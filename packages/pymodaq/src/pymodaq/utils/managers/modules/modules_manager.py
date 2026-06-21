@@ -563,9 +563,9 @@ class ModulesManager(QObject, ParameterManager):
 
                 QtWidgets.QApplication.processEvents()  # mandatory for the det_done_flag boolean to be modified in the corresponding method
                 if time.perf_counter() - tzero > self.actuator_timeout / 1000:  # timeout in seconds
-                    received_names = self.move_done_positions.get_names()
+                    received_origins = {dact.origin for dact in self.move_done_positions}
                     missing_actuators = [dact.name for dact in dte_act
-                                          if dact.name not in received_names]
+                                          if dact.name not in received_origins]
                     self.timeout_signal.emit(missing_actuators)
                     logger.error('Timeout Fired during waiting for actuators to be moved: '
                                   f'{", ".join(missing_actuators)}')
@@ -599,7 +599,7 @@ class ModulesManager(QObject, ParameterManager):
     @Slot(DataActuator)
     def move_done(self, data_act: DataActuator):
         try:
-            if data_act.name not in self.move_done_positions.get_names():
+            if data_act.origin not in {dact.origin for dact in self.move_done_positions}:
                 self.move_done_positions.append(data_act)
 
             if len(self.move_done_positions) == len(self.actuators):

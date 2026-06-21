@@ -66,6 +66,13 @@ def manager(detectors, actuators):
 # Helpers to build controlled DataToExport for tree-building tests
 # ---------------------------------------------------------------------------
 
+def make_actuator_response(title: str, value: float) -> DataActuator:
+    """DataActuator as emitted by a real DAQ_Move: origin stamped with the module title."""
+    dact = DataActuator(title, data=value)
+    dact.origin = title
+    return dact
+
+
 def make_raw_dte(det_title: str, dwa_name: str = 'DWA_NANE') -> DataToExport:
     """DTE with a single raw 1D channel from a detector."""
     raw = DataRaw(dwa_name, data=[np.zeros(10)])
@@ -270,24 +277,24 @@ class TestMoveDone:
     def test_flag_set_when_all_received(self, manager):
         self._init_move(manager, ['X_axis', 'Y_axis'])
 
-        manager.move_done(DataActuator('X_axis', data=1.0))
+        manager.move_done(make_actuator_response('X_axis', 1.0))
         assert not manager.move_done_flag
 
-        manager.move_done(DataActuator('Y_axis', data=2.0))
+        manager.move_done(make_actuator_response('Y_axis', 2.0))
         assert manager.move_done_flag
 
     def test_positions_accumulated(self, manager):
         self._init_move(manager, ['X_axis', 'Y_axis'])
 
-        manager.move_done(DataActuator('X_axis', data=1.0))
-        manager.move_done(DataActuator('Y_axis', data=2.0))
+        manager.move_done(make_actuator_response('X_axis', 1.0))
+        manager.move_done(make_actuator_response('Y_axis', 2.0))
         assert len(manager.move_done_positions) == 2
 
     def test_duplicate_ignored(self, manager):
         self._init_move(manager, ['X_axis', 'Y_axis'])
 
-        manager.move_done(DataActuator('X_axis', data=1.0))
-        manager.move_done(DataActuator('X_axis', data=9.0))  # duplicate
+        manager.move_done(make_actuator_response('X_axis', 1.0))
+        manager.move_done(make_actuator_response('X_axis', 9.0))  # duplicate
         assert len(manager.move_done_positions) == 1
         assert not manager.move_done_flag
 
@@ -430,7 +437,7 @@ class TestTimeout:
         manager.connect_actuators(True)
 
         def respond_x(_cmd):
-            actuators[0].move_done_signal.emit(DataActuator('X_axis', data=1.0))
+            actuators[0].move_done_signal.emit(make_actuator_response('X_axis', 1.0))
 
         actuators[0].command_hardware.connect(respond_x)
 
