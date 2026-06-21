@@ -112,11 +112,11 @@ class TabularScanner(ScannerBase):
               ]
     distribution = DataDistribution['spread']
 
-    def __init__(self, actuators: List['DAQ_Move'], display_units=True, **kwargs):
+    def __init__(self, actuators: List['DAQ_Move'], settings, **kwargs):
         self.table_model: TableModelTabular = None
         self.table_view: TableViewCustom = None
-        self.display_units = display_units
-        super().__init__(actuators=actuators, display_units=display_units)
+        super().__init__(actuators=actuators, settings=settings)
+
         self.delegates: Iterable[SpinBoxDelegate] = []
 
     def set_units(self):
@@ -243,12 +243,12 @@ class TabularScannerSubSegmented(TabularScanner):
                'menu': True},
               ] + TabularScanner.params
 
-    def __init__(self, actuators: List['DAQ_Move'], display_units=True):
+    def __init__(self, actuators: List['DAQ_Move'], settings):
         self.table_model: TableModelTabularReadOnly = None
         self.table_view: TableViewCustom = None
         self.table_model_points: TableModelTabular = None
         self.table_view_points: TableViewCustom = None
-        super().__init__(actuators=actuators, display_units=display_units)
+        super().__init__(actuators=actuators, settings=settings)
 
     @property
     def actuators(self):

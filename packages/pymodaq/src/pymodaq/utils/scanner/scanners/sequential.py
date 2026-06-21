@@ -94,11 +94,11 @@ class SequentialScanner(ScannerBase):
     distribution = DataDistribution['uniform']
     n_axes = 1
 
-    def __init__(self, actuators: List['DAQ_Move'], display_units=True, **_ignored):
+    def __init__(self, actuators: List['DAQ_Move'], settings=None, **_ignored):
 
         self.table_model: TableModelSequential = None
         self.table_view: TableViewCustom = None
-        super().__init__(actuators, display_units=display_units)
+        super().__init__(actuators, settings=settings)
         self.delegates: Iterable[gutils.SpinBoxDelegate] = []
         self.update_model()
 
