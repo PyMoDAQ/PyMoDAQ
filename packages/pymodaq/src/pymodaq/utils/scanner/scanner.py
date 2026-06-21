@@ -96,7 +96,8 @@ class Scanner(QObject, ParameterManager):
                 self.settings['scan_type'],
                 self.settings['scan_sub_type'],
                 actuators=self.actuators,
-                display_units=self.settings['units_handling', 'display_units'])
+                settings = self.settings
+            )
 
             while True:
                 child = self._scanner_settings_widget.layout().takeAt(0)
@@ -128,6 +129,7 @@ class Scanner(QObject, ParameterManager):
             self.settings.child('scan_sub_type').setOpts(
                 limits=scanner_factory.scan_sub_types(param.value()))
         if param.name() in ['scan_sub_type']:
+            self.settings.child('units_handling', 'display_units').show()
             self.set_scanner()
             self.settings.child('scan_type').setOpts(tip=self._scanner.__doc__)
             self.settings.child('scan_sub_type').setOpts(tip=self._scanner.__doc__)
@@ -276,14 +278,14 @@ def main():
     from pymodaq.utils.parameter import ParameterTree
     app = QtWidgets.QApplication(sys.argv)
 
-    units = ['nm', 'kW', 'ms']
+    units = ['nm', 'kW', 'ms', '°C', ]
 
     class MoveMock:
         def __init__(self, ind: int = 0):
-            self.title = f'act_{ind}'
+            self.title = f'act_{ind}_{units[ind]}'
             self.units = units[ind]
 
-    actuators = [MoveMock(ind) for ind in range(3)]
+    actuators = [MoveMock(ind) for ind in range(len(units))]
 
     params = [{'title': 'Actuators', 'name': 'actuators', 'type': 'itemselect',
                'value': dict(all_items=[act.title for act in actuators], selected=[]),'checkbox':True},
