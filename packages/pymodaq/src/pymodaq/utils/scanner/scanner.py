@@ -276,14 +276,14 @@ def main():
     from pymodaq.utils.parameter import ParameterTree
     app = QtWidgets.QApplication(sys.argv)
 
-    units = ['nm', 'kW', 'ms']
+    units = ['nm', 'kW', 'ms', '°C', ]
 
     class MoveMock:
         def __init__(self, ind: int = 0):
-            self.title = f'act_{ind}'
+            self.title = f'act_{ind}_{units[ind]}'
             self.units = units[ind]
 
-    actuators = [MoveMock(ind) for ind in range(3)]
+    actuators = [MoveMock(ind) for ind in range(len(units))]
 
     params = [{'title': 'Actuators', 'name': 'actuators', 'type': 'itemselect',
                'value': dict(all_items=[act.title for act in actuators], selected=[]),'checkbox':True},
