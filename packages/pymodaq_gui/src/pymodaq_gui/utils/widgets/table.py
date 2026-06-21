@@ -245,7 +245,7 @@ class SpinBoxDelegate(QtWidgets.QStyledItemDelegate):
         return doubleSpinBox
 
     def setEditorData(self, editor: SpinBox, index):
-        editor.setValue(Q_(parse_quantity(index.data())).magnitude)
+        editor.setValue(parse_quantity(index.data()).magnitude)
         #editor.setSuffix(Q_(index.data()).units)
 
     def setModelData(self, editor: SpinBox, model, index):
