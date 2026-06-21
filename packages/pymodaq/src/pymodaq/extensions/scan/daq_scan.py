@@ -189,13 +189,16 @@ class DAQScan(CustomExt):
         self.live_timer = QtCore.QTimer(self)
         self.live_timer.timeout.connect(self.update_live_plots)
 
+        #this part on the scan manager is not mature yet and need some reworking.
+        # I comment it for the 5.2.x branch and come back to it on the 5.3 one
+        # see also lines 104-106 in das_scan_ui and line 201 below and 215
         self.scan_manager = ScanManager(dashboard, self)
-        self.scan_manager.get_external_toolbar_menu(toolbar=self.ui.get_toolbar('scan_manager'),
-                                                    menu=self.ui.get_menu('scan_manager'))
+        # self.scan_manager.get_external_toolbar_menu(toolbar=self.ui.get_toolbar('scan_manager'),
+        #                                             menu=self.ui.get_menu('scan_manager'))
 
         if self.dashboard.experiment_manager.entry_applied:
             self.ui.enable_start_stop(True)
-            self.ini_scan_manager()
+            # self.ini_scan_manager()
 
         logger.info('DAQScan Initialized')
 
@@ -209,7 +212,9 @@ class DAQScan(CustomExt):
 
         Default is the default toolbar. To be reimplemented if needed
         """
-        return [self.ui.toolbar, self.ui.get_toolbar('scan_manager')]
+        #return [self.ui.toolbar, self.ui.get_toolbar('scan_manager')]
+
+        return [self.ui.toolbar]
 
     def plot_from(self):
         self.modules_manager.get_det_data_list()
@@ -227,9 +232,11 @@ class DAQScan(CustomExt):
 
     def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
         """ Mandatory even if empty"""
+        ...
 
     def setup_actions(self):
         """ Mandatory even if empty"""
+        ...
 
     def connect_things(self):
         self.scanner.scanner_updated_signal.connect(self.do_things_after_scanner_changed)
