@@ -15,7 +15,7 @@ from pymodaq_utils import math_utils as mutils
 from pymodaq_utils.units import nm2eV, eV2nm
 from pymodaq_data import data as data_mod
 from pymodaq_data import DataDim, Q_, DataToExport, Unit, ureg
-from pymodaq_data.data import dimensionless_aware_reduce_units
+from pymodaq_data.data import dimensionless_aware_reduce_units, Averaging
 from pymodaq_data.post_treatment.process_to_scalar import DataProcessorFactory
 
 #For tests with custom quantities
@@ -493,11 +493,21 @@ class TestDataBase:
         WEIGHT = 5
         FRAC = 0.23
         data = init_data(data=DATA2D, Ndata=2)
-        data1 = init_data(data=-DATA2D, Ndata=2)
+        data1 = init_data(data=-DATA2D, Ndata=2, name='anothername')
 
         assert data.average(data1, 1) == data * 0
         assert data.average(data, 1) == data
         assert data.average(data, 2) == data
+
+        assert data.average(data, 1).name == data.name
+        assert data.average(data1, 1).name == data.name
+
+        data_averaged = data.average(data, WEIGHT)
+
+        assert hasattr(data_averaged, Averaging.AVERAGED)
+        assert hasattr(data_averaged, Averaging.N_AVERAGED)
+        assert getattr(data_averaged, Averaging.AVERAGED)
+        assert getattr(data_averaged, Averaging.N_AVERAGED) == WEIGHT + 1
 
     def test_append(self):
         Ndata = 2
