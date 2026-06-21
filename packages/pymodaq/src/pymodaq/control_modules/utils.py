@@ -735,6 +735,17 @@ class PluginBase(QObject):
         """True when this plugin is the controller master."""
         return self.settings['controller', 'controller_status'] == ControllerStatus.MASTER
 
+    def get_caller(self) -> Optional[CallerBase]:
+        """Caller context last set by the extension currently driving this module.
+
+        Extensions (DAQ_Scan and others) may set context describing the HDF5 file/node
+        they're writing to before invoking a grab/move, so plugins can mirror PyMoDAQ's
+        file layout for their own files. Returns None outside any extension-driven run,
+        or if no extension has set a caller. Available at any point in the plugin's
+        lifetime, not just inside grab_data/move_abs.
+        """
+        return getattr(self.parent, '_caller', None)
+
     def ini_attributes(self):
         """Hook called at the end of each subclass __init__ for plugin-specific setup."""
         pass
@@ -851,6 +862,7 @@ class HardwareWorkerBase(QObject):
         self._plugin_name = plugin_name
         self.plugin = None              # set by subclass after ini_hardware
         self.controller_address = None
+        self._caller: Optional[CallerBase] = None
 
     @property
     def title(self) -> str:
@@ -859,6 +871,10 @@ class HardwareWorkerBase(QObject):
     @property
     def plugin_name(self) -> str:
         return self._plugin_name
+
+    def set_caller(self, caller: Optional[CallerBase]) -> None:
+        """Store the caller context, readable from the plugin via ``self.get_caller()``."""
+        self._caller = caller
 
     def ini_hardware(self, params_state=None, controller=None):
         raise NotImplementedError
