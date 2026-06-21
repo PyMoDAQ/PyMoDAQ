@@ -3,6 +3,7 @@ from typing import Union, TYPE_CHECKING
 from pathlib import Path
 import sys
 
+import toml
 from qtpy import QtWidgets, QtCore, QtGui
 from qtpy.QtCore import Qt
 from qtpy.QtGui import QKeySequence
@@ -11,7 +12,7 @@ from qtpy.QtCore import QModelIndex
 from pymodaq.utils.managers.modules.module_settings_manager import SettingsManager
 from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager
 from pymodaq_utils.logger import set_logger, get_module_name
-
+from pymodaq_utils.config import GlobalConfig as Config, get_set_local_dir
 
 from pymodaq_gui.parameter import Parameter, ioxml
 from pymodaq_gui.parameter.utils import ParameterWithPath
@@ -30,6 +31,9 @@ from pymodaq.utils.managers.state.utils import (
 from pymodaq.utils.config import get_set_state_path
 from pymodaq_gui.managers.manager_base import ManagerBase, ManagerActions
 from pymodaq.extensions import ExtensionEnum
+from pymodaq.launcher import HISTORY_FILE_NAME, HISTORY_FILE_PATH
+
+from datetime import datetime
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -37,6 +41,8 @@ if TYPE_CHECKING:
 
 logger = set_logger(get_module_name(__file__))
 handler_factory = SubEntryHandlerFactory()
+
+config = Config()
 
 
 class StateManager(ManagerBase):
@@ -64,6 +70,8 @@ class StateManager(ManagerBase):
             self._experiment_manager_local = dashboard.experiment_manager
 
         super().__init__(dashboard=dashboard, tree=StateParameterTree())
+
+        self.history_file_path: str = HISTORY_FILE_PATH
 
 
     @property
@@ -151,6 +159,9 @@ class StateManager(ManagerBase):
                 self.subentries_model.set_status(ind, False)
 
         self.close_subentries_display(1000)
+
+        self.save_new_history_entry()
+
         return True
 
     def populate_from_settings(self, settings: Parameter):
@@ -222,8 +233,6 @@ class StateManager(ManagerBase):
         self.delegate = ParameterDelegate()
         self.table_out.setItemDelegate(self.delegate)
 
-
-
         vlayout = QtWidgets.QVBoxLayout()
         hwidget = QtWidgets.QWidget()
         hlayout = QtWidgets.QHBoxLayout()
@@ -266,16 +275,19 @@ class StateManager(ManagerBase):
                                       add_experiment=True, add_state=False, add_break=False)
         self.experiment_manager.enable_actions(True)
 
-        self.add_action(EntryActions.ADD, 'Add', 'SP_ArrowRight', toolbar='move',
-                        tip='Add the current Parameter item',
+        self.add_action(EntryActions.ADD, 'Add', 'arrow_circle_right', toolbar='move',
+                        tip='Add the current Parameter item', icon_color=self.get_theme().green,
                         )
-        self.add_action(EntryActions.REMOVE, 'Remove', 'SP_ArrowLeft', toolbar='move',
+        self.add_action(EntryActions.REMOVE, 'Remove', 'arrow_circle_left', toolbar='move',
                         tip='Delete the current Configuration item ("Del")',
+                        icon_color=self.get_theme().red,
                         shortcut=Qt.Key.Key_Delete)
-        self.add_action(EntryActions.UP, 'Move Up', 'SP_ArrowUp', toolbar='move',
+        self.add_action(EntryActions.UP, 'Move Up', 'arrow_circle_up', toolbar='move',
                         tip='Move UP the current Configuration item ("Ctrl+Up")',
+                        icon_color=self.get_theme().blue,
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Up))
-        self.add_action(EntryActions.DOWN, 'Move Down', 'SP_ArrowDown', toolbar='move',
+        self.add_action(EntryActions.DOWN, 'Move Down', 'arrow_circle_down', toolbar='move',
+                        icon_color=self.get_theme().orange,
                         tip='Move Down the current Configuration item ("Ctrl+Down")',
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Down))
         self.toolbar.addSeparator()
@@ -422,6 +434,32 @@ class StateManager(ManagerBase):
                 if index != -1:  # means no selected row
                     self.config_model.moveRow(QModelIndex(), index,
                                               QModelIndex(), index+2)
+
+    def save_new_history_entry(self):
+        """Implements this method from ManagerBase. Save a new history entry with experiment and state for one time"""
+
+        date = datetime.now().strftime("%Y-%d-%m:%H:%M:%S")
+
+        entry = {date: {'experiment': self.experiment_manager.entry, 'state': self.entry}}
+
+        try:
+            existing = toml.load(self.history_file_path)
+        except (FileNotFoundError, PermissionError, OSError):
+            existing = {}
+
+        new_dict = {key: value for i, (key, value) in enumerate(existing.items())
+                    if i >= len(existing) - config('pymodaq', 'launcher', 'max_history_size') + 1
+                    and (config('pymodaq', 'launcher', 'keep_duplicates')
+                         or (value['experiment'] != entry[str(date)]['experiment']
+                             or value['state'] != entry[str(date)]['state']))
+                    }
+        new_dict.update(entry)
+
+        with open(self.history_file_path, "w") as f:
+            toml.dump(new_dict, f)
+
+
+
 
 
 if __name__ == "__main__":

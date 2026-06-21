@@ -16,9 +16,9 @@ logger = set_logger(get_module_name(__file__))
 
 class ConfigManager(ParameterManager):
     """
-    Manager class for handling configuration files and parameters.
+    Manager class for handling Preferences files and parameters.
 
-    Provides functionality to create, load, modify, and save configuration
+    Provides functionality to create, load, modify, and save preferences
     files in XML format with a graphical user interface.
 
     Attributes:

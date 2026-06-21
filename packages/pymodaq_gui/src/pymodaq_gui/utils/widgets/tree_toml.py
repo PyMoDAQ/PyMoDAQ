@@ -128,7 +128,7 @@ class TreeFromToml(ParameterManager, QObject):
 
         self.dialog.layout().addWidget(self.settings_tree)
         self.dialog.layout().addWidget(button_box)
-        self.dialog.setWindowTitle('Configuration entries')
+        self.dialog.setWindowTitle('Preferences entries')
         res = self.dialog.exec()
 
         if res == QtWidgets.QDialog.DialogCode.Accepted:

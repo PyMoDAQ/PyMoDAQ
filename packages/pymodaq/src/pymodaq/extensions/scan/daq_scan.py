@@ -131,7 +131,8 @@ class DAQScan(CustomExt):
         self.ui: DAQScanUI = None  #important to be here before super is called , see do_things_after_experiment_set
 
         super().__init__(parent=dockarea,
-                         dashboard=dashboard)
+                         dashboard=dashboard,
+                         add_toolbar_break=False)
 
         self.wait_time = 1000
 
@@ -850,7 +851,7 @@ class DAQScan(CustomExt):
         viewers_enum, data_names, _ = self.check_number_type_viewers()
         self.live_plotter.prepare_viewers(viewers_enum, viewers_name=data_names)
 
-    def update_status(self, txt: str, wait_time=0):
+    def update_status(self, txt: str, wait_time: int = None):
         """ Show the txt message in the status bar with a delay of wait_time ms.
 
         add an info log in the logger
@@ -859,10 +860,11 @@ class DAQScan(CustomExt):
         ----------
         txt: str
             the message to log
-        wait_time: int
-            leave the message apparent in the status bar for this duration in ms
+        wait_time: int or None
+            leave the message apparent in the status bar for this duration in ms.
+            If None, uses the value from config('gui', 'message_status_persistence')
         """
-        self.ui.display_status(txt, wait_time)
+        self.ui.update_status(txt, wait_time)
         self.status_signal.emit(txt)
         logger.info(txt)
 
@@ -877,7 +879,11 @@ class DAQScan(CustomExt):
         * "Timeout"
         """
         if status.command == "Update_Status":
-            self.update_status(status.attribute, wait_time=self.wait_time)
+            if isinstance(status.attribute, (tuple, list)):
+                txt, wait_time = status.attribute
+            else:
+                txt, wait_time = status.attribute, self.wait_time
+            self.update_status(txt, wait_time=wait_time)
 
         elif status.command == "Update_scan_index":
             # status[1] = [ind_scan,ind_average]
@@ -932,13 +938,6 @@ class DAQScan(CustomExt):
 
         elif status.command == 'add_nav_axes':
             self.module_and_data_saver.add_nav_axes(status.attribute)
-
-        elif status.command == 'splash':
-            if status.attribute is None:
-                self.splash_sc.setVisible(False)
-            else:
-                self.splash_sc.show()
-                self.splash_sc.showMessage(status.attribute)
 
     ############
     #  PLOTTING
@@ -1095,7 +1094,7 @@ class DAQScan(CustomExt):
             --------
             set_scan
         """
-        self.ui.display_status('Starting acquisition')
+        self.ui.update_status('Starting acquisition')
         #deactivate double_clicked
         if self.ui.is_action_checked('move_at'):
             self.ui.get_action('move_at').trigger()
@@ -1400,10 +1399,9 @@ class DAQScanAcquisition(QObject):
                 indexes = [self.ind_average] + list(indexes)
             indexes = tuple(indexes)
             if self.ind_scan == 0:
-                self.status_sig.emit(utils.ThreadCommand("splash",
-                                                         "Creating the arrays nodes in the h5file, please be patient"))
-                QtWidgets.QApplication.processEvents()
-                QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
+                self.status_sig.emit(utils.ThreadCommand(
+                    "Update_Status",
+                    attribute=("Creating the arrays nodes in the h5file, please be patient", 0)))
                 QThread.msleep(50)
                 nav_axes = self.scanner.get_nav_axes()
                 if self.Naverage > 1:
@@ -1436,15 +1434,12 @@ class DAQScanAcquisition(QObject):
 
             if self.ind_scan == 0:
                 self.status_sig.emit(utils.ThreadCommand("Update_Status", attribute="Acquisition has started"))
-                self.status_sig.emit(utils.ThreadCommand("splash", attribute=None))
 
             self.det_done_flag = True
             self.scan_data_tmp.emit(ScanDataTemp(self.ind_scan, indexes, data_temp))
 
         except Exception as e:
             logger.exception(str(e))
-        finally:
-            QtWidgets.QApplication.restoreOverrideCursor()
 
     def timeout(self):
         """

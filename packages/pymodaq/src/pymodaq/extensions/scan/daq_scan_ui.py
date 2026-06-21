@@ -36,7 +36,7 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
     command_sig = Signal(ThreadCommand)
 
     def __init__(self, parent, toolbar=None):
-        CustomApp.__init__(self, parent, toolbar=toolbar)
+        CustomApp.__init__(self, parent, toolbar=toolbar, add_toolbar_break=False)
         self.setup_docks_and_widgets()
         ViewerDispatcher.__init__(self, self.dockarea, title='Scanner',
                                   next_to_dock=self.dock_command)
@@ -240,9 +240,6 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
     def n_scan_steps(self, nsteps: int):
         self._n_scan_steps_sb.setValue(nsteps)
 
-    def display_status(self, status: str, wait_time=1000):
-        self.statusbar.showMessage(status, wait_time)
-        
     def set_permanent_status(self, status: str):
         self._status_message_label.setText(status)
 

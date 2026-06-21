@@ -47,7 +47,7 @@ class DataMixer(CustomExt):
     dte_computed_signal = QtCore.Signal(DataToExport)
 
     def __init__(self, parent: gutils.DockArea, dashboard):
-        super().__init__(parent, dashboard)
+        super().__init__(parent, dashboard, add_toolbar_break=False)
 
         self.model_class: Optional[DataMixerModel] = None
         self.datamixer_config = DataMixerConfig()
@@ -62,7 +62,6 @@ class DataMixer(CustomExt):
             model_class = find_dict_in_list_from_key_val(self.models, 'name', model_name)['class']
             params = getattr(model_class, 'params')
             self.settings.child('models', 'model_params').addChildren(params)
-
 
     def setup_docks_and_widgets(self):
         """Mandatory method to be subclassed to setup the docks layout
@@ -150,8 +149,8 @@ class DataMixer(CustomExt):
     def create_computed_detectors(self):
         try:
             self.dashboard.add_det_from_extension('DataMixer', 'DAQ0D', 'DataMixer', self)
-            self.dashboard.modules_manager.get_mod_from_name(
-                'DataMixer', 'det').settings.child('detector_settings', 'overridden_detectors').setOpts(
+            datamixer_mod = self.dashboard.modules_manager.get_mod_from_name('DataMixer', 'det')
+            datamixer_mod.settings.child(datamixer_mod._hw_settings_name, 'overridden_detectors').setOpts(
                 limits=self.modules_manager.selected_detectors_name)
             self.set_action_enabled('create_computed_detectors', False)
             #self.dashboard.override_det_from_extension(self.modules_manager.selected_detectors_name)

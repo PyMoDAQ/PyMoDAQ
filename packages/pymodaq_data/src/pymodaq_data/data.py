@@ -959,6 +959,17 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
         """
         return f'{self.origin}/{self.name}'
 
+    @staticmethod
+    def get_origin_name_from_full_name(full_name: str):
+        """ Standardize the obtention of the origin and name from the full name expression
+
+        Origin is always the first bit before the first '/' character while the name will be the remaining characters
+        """
+        name_bits = full_name.split('/')
+        origin = name_bits[0]
+        name = full_name.split(f'{origin}/')[1]
+        return origin, name
+
     def __repr__(self):
         return (f'{self.__class__.__name__} <{self.name}> '
                 f'<u: {self.units}> '

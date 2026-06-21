@@ -30,7 +30,7 @@ def iterative_show_pb(params):
 
 def find_last_index(list_children:list=[], name_prefix='',format_string='02.0f'):
     # Custom function to find last available index
-    child_indexes = ([int(par.name()[len(name_prefix) + 1:]) for par in list_children if name_prefix in par.name()])
+    child_indexes = ([int(par.name()[len(name_prefix):]) for par in list_children if name_prefix in par.name()])
     if child_indexes == []:
         newindex = 0
     else:

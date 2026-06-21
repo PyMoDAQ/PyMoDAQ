@@ -147,7 +147,8 @@ class SharedUI(CustomApp):
 
     def _merge_menus(self, menu_to_merge: QtWidgets.QMenu, menu: QtWidgets.QMenu):
         menu.insertActions(menu.actions()[0], menu_to_merge.actions())
-        menu_to_merge.parent().removeAction(menu_to_merge.menuAction())
+        if menu_to_merge.parent() is not None :
+            menu_to_merge.parent().removeAction(menu_to_merge.menuAction())
 
     @staticmethod
     def _get_menus_from_widget(widget: QtWidgets.QWidget) -> list[QtWidgets.QMenu]:

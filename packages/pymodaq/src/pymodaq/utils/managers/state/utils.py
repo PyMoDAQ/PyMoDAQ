@@ -75,18 +75,22 @@ class ParameterDelegate(QtWidgets.QStyledItemDelegate):
         # Try common value changed signals
         # if hasattr(widget, 'toggled'):
         #     widget.toggled.connect(lambda: self.commitData.emit(widget))
-        # elif hasattr(widget, 'currentIndexChanged'):  # For comboboxes
-        #     widget.currentIndexChanged.connect(lambda: self.commitData.emit(widget))
+        if hasattr(widget, 'currentIndexChanged'):  # For comboboxes
+            widget.currentIndexChanged.connect(lambda: self.value_changed(widget))
         # elif hasattr(widget, 'editingFinished'):
-        #     widget.editingFinished.connect(lambda: self.commitData.emit(widget))
+        #     widget.editingFinished.connect(lambda: self.value_changed(widget))
         # elif hasattr(widget, 'stateChanged'):  # For checkboxes
         #     widget.stateChanged.connect(lambda: self.commitData.emit(widget))
         # elif hasattr(widget, 'checkStateChanged'):  # For checkboxes
         #     widget.checkStateChanged.connect(lambda: self.commitData.emit(widget))
         #
-        # # Install event filter to catch focus loss
-        #widget.installEventFilter(self)
+        # Install event filter to catch focus loss
+        widget.installEventFilter(self)
         pass
+
+    def value_changed(self, widget: QtWidgets.QWidget):
+        QtWidgets.QApplication.processEvents()
+        self.commitData.emit(widget)
 
     def setEditorData(self, editor, index: QModelIndex):
         try:
@@ -214,7 +218,10 @@ class StateModel(TableModel):
                 elif index.column() == 2:
                     dat = entry.setting.parameter.title()
                 elif index.column() == 3:
-                    dat = f"{entry.setting.parameter.value()} {entry.setting.parameter.opts.get('suffix', '')}"
+                    suffix = ''
+                    if entry.setting.parameter.opts.get('suffix', None) is not None:
+                        suffix = f' {entry.setting.parameter.opts.get("suffix")}'
+                    dat = f"{entry.setting.parameter.value()}{suffix}"
                 else:
                     dat = ''
                 return dat

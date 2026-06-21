@@ -15,6 +15,7 @@ from pymodaq_gui.parameter import Parameter, ioxml
 
 from pymodaq.utils.managers.state.state_manager import StateManager
 from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager
+from pymodaq.utils.managers.modules.utils import ModuleType
 
 from pymodaq.utils.managers.overshoot.utils import ModulesManager, \
     get_set_overshooter_path, TriggerDirection  # noqa
@@ -41,7 +42,7 @@ class Overshoot:
 class Overshooter(ManagerBase):
     """
     Main class managing the Overshoots of control modules from a Dashboard and triggers loading
-    of a configuration.
+    of a state.
 
     This class provides a GUI to create, modify and save configurations for different overshoots
 
@@ -51,8 +52,7 @@ class Overshooter(ManagerBase):
     """
     execute_action_checkable = True
     params = [
-        {'title': 'Configuration:', 'name': 'configuration', 'type': 'list',
-         'limits': []},
+        {'title': 'State:', 'name': 'state', 'type': 'list', 'limits': []},
         {'title': 'Overshoots:', 'name': 'overshoots', 'type': 'group_overshoot'},
     ]
 
@@ -81,8 +81,8 @@ class Overshooter(ManagerBase):
         self.experiment_manager.applied_entry.connect(self.do_things_after_experiment_set)
         if self.experiment_manager.entry_applied:
             self.do_things_after_experiment_set(self.experiment_manager.entry)
-        self.state_manager.new_entry.connect(self.update_configurations)
-        self.state_manager.deleted_entry.connect(self.update_configurations)
+        self.state_manager.new_entry.connect(self.update_states)
+        self.state_manager.deleted_entry.connect(self.update_states)
 
 
     def child_added(self, param: Parameter, data: tuple[Parameter, int]):
@@ -110,7 +110,7 @@ class Overshooter(ManagerBase):
 
     def apply_config_from_overshoot(self, overshoot: Overshoot):
         self.state_manager._execute_entry(
-            self.state_manager.entry_path_from_name(self.settings['configuration']))
+            self.state_manager.entry_path_from_name(self.settings['state']))
         self._overshoot_under_process = False
 
     def show_hide_module_manager_settings(self):
@@ -147,7 +147,7 @@ class Overshooter(ManagerBase):
         Parameters:
         -----------
         file : Path
-            The path to the configuration file to be applied.
+            The path to the state file to be applied.
         """
         overshoot_subentries = self.settings.child('overshoots').children()
         if len(self.slots) == 0:
@@ -161,19 +161,19 @@ class Overshooter(ManagerBase):
             for ind, sub_entry in enumerate(overshoot_subentries):
                 mod = self.modules_manager.get_mod_from_name(sub_entry['module'])
                 if mod is not None:
-                    module_type = 'det'
+                    module_type = ModuleType.Detector
                 else:
-                    mod = self.modules_manager.get_mod_from_name(sub_entry['module'], 'act')
-                    module_type = 'act'
+                    mod = self.modules_manager.get_mod_from_name(sub_entry['module'], ModuleType.Actuator)
+                    module_type = ModuleType.Actuator
 
                 if mod is not None:
                     if self.is_action_checked(ManagerActions.EXECUTE) and sub_entry.value():
-                        if module_type == 'det':
+                        if module_type == ModuleType.Detector:
                             mod.grab_done_signal.connect(self.slots[sub_entry.name()])
                         else:
                             mod.current_value_signal.connect(self.slots[sub_entry.name()])
                     else:
-                        if module_type == 'det':
+                        if module_type == ModuleType.Detector:
                             mod.grab_done_signal.disconnect(self.slots[sub_entry.name()])
                         else:
                             mod.current_value_signal.disconnect(self.slots[sub_entry.name()])
@@ -255,9 +255,9 @@ class Overshooter(ManagerBase):
     def connect_things(self):
         self.connect_action('update_data', self.update_available_data)
 
-    def update_configurations(self):
-        configurations = self.state_manager.entries
-        self.settings.child('configuration').setLimits(configurations)
+    def update_states(self):
+        states = self.state_manager.entries
+        self.settings.child('state').setLimits(states)
 
     def update_available_data(self):
         self.modules_manager.get_det_data_list()
@@ -292,7 +292,7 @@ class Overshooter(ManagerBase):
         self.entries_sync.update_key('items', self.entries)
         self.update_entry()
         self.update_available_data()
-        self.update_configurations()
+        self.update_states()
 
 
 if __name__ == "__main__":

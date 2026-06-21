@@ -1,4 +1,7 @@
 import numbers
+
+HW_KIND = 'actuator'
+HW_SETTINGS_KEY = f'{HW_KIND}_settings'
 from abc import abstractmethod
 from time import perf_counter
 from typing import Union, List, Dict, TYPE_CHECKING, Optional, TypeVar
@@ -29,12 +32,13 @@ from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.data import DataActuator
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusMove
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
-from pymodaq.control_modules.utils import create_controller_param, create_remote_connection_params, ControllerStatus
+from pymodaq.control_modules.utils import (create_controller_param, create_remote_connection_params,
+                                            ControllerStatus, PluginBase)
 from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 
 
 if TYPE_CHECKING:
-    from pymodaq.control_modules.daq_move import DAQ_Move_Hardware
+    from pymodaq.control_modules.daq_move import ActuatorWorker
 
 logger = set_logger(get_module_name(__file__))
 
@@ -179,7 +183,7 @@ params = [
         {'title': 'Refresh value (ms):', 'name': 'refresh_timeout', 'type': 'int',
          'value': config('pymodaq', 'actuator', 'refresh_timeout_ms')},
     ] + create_remote_connection_params()},
-    {'title': 'Actuator Settings:', 'name': 'move_settings', 'type': 'group'},
+    {'title': 'Actuator Settings:', 'name': HW_SETTINGS_KEY, 'type': 'group'}
 ]
 
 
@@ -234,7 +238,7 @@ registerParameterType('group', GroupParameterPatch, override=True)
 
 
 
-class DAQ_Move_base(QObject):
+class DAQ_Move_base(PluginBase):
     """ The base class to be inherited by all actuator modules
 
     This base class implements all necessary parameters and methods for the plugin to communicate with its parent (the
@@ -242,7 +246,7 @@ class DAQ_Move_base(QObject):
 
     Parameters
     ----------
-    parent : DAQ_Move_Hardware
+    parent : ActuatorWorker
     params_state : Parameter
             pyqtgraph Parameter instance from which the module will get the initial settings (as defined in the experiment)
     Attributes
@@ -283,32 +287,15 @@ class DAQ_Move_base(QObject):
     data_actuator_type = DataActuatorType.float
     data_shape = (1,)  # expected shape of the underlying actuator's value (in general a float so shape = (1, ))
 
-    def __init__(self, parent: Optional['DAQ_Move_Hardware'] = None,
+    def __init__(self, parent: Optional['ActuatorWorker'] = None,
                  params_state: Optional[dict] = None,
                  **kwargs):
-        QObject.__init__(self)  # to make sure this is the parent class
+        super().__init__(parent, params_state)
+        self._title = self._title if parent is not None else "myactuator"
         self.move_is_done = False
-        self.parent = parent
         self.stage = None
-        self.controller = None
-        self.status = edict(info="", controller=None, stage=None, initialized=False)
-
+        self.status['stage'] = None
         self._ispolling = True
-        self.parent_parameters_path = []  # this is to be added in the send_param_status to take into account when the
-        # current class instance parameter list is a child of some other class
-        self.settings = Parameter.create(name='Settings', type='group', children=self.params)
-        if params_state is not None:
-            if isinstance(params_state, dict):
-                self.settings.restoreState(params_state)
-            elif isinstance(params_state, Parameter):
-                self.settings.restoreState(params_state.saveState())
-
-        self.settings.sigTreeStateChanged.connect(self.send_param_status)
-
-        if parent is not None:
-            self._title = parent.title
-        else:
-            self._title = "myactuator"
 
         self._axis_units: Union[Dict[str, str], List[str]] = None
         if isinstance(self._controller_units, str):
@@ -454,7 +441,6 @@ class DAQ_Move_base(QObject):
                 self.settings.child('controller', 'axis').setValue(name)
             elif isinstance(limits, dict):
                 self.settings.child('controller', 'axis').setValue(limits[name])
-            QtWidgets.QApplication.processEvents()
             self.axis_unit = self.axis_unit
             self.settings.child('epsilon').setValue(self.epsilon)
             if self.controller is not None:
@@ -473,7 +459,6 @@ class DAQ_Move_base(QObject):
     @axis_names.setter
     def axis_names(self, names: Union[List, Dict]):
         self.settings.child('controller', 'axis').setLimits(names)
-        QtWidgets.QApplication.processEvents()
 
     @property
     def axis_value(self) -> int:
@@ -501,8 +486,8 @@ class DAQ_Move_base(QObject):
             return self.axis_name
 
     def ini_attributes(self):
-        """ To be subclassed, in order to init specific attributes needed by the real implementation"""
-        self.controller = None
+        """To be subclassed, in order to init specific attributes needed by the real implementation."""
+        pass
 
     def ini_stage_init(
         self,
@@ -671,15 +656,6 @@ class DAQ_Move_base(QObject):
         else:
             raise NotImplementedError
 
-    def emit_status(self, status: ThreadCommand):
-        """ Emit the status_sig signal with the given status ThreadCommand back to the main GUI.
-        """
-        if self.parent is not None:
-            self.parent.status_sig.emit(status)
-            QtWidgets.QApplication.processEvents()
-        else:
-            print(status)
-
     def emit_value(self, pos: DataActuator):
         """Convenience method to emit the current actuator value back to the UI"""
 
@@ -689,9 +665,6 @@ class DAQ_Move_base(QObject):
         """
           to subclass to transfer parameters to hardware
         """
-
-    def commit_common_settings(self, param):
-        pass
 
     def move_done(self, position: Optional[
         DataActuator] = None):  # the position argument is just there to match some signature of child classes
@@ -829,29 +802,6 @@ class DAQ_Move_base(QObject):
             logger.debug(f'Current value: {self._current_value}')
             self.move_done(self._current_value)
 
-    def send_param_status(self, param, changes):
-        """ Send changes value updates to the gui to update consequently the User Interface
-
-        The message passing is made via the ThreadCommand "update_settings".
-        """
-
-        for param, change, data in changes:
-            path = self.settings.childPath(param)
-            if change == 'childAdded':
-                self.emit_status(ThreadCommand(ThreadStatus.UPDATE_SETTINGS,
-                                               [self.parent_parameters_path + path, [data[0].saveState(), data[1]],
-                                                change]))  # send parameters values/limits back to the GUI. Send kind of a copy back the GUI otherwise the child reference will be the same in both th eUI and the plugin so one of them will be removed
-            elif change == 'value' or change == 'limits' or change == 'options':
-                self.emit_status(ThreadCommand(ThreadStatus.UPDATE_SETTINGS,
-                                               [self.parent_parameters_path + path, data,
-                                                change]))  # send parameters values/limits back to the GUI
-            elif change == 'parent':
-                pass
-            elif change == 'limits':
-                self.emit_status(ThreadCommand(ThreadStatus.UPDATE_SETTINGS,
-                                               [self.parent_parameters_path + path, data,
-                                                change]))
-
     def get_position_with_scaling(self, pos: DataActuator) -> DataActuator:
         """ Get the current position from the hardware with scaling conversion.
         """
@@ -881,46 +831,22 @@ class DAQ_Move_base(QObject):
         return pos
 
     @Slot(edict)
-    def update_settings(self, settings_parameter_dict):  # settings_parameter_dict=edict(path=path,param=param)
-        """ Receive the settings_parameter signal from the param_tree_changed method and make hardware updates of
-        modified values.
-        """
-        path = settings_parameter_dict['path']
-        param = settings_parameter_dict['param']
-        change = settings_parameter_dict['change']
-        apply_settings = True
-        try:
-            self.settings.sigTreeStateChanged.disconnect(self.send_param_status)
-        except Exception:
-            pass
-        if change == 'value':
-            self.settings.child(*path[1:]).setValue(param.value())  # blocks signal back to main UI
-        elif change == 'childAdded':
-            try:
-                child = Parameter.create(name='tmp')
-                child.restoreState(param)
-                param = child
-                self.settings.child(*path[1:]).addChild(child)  # blocks signal back to main UI
-            except ValueError:
-                apply_settings = False
-        elif change == 'parent':
-            try:
-                children = putils.get_param_from_name(self.settings, param.name())
-
-                if children is not None:
-                    path = putils.get_param_path(children)
-                    self.settings.child(*path[1:-1]).removeChild(children)
-            except IndexError:
-                logger.debug(f'Could not remove children from {param.name()}')
-        self.settings.sigTreeStateChanged.connect(self.send_param_status)
-        if apply_settings:
-            self.commit_common_settings(param)
-            self.commit_settings(param)
-
+    def update_settings(self, settings_parameter_dict):
+        """Apply settings-tree change and handle actuator-specific axis/epsilon side-effects."""
+        super().update_settings(settings_parameter_dict)
+        if settings_parameter_dict['change'] == 'value':
+            param = settings_parameter_dict['param']
             if param.name() == 'axis':
                 self.axis_name = param.value()
             elif param.name() == 'epsilon':
                 self.epsilon = param.value()
+
+    def ini_stage_init(self, old_controller=None, new_controller=None, slave_controller=None):
+        """Deprecated — use ini_controller_init instead."""
+        import warnings
+        warnings.warn("'ini_stage_init' is deprecated, use 'ini_controller_init' instead.",
+                      DeprecationWarning, stacklevel=2)
+        return self.ini_controller_init(old_controller, new_controller, slave_controller)
 
     # abstract methods to be overwritten by the concrete implementations
     @abstractmethod

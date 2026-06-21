@@ -47,7 +47,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "hatch", 
+    "hatch",
     "flake8",
     "pytest",
     "pytest-cov",

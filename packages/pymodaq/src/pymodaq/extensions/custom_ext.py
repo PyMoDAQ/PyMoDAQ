@@ -24,7 +24,7 @@ class CustomExt(CustomApp):
     status_signal = QtCore.Signal(str)  # signal to be used to emit info
     config_changed = QtCore.Signal()  # will be emitted when the user changed anything in the configuration files (emitted from SharedUI)
 
-    icon_name = ''
+    icon_name = 'extension' # change this icon name if needed
 
     def __init__(self, parent: Union[DockArea, QtWidgets.QWidget, QtWidgets.QMainWindow],
                  dashboard: 'DashBoard', module_manager_class=ModulesManager, **kwargs):
@@ -59,7 +59,6 @@ class CustomExt(CustomApp):
         super().quit_fun()
         if self.dashboard is not None:
             self.show_dashboard(True)  #make sure to show it if it was hidden
-
 
     def get_app_toolbars(self) -> list[QtWidgets.QToolBar]:
         """ Get the main toolbars widget to be eventually added in the main window toolbararea
