@@ -174,9 +174,9 @@ class ControlModule(QObject):
         last configured that saver - that distinction lets a plugin tell live
         continuous-saving state apart from a saver shape leftover from a finished scan.
         """
-        if self._module_and_data_saver is None or self.module_and_data_saver.h5saver is None:
+        if self._module_and_data_saver is None:
             return None
-        saver = self.module_and_data_saver
+        saver = self.module_and_data_saver  # property: lazily (re)attaches self.h5saver if needed
         node_name = None
         if saver.module_group is not None:
             node_name = saver.module_group.name.split('/')[-1]
