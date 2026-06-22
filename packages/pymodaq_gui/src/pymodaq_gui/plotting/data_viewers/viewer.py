@@ -208,9 +208,8 @@ class ViewerDispatcher:
     def show_data(self, data: DataToExport, **kwargs):
         """ Convenience method. Display each dwa in a dedicated data viewer"""
         viewer_types = [ViewersEnum.get_viewers_enum_from_data(dwa) for dwa in data]
-        viewer_names = [f'{dwa.name}_Averaged: {getattr(dwa, Averaging.N_AVERAGED)}'
-                        if hasattr(dwa, Averaging.AVERAGED)
-                           and getattr(dwa, Averaging.AVERAGED) else dwa.name for dwa in data]
+        viewer_names = [f'{dwa.name}_Averaged: {dwa.n_averaged}'
+                        if dwa.averaged else dwa.name for dwa in data]
         if self.viewer_types != viewer_types:
             self.update_viewers(viewer_types, viewer_names)
         for viewer, dwa in zip(self.viewers, data):

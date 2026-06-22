@@ -805,9 +805,8 @@ class DAQ_Viewer(ParameterControlModule):
             if ('do_plot' not in dwa.extra_attributes) or \
                     ('do_plot' in dwa.extra_attributes and dwa.do_plot):
                 self.viewers[ind].title = dwa.name
-                name = (f'{dwa.name}_Averaged: {getattr(dwa, Averaging.N_AVERAGED)}'
-                        if hasattr(dwa, Averaging.AVERAGED)
-                           and getattr(dwa, Averaging.AVERAGED) else dwa.name)
+                name = (f'{dwa.name}_Averaged: {dwa.n_averaged}'
+                        if dwa.averaged else dwa.name)
                 self.viewer_docks[ind].setTitle(f'{self._title} {name}')
 
                 if temp:
