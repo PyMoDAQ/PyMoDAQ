@@ -62,6 +62,7 @@ names = [
     'ink_eraser',
     'ink_eraser_off',
     'input',
+    'jump_to_element',
     'keyboard_arrow_left',
     'keyboard_arrow_right',
     'language',
@@ -113,5 +114,7 @@ names = [
     'videocam',
     'videocam_off',
     'visibility',
-    'visibility_off'
+    'visibility_off',
+    'zoom_in',
+    'zoom_out',
 ]
