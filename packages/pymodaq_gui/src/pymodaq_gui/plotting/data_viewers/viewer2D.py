@@ -10,7 +10,7 @@ from qtpy.QtCore import QObject, Slot, Signal
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 from pyqtgraph import ROI as pgROI
-
+from pymodaq_gui.plotting.utils.plot_utils import Point
 from pymodaq_utils import utils
 from pymodaq_utils.logger import set_logger, get_module_name
 
@@ -350,6 +350,14 @@ class View2D(ActionManager, QtCore.QObject):
         for item in self.plotitem.items[:]:
             if isinstance(item, (SpreadImageItem, UniformImageItem)):
                 self.plotitem.removeItem(item)
+
+    def set_transform(self, xaxis: Axis, yaxis: Axis):
+        tr = QtGui.QTransform()  # prepare PlotItems transformation:
+        tr.translate(xaxis.offset, yaxis.offset)
+        tr.scale(xaxis.scaling, yaxis.scaling)
+        for image_item_name in self.data_displayer.get_images():
+            self.data_displayer.get_image(image_item_name).setTransform(tr)
+        #self.ROIselect.setTransform(tr)
 
     def set_image_displayer(self, data_distribution: DataDistribution):
         self.clear_plot_item()
@@ -880,6 +888,7 @@ class Viewer2D(ViewerBase):
                 yaxis = self._datas.get_axis_from_index(0)[0]
                 self.x_axis = xaxis
                 self.y_axis = yaxis
+                self.view.set_transform(xaxis, yaxis)
             else:
                 self.x_axis = self._datas.get_axis_from_index(0)[0]
                 self.y_axis = self._datas.get_axis_from_index(0)[1]
@@ -967,7 +976,11 @@ class Viewer2D(ViewerBase):
             pos = self.view.ROIselect.pos()
             size = self.view.ROIselect.size()
             # self.ROI_select_signal.emit(QtCore.QRectF(pos[0], pos[1], size[0], size[1]))
-            self.roi_select_signal.emit(RoiInfo.info_from_rect_roi(self.view.ROIselect))
+            offset_x = self.view.get_axis('bottom').axis_offset
+            offset_y = self.view.get_axis('left').axis_offset
+
+            self.roi_select_signal.emit(
+                RoiInfo.info_from_rect_roi(self.view.ROIselect))
 
     @Slot(float, float)
     def double_clicked(self, posx, posy):
