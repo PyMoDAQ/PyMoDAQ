@@ -114,5 +114,7 @@ names = [
     'videocam',
     'videocam_off',
     'visibility',
-    'visibility_off'
+    'visibility_off',
+    'zoom_in',
+    'zoom_out',
 ]
