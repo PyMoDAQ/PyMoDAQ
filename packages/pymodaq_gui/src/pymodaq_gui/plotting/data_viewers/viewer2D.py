@@ -352,12 +352,21 @@ class View2D(ActionManager, QtCore.QObject):
                 self.plotitem.removeItem(item)
 
     def set_transform(self, xaxis: Axis, yaxis: Axis):
+        for image_item_name in self.data_displayer.get_images():
+            self.data_displayer.get_image(image_item_name).resetTransform()
+        self.ROIselect.resetTransform()
+
         tr = QtGui.QTransform()  # prepare PlotItems transformation:
         tr.translate(xaxis.offset, yaxis.offset)
         tr.scale(xaxis.scaling, yaxis.scaling)
+
+        tr_roi = QtGui.QTransform()
+        tr_roi.translate(xaxis.offset, yaxis.offset)
+        tr_roi.scale(xaxis.scaling, yaxis.scaling)
+
         for image_item_name in self.data_displayer.get_images():
             self.data_displayer.get_image(image_item_name).setTransform(tr)
-        #self.ROIselect.setTransform(tr)
+        self.ROIselect.setTransform(tr_roi)
 
     def set_image_displayer(self, data_distribution: DataDistribution):
         self.clear_plot_item()
@@ -681,8 +690,8 @@ class View2D(ActionManager, QtCore.QObject):
         if size is None:
             size = rect.size() * 2 / 3
             pos = rect.center()-QtCore.QPointF(rect.width() * 2 / 3, rect.height() * 2 / 3)/2
+        self.ROIselect.setSize(size, center=(0.5, 0.5))
         self.ROIselect.setPos(pos)
-        self.ROIselect.setSize(size)
 
     def set_image_labels(self, labels: List[str]):
         if self.data_displayer.labels != labels:
@@ -888,7 +897,8 @@ class Viewer2D(ViewerBase):
                 yaxis = self._datas.get_axis_from_index(0)[0]
                 self.x_axis = xaxis
                 self.y_axis = yaxis
-                self.view.set_transform(xaxis, yaxis)
+                if not hasattr(self._datas, 'sliced'):
+                    self.view.set_transform(xaxis, yaxis)
             else:
                 self.x_axis = self._datas.get_axis_from_index(0)[0]
                 self.y_axis = self._datas.get_axis_from_index(0)[1]
@@ -999,7 +1009,7 @@ class Viewer2D(ViewerBase):
     @x_axis.setter
     def x_axis(self, axis: Axis = None):
         if axis is not None:
-            self.view.set_axis_scaling('bottom', scaling=axis.scaling, offset=axis.offset,
+            self.view.set_axis_scaling('bottom', scaling=1, offset=0,
                                        label=axis.label, units=axis.units)
             self.view.set_axis_scaling('top', scaling=1, offset=0,
                                        label='index', units='')
@@ -1011,7 +1021,7 @@ class Viewer2D(ViewerBase):
     @y_axis.setter
     def y_axis(self, axis: Axis = None):
         if axis is not None:
-            self.view.set_axis_scaling('left', scaling=axis.scaling, offset=axis.offset,
+            self.view.set_axis_scaling('left', scaling=1, offset=0,
                                        label=axis.label, units=axis.units)
             self.view.set_axis_scaling('right', scaling=1, offset=0,
                                        label='index', units='')
