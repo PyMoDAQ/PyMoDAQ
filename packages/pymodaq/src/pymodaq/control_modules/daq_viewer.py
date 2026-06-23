@@ -470,6 +470,7 @@ class DAQ_Viewer(ParameterControlModule):
         self.update_status(f'{self._title}: Stop Grab')
         self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.STOP_GRAB))
         self._grabing = False
+        self._ind_continuous_grab = 0
 
     # -------------------------------------------------------------------------
     # Data handling
