@@ -622,6 +622,11 @@ class RoiInfo:
             self.origin += Point((self.size[0] / 2, self.size[1] / 2))
             self.centered = True
 
+    def uncenter_origin(self):
+        if self.centered:
+            self.origin -= Point((self.size[0] / 2, self.size[1] / 2))
+            self.centered = False
+
     def __repr__(self):
         return f'Origin: {self.origin}, Size: {self.size}, Centered: {self.centered}'
 
@@ -635,24 +640,28 @@ class RoiInfo:
                    size=Point(*[_slice.stop - _slice.start for _slice in slices]),
                    roi_class=RectROI if len(slices) == 2 else LinearROI)
 
-    def to_slices(self) -> IterableType[slice]:
+    def to_slices(self, as_integer=True) -> IterableType[slice]:
         """Get slices to be used directly to slice DataWithAxes"""
+        if not as_integer:
+            cast = float
+        else:
+            cast = int
         if issubclass(self.roi_class, pgROI):
             if self.centered:
-                return (slice(int(self.origin[0] - self.size[0] / 2),
-                              int(self.origin[0] + self.size[0] / 2)),
-                        slice(int(self.origin[1] - self.size[1] / 2),
-                              int(self.origin[1] + self.size[1] / 2)),
+                return (slice(cast(self.origin[0] - self.size[0] / 2),
+                              cast(self.origin[0] + self.size[0] / 2)),
+                        slice(cast(self.origin[1] - self.size[1] / 2),
+                              cast(self.origin[1] + self.size[1] / 2)),
                         )
             else:
-                return (slice(int(self.origin[0]),
-                              int(self.origin[0] + self.size[0])),
-                        slice(int(self.origin[1]),
-                              int(self.origin[1] + self.size[1])),
+                return (slice(cast(self.origin[0]),
+                              cast(self.origin[0] + self.size[0])),
+                        slice(cast(self.origin[1]),
+                              cast(self.origin[1] + self.size[1])),
                         )
         elif issubclass(self.roi_class, pgLinearROI):
             if self.centered:
-                return (slice((self.origin[0] - self.size[0] / 2),
-                              (self.origin[0] + self.size[0] / 2)),)
+                return (slice(cast(self.origin[0] - self.size[0] / 2),
+                              cast(self.origin[0] + self.size[0] / 2)),)
             else:
-                return (slice((self.origin[0]), (self.origin[0] + self.size[0])),)
+                return (slice(cast(self.origin[0]), cast(self.origin[0] + self.size[0])),)
