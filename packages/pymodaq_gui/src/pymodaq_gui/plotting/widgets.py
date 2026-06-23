@@ -6,13 +6,27 @@ Created the 04/11/2022
 """
 
 import pyqtgraph as pg
+from pyqtgraph import ViewBox
 from qtpy import QtWidgets
 
 from pymodaq_gui.plotting.utils.plot_utils import View_cust
 from pymodaq_gui.plotting.items.axis_scaled import AXIS_POSITIONS, AxisItem_Scaled
 
+class PlotWidget(pg.PlotWidget):
+    def __init__(self, *args, **kwargs):
+        plot_item = pg.PlotItem(viewBox=View_cust())
+        super().__init__(*args, plotItem=plot_item, **kwargs)
 
-class ImageWidget(pg.GraphicsLayoutWidget):
+    @property
+    def view(self) -> ViewBox:
+        return self.getViewBox()
+
+    @property
+    def legend(self):
+        return self.plotItem.legend
+
+
+class ImageWidget(PlotWidget):
     """this gives a layout to add imageitems.
     """
 
@@ -31,16 +45,18 @@ class ImageWidget(pg.GraphicsLayoutWidget):
         """
         self.plotitem.vb.setAspectLocked(lock=True, ratio=1)
 
-    def getAxis(self, position):
+    def getAxis(self, position) -> AxisItem_Scaled:
         return self.plotitem.getAxis(position)
 
     def setupUI(self, *args_plotitem, **kwargs_plotitem):
         layout = QtWidgets.QGridLayout()
         # set viewer area
         self.scene_obj = self.scene()
-        self.view = View_cust()
-        self.plotitem = pg.PlotItem(viewBox=self.view, *args_plotitem, **kwargs_plotitem)
-        self.plotItem = self.plotitem  # for backcompatibility
+        #self.view = View_cust()
+        # self.plotitem = pg.PlotItem(viewBox=self.view, *args_plotitem, **kwargs_plotitem)
+        # self.plotItem = self.plotitem  # for backcompatibility
+        self.plotitem = self.plotItem
+
         self.setAspectLocked(lock=True, ratio=1)
         self.setCentralItem(self.plotitem)
 
@@ -62,15 +78,3 @@ class ImageWidget(pg.GraphicsLayoutWidget):
         return axis
 
 
-class PlotWidget(pg.PlotWidget):
-    def __init__(self, *args, **kwargs):
-        plot_item = pg.PlotItem(viewBox=View_cust())
-        super().__init__(*args, plotItem=plot_item, **kwargs)
-
-    @property
-    def view(self):
-        return self.getViewBox()
-
-    @property
-    def legend(self):
-        return self.plotItem.legend
