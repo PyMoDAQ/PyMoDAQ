@@ -353,6 +353,9 @@ class View2D(ActionManager, QtCore.QObject):
         self.plotitem.getAxis('right').linkToView(self.roi_vb)
         self.plotitem.getAxis('top').linkToView(self.roi_vb)
 
+        self.roi_vb.setXLink(self.plotitem.vb)
+        self.roi_vb.setYLink(self.plotitem.vb)
+
         self.update_view_box()
         self.plotitem.vb.sigResized.connect(self.update_view_box)
 
@@ -369,21 +372,21 @@ class View2D(ActionManager, QtCore.QObject):
                 self.plotitem.removeItem(item)
 
     def set_transform(self, xaxis: Axis, yaxis: Axis):
-        # for image_item_name in self.data_displayer.get_images():
-        #     self.data_displayer.get_image(image_item_name).resetTransform()
-        # self.ROIselect.resetTransform()
-        #
-        # tr = QtGui.QTransform()  # prepare PlotItems transformation:
-        # tr.translate(xaxis.offset, yaxis.offset)
-        # tr.scale(xaxis.scaling, yaxis.scaling)
-        #
-        # tr_roi = QtGui.QTransform()
-        # tr_roi.translate(xaxis.offset, yaxis.offset)
-        # tr_roi.scale(xaxis.scaling, yaxis.scaling)
-        #
-        # for image_item_name in self.data_displayer.get_images():
-        #     self.data_displayer.get_image(image_item_name).setTransform(tr)
-        # self.ROIselect.setTransform(tr_roi)
+        for image_item_name in self.data_displayer.get_images():
+            self.data_displayer.get_image(image_item_name).resetTransform()
+        #self.ROIselect.resetTransform()
+
+        tr = QtGui.QTransform()  # prepare PlotItems transformation:
+        tr.translate(xaxis.offset, yaxis.offset)
+        tr.scale(xaxis.scaling, yaxis.scaling)
+
+        tr_roi = QtGui.QTransform()
+        tr_roi.translate(xaxis.offset, yaxis.offset)
+        tr_roi.scale(xaxis.scaling, yaxis.scaling)
+
+        for image_item_name in self.data_displayer.get_images():
+            self.data_displayer.get_image(image_item_name).setTransform(tr)
+        #self.ROIselect.setTransform(tr_roi)
         pass
 
     def set_image_displayer(self, data_distribution: DataDistribution):
@@ -481,8 +484,6 @@ class View2D(ActionManager, QtCore.QObject):
         self.splitter_VRight.addWidget(self._lineout_widgets['ver'])
         self.splitter_VRight.addWidget(self._lineout_widgets['int'])
 
-        self.image_widget.add_scaled_axis('right')
-        self.image_widget.add_scaled_axis('top')
         self.image_widget.add_scaled_axis('left')
         self.image_widget.add_scaled_axis('bottom')
         self.splitter.addWidget(self.roi_manager.roiwidget)
@@ -1027,10 +1028,8 @@ class Viewer2D(ViewerBase):
     @x_axis.setter
     def x_axis(self, axis: Axis = None):
         if axis is not None:
-            self.view.set_axis_scaling('bottom', scaling=axis.scaling, offset=axis.offset,
+            self.view.set_axis_scaling('bottom', scaling=1, offset=0,
                                        label=axis.label, units=axis.units)
-            self.view.set_axis_scaling('top', scaling=1, offset=0,
-                                       label='index', units='')
 
     @property
     def y_axis(self):
@@ -1039,10 +1038,8 @@ class Viewer2D(ViewerBase):
     @y_axis.setter
     def y_axis(self, axis: Axis = None):
         if axis is not None:
-            self.view.set_axis_scaling('left', scaling=axis.scaling, offset=axis.offset,
+            self.view.set_axis_scaling('left', scaling=1, offset=0,
                                        label=axis.label, units=axis.units)
-            self.view.set_axis_scaling('right', scaling=1, offset=0,
-                                       label='index', units='')
 
     @Slot(DataToExport)
     def process_crosshair_lineouts(self, dte):
