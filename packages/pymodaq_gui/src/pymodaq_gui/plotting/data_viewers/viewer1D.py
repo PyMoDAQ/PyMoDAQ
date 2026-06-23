@@ -415,7 +415,7 @@ class View1D(ActionManager, QObject):
 
         self.splitter_ver.addWidget(self.plot_widget)
         self.splitter_ver.addWidget(self.lineout_widgets)
-        self.roi_manager.viewer_widget = self.plot_widget
+        self.roi_manager.view_box = self.plot_widget.view
 
         self.crosshair = Crosshair(self.plotitem, orientation='vertical')
         self.show_hide_crosshair()

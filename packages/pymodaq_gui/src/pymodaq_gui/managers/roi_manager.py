@@ -145,11 +145,11 @@ class ROIManager(QObject):
     roi_changed = Signal()
     color_list = np.array(plot_colors)
 
-    def __init__(self, viewer_widget=None, ROI_type=DataDim.Data1D):
+    def __init__(self, view_box=None, ROI_type=DataDim.Data1D):
         super().__init__()
         self.ROI_type = ROI_type
         self.roiwidget = QtWidgets.QWidget()
-        self.viewer_widget = viewer_widget  # either a PlotWidget or a ImageWidget
+        self.view_box = view_box  # either a PlotWidget or a ImageWidget
         self._ROIs: OrderedDict[str, ROI] = OrderedDict([])
         self.setupUI()
 
@@ -256,7 +256,7 @@ class ROIManager(QObject):
 
     def make_ROI(self, param: Parameter) -> ROI:
         newindex = int(param.name()[-2:])
-        pos = self.viewer_widget.plotItem.vb.viewRange()
+        pos = self.view_box.viewRange()
         if self.ROI_type == DataDim.Data1D:
             descriptor = ''
             pos = pos[0]
@@ -287,7 +287,7 @@ class ROIManager(QObject):
         # Adding to dictionnary
         self.ROIs[roi.key()] = roi
         # Adding to viewer
-        self.viewer_widget.plotItem.addItem(roi)  
+        self.view_box.addItem(roi)
         # Emitting signal
         self.new_ROI_signal.emit(roi.key())
 
@@ -345,7 +345,7 @@ class ROIManager(QObject):
                     roi_group.removeChild(param)
                     self.settings_signalBlocker.unblock()
         roi = self.ROIs.pop(roi.key())
-        self.viewer_widget.plotItem.removeItem(roi)
+        self.view_box.removeItem(roi)
         self.remove_ROI_signal.emit(roi.key())
         self.emit_colors()
 
@@ -399,7 +399,7 @@ class ROIManager(QObject):
             roi.doShow(param.value())
         elif param.name() == 'roi_type':
             state = roi.saveState()
-            self.viewer_widget.plotItem.removeItem(roi)            
+            self.view_box.removeItem(roi)
             if self.ROI_type =='2D':
                 roi = self.make_ROI2D(roi_type=param.value(),index=roi.index,pos=state['pos'],size=state['size'],angle=state['angle'],pen=roi.pen)                
                 self.add_ROI(roi)
