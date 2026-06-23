@@ -322,6 +322,8 @@ class DAQ_Viewer(ParameterControlModule):
             self.grab_data(cmd.attribute, snap_state=False)
         elif cmd.command == UiToMainViewer.SNAP:
             self.grab_data(False, snap_state=True)
+        elif cmd.command == UiToMainViewer.RESET_LIVE:
+            self.reset_live_averaging()
         elif cmd.command == UiToMainViewer.SAVE_CURRENT:
             self.save_current()
         elif cmd.command == UiToMainViewer.DETECTOR_CHANGED:
@@ -432,8 +434,7 @@ class DAQ_Viewer(ParameterControlModule):
                               dict(Naverage=self.settings['main_settings', 'Naverage'])))
         else:
             if not grab_state:
-                self.update_status(f'{self._title}: Stop Grab')
-                self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.STOP_GRAB))
+                self.stop()
             else:
                 self.thread_status(ThreadCommand(ThreadStatusViewer.UPDATE_CHANNELS))
                 self.update_status(f'{self._title}: Continuous Grab')
@@ -454,7 +455,7 @@ class DAQ_Viewer(ParameterControlModule):
         self.stop_grab()
 
     def stop_grab(self):
-        """ Stop the current continuous grabbing and unchecked the stop button of the UI
+        """ Stop the current continuous grabbing and unchecked the Grab button of the UI
 
         See Also
         --------
@@ -470,6 +471,8 @@ class DAQ_Viewer(ParameterControlModule):
         self.update_status(f'{self._title}: Stop Grab')
         self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.STOP_GRAB))
         self._grabing = False
+
+    def reset_live_averaging(self):
         self._ind_continuous_grab = 0
 
     # -------------------------------------------------------------------------
@@ -862,9 +865,10 @@ class DAQ_Viewer(ParameterControlModule):
 
         elif param.name() == 'live_averaging':
             self.settings.child('main_settings', 'show_averaging').setValue(False)
+            self.ui.get_action('reset_live').setVisible(param.value())
             if param.value():
                 self.settings.child('main_settings', 'N_live_averaging').show()
-                self._ind_continuous_grab = 0
+                self.reset_live_averaging()
                 self.settings.child('main_settings', 'N_live_averaging').setValue(0)
             else:
                 self.settings.child('main_settings', 'N_live_averaging').hide()

@@ -44,6 +44,7 @@ class ActionIconNames(StrEnum):
     GRAB = 'repeat'
     GRAB_STOP = 'repeat_on'
     INI = 'cable'
+    RESET = 'replay'
 
 
 class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
@@ -174,6 +175,9 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.add_action('grab', 'Grab', ActionIconNames.GRAB, "Grab data from the detector", checkable=True,
                         icon_checked=ActionIconNames.GRAB_STOP,
                         icon_checked_color=self.get_theme().green)
+        self.add_action('reset_live', 'ResetLive', ActionIconNames.RESET,
+                        "Reset The current live averaging",
+                        visible=False)
         self.add_action('show_graphs', 'ShowGraphs', 'bid_landscape', 'Show/Hide the Graphs Area',
                         checkable=True, icon_checked='bid_landscape_disabled',
                         icon_color=self.get_theme().green, icon_checked_color=self.get_theme().red)
@@ -190,6 +194,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
         self.connect_action('grab', self._grab)
         self.connect_action('snap', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SNAP, )))
+        self.connect_action('reset_live', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.RESET_LIVE)))
         self.connect_action('save_current', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SAVE_CURRENT, )))
 
         self.selector.module_changed.connect(self._detector_changed)
@@ -273,7 +278,8 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         """Slot from the *grab* action"""
         self.command_sig.emit(ThreadCommand(UiToMainViewer.GRAB, attribute=self.is_action_checked('grab')))
         self.enable_actions(not self.is_action_checked('grab'),
-                            all_except=('grab', 'selector', 'show_settings', 'show_graphs'))
+                            all_except=('grab', 'selector', 'show_settings', 'show_graphs',
+                                        'reset_live'))
 
         if not self.config('pymodaq', 'viewer', 'allow_settings_edition'):
             self._settings_widget.setEnabled(not self.is_action_checked('grab'))
