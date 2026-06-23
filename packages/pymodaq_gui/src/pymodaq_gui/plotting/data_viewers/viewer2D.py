@@ -9,8 +9,8 @@ from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
-from pyqtgraph import ROI as pgROI
-from pymodaq_gui.plotting.utils.plot_utils import Point
+from pyqtgraph import ROI as pgROI, mkPen
+from pymodaq_gui.plotting.utils.plot_utils import Point, View_cust
 from pymodaq_utils import utils
 from pymodaq_utils.logger import set_logger, get_module_name
 
@@ -309,7 +309,7 @@ class View2D(ActionManager, QtCore.QObject):
     def __init__(self, parent_widget=None):
         QtCore.QObject.__init__(self)
         ActionManager.__init__(self, toolbar=QtWidgets.QToolBar())
-
+        self.roi_vb:  View_cust = None
         self.ROIselect = SimpleRectROI([0, 0], [10, 10], centered=True, sideScalers=True)
 
         self._lineout_widgets = {widg_key: QtWidgets.QWidget() for widg_key in self.lineout_types}
@@ -330,6 +330,7 @@ class View2D(ActionManager, QtCore.QObject):
 
         self.roi_target: Union[pgROI, Crosshair] = None
 
+        self.setup_view_box()
         self.setup_widgets()
 
         self.histogrammer = Histogrammer(self.widget_histo)
@@ -346,27 +347,44 @@ class View2D(ActionManager, QtCore.QObject):
 
         self.set_image_displayer(DataDistribution['uniform'])
 
+    def setup_view_box(self):
+        self.roi_vb = View_cust(border=mkPen('red'))
+        self.plotitem.scene().addItem(self.roi_vb)
+        self.plotitem.getAxis('right').linkToView(self.roi_vb)
+        self.plotitem.getAxis('top').linkToView(self.roi_vb)
+
+        self.update_view_box()
+        self.plotitem.vb.sigResized.connect(self.update_view_box)
+
+        self.roi_vb.addItem(self.ROIselect)
+
+    def update_view_box(self):
+        self.roi_vb.setGeometry(self.plotitem.vb.sceneBoundingRect())
+        self.roi_vb.linkedViewChanged(self.plotitem.vb, self.roi_vb.XAxis)
+        self.roi_vb.linkedViewChanged(self.plotitem.vb, self.roi_vb.YAxis)
+
     def clear_plot_item(self):
         for item in self.plotitem.items[:]:
             if isinstance(item, (SpreadImageItem, UniformImageItem)):
                 self.plotitem.removeItem(item)
 
     def set_transform(self, xaxis: Axis, yaxis: Axis):
-        for image_item_name in self.data_displayer.get_images():
-            self.data_displayer.get_image(image_item_name).resetTransform()
-        self.ROIselect.resetTransform()
-
-        tr = QtGui.QTransform()  # prepare PlotItems transformation:
-        tr.translate(xaxis.offset, yaxis.offset)
-        tr.scale(xaxis.scaling, yaxis.scaling)
-
-        tr_roi = QtGui.QTransform()
-        tr_roi.translate(xaxis.offset, yaxis.offset)
-        tr_roi.scale(xaxis.scaling, yaxis.scaling)
-
-        for image_item_name in self.data_displayer.get_images():
-            self.data_displayer.get_image(image_item_name).setTransform(tr)
-        self.ROIselect.setTransform(tr_roi)
+        # for image_item_name in self.data_displayer.get_images():
+        #     self.data_displayer.get_image(image_item_name).resetTransform()
+        # self.ROIselect.resetTransform()
+        #
+        # tr = QtGui.QTransform()  # prepare PlotItems transformation:
+        # tr.translate(xaxis.offset, yaxis.offset)
+        # tr.scale(xaxis.scaling, yaxis.scaling)
+        #
+        # tr_roi = QtGui.QTransform()
+        # tr_roi.translate(xaxis.offset, yaxis.offset)
+        # tr_roi.scale(xaxis.scaling, yaxis.scaling)
+        #
+        # for image_item_name in self.data_displayer.get_images():
+        #     self.data_displayer.get_image(image_item_name).setTransform(tr)
+        # self.ROIselect.setTransform(tr_roi)
+        pass
 
     def set_image_displayer(self, data_distribution: DataDistribution):
         self.clear_plot_item()
@@ -436,7 +454,7 @@ class View2D(ActionManager, QtCore.QObject):
         self.setup_graphs(self.graphs_widget.layout())
         splitter_vertical.addWidget(self.graphs_widget)
 
-        self.plotitem.addItem(self.ROIselect)
+
 
         self.splitter_VLeft.splitterMoved[int, int].connect(self.move_right_splitter)
         self.splitter_VRight.splitterMoved[int, int].connect(self.move_left_splitter)
@@ -1009,7 +1027,7 @@ class Viewer2D(ViewerBase):
     @x_axis.setter
     def x_axis(self, axis: Axis = None):
         if axis is not None:
-            self.view.set_axis_scaling('bottom', scaling=1, offset=0,
+            self.view.set_axis_scaling('bottom', scaling=axis.scaling, offset=axis.offset,
                                        label=axis.label, units=axis.units)
             self.view.set_axis_scaling('top', scaling=1, offset=0,
                                        label='index', units='')
@@ -1021,7 +1039,7 @@ class Viewer2D(ViewerBase):
     @y_axis.setter
     def y_axis(self, axis: Axis = None):
         if axis is not None:
-            self.view.set_axis_scaling('left', scaling=1, offset=0,
+            self.view.set_axis_scaling('left', scaling=axis.scaling, offset=axis.offset,
                                        label=axis.label, units=axis.units)
             self.view.set_axis_scaling('right', scaling=1, offset=0,
                                        label='index', units='')
