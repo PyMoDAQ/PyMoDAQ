@@ -178,7 +178,7 @@ class ROIManager(QObject):
             raise KeyError(f'{roi_key} is not a valid ROI identifier for {self.ROIs}')
 
     def emit_colors(self):
-        self.color_signal.emit([self._ROIs[roi_key].color for roi_key in self._ROIs])
+        self.color_signal.emit([self._ROIs[roi_key].color() for roi_key in self._ROIs])
 
     def add_roi_programmatically(self, descriptor: str = ROI2D_TYPES[0]):
         self.settings.child('ROIs').addNew(descriptor)
