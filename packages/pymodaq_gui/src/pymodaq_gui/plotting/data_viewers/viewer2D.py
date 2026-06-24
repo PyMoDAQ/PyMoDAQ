@@ -520,28 +520,29 @@ class View2D(ActionManager, QtCore.QObject):
         self.get_action('green').setChecked(True)
         self.get_action('blue').setChecked(True)
 
-        self.add_action('autolevels', 'AutoLevels', 'autoscale',
+        self.add_action('autolevels', 'AutoLevels', 'fit_page_height',
                         tip='Scale Histogram to Min/Max intensity', checkable=True)
-        self.add_action('auto_levels_sym', 'AutoLevels Sym.', 'autoscale',
+        self.add_action('auto_levels_sym', 'AutoLevels Sym.', 'fit_page_height',
                         tip='Make the autoscale of the histograms symetric with respect to 0', checkable=True)
 
-        self.add_action('histo', 'Histogram', 'Histogram', tip='Show/Hide Histogram', checkable=True)
-        self.add_action('roi', 'ROI', 'Region', tip='Show/Hide ROI Manager', checkable=True)
+        self.add_action('histo', 'Histogram', 'bar_chart', tip='Show/Hide Histogram', checkable=True)
+        self.add_action('roi', 'ROI', 'calculate', tip='Show/Hide ROI Manager', checkable=True)
 
         self.add_action('link_lineouts', 'Link Lineouts', 'link', tip='Link Lineouts',
                         checkable=True, checked=True, visible=False,
                         icon_color=self.get_theme().red, icon_checked_color=self.get_theme().green)
 
-        self.add_action('isocurve', 'IsoCurve', 'meshPlot', tip='Show/Hide Isocurve', checkable=True)
-        self.add_action('aspect_ratio', 'Aspect Ratio', 'Zoom_1_1', tip='Fix Aspect Ratio', checkable=True, checked=True)
-        self.add_action('crosshair', 'CrossHair', 'reset', tip='Show/Hide data Crosshair', checkable=True)
-        self.add_action('ROIselect', 'ROI Select', 'Select_24',
+        self.add_action('isocurve', 'IsoCurve', 'altitude', tip='Show/Hide Isocurve', checkable=True)
+        self.add_action('aspect_ratio', 'Aspect Ratio', 'aspect_ratio', tip='Fix Aspect Ratio', checkable=True, checked=True)
+        self.add_action('crosshair', 'CrossHair', 'add_2', tip='Show/Hide data Crosshair', checkable=True)
+        self.add_action('ROIselect', 'ROI Select', 'select',
                         tip='Show/Hide ROI selection area', checkable=True)
-        self.add_action('flip_ud', 'Flip UD', 'scale_vertically',
-                        tip='Flip the image up/down', checkable=True)
-        self.add_action('flip_lr', 'Flip LR', 'scale_horizontally',
+        self.add_action('flip_ud', 'Flip UD', 'flip',
+                        tip='Flip the image up/down', checkable=True,
+                        rotate=90)
+        self.add_action('flip_lr', 'Flip LR', 'flip',
                         tip='Flip the image left/right', checkable=True)
-        self.add_action('rotate', 'Rotate', 'rotation2',
+        self.add_action('rotate', 'Rotate', 'rotate_90_degrees_cw',
                         tip='Rotate the image', checkable=True)
         self.add_action('opposite', 'Opposite', 'remove',
                         tip='Take the opposite of the image', checkable=True)
