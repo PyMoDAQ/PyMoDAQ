@@ -242,7 +242,8 @@ def create_icon(icon_name: Union[QtGui.QIcon, str, Path],
                 icon_color: Union[QtGui.QColor, bytes, str] = None,
                 icon_checked_color: Union[QtGui.QColor, bytes, str] = None,
                 flip_h: bool = False,
-                flip_v: bool = False):
+                flip_v: bool = False,
+                rotate: int = 0,):
     """ Create an icon from various sources by order of preference:
 
     1) icon_name is a MaterialIcon
@@ -265,6 +266,8 @@ def create_icon(icon_name: Union[QtGui.QIcon, str, Path],
         Mirror the icon horizontally (left ↔ right).
     flip_v:
         Mirror the icon vertically (top ↔ bottom).
+    rotate:
+        Rotate the icon given the value in degrees
     """
     if isinstance(icon_name, MaterialIcon):
         icon_name.set_color(create_color(icon_color))
@@ -300,7 +303,8 @@ def create_icon(icon_name: Union[QtGui.QIcon, str, Path],
         icon = QtWidgets.QWidget().style().standardIcon(pixmapi)
     else:
         icon = QtGui.QIcon()
-    return _flip_icon(icon, flip_h, flip_v)
+    icon = _flip_icon(icon, flip_h, flip_v)
+    return _rotate_icon(icon, angle=rotate)
 
 
 def resource_path_exists(path: str) -> bool:
