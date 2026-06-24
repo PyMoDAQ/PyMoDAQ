@@ -18,7 +18,7 @@ from pymodaq_gui.managers.roi_manager import ROIManager, LinearROI, RectROI
 from pymodaq_gui.plotting.items.crosshair import Crosshair
 from pymodaq_gui.plotting.items.image import UniformImageItem
 from pymodaq_gui.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
-
+from pymodaq_gui.plotting.utils.lineout import Lineouts
 
 logger = set_logger(get_module_name(__file__))
 
@@ -135,7 +135,7 @@ class Filter2DFromCrosshair(Filter):
                 raise IndexError
             dwa_hor = dwa.isig[H_indexes]
             dwa_hor.labels = [f'Crosshair/{label}' for label in dwa_hor.labels]
-            dwa_hor.name = 'hor'
+            dwa_hor.name = Lineouts.HOR
             dte.append(dwa_hor)
         except IndexError:
             pass
@@ -144,7 +144,7 @@ class Filter2DFromCrosshair(Filter):
                 raise IndexError
             dwa_ver = dwa.isig[V_indexes]
             dwa_ver.labels = [f'Crosshair/{label}' for label in dwa_ver.labels]
-            dwa_ver.name = 'ver'
+            dwa_ver.name = Lineouts.VER
             dte.append(dwa_ver)
         except IndexError:
             pass
@@ -155,7 +155,7 @@ class Filter2DFromCrosshair(Filter):
                 raise IndexError
             dwa_int = dwa.isig[utils.rint(indy), utils.rint(indx)]
             dwa_int.labels = [f'Crosshair/{label}' for label in dwa_int.labels]
-            dwa_int.name = 'int'
+            dwa_int.name = Lineouts.INT
             dte.append(dwa_int)
         except IndexError:
             pass
@@ -191,13 +191,13 @@ class Filter2DFromCrosshair(Filter):
 
         dte = DataToExport('Crosshair')
         if len(hor_data) > 0 and len(hor_axis) > 0:
-            dte.append(DataFromRoi('hor', data=hor_data,
+            dte.append(DataFromRoi(Lineouts.HOR, data=hor_data,
                                    axes=[Axis(dwa.axes[1].label, dwa.axes[1].units, data=hor_axis)]))
         if len(ver_data) > 0 and len(ver_axis) > 0:
-            dte.append(DataFromRoi('ver', data=ver_data,
+            dte.append(DataFromRoi(Lineouts.VER, data=ver_data,
                                    axes=[Axis(dwa.axes[0].label, dwa.axes[0].units, data=ver_axis)]))
         if len(int_data) > 0:
-            dte.append(DataFromRoi('int', data=int_data))
+            dte.append(DataFromRoi(Lineouts.INT, data=int_data))
 
         return dte
 
@@ -324,16 +324,6 @@ class Filter2DFromRois(Filter):
                 logger.warning(f'Issue with the ROI: {str(e)}')
         return dte
 
-    def get_slices_from_roi(self, roi: RectROI, data_shape: tuple) -> Tuple[slice, slice]:
-        x, y = roi.pos().x(), roi.pos().y()
-        width, height = roi.size().x(), roi.size().y()
-        size_y, size_x = data_shape
-        ind_x_min = int(min(max(x, 0), size_x))
-        ind_y_min = int(min(max(y, 0), size_y))
-        ind_x_max = int(max(0, min(x+width, size_x)))
-        ind_y_max = int(max(0, min(y+height, size_y)))
-        return slice(ind_y_min,ind_y_max), slice(ind_x_min, ind_x_max)
-
     def get_xydata_from_roi(self, roi: RectROI, dwa: DataWithAxes, math_function: str) -> DataToExport:
         dte = DataToExport(roi.name)
         if dwa is not None:
@@ -354,9 +344,9 @@ class Filter2DFromRois(Filter):
                 x_axis = Axis(_x_axis.label, _x_axis.units, data=xvals, index=0, spread_order=0)
                 _y_axis = dwa.get_axis_from_index_spread(0, 1)
                 y_axis = Axis(_y_axis.label, _y_axis.units, data=yvals, index=0, spread_order=0)
-                sub_data_hor = DataFromRoi('hor', distribution='spread', data=[data_H], axes=[x_axis])
-                sub_data_ver = DataFromRoi('ver', distribution='spread', data=[data_V], axes=[y_axis])
-                math_data = DataFromRoi('int', data=int_data)
+                sub_data_hor = DataFromRoi(Lineouts.HOR, distribution='spread', data=[data_H], axes=[x_axis])
+                sub_data_ver = DataFromRoi(Lineouts.VER, distribution='spread', data=[data_V], axes=[y_axis])
+                math_data = DataFromRoi(Lineouts.INT, data=int_data)
             else:
                 # slices = self.get_slices_from_roi(roi, dwa.shape)
                 # sub_data: DataFromRoi = dwa.isig[slices[0], slices[1]]
@@ -370,13 +360,13 @@ class Filter2DFromRois(Filter):
                 sub_data_ver = sub_data.mean(1)
                 math_data = data_processors.get(math_function).process(sub_data)
 
-            sub_data_hor.name = 'hor'
+            sub_data_hor.name = Lineouts.HOR
             sub_data_hor.origin = roi.name
             sub_data_hor.labels = labels
-            sub_data_ver.name = 'ver'
+            sub_data_ver.name = Lineouts.VER
             sub_data_ver.origin = roi.name
             sub_data_ver.labels = labels
-            math_data.name = 'int'
+            math_data.name = Lineouts.INT
             math_data.origin = roi.name
             math_data.labels = labels
 
