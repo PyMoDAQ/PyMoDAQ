@@ -55,6 +55,7 @@ names = [
     'file_export',
     'file_open',
     'file_save',
+    'fit_page_height',
     'flip',
     'folder_data',
     'folder_open',
