@@ -309,7 +309,7 @@ class View1D(ActionManager, QObject):
 
     @Slot(str)
     def add_roi_displayer(self, roi_name=''):
-        color = self.roi_manager.ROIs[roi_name].color()
+        color = self.roi_manager.ROIs[roi_name].color
         self.lineout_viewers.view.add_data_displayer(
             roi_name, make_dashed_pens(color, self.data_displayer.Ndata))
 

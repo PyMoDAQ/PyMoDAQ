@@ -179,7 +179,7 @@ class ROIManager(QObject):
             raise KeyError(f'{roi_key} is not a valid ROI identifier for {self.ROIs}')
 
     def emit_colors(self):
-        self.color_signal.emit([self._ROIs[roi_key].color() for roi_key in self._ROIs])
+        self.color_signal.emit([self._ROIs[roi_key].color for roi_key in self._ROIs])
 
     def add_roi_programmatically(self, descriptor: str = ROI2D_TYPES[0]):
         self.settings.child('ROIs').addNew(descriptor)
@@ -298,7 +298,7 @@ class ROIManager(QObject):
         isExpanded = not param.opts['expanded']
         param.setOpts(expanded=isExpanded)
 
-    def make_ROI1D(self, index, pos, compute=True, **kwargs):
+    def make_ROI1D(self, index, pos, compute=True, **kwargs) -> LinearROI:
         """Convenience function to make custom ROI_1D
 
         Args:
@@ -315,7 +315,7 @@ class ROIManager(QObject):
         roi.setOpacity(0.2)
         return roi                    
 
-    def make_ROI2D(self, descriptor: str, index, pos, size, compute=True, **kwargs):
+    def make_ROI2D(self, descriptor: str, index, pos, size, compute=True, **kwargs) -> ROI:
         """Convenience function to make custom ROI_2D
 
         Args:
