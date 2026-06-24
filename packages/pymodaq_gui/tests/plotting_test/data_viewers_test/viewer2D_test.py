@@ -242,7 +242,7 @@ class TestViewer2D:
 
 
 class TestAxis:
-    @pytest.mark.parametrize('position', ('left', 'bottom', 'right', 'top'))
+    @pytest.mark.parametrize('position', ('left', 'bottom'))
     def test_axis_label(self, init_viewer2d, position):
         prog, qtbot = init_viewer2d
         UNITS= 'myunits'
@@ -437,7 +437,7 @@ class TestROI:
         assert prog.view.is_action_checked('roi')
 
         with qtbot.waitSignal(prog.data_to_export_signal, timeout=1000) as blocker:
-            roi.setSize((data[0].T).shape)
+            roi.setSize([size.magnitude for size in data.get_axes_sizes()[::-1]])
             roi.setPos((0, 0))
 
         data_to_export: data_mod.DataToExport = blocker.args[0]

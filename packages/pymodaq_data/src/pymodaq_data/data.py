@@ -495,6 +495,16 @@ class Axis(SerializableBase):
         if self._data is None:
             self._size = _size
 
+    @property
+    def axis_width(self) -> Q_:
+        """get the width of the axis in axis unit
+
+        That is the difference between the max value and the min value of the axis
+        """
+        if self.scaling is not None:
+            return Q_(self.size * self.scaling, self.units)
+        else:
+            return Q_(self.get_data().max() - self.get_data().min(), self.units)
     @staticmethod
     def _check_index_valid(index: int):
         if not isinstance(index, int):
@@ -619,10 +629,10 @@ class Axis(SerializableBase):
         """find the index of the threshold value within the axis"""
         if isinstance(threshold, Q_):
             threshold = threshold.m_as(self.units)
-        if threshold < self.min():
+        if threshold <= self.min():
             return 0
-        elif threshold > self.max():
-            return len(self) - 1
+        elif threshold >= self.max():
+            return len(self)
         elif self._data is not None:
             return mutils.find_index(self._data, threshold)[0][0]
         else:
@@ -668,7 +678,7 @@ class DataLowLevel:
 
     @name.setter
     def name(self, other_name: str):
-        self._name = other_name
+        self._name = str(other_name)
 
     @property
     def timestamp(self):
@@ -2060,6 +2070,10 @@ class DataWithAxes(DataBase, SerializableBase):
 
         dwa.timestamp = timestamp
         return dwa, remaining_bytes
+
+    def get_axes_sizes(self) -> Iterable[Q_]:
+        self.create_missing_axes()
+        return [self.get_axis_from_index(index)[0].axis_width for index in range(len(self.axes))]
 
     def check_axes_linear(self, axes: List[Axis] = None) -> bool:
         """ Check if any axis may be non linear
