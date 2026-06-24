@@ -5,12 +5,14 @@ import numpy as np
 import sys
 from typing import Union, Iterable, List, Dict
 
+import qt_themes
 from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 from pyqtgraph import ROI as pgROI, mkPen
 from pymodaq_gui.plotting.utils.plot_utils import Point, View_cust
+from pymodaq_gui.qt_utils import mkQApp
 from pymodaq_utils import utils
 from pymodaq_utils.logger import set_logger, get_module_name
 
@@ -313,10 +315,7 @@ class View2D(ActionManager, QtCore.QObject):
         self.ROIselect = SimpleRectROI([0, 0], [10, 10], centered=True, sideScalers=True)
 
         self._lineout_widgets = {widg_key: QtWidgets.QWidget() for widg_key in self.lineout_types}
-        self.lineout_viewers: Dict[str, Viewer1D] = dict(hor=Viewer1D(self._lineout_widgets['hor'], show_toolbar=False, no_margins=True),
-                                    ver=Viewer1D(self._lineout_widgets['ver'], show_toolbar=False, no_margins=True,
-                                                 flip_axes=True),
-                                    int=Viewer0D(self._lineout_widgets['int'], show_toolbar=False, no_margins=True))
+        self.lineout_viewers: Dict[str, Viewer1D] = None
 
         self.setup_actions()
 
@@ -331,6 +330,7 @@ class View2D(ActionManager, QtCore.QObject):
         self.roi_target: Union[pgROI, Crosshair] = None
 
         self.setup_view_box()
+        self.setup_lineouts()
         self.setup_widgets()
 
         self.histogrammer = Histogrammer(self.widget_histo)
@@ -347,8 +347,13 @@ class View2D(ActionManager, QtCore.QObject):
 
         self.set_image_displayer(DataDistribution['uniform'])
 
+    @staticmethod
+    def get_theme(name: str = None) -> qt_themes.Theme:
+        return qt_themes.get_theme(name)
+
     def setup_view_box(self):
-        self.roi_vb = View_cust(border=mkPen('red'))
+        """ create and axis-sync a viewbox dedicated to ROIselect """
+        self.roi_vb = View_cust()
         self.plotitem.scene().addItem(self.roi_vb)
         self.plotitem.getAxis('right').linkToView(self.roi_vb)
         self.plotitem.getAxis('top').linkToView(self.roi_vb)
@@ -365,6 +370,19 @@ class View2D(ActionManager, QtCore.QObject):
         self.roi_vb.setGeometry(self.plotitem.vb.sceneBoundingRect())
         self.roi_vb.linkedViewChanged(self.plotitem.vb, self.roi_vb.XAxis)
         self.roi_vb.linkedViewChanged(self.plotitem.vb, self.roi_vb.YAxis)
+
+    def setup_lineouts(self):
+        self.lineout_viewers: Dict[str, Viewer1D] = dict(hor=Viewer1D(self._lineout_widgets['hor'], show_toolbar=False, no_margins=True),
+                                    ver=Viewer1D(self._lineout_widgets['ver'], show_toolbar=False, no_margins=True,
+                                                 flip_axes=True),
+                                    int=Viewer0D(self._lineout_widgets['int'], show_toolbar=False, no_margins=True))
+        self.link_lineouts()
+
+    def link_lineouts(self, do_link=True):
+        hor_vb: View_cust = self.lineout_viewers['hor'].view.plotitem.vb
+        ver_vb: View_cust = self.lineout_viewers['ver'].view.plotitem.vb
+        hor_vb.linkView(hor_vb.XAxis, self.plotitem.vb if do_link else None)
+        ver_vb.linkView(ver_vb.YAxis, self.plotitem.vb if do_link else None)
 
     def clear_plot_item(self):
         for item in self.plotitem.items[:]:
@@ -506,6 +524,11 @@ class View2D(ActionManager, QtCore.QObject):
 
         self.add_action('histo', 'Histogram', 'Histogram', tip='Show/Hide Histogram', checkable=True)
         self.add_action('roi', 'ROI', 'Region', tip='Show/Hide ROI Manager', checkable=True)
+
+        self.add_action('link_lineouts', 'Link Lineouts', 'link', tip='Link Lineouts',
+                        checkable=True, checked=True, visible=False,
+                        icon_color=self.get_theme().red, icon_checked_color=self.get_theme().green)
+
         self.add_action('isocurve', 'IsoCurve', 'meshPlot', tip='Show/Hide Isocurve', checkable=True)
         self.add_action('aspect_ratio', 'Aspect Ratio', 'Zoom_1_1', tip='Fix Aspect Ratio', checkable=True, checked=True)
         self.add_action('crosshair', 'CrossHair', 'reset', tip='Show/Hide data Crosshair', checkable=True)
@@ -542,10 +565,21 @@ class View2D(ActionManager, QtCore.QObject):
         self.connect_action('histo', self.show_hide_histogram)
         self.connect_action('roi', self.show_lineout_widgets)
         self.connect_action('roi', self.roi_clicked)
+        self.connect_action('roi', self.show_hide_link_lineouts)
+
+
         self.connect_action('ROIselect', lambda: self.show_ROI_select())
         self.connect_action('crosshair', self.show_hide_crosshair)
         self.connect_action('crosshair', self.show_lineout_widgets)
+        self.connect_action('crosshair', self.show_hide_link_lineouts)
         self.connect_action('legend', self.show_legend)
+
+        self.connect_action('link_lineouts', self.link_lineouts)
+
+    def show_hide_link_lineouts(self):
+        self.get_action('link_lineouts').setVisible(
+            self.is_action_checked('roi') or self.is_action_checked('crosshair')
+        )
 
     def show_legend(self, show=True):
         self.data_displayer.show_legend(show)
@@ -1103,7 +1137,7 @@ def main_spread():
 def main(data_distribution='uniform'):
     """either 'uniform' or 'spread'"""
 
-    app = QtWidgets.QApplication(sys.argv)
+    app = mkQApp('Viewer2D')
     widget = QtWidgets.QWidget()
 
     widget_button = QtWidgets.QWidget()
@@ -1184,7 +1218,7 @@ def print_roi_select(rect):
 
 
 def main_view():
-    app = QtWidgets.QApplication(sys.argv)
+    app = mkQApp('View2D')
 
     form = QtWidgets.QWidget()
     prog = View2D(form)
