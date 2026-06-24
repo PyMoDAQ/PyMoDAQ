@@ -358,8 +358,11 @@ class Filter2DFromRois(Filter):
                 sub_data_ver = DataFromRoi('ver', distribution='spread', data=[data_V], axes=[y_axis])
                 math_data = DataFromRoi('int', data=int_data)
             else:
-                slices = self.get_slices_from_roi(roi, dwa.shape)
-                sub_data: DataFromRoi = dwa.isig[slices[0], slices[1]]
+                # slices = self.get_slices_from_roi(roi, dwa.shape)
+                # sub_data: DataFromRoi = dwa.isig[slices[0], slices[1]]
+
+                sub_data: DataFromRoi = dwa.vsig[roi.to_info().to_slices(False)]
+
                 sub_data.name = 'Cropped'
                 sub_data.origin = roi.name
                 sub_data.labels = labels
