@@ -45,6 +45,87 @@ class ROIBase:
     DIMENSIONALITY: DataDim = NotImplemented
     DESCRIPTOR: str = NotImplemented  # the identifier of the ROI, its name!
 
+    index_signal = Signal(int)
+
+    def __init__(self, index=0, name='roi', compute=True):
+        self.name = name
+        self.index = index
+        self._compute = compute
+        self.menu = None
+        self.signalBlocker = None
+        self._clipboard = None
+
+    def init_qt(self):
+        self.signalBlocker = QSignalBlocker(self)
+        self.signalBlocker.unblock()
+        self._clipboard = QtGui.QGuiApplication.clipboard()
+
+
+    def emit_index_signal(self):
+        self.index_signal.emit(self.index)
+
+    @abstractmethod
+    def mouseClickEvent(self, ev):
+        ...
+
+    @property
+    def color(self):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def getMenu(self):
+        ...
+
+    def _emitCopyRequest(self):
+        self.sigCopyRequested.emit(self)
+
+    def mouseDoubleClickEvent(self, ev):
+        if ev.button() == QtCore.Qt.MouseButton.LeftButton:
+            ev.accept()
+            self.sigDoubleClicked.emit(self, ev)
+
+    @abstractmethod
+    def to_info(self) -> 'RoiInfo':
+        """ Return the info about the ROI
+
+        To be Reimplemented for different ROI types"""
+        ...
+
+    def copy_clipboard(self):
+        info = self.to_info()
+        self._clipboard.setText(str(info.to_slices()))
+
+    @abstractmethod
+    def center(self):
+        ...
+
+    @abstractmethod
+    def width(self):
+        ...
+    @abstractmethod
+    def height(self):
+        ...
+
+    def key(self) -> str:
+        return roi_format(self.index)
+
+    def type(self) -> str:
+        return type(self).__name__
+
+    def doShow(self, status: bool = True):
+        if status:
+            self.show()
+        else:
+            self.hide()
+
+    @property
+    def compute(self):
+        return self._compute
+
+    @compute.setter
+    def compute(self, compute: bool = True):
+        self._compute = compute
+
 
 class ROIFactory():
     """The factory class for creating ROI"""
@@ -105,90 +186,7 @@ class ROIFactory():
         return descriptors
 
 
-class ROIMixin:
-    index_signal = Signal(int)
-
-    def __init__(self, index=0, name='roi', compute=True):
-        self.name = name
-        self.index = index
-        self._compute = compute
-        self.menu = None
-        self.signalBlocker = None
-        self._clipboard = None
-
-    def init_qt(self):
-        self.signalBlocker = QSignalBlocker(self)
-        self.signalBlocker.unblock()
-        self._clipboard = QtGui.QGuiApplication.clipboard()
-
-
-    def emit_index_signal(self):
-        self.index_signal.emit(self.index)
-
-    @abstractmethod
-    def mouseClickEvent(self, ev):
-        ...
-
-    @abstractmethod
-    def color(self):
-        ...
-
-    @abstractmethod
-    def getMenu(self):
-        ...
-
-    def _emitCopyRequest(self):
-        self.sigCopyRequested.emit(self)
-
-    def mouseDoubleClickEvent(self, ev):
-        if ev.button() == QtCore.Qt.MouseButton.LeftButton:
-            ev.accept()
-            self.sigDoubleClicked.emit(self, ev)
-
-    @abstractmethod
-    def to_info(self) -> 'RoiInfo':
-        """ Return the info about the ROI
-
-        To be Reimplemented for different ROI types"""
-        ...
-
-    def copy_clipboard(self):
-        info = self.to_info()
-        self._clipboard.setText(str(info.to_slices()))
-
-    @abstractmethod
-    def center(self):
-        ...
-
-    @abstractmethod
-    def width(self):
-        ...
-    @abstractmethod
-    def height(self):
-        ...
-
-    def key(self) -> str:
-        return roi_format(self.index)
-
-    def type(self) -> str:
-        return type(self).__name__
-
-    def doShow(self, status: bool = True):
-        if status:
-            self.show()
-        else:
-            self.hide()
-
-    @property
-    def compute(self):
-        return self._compute
-
-    @compute.setter
-    def compute(self, compute: bool = True):
-        self._compute = compute
-
-
-class ROI(pgROI, ROIMixin, ROIBase):
+class ROI(pgROI, ROIBase):
     """ Base class for all 2D ROI"""
     sigCopyRequested = Signal(object)
     sigDoubleClicked = Signal(object, object)
@@ -196,8 +194,7 @@ class ROI(pgROI, ROIMixin, ROIBase):
 
     def __init__(self, *args, index=0, name='roi', compute=True, **kwargs):
         pgROI.__init__(self, *args, **kwargs)
-        ROIBase.__init__(self)
-        ROIMixin.__init__(self, index=index, name=name, compute=compute)
+        ROIBase.__init__(self, index=index, name=name, compute=compute)
 
         self.init_qt()
 
@@ -290,7 +287,7 @@ class ROIBrushable(ROI):
 
 
 @ROIFactory.register()
-class LinearROI(pgLinearROI, ROIMixin, ROIBase):
+class LinearROI(pgLinearROI, ROIBase):
     sigCopyRequested = Signal(object)
     sigDoubleClicked = Signal(object,object)
     sigRemoveRequested = Signal(object)
@@ -300,8 +297,7 @@ class LinearROI(pgLinearROI, ROIMixin, ROIBase):
 
     def __init__(self, index=0, pos=[0, 10], name='roi', compute=True, **kwargs):
         pgLinearROI.__init__(self, values=pos, **kwargs)
-        ROIBase.__init__(self)
-        ROIMixin.__init__(self, index=index, name=name, compute=compute)
+        ROIBase.__init__(self, index=index, name=name, compute=compute)
 
         self.init_qt()
 
