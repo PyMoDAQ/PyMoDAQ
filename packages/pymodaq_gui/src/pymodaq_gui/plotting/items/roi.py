@@ -45,67 +45,6 @@ class ROIBase:
     DIMENSIONALITY: DataDim = NotImplemented
     DESCRIPTOR: str = NotImplemented  # the identifier of the ROI, its name!
 
-
-class ROIFactory():
-    """The factory class for creating ROI"""
-
-    registry = {}
-
-    @classmethod
-    def register(cls) -> Callable:
-        """Class decorator method to register ROI class to the internal registry. Must be used as
-        decorator above the definition of a ROI class.
-        """
-
-        def inner_wrapper(wrapped_class: ROIBase) -> ROIBase:
-            if wrapped_class.DIMENSIONALITY is NotImplemented or \
-                    wrapped_class.DESCRIPTOR is NotImplemented:
-                raise NotImplementedError(f'{wrapped_class} does not properly provide a valid value for '
-                                          f'`DIMENSIONALITY` ({wrapped_class.DIMENSIONALITY}) or for '
-                                          f'`ROI_DESC` ({wrapped_class.DESCRIPTOR})')
-
-            if wrapped_class.DIMENSIONALITY not in cls.registry:
-                cls.registry[wrapped_class.DIMENSIONALITY] = {}
-            if wrapped_class.DESCRIPTOR not in cls.registry[wrapped_class.DIMENSIONALITY]:
-                cls.registry[wrapped_class.DIMENSIONALITY][wrapped_class.DESCRIPTOR] = wrapped_class
-            return wrapped_class
-        return inner_wrapper
-
-    @classmethod
-    def create(cls, dimensionality: DataDim, descriptor: str, *args, **kwargs) -> ROIBase:
-        """Factory command to create the ROI object.
-        This method gets the appropriate ROI class from the registry and instantiates it.
-        Parameters
-        ----------
-        dimensionality: DataDim
-            the dimensionality of the ROI
-        descriptor: str
-            the roi descriptor string
-        Returns
-        -------
-        an instance of the ROI created
-        """
-        if dimensionality not in cls.registry:
-            raise ValueError(f".{dimensionality} is not a supported ROI dimensionality")
-        elif descriptor not in cls.registry[dimensionality]:
-            raise ValueError(f".{descriptor} is not a supported file description.")
-
-        return cls.registry[dimensionality][descriptor](*args, **kwargs)
-
-    @classmethod
-    def get_dimensionality(cls):
-        """Returns a list of registered dimensionality"""
-        return list(cls.registry.keys()).sort()
-
-    @classmethod
-    def get_descriptors_from_dimensionality(cls, dim: DataDim):
-        """Returns a list of ROi descriptors for a given dimensionality"""
-        descriptors = list(cls.registry[dim].keys())
-        descriptors.sort()
-        return descriptors
-
-
-class ROIMixin:
     index_signal = Signal(int)
 
     def __init__(self, index=0, name='roi', compute=True):
@@ -209,7 +148,66 @@ class ROIMixin:
         self._compute = compute
 
 
-class ROI(pgROI, ROIMixin, ROIBase):
+class ROIFactory():
+    """The factory class for creating ROI"""
+
+    registry = {}
+
+    @classmethod
+    def register(cls) -> Callable:
+        """Class decorator method to register ROI class to the internal registry. Must be used as
+        decorator above the definition of a ROI class.
+        """
+
+        def inner_wrapper(wrapped_class: ROIBase) -> ROIBase:
+            if wrapped_class.DIMENSIONALITY is NotImplemented or \
+                    wrapped_class.DESCRIPTOR is NotImplemented:
+                raise NotImplementedError(f'{wrapped_class} does not properly provide a valid value for '
+                                          f'`DIMENSIONALITY` ({wrapped_class.DIMENSIONALITY}) or for '
+                                          f'`ROI_DESC` ({wrapped_class.DESCRIPTOR})')
+
+            if wrapped_class.DIMENSIONALITY not in cls.registry:
+                cls.registry[wrapped_class.DIMENSIONALITY] = {}
+            if wrapped_class.DESCRIPTOR not in cls.registry[wrapped_class.DIMENSIONALITY]:
+                cls.registry[wrapped_class.DIMENSIONALITY][wrapped_class.DESCRIPTOR] = wrapped_class
+            return wrapped_class
+        return inner_wrapper
+
+    @classmethod
+    def create(cls, dimensionality: DataDim, descriptor: str, *args, **kwargs) -> ROIBase:
+        """Factory command to create the ROI object.
+        This method gets the appropriate ROI class from the registry and instantiates it.
+        Parameters
+        ----------
+        dimensionality: DataDim
+            the dimensionality of the ROI
+        descriptor: str
+            the roi descriptor string
+        Returns
+        -------
+        an instance of the ROI created
+        """
+        if dimensionality not in cls.registry:
+            raise ValueError(f".{dimensionality} is not a supported ROI dimensionality")
+        elif descriptor not in cls.registry[dimensionality]:
+            raise ValueError(f".{descriptor} is not a supported file description.")
+
+        return cls.registry[dimensionality][descriptor](*args, **kwargs)
+
+    @classmethod
+    def get_dimensionality(cls):
+        """Returns a list of registered dimensionality"""
+        return list(cls.registry.keys()).sort()
+
+    @classmethod
+    def get_descriptors_from_dimensionality(cls, dim: DataDim):
+        """Returns a list of ROi descriptors for a given dimensionality"""
+        descriptors = list(cls.registry[dim].keys())
+        descriptors.sort()
+        return descriptors
+
+
+class ROI(pgROI, ROIBase):
     """ Base class for all 2D ROI"""
     sigCopyRequested = Signal(object)
     sigDoubleClicked = Signal(object, object)
@@ -217,8 +215,7 @@ class ROI(pgROI, ROIMixin, ROIBase):
 
     def __init__(self, *args, index=0, name='roi', compute=True, **kwargs):
         pgROI.__init__(self, *args, **kwargs)
-        ROIBase.__init__(self)
-        ROIMixin.__init__(self, index=index, name=name, compute=compute)
+        ROIBase.__init__(self, index=index, name=name, compute=compute)
 
         self.init_qt()
 
@@ -226,7 +223,7 @@ class ROI(pgROI, ROIMixin, ROIBase):
         if self.menu is None:
             self.menu = QtWidgets.QMenu()
             self.menu.setTitle(translate("ROI", "ROI"))
-            self.menu.addAction('Copy ROI indexes to clipboard', self.copy_clipboard)
+            self.menu.addAction('Copy ROI slice to clipboard', self.copy_clipboard)
             self.menu.addAction("Copy ROI", self._emitCopyRequest)
             self.menu.addAction("Remove ROI", self._emitRemoveRequest)
         return self.menu
@@ -336,7 +333,7 @@ class ROIBrushable(ROI):
 
 
 @ROIFactory.register()
-class LinearROI(pgLinearROI, ROIMixin, ROIBase):
+class LinearROI(pgLinearROI, ROIBase):
     sigCopyRequested = Signal(object)
     sigDoubleClicked = Signal(object,object)
     sigRemoveRequested = Signal(object)
@@ -346,8 +343,7 @@ class LinearROI(pgLinearROI, ROIMixin, ROIBase):
 
     def __init__(self, index=0, pos=[0, 10], name='roi', compute=True, **kwargs):
         pgLinearROI.__init__(self, values=pos, **kwargs)
-        ROIBase.__init__(self)
-        ROIMixin.__init__(self, index=index, name=name, compute=compute)
+        ROIBase.__init__(self, index=index, name=name, compute=compute)
 
         self.init_qt()
 
