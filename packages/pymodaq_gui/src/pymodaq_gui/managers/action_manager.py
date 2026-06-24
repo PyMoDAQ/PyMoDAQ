@@ -481,6 +481,7 @@ class ActionManager:
                                               icon_checked_color=icon_checked_color,
                                               flip_h=flip_h,
                                               flip_v=flip_v,
+                                              rotate=rotate,
                                               before=before,
                                               action=action)
         return self._actions[short_name]
