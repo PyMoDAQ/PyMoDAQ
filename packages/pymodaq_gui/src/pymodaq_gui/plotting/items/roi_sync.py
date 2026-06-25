@@ -289,18 +289,16 @@ if __name__ == '__main__':
 
     app = mkQApp('RoiSync')
 
+    from pymodaq_gui.plotting.data_viewers.viewer2D import Viewer2D, generate_uniform_data
     from pymodaq_gui.plotting.widgets import ImageWidget
     from pyqtgraph import PlotWidget
 
-    im = ImageWidget() #PlotWidget()
+    widget_viewer = QtWidgets.QWidget()
+    viewer = Viewer2D(widget_viewer)
+    im = viewer.view.image_widget
 
     sync_2D = ROISync(DataDim.Data2D)
     sync_1D = ROISync(DataDim.Data1D)
-
-    widget = QtWidgets.QWidget()
-    layout = QtWidgets.QHBoxLayout()
-    widget.setLayout(layout)
-    layout.addWidget(im)
 
     tree_2D = ParameterTree()
     tree_1D = ParameterTree()
@@ -314,9 +312,12 @@ if __name__ == '__main__':
     tree_2D.setParameters(roi_2D_param)
     tree_1D.setParameters(roi_1D_param)
 
+    dwa = generate_uniform_data()
+    viewer.show_data(dwa)
+
     im.plotItem.addItem(roi_2D)
     im.plotItem.addItem(roi_1D)
-    widget.show()
+    widget_viewer.show()
     tree_2D.show()
     tree_1D.show()
 
