@@ -4,7 +4,7 @@ import numpy as np
 from qtpy import QtWidgets
 
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_data.data import DataToExport, DataWithAxes, Axis, DataSource
+from pymodaq_data.data import DataToExport, DataWithAxes, Axis, DataSource, Averaging
 
 from pymodaq_utils.enums import enum_checker
 from pymodaq_utils.factory import ObjectFactory
@@ -208,7 +208,8 @@ class ViewerDispatcher:
     def show_data(self, data: DataToExport, **kwargs):
         """ Convenience method. Display each dwa in a dedicated data viewer"""
         viewer_types = [ViewersEnum.get_viewers_enum_from_data(dwa) for dwa in data]
-        viewer_names = [dwa.name for dwa in data]
+        viewer_names = [f'{dwa.name}_Averaged: {dwa.n_averaged}'
+                        if dwa.averaged else dwa.name for dwa in data]
         if self.viewer_types != viewer_types:
             self.update_viewers(viewer_types, viewer_names)
         for viewer, dwa in zip(self.viewers, data):

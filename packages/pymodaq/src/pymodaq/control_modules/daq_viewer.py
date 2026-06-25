@@ -20,8 +20,8 @@ import numpy as np
 from qtpy import QtWidgets
 from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal
 
-from pymodaq_data import DataSource
-from pymodaq_data.data import DataToExport, Axis, DataDistribution
+
+from pymodaq_data.data import DataToExport, Axis, DataDistribution, Averaging
 from pymodaq.utils.data import DataFromPlugins
 
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -322,6 +322,8 @@ class DAQ_Viewer(ParameterControlModule):
             self.grab_data(cmd.attribute, snap_state=False)
         elif cmd.command == UiToMainViewer.SNAP:
             self.grab_data(False, snap_state=True)
+        elif cmd.command == UiToMainViewer.RESET_LIVE:
+            self.reset_live_averaging()
         elif cmd.command == UiToMainViewer.SAVE_CURRENT:
             self.save_current()
         elif cmd.command == UiToMainViewer.DETECTOR_CHANGED:
@@ -432,8 +434,7 @@ class DAQ_Viewer(ParameterControlModule):
                               dict(Naverage=self.settings['main_settings', 'Naverage'])))
         else:
             if not grab_state:
-                self.update_status(f'{self._title}: Stop Grab')
-                self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.STOP_GRAB))
+                self.stop()
             else:
                 self.thread_status(ThreadCommand(ThreadStatusViewer.UPDATE_CHANNELS))
                 self.update_status(f'{self._title}: Continuous Grab')
@@ -454,7 +455,7 @@ class DAQ_Viewer(ParameterControlModule):
         self.stop_grab()
 
     def stop_grab(self):
-        """ Stop the current continuous grabbing and unchecked the stop button of the UI
+        """ Stop the current continuous grabbing and unchecked the Grab button of the UI
 
         See Also
         --------
@@ -470,6 +471,9 @@ class DAQ_Viewer(ParameterControlModule):
         self.update_status(f'{self._title}: Stop Grab')
         self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.STOP_GRAB))
         self._grabing = False
+
+    def reset_live_averaging(self):
+        self._ind_continuous_grab = 0
 
     # -------------------------------------------------------------------------
     # Data handling
@@ -805,7 +809,9 @@ class DAQ_Viewer(ParameterControlModule):
             if ('do_plot' not in dwa.extra_attributes) or \
                     ('do_plot' in dwa.extra_attributes and dwa.do_plot):
                 self.viewers[ind].title = dwa.name
-                self.viewer_docks[ind].setTitle(self._title + ' ' + dwa.name)
+                name = (f'{dwa.name}_Averaged: {dwa.n_averaged}'
+                        if dwa.averaged else dwa.name)
+                self.viewer_docks[ind].setTitle(f'{self._title} {name}')
 
                 if temp:
                     self.viewers[ind].show_data_temp(dwa)
@@ -859,9 +865,10 @@ class DAQ_Viewer(ParameterControlModule):
 
         elif param.name() == 'live_averaging':
             self.settings.child('main_settings', 'show_averaging').setValue(False)
+            self.ui.get_action('reset_live').setVisible(param.value())
             if param.value():
                 self.settings.child('main_settings', 'N_live_averaging').show()
-                self._ind_continuous_grab = 0
+                self.reset_live_averaging()
                 self.settings.child('main_settings', 'N_live_averaging').setValue(0)
             else:
                 self.settings.child('main_settings', 'N_live_averaging').hide()
@@ -888,7 +895,7 @@ class DAQ_Viewer(ParameterControlModule):
             try:
                 if param.name() == 'do_save':
                     self.setup_continuous_saving(param.value())
-                self._h5saver_continuous.settings.child(*path[1:]).setValue(param.value())
+                    self._h5saver_continuous.settings.child(*path[1:]).setValue(param.value())
             except KeyError:
                 pass
 
@@ -1168,7 +1175,7 @@ class DetectorWorker(HardwareWorkerBase):
             if self.ind_average == 1:
                 self.datas = data.deepcopy()
             else:
-                self.datas = data.average(self.datas, self.ind_average)
+                self.datas = data.average(self.datas, self.ind_average - 1)
 
             if self.show_averaging:
                 self.emit_temp_data(self.datas)
