@@ -89,6 +89,7 @@ names = [
     'not_started',
     'open_in_new',
     'pause_circle',
+    'pin',
     'plug_connect',
     'qr_code_scanner',
     'quick_reference',
