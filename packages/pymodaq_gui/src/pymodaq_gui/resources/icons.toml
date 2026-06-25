@@ -104,6 +104,7 @@ names = [
     'save',
     'save_as',
     'save_clock',
+    'scatter_plot',
     'search',
     'security',
     'select',
