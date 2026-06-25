@@ -6,7 +6,7 @@ from pymodaq_utils import utils
 AXIS_POSITIONS = ['top', 'bottom', 'right', 'left']
 
 
-class AxisItem_Scaled(pg.AxisItem):
+class AxisItemScaled(pg.AxisItem):
     """
     Subclass of pg.AxisItem enabling scaling of the tick values with respect to the linked viewbox
     """

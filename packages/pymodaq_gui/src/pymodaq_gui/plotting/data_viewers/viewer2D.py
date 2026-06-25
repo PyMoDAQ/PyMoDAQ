@@ -12,7 +12,7 @@ from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 from pyqtgraph import ROI as pgROI
 
 from pymodaq_gui.plotting.utils.lineout import Lineouts
-from pymodaq_gui.plotting.utils.plot_utils import View_cust
+from pymodaq_gui.plotting.utils.plot_utils import ViewBox
 from pymodaq_gui.qt_utils import mkQApp
 from pymodaq_utils.logger import set_logger, get_module_name
 
@@ -29,7 +29,7 @@ from pymodaq_gui.plotting.data_viewers.viewer import ViewerBase
 from pymodaq_gui.plotting.data_viewers.viewer1D import Viewer1D
 from pymodaq_gui.plotting.data_viewers.viewer0D import Viewer0D
 from pymodaq_gui.plotting.items.image import UniformImageItem, SpreadImageItem
-from pymodaq_gui.plotting.items.axis_scaled import AXIS_POSITIONS, AxisItem_Scaled
+from pymodaq_gui.plotting.items.axis_scaled import AXIS_POSITIONS, AxisItemScaled
 from pymodaq_gui.plotting.items.crosshair import Crosshair
 from pymodaq_gui.plotting.utils.filter import Filter2DFromCrosshair, Filter2DFromRois
 from pymodaq_gui.plotting.utils.plot_utils import make_dashed_pens
@@ -309,7 +309,7 @@ class View2D(ActionManager, QtCore.QObject):
     def __init__(self, parent_widget=None):
         QtCore.QObject.__init__(self)
         ActionManager.__init__(self, toolbar=QtWidgets.QToolBar())
-        self.roi_vb:  View_cust = None
+        self.roi_vb:  ViewBox = None
         self.ROIselect = SimpleRectROI([0, 0], [10, 10], centered=True, sideScalers=True)
 
         self._lineout_widgets = {widg_key: QtWidgets.QWidget() for widg_key in Lineouts.values()}
@@ -355,7 +355,7 @@ class View2D(ActionManager, QtCore.QObject):
 
     def setup_view_box(self):
         """ create and axis-sync a viewbox dedicated to ROIselect """
-        self.roi_vb = View_cust()
+        self.roi_vb = ViewBox()
         self.plotitem.scene().addItem(self.roi_vb)
         self.plotitem.getAxis('right').linkToView(self.roi_vb)
         self.plotitem.getAxis('top').linkToView(self.roi_vb)
@@ -382,8 +382,8 @@ class View2D(ActionManager, QtCore.QObject):
         self.link_lineouts()
 
     def link_lineouts(self, do_link=True):
-        hor_vb: View_cust = self.lineout_viewers[Lineouts.HOR].view.plotitem.vb
-        ver_vb: View_cust = self.lineout_viewers[Lineouts.VER].view.plotitem.vb
+        hor_vb: ViewBox = self.lineout_viewers[Lineouts.HOR].view.plotitem.vb
+        ver_vb: ViewBox = self.lineout_viewers[Lineouts.VER].view.plotitem.vb
         hor_vb.linkView(hor_vb.XAxis, self.plotitem.vb if do_link else None)
         ver_vb.linkView(ver_vb.YAxis, self.plotitem.vb if do_link else None)
 
@@ -700,7 +700,7 @@ class View2D(ActionManager, QtCore.QObject):
     def get_double_clicked(self):
         return self.image_widget.view.sig_double_clicked
 
-    def get_axis(self, position='left') -> AxisItem_Scaled:
+    def get_axis(self, position='left') -> AxisItemScaled:
         if position not in AXIS_POSITIONS:
             raise KeyError(f'{position} is not a possible position for Axis: {AXIS_POSITIONS}')
         return self.image_widget.getAxis(position)

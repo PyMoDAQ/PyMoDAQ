@@ -6,15 +6,14 @@ Created the 04/11/2022
 """
 
 import pyqtgraph as pg
-from pyqtgraph import ViewBox
 from qtpy import QtWidgets
 
-from pymodaq_gui.plotting.utils.plot_utils import View_cust
-from pymodaq_gui.plotting.items.axis_scaled import AXIS_POSITIONS, AxisItem_Scaled
+from pymodaq_gui.plotting.utils.plot_utils import ViewBox
+from pymodaq_gui.plotting.items.axis_scaled import AXIS_POSITIONS, AxisItemScaled
 
 class PlotWidget(pg.PlotWidget):
     def __init__(self, *args, **kwargs):
-        plot_item = pg.PlotItem(viewBox=View_cust())
+        plot_item = pg.PlotItem(viewBox=ViewBox())
         super().__init__(*args, plotItem=plot_item, **kwargs)
 
     @property
@@ -45,7 +44,7 @@ class ImageWidget(PlotWidget):
         """
         self.plotitem.vb.setAspectLocked(lock=True, ratio=1)
 
-    def getAxis(self, position) -> AxisItem_Scaled:
+    def getAxis(self, position) -> AxisItemScaled:
         return self.plotitem.getAxis(position)
 
     def setupUI(self, *args_plotitem, **kwargs_plotitem):
@@ -73,7 +72,7 @@ class ImageWidget(PlotWidget):
         """
         if position not in AXIS_POSITIONS:
             raise ValueError(f'The Axis position {position} should be in {AXIS_POSITIONS}')
-        axis = AxisItem_Scaled(position)
+        axis = AxisItemScaled(position)
         self.plotitem.setAxisItems({position: axis})
         return axis
 
