@@ -143,7 +143,7 @@ class ROIViewerManager(QtCore.QObject, ROIParameterManager):
         if data[0].parent() is self.rois_setting:
             self.create_and_add(data[0])
 
-    def create_and_add(self, param: RoiParameter, append_to_tree=False):
+    def create_and_add(self, param: RoiParameter):
         roi_meta = ROIMeta(param)
         self._ROIs.append(roi_meta)
         self.view_box.addItem(roi_meta.roi)
