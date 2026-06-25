@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING, List, Tuple, Union, Callable, Iterable as Iter
 
 import numpy as np
 import pyqtgraph as pg
+
+from pymodaq_data import DataDim
 from pymodaq_data.post_treatment.process_to_scalar import DataProcessorFactory
 from pymodaq_gui.plotting.utils.plot_utils import Point
 from pymodaq_utils.logger import get_module_name, set_logger
@@ -12,7 +14,7 @@ from pymodaq_utils.math_utils import rotate2D
 
 from pymodaq_data.plotting.utils import PlotColors
 
-from pyqtgraph import ROI as pgROI, ROI, LinearRegionItem
+from pyqtgraph import ROI as pgROI, ROI, LinearRegionItem, mkColor
 from pyqtgraph import LinearRegionItem as pgLinearROI
 from pyqtgraph import functions as fn
 from qtpy import QtCore, QtGui, QtWidgets
@@ -35,14 +37,20 @@ def roi_format(index):
     return f'{ROI_NAME_PREFIX}{index:02d}'
 
 
-class DataDim(StrEnum):
-    Data1D = 'Data1D'
-    Data2D = 'Data2D'
+class ROIDim(StrEnum):
+    ROI1D = 'data_1D'
+    ROI2D = 'data_2D'
+
+    def map_to_datadim(self) -> DataDim:
+        if self == ROIDim.ROI1D:
+            return DataDim.Data1D
+        else:
+            return DataDim.Data2D
 
 
 class ROIBase:
     """ Base class to be inherited for ROI to be created by the factory"""
-    DIMENSIONALITY: DataDim = NotImplemented
+    DIMENSIONALITY: ROIDim = NotImplemented
     DESCRIPTOR: str = NotImplemented  # the identifier of the ROI, its name!
 
     index_signal = Signal(int)
@@ -174,12 +182,12 @@ class ROIFactory():
         return inner_wrapper
 
     @classmethod
-    def create(cls, dimensionality: DataDim, descriptor: str, *args, **kwargs) -> ROIBase:
+    def create(cls, dimensionality: ROIDim, descriptor: str, *args, **kwargs) -> ROIBase:
         """Factory command to create the ROI object.
         This method gets the appropriate ROI class from the registry and instantiates it.
         Parameters
         ----------
-        dimensionality: DataDim
+        dimensionality: ROIDim
             the dimensionality of the ROI
         descriptor: str
             the roi descriptor string
@@ -200,7 +208,7 @@ class ROIFactory():
         return list(cls.registry.keys()).sort()
 
     @classmethod
-    def get_descriptors_from_dimensionality(cls, dim: DataDim):
+    def get_descriptors_from_dimensionality(cls, dim: ROIDim):
         """Returns a list of ROi descriptors for a given dimensionality"""
         descriptors = list(cls.registry[dim].keys())
         descriptors.sort()
@@ -218,6 +226,11 @@ class ROI(pgROI, ROIBase):
         ROIBase.__init__(self, index=index, name=name, compute=compute)
 
         self.init_qt()
+        if 'color' in kwargs:
+            self.set_color(kwargs['color'])
+        if 'angle' in kwargs:
+            self.setAngle(kwargs['angle'])
+
 
     def getMenu(self):
         if self.menu is None:
@@ -338,14 +351,17 @@ class LinearROI(pgLinearROI, ROIBase):
     sigDoubleClicked = Signal(object,object)
     sigRemoveRequested = Signal(object)
 
-    DIMENSIONALITY = DataDim.Data1D
+    DIMENSIONALITY = ROIDim.ROI1D
     DESCRIPTOR = 'LinearROI'
 
     def __init__(self, index=0, pos=[0, 10], name='roi', compute=True, **kwargs):
+        color = kwargs.pop('color', None)
         pgLinearROI.__init__(self, values=pos, **kwargs)
         ROIBase.__init__(self, index=index, name=name, compute=compute)
 
         self.init_qt()
+        if color is not None:
+            self.set_color(color)
 
     def getMenu(self):
         if self.menu is None:
@@ -401,6 +417,10 @@ class LinearROI(pgLinearROI, ROIBase):
 
     def set_color(self, value):
         self.brush.setColor(value)
+        line_color = mkColor(value)
+        line_color.setAlpha(255)
+        for line in self.lines:
+            line.setPen(value)
 
     def center(self) -> float:
         """ Get the center position of the ROI """
@@ -435,7 +455,7 @@ class EllipseROI(ROI):
 
     """
 
-    DIMENSIONALITY = DataDim.Data2D
+    DIMENSIONALITY = ROIDim.ROI2D
     DESCRIPTOR = 'EllipseROI'
 
     def __init__(self, index=0, pos=[0, 0], size=[10, 10], **kwargs):
@@ -492,7 +512,7 @@ class EllipseROI(ROI):
 @ROIFactory.register()
 class CircularROI(EllipseROI):
 
-    DIMENSIONALITY = DataDim.Data2D
+    DIMENSIONALITY = ROIDim.ROI2D
     DESCRIPTOR = 'CircularROI'
 
     def __init__(self, index=0, pos=[0, 0], size=[10, 10], **kwargs):
@@ -522,7 +542,7 @@ class SimpleRectROI(ROI):
 @ROIFactory.register()
 class RectROI(ROI):
 
-    DIMENSIONALITY = DataDim.Data2D
+    DIMENSIONALITY = ROIDim.ROI2D
     DESCRIPTOR = 'RectROI'
 
     def __init__(self, index=0, pos=[0, 0], size=[10, 10], **kwargs):

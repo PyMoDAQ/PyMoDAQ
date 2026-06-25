@@ -20,7 +20,7 @@ from pymodaq_data.data import (Axis, DataToExport, DataRaw,
                                DataDistribution, DataWithAxes)
 from pymodaq_data.plotting.utils import PlotColors
 
-from pymodaq_gui.managers.roi_manager import ROIManager, DataDim
+from pymodaq_gui.managers.roi_manager import ROIManager, ROIDim
 from pymodaq_gui.plotting.items.roi import SimpleRectROI, RoiInfo
 
 from pymodaq_gui.managers.action_manager import ActionManager
@@ -323,7 +323,7 @@ class View2D(ActionManager, QtCore.QObject):
             self.parent_widget.show()
 
         self.image_widget = ImageWidget()
-        self.roi_manager = ROIManager(self.image_widget, DataDim.Data2D)
+        self.roi_manager = ROIManager(self.image_widget, ROIDim.ROI2D)
 
         self.roi_target: Union[pgROI, Crosshair] = None
 

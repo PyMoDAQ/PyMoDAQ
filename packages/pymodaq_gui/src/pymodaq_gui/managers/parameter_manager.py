@@ -413,6 +413,9 @@ class ParameterManager:
             elif change == "limits":
                 self.limits_changed(param, data)
 
+            elif change == 'contextMenu':
+                self.menu_changed(param, data)
+
     def value_changed(self, param: Parameter):
         """Non-mandatory method to be subclassed for actions to perform when a parameter value changes.
 
@@ -556,6 +559,20 @@ class ParameterManager:
         Notes
         -----
         For this method to be triggered, the Parameter.setLimits() method must be used.
+        """
+        pass
+
+    def menu_changed(self, param: Parameter, data: str):
+        """Non-mandatory method to be subclassed for actions to perform when context menu changed.
+
+        This method is called automatically when the user selects one of the entry of the context menu
+
+        Parameters
+        ----------
+        param : Parameter
+            The parameter whose menu has been changed
+        data: str
+            The selected menu string
         """
         pass
 

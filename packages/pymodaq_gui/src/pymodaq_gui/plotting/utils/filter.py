@@ -1,4 +1,6 @@
 import numpy as np
+
+from pymodaq_gui.managers.roi_viewer_manager import ROIViewerManager
 from pymodaq_gui.parameter import Parameter
 from qtpy import QtCore, QtWidgets, QtGui
 from qtpy.QtCore import QPointF, Slot, Signal, QObject
@@ -6,6 +8,7 @@ from typing import List, Tuple
 
 from pyqtgraph import LinearRegionItem
 
+from pymodaq_gui.plotting.items.roi_sync import roi_format
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
 from pymodaq_utils import math_utils as mutils
@@ -226,10 +229,9 @@ class Filter1DFromRois(Filter):
     roi_manager:ROIManager
     graph_item: PlotItems
     """
-    def __init__(self, roi_manager: ROIManager):
+    def __init__(self, roi_manager: ROIViewerManager):
 
         super().__init__()
-        self._roi_settings = roi_manager.settings
         self._ROIs = roi_manager.ROIs
         self._axis: data_mod.Axis = None
 
@@ -243,15 +245,17 @@ class Filter1DFromRois(Filter):
             if axis is not None:
                 self.update_axis(axis)
             if data is not None:
-                for roi_key, roi in self._ROIs.items():
-                    if roi.compute:
+                for roi_meta in self._ROIs:
+                    if roi_meta.roi.compute:
                         sub_data = data.deepcopy()
-                        labels = self._roi_settings['ROIs', roi_key, 'use_channel']['selected']
+                        labels = roi_meta.param['use_channel']['selected']
                         if labels:
                             sub_data.data = [sub_data[sub_data.labels.index(label)] for label in labels]
                             sub_data.labels = [label for label in labels]
-                        dte_tmp = self.get_data_from_roi(roi, self._roi_settings.child('ROIs', roi_key),
-                                                                        sub_data)
+                        dte_tmp = self.get_data_from_roi(
+                            roi_meta.roi,
+                            roi_meta.param,
+                            sub_data)
                         dte.append(dte_tmp)
         except Exception as e:
             logger.warning(f'Issue with the ROI: {str(e)}')
@@ -260,8 +264,7 @@ class Filter1DFromRois(Filter):
     def get_data_from_roi(self, roi: LinearROI, roi_param: Parameter, data: data_mod.DataWithAxes) -> DataToExport:
         if data is not None:
             dte = DataToExport('ROI1D')
-            _slice = self.get_slice_from_roi(roi, data)
-            sub_data: DataFromRoi = data.isig[_slice]
+            sub_data: DataFromRoi = data.vsig[roi.to_info().to_slices(False)]
             sub_data.name = 'HorData'
             sub_data.origin = roi_param.name()
             sub_data.labels = [f'{roi_param.name()}/{label}' for label in sub_data.labels]

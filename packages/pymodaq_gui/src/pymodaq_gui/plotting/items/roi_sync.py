@@ -1,3 +1,6 @@
+import dataclasses
+from pyqtgraph.parametertree.parameterTypes import SimpleParameter
+
 from typing import Union
 
 import numpy as np
@@ -13,14 +16,14 @@ from pymodaq_data.post_treatment.process_to_scalar import DataProcessorFactory
 
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_gui.managers.roi_manager import plot_colors, roi_format
-from pymodaq_gui.plotting.items.roi import DataDim, ROI, ROIFactory, LinearROI
+from pymodaq_gui.plotting.items.roi import ROIDim, ROI, ROIFactory, LinearROI, mkColor
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.utils.widget_sync import WidgetSync, SyncMode
 
 
 plot_colors = PlotColors()
 data_processors = DataProcessorFactory()
-ROI2D_TYPES = ROIFactory.get_descriptors_from_dimensionality(DataDim.Data2D)
+ROI2D_TYPES = ROIFactory.get_descriptors_from_dimensionality(ROIDim.ROI2D)
 config = Config()
 
 ROI_NAME_PREFIX = 'ROI_'
@@ -29,20 +32,51 @@ def roi_format(index):
     return f'{ROI_NAME_PREFIX}{index:02d}'
 
 
+@dataclasses.dataclass
+class ROIParameterOptions:
+    color: Union[QtGui.QColor, tuple[int, int, int]] = plot_colors[0]
+    zlevel: int = 1
+    x: float = 0.
+    y: float = 0.
+    width: float = 10.
+    height: float = 10.
+    angle: float = 0.
+
+
 class RoiParameter(GroupParameter):
 
-    def __init__(self, dim: DataDim, descriptor: str, index: int = 0):
+    def __init__(self, dim: ROIDim, descriptor: str, index: int = 0, **kwargs):
+        kwargs.pop('type', None)
+        super().__init__(name=roi_format(index), type='roi_group',
+                         removable=True, children=[], context= ['Copy'], **kwargs)
+        self.opts['dim'] = dim
+        self.opts['descriptor'] = descriptor
+        self.opts['index'] = index
 
-        super().__init__(name=roi_format(index), type='group')
-
-        if dim == DataDim.Data1D:
+        self.roi_dim = dim
+        self.index = index
+        self.descriptor = descriptor
+        if dim == ROIDim.ROI1D:
             self.addChildren(self.make_ROIParam1D(descriptor, index))
-        elif dim == DataDim.Data2D:
+        elif dim == ROIDim.ROI2D:
             self.addChildren(self.make_ROIParam2D(descriptor, index))
 
+    def to_options(self) -> ROIParameterOptions:
+        options = ROIParameterOptions(
+            color=self['color'],
+            zlevel=self['zlevel'],
+            x=self['position', 'x'],
+            y=self['position', 'y'],
+        )
+        if self.roi_dim == ROIDim.ROI2D:
+            options.width = self['size', 'width']
+            options.height = self['size', 'height']
+        return options
+
+
     @staticmethod
-    def makeChannelsParam(dim=DataDim.Data2D):
-        if dim == DataDim.Data2D:
+    def makeChannelsParam(dim=ROIDim.ROI2D):
+        if dim == ROIDim.ROI2D:
             child = [{'title': 'Use channel', 'name': 'use_channel', 'type': 'itemselect', 'checkbox': True,
                       'value': dict(all_items=['red', 'green', 'blue'],
                                     selected=['red']),
@@ -53,13 +87,16 @@ class RoiParameter(GroupParameter):
 
     @staticmethod
     def makeDisplayParam(index: int = 0):
-        return [{'title': 'Color', 'name': 'color', 'type': 'color', 'value': list(np.roll(plot_colors, index)[0])},
+        color = list(np.roll(plot_colors, index)[0])
+        color = mkColor(color)
+        color.setAlpha(50)
+        return [{'title': 'Color', 'name': 'color', 'type': 'color', 'value': color},
                 {'name': 'zlevel', 'title': 'Z-level', 'type': 'int', 'expanded': False, 'value': 10}]
 
     @staticmethod
-    def makeMathParam(dim: DataDim = DataDim.Data2D):
+    def makeMathParam(dim: ROIDim = ROIDim.ROI2D):
         return [{'title': 'Math type:', 'name': 'math_function', 'type': 'list',
-                 'limits': data_processors.functions_filtered(dim)}]
+                 'limits': data_processors.functions_filtered(dim.map_to_datadim())}]
 
     @staticmethod
     def make_ROIParam2D(descriptor: str, index: int):
@@ -68,8 +105,8 @@ class RoiParameter(GroupParameter):
                           'limits': ROI2D_TYPES, 'readonly': False}])
         children.append({'title': 'Process data', 'name': 'process_data', 'type': 'led_push',
                          'value': config.get(('utils', 'plotting', 'process_roi'), True)})
-        children.extend(RoiParameter.makeChannelsParam(DataDim.Data2D))
-        children.extend(RoiParameter.makeMathParam(DataDim.Data2D))
+        children.extend(RoiParameter.makeChannelsParam(ROIDim.ROI2D))
+        children.extend(RoiParameter.makeMathParam(ROIDim.ROI2D))
         children.extend(RoiParameter.makeDisplayParam(index))
 
         children.extend([{'title': 'Center', 'name': 'position', 'type': 'group', 'expanded': False, 'children': [
@@ -89,8 +126,8 @@ class RoiParameter(GroupParameter):
         children = []
         children.append({'title': 'Process data', 'name': 'process_data', 'type': 'led_push',
                          'value': config.get(('utils', 'plotting', 'process_roi'), True)})
-        children.extend(RoiParameter.makeChannelsParam(DataDim.Data1D))
-        children.extend(RoiParameter.makeMathParam(DataDim.Data1D))
+        children.extend(RoiParameter.makeChannelsParam(ROIDim.ROI1D))
+        children.extend(RoiParameter.makeMathParam(ROIDim.ROI1D))
         children.extend(RoiParameter.makeDisplayParam(index=index))
         children.extend([{'title': 'Position', 'name': 'position', 'type': 'group', 'children': [
             {'title': 'Left', 'name': 'x', 'type': 'float', 'value': 0, 'step': 1},
@@ -99,32 +136,86 @@ class RoiParameter(GroupParameter):
 
         return children
 
+    def roi_from_param(self, index: int) -> ROI:
+        options = self.to_options()
+        if self.roi_dim == ROIDim.ROI1D:
+            return self.make_ROI(index, self.roi_dim, self.descriptor,
+                          pos=(options.x, options.y),
+                          color=options.color)
+        else:
+            return self.make_ROI(index, self.roi_dim, self.descriptor,
+                          pos=(options.x, options.y),
+                          size=(options.width, options.height),
+                          color=options.color,
+                          angle=options.angle,
+                          )
 
-registerParameterType('roi', RoiParameter, override=True)
+
+    def make_ROI(self, index, roi_type: ROIDim, roi_descriptor: str,
+                 pos=(0., 0.), size=(10., 10.), **kwargs) -> ROI:
+        newindex = index
+        if roi_type == ROIDim.ROI1D:
+            roi = self.make_ROI1D(newindex, pos, **kwargs)
+        elif roi_type == ROIDim.ROI2D:
+            roi = self.make_ROI2D(roi_descriptor, newindex, pos, size, **kwargs)
+        return roi
+
+    def make_ROI1D(self, index, pos, compute=True, **kwargs) -> ROI:
+        """Convenience function to make custom ROI_1D
+
+        Args:
+            index (int): Current index of ROI
+            pos: Initial position of ROI
+
+        Returns:
+            roi: LinearROI
+        """
+        roi = ROIFactory.create(ROIDim.ROI1D,
+                                ROIFactory.get_descriptors_from_dimensionality(ROIDim.ROI1D)[0],
+                                index=index, pos=pos, compute=compute, **kwargs)
+        # roi.setZValue(-10)
+        #roi.setOpacity(0.2)
+        return roi
+
+    def make_ROI2D(self, descriptor: str, index, pos, size, compute=True, **kwargs) -> ROI:
+        """Convenience function to make custom ROI_2D
+
+        Args:
+            descriptor (str): name of 2D ROI
+            index (int): Current index of ROI
+            pos: Initial position of ROI
+            size: Initial size of ROI
+
+        Returns:
+            roi: pg.ROI
+        """
+
+        return ROIFactory.create(ROIDim.ROI2D, descriptor,
+                                 index=index, pos=pos,
+                                 size=size, name=roi_format(index),
+                                 compute=compute, **kwargs)
+
+registerParameterType('roi_group', RoiParameter, override=True)
 
 
 class ROISync(QtCore.QObject):
 
-    def __init__(self, roi_type: DataDim,
-                 color: Union[QtGui.QColor, tuple[int, int, int]] = plot_colors[0],
-                 zlevel=1,
-                 x=0, y=0,
-                 width=10, height=10,
-                 angle=0
-                 ):
+    def __init__(self, roi_dim: ROIDim,
+                 roi_options=ROIParameterOptions()):
+
         super().__init__()
-        self.roi_type = roi_type
+        self.roi_dim = roi_dim
         initial_value = {
-            'color': color,
-            'zlevel': zlevel,
-            'x': x,
-            'y': y,
+            'color': roi_options.color,
+            'zlevel': roi_options.zlevel,
+            'x': roi_options.x,
+            'y': roi_options.y,
         }
-        if self.roi_type == DataDim.Data2D:
+        if self.roi_dim == ROIDim.ROI2D:
             initial_value.update({
-                'width': width,
-                'height': height,
-                'angle': angle
+                'width': roi_options.width,
+                'height': roi_options.height,
+                'angle': roi_options.angle
             },
             )
 
@@ -132,17 +223,21 @@ class ROISync(QtCore.QObject):
             initial_value=initial_value,
             validator=self.validator)
 
+    @classmethod
+    def sync_from_param(cls, param: RoiParameter):
+        return cls(param.roi_dim, roi_options=param.to_options())
+
     def validator(self, value: dict) -> dict:
         for key in value:
             if isinstance(value[key], (ROI, LinearROI)):
-                if key in ('x', 'y') and self.roi_type == DataDim.Data2D:
+                if key in ('x', 'y') and self.roi_dim == ROIDim.ROI2D:
                     if key == 'x':
                         value[key] = getattr(value[key], 'center')()[0]
                     else:
                         value[key] = getattr(value[key], 'center')()[1]
                 else:
                     value[key] = getattr(value[key], key)()
-            elif isinstance(value[key], QtGui.QColor) and self.roi_type == DataDim.Data1D:
+            elif isinstance(value[key], QtGui.QColor) and self.roi_dim == ROIDim.ROI1D:
                 value[key].setAlphaF(0.3)
         return value
 
@@ -165,7 +260,7 @@ class ROISync(QtCore.QObject):
             'y': {'param': roi_parameter.child('position', 'y')},
         }
 
-        if self.roi_type == DataDim.Data1D:
+        if self.roi_dim == ROIDim.ROI1D:
             roi_property_map.update({
                 'x': {
                     'signal': roi.sigRegionChangeFinished,
@@ -180,7 +275,7 @@ class ROISync(QtCore.QObject):
                     'mode': SyncMode.BIDIRECTIONAL,
                 },})
 
-        if self.roi_type == DataDim.Data2D:
+        if self.roi_dim == ROIDim.ROI2D:
             parameter_property_map.update({
                 'width': {'param': roi_parameter.child('size', 'width')},
                 'height': {'param': roi_parameter.child('size', 'height')},
@@ -230,55 +325,6 @@ class ROISync(QtCore.QObject):
             property_map=parameter_property_map
         )
 
-    def make_ROI(self, index, roi_type: DataDim, roi_descriptor: str, view_range = ((0, 10), (0, 10))) -> ROI:
-        newindex = index
-        if roi_type == DataDim.Data1D:
-
-            pos = view_range[0]
-            pos = view_range[0] + np.diff(view_range)*np.array([2,4])/6
-            roi = self.make_ROI1D(newindex, pos)
-        elif roi_type == DataDim.Data2D:
-            xrange, yrange = view_range
-            width = np.max(((xrange[1] - xrange[0]) / 10, 2))
-            height = np.max(((yrange[1] - yrange[0]) / 10, 2))
-            pos = [int(np.mean(xrange) - width / 2), int(np.mean(yrange) - width / 2)]
-            roi = self.make_ROI2D(roi_descriptor, index=newindex, pos=pos, size=[width, height])
-        return roi
-
-    def make_ROI1D(self, index, pos, compute=True, **kwargs) -> ROI:
-        """Convenience function to make custom ROI_1D
-
-        Args:
-            index (int): Current index of ROI
-            pos: Initial position of ROI
-
-        Returns:
-            roi: LinearROI
-        """
-        roi = ROIFactory.create(DataDim.Data1D,
-                                ROIFactory.get_descriptors_from_dimensionality(DataDim.Data1D)[0],
-                                index=index, pos=pos, compute=compute, **kwargs)
-        # roi.setZValue(-10)
-        roi.setOpacity(0.2)
-        return roi
-
-    def make_ROI2D(self, descriptor: str, index, pos, size, compute=True, **kwargs) -> ROI:
-        """Convenience function to make custom ROI_2D
-
-        Args:
-            descriptor (str): name of 2D ROI
-            index (int): Current index of ROI
-            pos: Initial position of ROI
-            size: Initial size of ROI
-
-        Returns:
-            roi: pg.ROI
-        """
-
-        return ROIFactory.create(DataDim.Data2D, descriptor,
-                                 index=index, pos=pos,
-                                 size=size, name=roi_format(index),
-                                 compute=compute, **kwargs)
 
 
 if __name__ == '__main__':
@@ -290,24 +336,23 @@ if __name__ == '__main__':
     app = mkQApp('RoiSync')
 
     from pymodaq_gui.plotting.data_viewers.viewer2D import Viewer2D, generate_uniform_data
-    from pymodaq_gui.plotting.widgets import ImageWidget
-    from pyqtgraph import PlotWidget
+
 
     widget_viewer = QtWidgets.QWidget()
     viewer = Viewer2D(widget_viewer)
     im = viewer.view.image_widget
 
-    sync_2D = ROISync(DataDim.Data2D)
-    sync_1D = ROISync(DataDim.Data1D)
+    sync_2D = ROISync(ROIDim.ROI2D)
+    sync_1D = ROISync(ROIDim.ROI1D)
 
     tree_2D = ParameterTree()
     tree_1D = ParameterTree()
 
-    roi_2D = ROIFactory.create(DataDim.Data2D, 'EllipseROI')
-    roi_2D_param = RoiParameter(DataDim.Data2D, 'EllipseROI')
+    roi_2D = ROIFactory.create(ROIDim.ROI2D, 'EllipseROI')
+    roi_2D_param = RoiParameter(ROIDim.ROI2D, 'EllipseROI')
 
-    roi_1D = ROIFactory.create(DataDim.Data1D, 'LinearROI')
-    roi_1D_param = RoiParameter(DataDim.Data1D, 'LinearROI', index=2)
+    roi_1D = ROIFactory.create(ROIDim.ROI1D, 'LinearROI')
+    roi_1D_param = RoiParameter(ROIDim.ROI1D, 'LinearROI', index=2)
 
     tree_2D.setParameters(roi_2D_param)
     tree_1D.setParameters(roi_1D_param)

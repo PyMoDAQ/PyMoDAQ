@@ -21,7 +21,7 @@ from pymodaq_utils.logger import get_module_name, set_logger
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_gui.config import get_set_roi_path
 from pymodaq_gui.utils import select_file
-from pymodaq_gui.plotting.items.roi import ROIFactory, ROI, LinearROI, DataDim, RectROI  # noqa
+from pymodaq_gui.plotting.items.roi import ROIFactory, ROI, LinearROI, ROIDim, RectROI  # noqa
 
 import numpy as np
 from pathlib import Path
@@ -36,7 +36,7 @@ config = Config()
 plot_colors = PlotColors()
 
 ROI_NAME_PREFIX = 'ROI_'
-ROI2D_TYPES = ROIFactory.get_descriptors_from_dimensionality(DataDim.Data2D)
+ROI2D_TYPES = ROIFactory.get_descriptors_from_dimensionality(ROIDim.ROI2D)
 
 
 def roi_format(index):
@@ -44,11 +44,11 @@ def roi_format(index):
 
 
 class ROIScalableGroup(GroupParameter):
-    def __init__(self, roi_type=DataDim.Data1D, **opts):
+    def __init__(self, roi_type=ROIDim.ROI1D, **opts):
         opts['type'] = 'group'
         opts['addText'] = "Add"
         self.roi_type = roi_type
-        if roi_type == DataDim.Data2D:
+        if roi_type == ROIDim.ROI2D:
             opts['addList'] = ROI2D_TYPES
         # self.color_list = ROIManager.color_list
         super().__init__(**opts)
@@ -66,15 +66,15 @@ class ROIScalableGroup(GroupParameter):
 
     def makeChild(self, index, descriptor: str):
         child = {'name': ROIManager.roi_format(index), 'type': 'bool','value':True, 'removable': True, 'renamable': False, 'expanded': False,'context':['Copy']}
-        if self.roi_type == DataDim.Data2D:
+        if self.roi_type == ROIDim.ROI2D:
             child['children'] = ROIScalableGroup.make_ROIParam2D(descriptor, index)
-        elif self.roi_type == DataDim.Data1D:
+        elif self.roi_type == ROIDim.ROI1D:
             child['children'] = ROIScalableGroup.make_ROIParam1D(descriptor, index)
         return child  
     
     @staticmethod
-    def makeChannelsParam(dim=DataDim.Data2D):
-        if dim == DataDim.Data2D:
+    def makeChannelsParam(dim=ROIDim.ROI2D):
+        if dim == ROIDim.ROI2D:
             child = [{'title': 'Use channel', 'name': 'use_channel', 'type': 'itemselect', 'checkbox': True,
                       'value': dict(all_items=['red', 'green', 'blue'],
                            selected=['red']),
@@ -89,7 +89,7 @@ class ROIScalableGroup(GroupParameter):
              {'name': 'zlevel', 'title':'Z-level','type': 'int', 'expanded': False, 'value':10}] 
         
     @staticmethod
-    def makeMathParam(dim=DataDim.Data2D):
+    def makeMathParam(dim=ROIDim.ROI2D):
         return [{'title': 'Math type:', 'name': 'math_function', 'type': 'list',
                              'limits': data_processors.functions_filtered(dim)}]
     @staticmethod    
@@ -99,8 +99,8 @@ class ROIScalableGroup(GroupParameter):
                               'limits': ROI2D_TYPES, 'readonly': False}])
             children.append({'title': 'Process data', 'name': 'process_data', 'type': 'led_push',
                              'value': config.get(('utils', 'plotting', 'process_roi'), True)})
-            children.extend(ROIScalableGroup.makeChannelsParam(DataDim.Data2D))
-            children.extend(ROIScalableGroup.makeMathParam(DataDim.Data2D))
+            children.extend(ROIScalableGroup.makeChannelsParam(ROIDim.ROI2D))
+            children.extend(ROIScalableGroup.makeMathParam(ROIDim.ROI2D))
             children.extend(ROIScalableGroup.makeDisplayParam(index))
             children.extend([{'name': 'center', 'type': 'group', 'expanded': False, 'children': [
                     {'name': 'x', 'type': 'float', 'value': 0, 'step': 1,'decimals':6},
@@ -123,8 +123,8 @@ class ROIScalableGroup(GroupParameter):
             children = []
             children.append({'title': 'Process data', 'name': 'process_data', 'type': 'led_push',
                              'value': config.get(('utils', 'plotting', 'process_roi'), True)})
-            children.extend(ROIScalableGroup.makeChannelsParam(DataDim.Data1D))
-            children.extend(ROIScalableGroup.makeMathParam(DataDim.Data1D))
+            children.extend(ROIScalableGroup.makeChannelsParam(ROIDim.ROI1D))
+            children.extend(ROIScalableGroup.makeMathParam(ROIDim.ROI1D))
             children.extend(ROIScalableGroup.makeDisplayParam(index))
             children.extend([{'name': 'position', 'type': 'group', 'children': [
                 {'name': 'left', 'type': 'float', 'value': 0, 'step': 1},
@@ -145,7 +145,7 @@ class ROIManager(QObject):
     roi_changed = Signal()
     color_list = np.array(plot_colors)
 
-    def __init__(self, view_box=None, ROI_type=DataDim.Data1D):
+    def __init__(self, view_box=None, ROI_type=ROIDim.ROI1D):
         super().__init__()
         self.ROI_type = ROI_type
         self.roiwidget = QtWidgets.QWidget()
@@ -257,13 +257,13 @@ class ROIManager(QObject):
     def make_ROI(self, param: Parameter) -> ROI:
         newindex = int(param.name()[-2:])
         pos = self.view_box.viewRange()
-        if self.ROI_type == DataDim.Data1D:
+        if self.ROI_type == ROIDim.ROI1D:
             descriptor = ''
             pos = pos[0]
             pos = pos[0] + np.diff(pos)*np.array([2,4])/6
             roi = self.make_ROI1D(newindex, pos, brush=param['Color'],
                                   compute=param['process_data'])
-        elif self.ROI_type == DataDim.Data2D:
+        elif self.ROI_type == ROIDim.ROI2D:
             descriptor = param.child('roi_type').value()
             xrange,yrange=pos                    
             width = np.max(((xrange[1] - xrange[0]) / 10, 2))
@@ -307,8 +307,8 @@ class ROIManager(QObject):
         Returns:
             roi: LinearROI
         """
-        roi = ROIFactory.create(DataDim.Data1D,
-                                ROIFactory.get_descriptors_from_dimensionality(DataDim.Data1D)[0],
+        roi = ROIFactory.create(ROIDim.ROI1D,
+                                ROIFactory.get_descriptors_from_dimensionality(ROIDim.ROI1D)[0],
                                 index=index, pos=pos, compute=compute, **kwargs)
         # roi.setZValue(-10)
         roi.setOpacity(0.2)
@@ -327,7 +327,7 @@ class ROIManager(QObject):
             roi: pg.ROI 
         """
 
-        return ROIFactory.create(DataDim.Data2D, descriptor,
+        return ROIFactory.create(ROIDim.ROI2D, descriptor,
                                  index=index, pos=pos,
                                  size=size, name=roi_format(index),
                                  compute=compute, **kwargs)
@@ -600,7 +600,7 @@ class ROISaver:
                 if hasattr(viewer, 'roi_manager'):
                     viewer_param.addChild(
                         {'title': 'ROI type:', 'name': 'roi_type', 'type': 'str',
-                         'value': viewer.roi_manager.settings.child('ROIs').roi_type})
+                         'value': viewer.roi_manager.settings.child('ROIs').roi_dim})
                     viewer_param.addChildren(viewer.roi_manager.settings.child('ROIs').children())
                 det_param.addChild(viewer_param)
             self.roi_presets.addChild(det_param)
@@ -648,7 +648,7 @@ if __name__ == '__main__':
 
     im = ImageWidget()
     im = PlotWidget()
-    prog = ROIManager(im, DataDim.Data2D)
+    prog = ROIManager(im, ROIDim.ROI2D)
     widget = QtWidgets.QWidget()
     layout = QtWidgets.QHBoxLayout()
     widget.setLayout(layout)
