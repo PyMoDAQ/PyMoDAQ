@@ -76,6 +76,7 @@ names = [
     'keyboard_arrow_right',
     'language',
     'lightbulb',
+    'line_style',
     'link',
     'lock',
     'lock_open_right',
