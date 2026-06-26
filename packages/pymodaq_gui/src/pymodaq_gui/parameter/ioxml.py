@@ -43,8 +43,7 @@ optional_boolean_options = {'show_pb': None,
                             'filetype': None,
                             }
 
-optional_str_options = {'title': None,
-                        'label': None,
+optional_str_options = {'label': None,
                         'suffix': None,
                         }
 
@@ -193,38 +192,36 @@ def dict_from_param(param: Parameter):
     add_text_to_elt, walk_parameters_to_xml, dict_from_param
     """
     opts = dict([])
-    param_opts = copy.deepcopy(param.opts)
-    param_opts.pop('name')
 
-    opts['type'] = str(param_opts.pop('type'))
-    title = param_opts.pop('title', None)
-    if title is None:
-        title = param.name()
-    opts['title'] = title
+    param_opts = param.opts
+
+    opts['type'] = str(param_opts.get('type'))
+    title = param_opts.get('title', None)
+    opts['title'] = title if title is not None else param.name()
 
     for option_str, default in required_boolean_options.items():
-        opt_as_str = '1' if param_opts.pop(option_str, default) else '0'
+        opt_as_str = '1' if param_opts.get(option_str, default) else '0'
         opts[option_str] = opt_as_str
 
     for option_str in optional_boolean_options:
         if option_str in param_opts:
-            opt_as_str = '1' if param_opts.pop(option_str) else '0'
+            opt_as_str = '1' if param_opts.get(option_str) else '0'
             opts[option_str] = opt_as_str
 
     for option_str in optional_str_options:
         if option_str in param_opts:
-            opts[option_str] = param_opts.pop(option_str)
+            opts[option_str] = param_opts.get(option_str)
 
     for option_int in optional_int_options:
         if option_int in param_opts:
-            opts[option_int] = f'{param_opts.pop(option_int)}'
+            opts[option_int] = f'{param_opts.get(option_int)}'
 
     for eval_option in optional_eval_options:
         if eval_option in param_opts:
-            opts[eval_option] = str(param_opts.pop(eval_option))
+            opts[eval_option] = str(param_opts.get(eval_option))
 
     if 'limits' in param_opts:
-        limits_opt = param_opts.pop('limits')
+        limits_opt = param_opts.get('limits')
         if isinstance(limits_opt, dict):
             limits = {}
             for key in limits_opt:
@@ -232,12 +229,6 @@ def dict_from_param(param: Parameter):
         else:
             limits = str(limits_opt)
         opts.update(dict(limits=limits))
-
-
-    #wrap in str the other options
-    for option_str in param_opts:
-        opts[option_str] = str(param_opts[option_str])
-
 
     return opts
 
