@@ -1,7 +1,7 @@
 import pyqtgraph as pg
 
 from pymodaq_data.data import Axis
-from pymodaq_utils import utils
+from pymodaq_utils import math_utils as mutils
 
 AXIS_POSITIONS = ['top', 'bottom', 'right', 'left']
 
@@ -31,7 +31,7 @@ class AxisItemScaled(pg.AxisItem):
         self._offset = offset
 
     def axis_data(self, Npts):
-        return utils.linspace_step_N(self.axis_offset, self.axis_scaling, Npts)
+        return mutils.linspace_step_N(self.axis_offset, self.axis_scaling, Npts)
 
     def set_scaling_and_label(self, axis_info: Axis):
         self.setLabel(axis_info.label, axis_info.units)
