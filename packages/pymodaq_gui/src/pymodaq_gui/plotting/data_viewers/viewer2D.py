@@ -394,22 +394,12 @@ class View2D(ActionManager, QtCore.QObject):
                 self.plotitem.removeItem(item)
 
     def set_transform(self, xaxis: Axis, yaxis: Axis):
-        for image_item_name in self.data_displayer.get_images():
-            self.data_displayer.get_image(image_item_name).resetTransform()
-        #self.ROIselect.resetTransform()
-
         tr = QtGui.QTransform()  # prepare PlotItems transformation:
         tr.translate(xaxis.offset, yaxis.offset)
         tr.scale(xaxis.scaling, yaxis.scaling)
 
-        tr_roi = QtGui.QTransform()
-        tr_roi.translate(xaxis.offset, yaxis.offset)
-        tr_roi.scale(xaxis.scaling, yaxis.scaling)
-
         for image_item_name in self.data_displayer.get_images():
             self.data_displayer.get_image(image_item_name).setTransform(tr)
-        #self.ROIselect.setTransform(tr_roi)
-        pass
 
     def set_image_displayer(self, data_distribution: DataDistribution):
         self.clear_plot_item()
@@ -954,8 +944,7 @@ class Viewer2D(ViewerBase):
                 yaxis = self._datas.get_axis_from_index(0)[0]
                 self.x_axis = xaxis
                 self.y_axis = yaxis
-                if not hasattr(self._datas, 'sliced'):
-                    self.view.set_transform(xaxis, yaxis)
+                self.view.set_transform(xaxis, yaxis)
             else:
                 self.x_axis = self._datas.get_axis_from_index(0)[0]
                 self.y_axis = self._datas.get_axis_from_index(0)[1]
