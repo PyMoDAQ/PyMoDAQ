@@ -289,10 +289,10 @@ class DashBoard(CustomApp, LECOComponentMixin):
                 'detectors': [ detector.get_leco_name() for detector in self.detector_modules],
             }
             self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.SEND_DEVICES, devices))
-        elif status.command == LECODashboardCommands.GET_CONFIGURATIONS:
+        elif status.command == LECODashboardCommands.GET_STATES:
             entries = self.state_manager.entries if self.state_manager.is_action_enabled(ManagerActions.LIST) else []
-            self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.SEND_CONFIGURATIONS, entries))
-        elif status.command == LECODashboardCommands.APPLY_CONFIGURATION:
+            self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.SEND_STATES, entries))
+        elif status.command == LECODashboardCommands.APPLY_STATE:
             configuration = status.attribute
             loaded = False
             if (configuration in self.state_manager.entries and
@@ -303,7 +303,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
                 self.state_manager.execute_entry(self.state_manager.entry_filepath)
                 loaded = True
 
-            self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.APPLIED_CONFIGURATION_DONE, loaded))
+            self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.APPLIED_STATE_DONE, loaded))
         elif status.command == LECODashboardCommands.GET_EXPERIMENTS:
             self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.SEND_EXPERIMENTS, self.experiment_manager.entries))
         elif status.command == LECODashboardCommands.APPLY_EXPERIMENT:

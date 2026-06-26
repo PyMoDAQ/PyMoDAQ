@@ -63,10 +63,10 @@ class LECOViewerCommands(StrEnum):
 class LECODashboardCommands(StrEnum):
     GET_DEVICES = 'get_devices'
     SEND_DEVICES = 'send_devices'
-    GET_CONFIGURATIONS = 'get_configurations'
-    SEND_CONFIGURATIONS = 'send_configurations'
-    APPLY_CONFIGURATION = 'apply_configuration'
-    APPLIED_CONFIGURATION_DONE = 'applied_configuration_done'
+    GET_STATES = 'get_states'
+    SEND_STATES = 'send_states'
+    APPLY_STATE = 'apply_state'
+    APPLIED_STATE_DONE = 'applied_state_done'
     GET_EXPERIMENTS = 'get_experiments'
     SEND_EXPERIMENTS = 'send_experiments'
     APPLY_EXPERIMENT = 'apply_experiment'
@@ -131,8 +131,8 @@ class ActorHandler(PymodaqPipeHandler):
         self.register_rpc_method(self.stop_grab, name=ViewerMethods.STOP)
         self.register_rpc_method(self.get_settings, name=GenericMethods.GET_SETTINGS)
         self.register_rpc_method(self.get_devices, name=DashboardMethods.GET_DEVICES)
-        self.register_rpc_method(self.get_configurations, name=DashboardMethods.GET_CONFIGURATIONS)
-        self.register_rpc_method(self.apply_configuration, name=DashboardMethods.APPLY_CONFIGURATION)
+        self.register_rpc_method(self.get_states, name=DashboardMethods.GET_STATES)
+        self.register_rpc_method(self.apply_state, name=DashboardMethods.APPLY_STATE)
         self.register_rpc_method(self.get_experiments, name=DashboardMethods.GET_EXPERIMENTS)
         self.register_rpc_method(self.apply_experiment, name=DashboardMethods.APPLY_EXPERIMENT)
     @staticmethod
@@ -164,11 +164,11 @@ class ActorHandler(PymodaqPipeHandler):
     def get_devices(self):
         self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.GET_DEVICES))
 
-    def get_configurations(self):
-        self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.GET_CONFIGURATIONS))
+    def get_states(self):
+        self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.GET_STATES))
 
-    def apply_configuration(self, configuration : str):
-        self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.APPLY_CONFIGURATION, attribute=configuration))
+    def apply_state(self, state : str):
+        self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.APPLY_STATE, attribute=state))
 
     def get_experiments(self):
         self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.GET_EXPERIMENTS))
@@ -386,10 +386,10 @@ class ActorListener(PymodaqListener):
                     method=DashboardDirectorMethods.SEND_DEVICES,
                     **binary_serialization_to_kwargs(command.attribute, data_key="data"),
                 )
-            elif command.command == LECODashboardCommands.SEND_CONFIGURATIONS:
+            elif command.command == LECODashboardCommands.SEND_STATES:
                 self.send_rpc_message_to_remote(
                     method=DashboardDirectorMethods.SEND_CONFIGURATIONS,
-                    configurations=command.attribute,
+                    states=command.attribute,
                 )
             elif command.command == LECODashboardCommands.SEND_EXPERIMENTS:
                 self.send_rpc_message_to_remote(
@@ -401,7 +401,7 @@ class ActorListener(PymodaqListener):
                     method=DashboardDirectorMethods.APPLIED_EXPERIMENT_DONE,
                     done=command.attribute,
                 )
-            elif command.command == LECODashboardCommands.APPLIED_CONFIGURATION_DONE:
+            elif command.command == LECODashboardCommands.APPLIED_STATE_DONE:
                 self.send_rpc_message_to_remote(
                     method=DashboardDirectorMethods.APPLIED_CONFIGURATION_DONE,
                     done=command.attribute,
