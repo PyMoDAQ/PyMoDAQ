@@ -308,6 +308,10 @@ class ParameterManager:
             - A list of dictionaries defining parameter structure
             - A Path to an XML file containing saved parameters
         """
+        self.set_settings(settings)
+
+    def set_settings(self, settings: Union[Parameter, List[Dict[str, str]], Path]):
+        """ similar to the property setter but easier to subclass"""
         settings = self.create_parameter(settings)
         self._settings = settings
         self.tree.setParameters(
@@ -317,7 +321,7 @@ class ParameterManager:
 
     @staticmethod
     def create_parameter(
-        settings: Union[Parameter, List[Dict[str, str]], Path],
+            settings: Union[Parameter, List[Dict[str, str]], Path],
     ) -> Parameter:
         """Create a Parameter object from various input types.
 
