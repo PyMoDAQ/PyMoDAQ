@@ -42,7 +42,9 @@ class SharedUI(SharedUI):
         super().setup_actions()
 
         self.add_action("scripting", "Enable scripting", "code_blocks",
-                        "Enable usage of scripting to control this component. Also runs a Coordinator", auto_toolbar=False, menu=MenuToolbarNames.TOOLS)
+                        "Enable usage of scripting to control this component. Also runs a Coordinator",
+                        auto_toolbar=False, menu=MenuToolbarNames.TOOLS, icon_color='green', icon_checked="code_blocks",
+                        icon_checked_color='red')
         self.add_action("leco", "Run Leco Coordinator", "router", "Run a Coordinator on this localhost",
                         auto_toolbar=False, menu=MenuToolbarNames.TOOLS)
         self.add_action("plugin_manager", "Plugin Manager", 'extension', tip='Opens the Plugin Manager',
