@@ -444,6 +444,7 @@ class LECOComponentMixin:
     """
 
     _leco_commands_signal = Signal(ThreadCommand)
+    _connect_leco_request = Signal(bool)
 
     def __init__(self, listener_class: Type[ActorListener], **kwargs):
         """Initialize the mixin.
@@ -453,6 +454,7 @@ class LECOComponentMixin:
         """
         self._leco_client: Optional[ActorListener] = None
         self._listener_class: Type[ActorListener] = listener_class
+        self._connected = False
 
     def connect_leco(self, connect: bool) -> None:
         """Connect to or disconnect from the LECO network.
@@ -482,12 +484,14 @@ class LECOComponentMixin:
                 self._leco_client.cmd_signal.connect(self.process_leco_commands)
             self._leco_commands_signal.connect(self._leco_client.queue_command)
             self._leco_client.start_listen()
+            self._connected = True
         else:
-            self._leco_client.stop_listen()
             try:
+                self._leco_client.stop_listen()
                 self._leco_commands_signal.disconnect(self._leco_client.queue_command)
-            except TypeError:
-                pass  # already disconnected
+                self._connected = False
+            except (TypeError,AttributeError):
+                pass  # already disconnected or never connected
 
     def get_leco_name(self) -> str:
         """Return the LECO component name used to register on the network.

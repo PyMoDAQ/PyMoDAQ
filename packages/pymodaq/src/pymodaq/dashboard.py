@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
+import itertools
 import sys
 import datetime
 import subprocess
@@ -234,7 +234,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.get_toolbar('overshooter').setEnabled(False)
         self.experiment_manager.enable_actions(True)
 
-        self.connect_leco(connect=True)
+
 
 
     def do_things_after_experiment_set(self, experiment_name: str):
@@ -255,6 +255,10 @@ class DashBoard(CustomApp, LECOComponentMixin):
         if self._scripted_experiment_load:
             self._scripted_experiment_load = False
             self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.APPLIED_EXPERIMENT_DONE, True))
+
+        for device in itertools.chain(self.actuators_modules, self.detector_modules):
+            self._connect_leco_request.connect(device.connect_leco)
+        self._connect_leco_request.emit(self._connected)
 
     def get_leco_name(self) -> str:
         return "dashboard"

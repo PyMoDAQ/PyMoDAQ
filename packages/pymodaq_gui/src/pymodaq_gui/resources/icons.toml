@@ -29,6 +29,7 @@ names = [
     'check_box',
     'check_box_outline_blank',
     'close',
+    'code_blocks',
     'compare_arrows',
     'deblur',
     'description',
