@@ -18,9 +18,6 @@ from qtpy.QtWidgets import (
     QMessageBox,
 )
 
-
-
-
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
 from pymodaq_utils.utils import ThreadCommand
