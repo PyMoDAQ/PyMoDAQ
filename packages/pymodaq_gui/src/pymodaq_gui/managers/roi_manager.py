@@ -91,7 +91,7 @@ class ROIScalableGroup(GroupParameter):
     @staticmethod
     def makeMathParam(dim=ROIDim.ROI2D):
         return [{'title': 'Math type:', 'name': 'math_function', 'type': 'list',
-                             'limits': data_processors.functions_filtered(dim)}]
+                             'limits': data_processors.functions_filtered(dim.map_to_datadim())}]
     @staticmethod    
     def make_ROIParam2D(descriptor: str, index):
             children = []    

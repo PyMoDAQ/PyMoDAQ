@@ -222,15 +222,16 @@ class ROI(pgROI, ROIBase):
     sigRemoveRequested = Signal(object)
 
     def __init__(self, *args, index=0, name='roi', compute=True, **kwargs):
+        color = kwargs.pop('color', None)
+        angle = kwargs.pop('angle', None)
         pgROI.__init__(self, *args, **kwargs)
         ROIBase.__init__(self, index=index, name=name, compute=compute)
 
         self.init_qt()
-        if 'color' in kwargs:
-            self.set_color(kwargs['color'])
-        if 'angle' in kwargs:
-            self.setAngle(kwargs['angle'])
-
+        if color is not None:
+            self.set_color(color)
+        if angle is not None:
+            self.setAngle(angle)
 
     def getMenu(self):
         if self.menu is None:

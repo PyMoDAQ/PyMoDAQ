@@ -300,7 +300,6 @@ class Filter2DFromRois(Filter):
     def __init__(self, roi_manager: ROIManager, graph_item: UniformImageItem, image_keys):
 
         super().__init__()
-        self._roi_settings = roi_manager.settings
         self._image_keys = image_keys
         self._graph_item = graph_item
         self.axes = (0, 1)
@@ -311,16 +310,15 @@ class Filter2DFromRois(Filter):
         if dwa is not None:
             try:
                 labels = []
-                for roi_key, roi in self._ROIs.items():
-                    if roi.compute:
-                        labels = self._roi_settings['ROIs', roi_key, 'use_channel']['selected']
+                for roi_meta in self._ROIs:
+                    if roi_meta.roi.compute:
+                        labels = roi_meta.param['use_channel']['selected']
                         sub_data = dwa.deepcopy()
                         if labels:
                             sub_data.data = [dwa[dwa.labels.index(label)] for label in labels]
                             sub_data.labels = [label for label in labels]
-                            dte_temp = self.get_xydata_from_roi(roi, sub_data,
-                                                                    self._roi_settings['ROIs',
-                                                                    roi_key, 'math_function'])
+                            dte_temp = self.get_xydata_from_roi(roi_meta.roi, sub_data,
+                                                                roi_meta.param['math_function'])
 
                             dte.append(dte_temp)
             except Exception as e:

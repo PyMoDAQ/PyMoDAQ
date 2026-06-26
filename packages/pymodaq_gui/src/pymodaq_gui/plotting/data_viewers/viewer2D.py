@@ -11,6 +11,7 @@ import pyqtgraph as pg
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 from pyqtgraph import ROI as pgROI
 
+from pymodaq_gui.plotting.items.roi_sync import roi_format
 from pymodaq_gui.plotting.utils.lineout import Lineouts
 from pymodaq_gui.plotting.utils.plot_utils import ViewBox
 from pymodaq_gui.qt_utils import mkQApp
@@ -20,7 +21,7 @@ from pymodaq_data.data import (Axis, DataToExport, DataRaw,
                                DataDistribution, DataWithAxes)
 from pymodaq_data.plotting.utils import PlotColors
 
-from pymodaq_gui.managers.roi_manager import ROIManager, ROIDim
+from pymodaq_gui.managers.roi_viewer_manager import ROIViewerManager, ROIDim
 from pymodaq_gui.plotting.items.roi import SimpleRectROI, RoiInfo
 
 from pymodaq_gui.managers.action_manager import ActionManager
@@ -323,7 +324,7 @@ class View2D(ActionManager, QtCore.QObject):
             self.parent_widget.show()
 
         self.image_widget = ImageWidget()
-        self.roi_manager = ROIManager(self.image_widget, ROIDim.ROI2D)
+        self.roi_manager = ROIViewerManager(self.image_widget.plotitem.vb, ROIDim.ROI2D)
 
         self.roi_target: Union[pgROI, Crosshair] = None
 
@@ -550,7 +551,8 @@ class View2D(ActionManager, QtCore.QObject):
                         tip='Show the legend', checkable=True)
 
     def update_colors(self, colors: list):
-        for ind, roi_name in enumerate(self.roi_manager.ROIs):
+        for ind, roi_meta in enumerate(self.roi_manager.ROIs):
+            roi_name = roi_format(roi_meta.index)
             self.lineout_viewers[Lineouts.HOR].update_colors(make_dashed_pens(colors[ind]), displayer=roi_name)
             self.lineout_viewers[Lineouts.VER].update_colors(make_dashed_pens(colors[ind]), displayer=roi_name)
             self.lineout_viewers[Lineouts.INT].update_colors(make_dashed_pens(colors[ind]), displayer=roi_name)
@@ -588,24 +590,22 @@ class View2D(ActionManager, QtCore.QObject):
     def show_legend(self, show=True):
         self.data_displayer.show_legend(show)
 
-    @Slot(str)
-    def add_roi_displayer(self, roi_name=''):
-        color = self.roi_manager.ROIs[roi_name].color
+    def add_roi_displayer(self, roi_index: int):
+        color = self.roi_manager.get_roi_from_index(roi_index).roi.color()
+        roi_name = roi_format(roi_index)
         self.lineout_viewers[Lineouts.HOR].view.add_data_displayer(roi_name, make_dashed_pens(color))
         self.lineout_viewers[Lineouts.VER].view.add_data_displayer(roi_name, make_dashed_pens(color))
         self.lineout_viewers[Lineouts.INT].view.add_data_displayer(roi_name, make_dashed_pens(color))
 
-    @Slot(str)
-    def remove_roi_displayer(self, roi_name=''):
+    def remove_roi_displayer(self, roi_index: int):
+        roi_name = roi_format(roi_index)
         self.lineout_viewers[Lineouts.HOR].view.remove_data_displayer(roi_name)
         self.lineout_viewers[Lineouts.VER].view.remove_data_displayer(roi_name)
         self.lineout_viewers[Lineouts.INT].view.remove_data_displayer(roi_name)
 
-    @Slot(str)
-    def update_roi_channels(self, roi_name):
+    def update_roi_channels(self, roi_index):
         """Update the use_channel setting each time a ROI is added"""
-        roi = self.roi_manager.get_roi(roi_name)
-        self.roi_manager.update_use_channel(self.data_displayer.labels.copy(),roi.index)
+        self.roi_manager.update_use_channel(self.data_displayer.labels.copy(),roi_index)
 
     def prepare_ui(self):
         self.ROIselect.setVisible(False)
@@ -644,8 +644,8 @@ class View2D(ActionManager, QtCore.QObject):
     def roi_clicked(self, isroichecked=True):
         self.roi_manager.roiwidget.setVisible(isroichecked)
 
-        for k, roi in self.roi_manager.ROIs.items():
-            roi.setVisible(isroichecked)
+        for roi_meta in self.roi_manager.ROIs:
+            roi_meta.roi.setVisible(isroichecked)
 
     def get_visible_images(self):
         are_items_visible = []
@@ -1022,7 +1022,6 @@ class Viewer2D(ViewerBase):
         self.view.ROIselect.sigRegionChangeFinished.connect(self.selected_region_changed)
 
         self.roi_manager.roi_changed.connect(self.roi_changed)
-        self.roi_manager.roi_value_changed.connect(self.roi_changed)
 
         self.view.connect_action('flip_ud', slot=self.update_data)
         self.view.connect_action('flip_lr', slot=self.update_data)
@@ -1107,7 +1106,6 @@ class Viewer2D(ViewerBase):
 
                     QtWidgets.QApplication.processEvents()
 
-                self.view.roi_manager.settings.child('measurements').setValue(self.measure_data_dict)
                 if not self._display_temporary:
                     self.data_to_export_signal.emit(self.data_to_export)
                 self.ROI_changed.emit()

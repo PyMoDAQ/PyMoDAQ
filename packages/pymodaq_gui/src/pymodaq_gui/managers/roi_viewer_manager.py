@@ -3,7 +3,7 @@ from collections import OrderedDict
 import os
 from pathlib import Path
 import sys
-from typing import List
+from typing import List, Union, Dict
 
 import numpy as np
 
@@ -44,7 +44,7 @@ ROI2D_TYPES = ROIFactory.get_descriptors_from_dimensionality(ROIDim.ROI2D)
 
 class ROIScalableGroup(GroupParameter):
     def __init__(self, roi_dim=ROIDim.ROI1D, **opts):
-        opts['type'] = 'group'
+        opts['type'] = 'scalable_roigroup_parameter'
         opts['addText'] = "Add"
         self.roi_dim = roi_dim
         if roi_dim == ROIDim.ROI2D:
@@ -62,11 +62,13 @@ class ROIScalableGroup(GroupParameter):
 
         self.addChild(RoiParameter(self.roi_dim, descriptor, newindex))
 
+registerParameterType('scalable_roigroup_parameter', ROIScalableGroup)
+
 
 class ROIParameterManager(ParameterManager):
     def __init__(self, roi_dim=ROIDim.ROI1D):
         super().__init__(settings_name='roi_parameters',
-                         action_list=("search", "save", "update", "load", "clear"))
+                         action_list=("save", "update", "load", "clear", "search"))
         self.roi_dim = roi_dim
         self.settings.addChild(ROIScalableGroup(self.roi_dim,
                                                 name='rois',
@@ -74,11 +76,24 @@ class ROIParameterManager(ParameterManager):
 
     @property
     def rois_setting(self) -> ROIScalableGroup:
-        return self.settings.child('rois')
+        return self._settings.child('rois')
 
     def clear_settings_slot(self):
-        for child in self.rois_setting.children():
-            child.remove()
+        try:
+            for child in self.rois_setting.children():
+                child.remove()
+        except KeyError:
+            pass
+
+    def set_settings(self, settings: Union[Parameter, List[Dict[str, str]], Path]):
+        if not hasattr(self, '_settings') or 'rois' not in [child.name() for child in self._settings.children()]:
+            super().set_settings(settings)
+        else:
+            settings = self.create_parameter(settings)
+            self.clear_settings_slot()
+            for child in settings.child('rois').children():
+                self.rois_setting.addChild(child.saveState())
+
 
 
 class ROIMeta:
@@ -91,7 +106,7 @@ class ROIMeta:
         self.sync.sync_entries_with(self.roi, self.param)
 
 
-class ROIViewerManager(QtCore.QObject, ROIParameterManager):
+class ROIViewerManager(ROIParameterManager, QtCore.QObject):
 
     new_ROI_signal = Signal(int)
     remove_ROI_signal = Signal(int)
@@ -104,8 +119,9 @@ class ROIViewerManager(QtCore.QObject, ROIParameterManager):
     params = []
 
     def __init__(self, view_box=None, roi_dim=ROIDim.ROI1D):
-        super().__init__()
-        self.roi_dim = roi_dim
+        QtCore.QObject.__init__(self)
+        ROIParameterManager.__init__(self, roi_dim)
+
         self.view_box: ViewBox = view_box  # a viewbox to add ROI into!
         self._ROIs: list[ROIMeta] = []
 
@@ -115,7 +131,7 @@ class ROIViewerManager(QtCore.QObject, ROIParameterManager):
         return self.settings_tree
 
     def emit_colors(self):
-        colors = [roi_meta.roi.color() for roi_meta in self._ROIs]
+        colors = [roi_meta.param['color'] for roi_meta in self._ROIs]
         for color in colors:
             color.setAlpha(255)
         self.color_signal.emit(colors)
@@ -131,10 +147,10 @@ class ROIViewerManager(QtCore.QObject, ROIParameterManager):
         return find_objects_in_list_from_attr_name_val(self._ROIs, 'index', index)[0]
 
     def add_roi_programmatically(self, descriptor: str = ROI2D_TYPES[0]):
-        self.settings.child('rois').addNew(descriptor)
+        self.rois_setting.addNew(descriptor)
 
     def remove_roi_programmatically(self, index: int):
-        self.settings.child('rois').removeChild(self.get_roi_from_index(index).param)
+        self.rois_setting.removeChild(self.get_roi_from_index(index).param)
 
     def get_ROI_indexes(self):
         return [roi.index for roi in self.ROIs]
@@ -148,6 +164,8 @@ class ROIViewerManager(QtCore.QObject, ROIParameterManager):
         self._ROIs.append(roi_meta)
         self.view_box.addItem(roi_meta.roi)
         roi_meta.roi.sigRegionChangeFinished.connect(lambda: self.roi_changed.emit())
+        roi_meta.roi.sigRemoveRequested.connect(lambda: self.remove_ROI(roi_meta))
+        roi_meta.roi.sigCopyRequested.connect(lambda: self.copy_ROI(roi_meta))
         self.new_ROI_signal.emit(param.index)
         self.roi_changed.emit()
 
@@ -160,18 +178,24 @@ class ROIViewerManager(QtCore.QObject, ROIParameterManager):
             self._ROIs, 'param', param)[0]
         self._ROIs.remove(roi_meta)
         self.view_box.removeItem(roi_meta.roi)
-        self.remove_ROI_signal.emit(param.index)
+        self.remove_ROI_signal.emit(roi_meta.index)
+
     def menu_changed(self, param: RoiParameter, data: str):
         if data == 'Copy':
             roi_meta = self.get_roi_from_index(param.index)
             self.copy_ROI(roi_meta)
-
+        elif data == 'Remove':
+            roi_meta = self.get_roi_from_index(param.index)
+            self.remove_ROI(roi_meta)
 
     def expand_roi_tree(self, roi):
         # Expand roi tree when roi gets double selected
         param = self.rois_setting.child(roi_format(roi.index))
         isExpanded = not param.opts['expanded']
         param.setOpts(expanded=isExpanded)
+
+    def remove_ROI(self, roi_meta: ROIMeta):
+        self.remove_roi_programmatically(roi_meta.index)
 
     def copy_ROI(self, roi_meta: ROIMeta):
         """Method to copy a ROI and add it to the parameter tree and to the viewer widget
