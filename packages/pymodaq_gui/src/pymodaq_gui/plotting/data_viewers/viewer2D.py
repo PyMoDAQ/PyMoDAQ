@@ -1158,11 +1158,24 @@ def main(data_distribution='uniform'):
         data_to_plot = generate_uniform_data()
 
     elif data_distribution == 'spread':
-        data_spread = np.load('../../../resources/triangulation_data.npy')
-        data_to_plot = DataRaw(name='mydata', distribution='spread', data=[data_spread[:,2]],
+        data_to_plot = generate_uniform_data()
+        N = 500
+
+        sample_x = np.random.randint(0, high=data_to_plot.shape[1], size=(N,))
+        sample_y = np.random.randint(0, high=data_to_plot.shape[0], size=(N,))
+        data_spread  = np.zeros((N, 3))
+        for ind in range(N):
+            data_spread[ind, 2] = data_to_plot.isig[sample_y[ind], sample_x[ind]][0][0]
+        data_spread[:, 0] = data_to_plot.get_axis_from_index(1)[0].get_data()[sample_x]
+        data_spread[:, 1] = data_to_plot.get_axis_from_index(0)[0].get_data()[sample_y]
+
+
+        data_to_plot = DataRaw(name='mydata', distribution='spread', data=[data_spread[:, 2]],
                                        nav_indexes=(0,),
-                                       axes=[Axis('xaxis', units='xpxl', data=data_spread[:,0], index=0, spread_order=0),
-                                             Axis('yaxis', units='ypxl', data=data_spread[:,1], index=0, spread_order=1)])
+                                       axes=[Axis('xaxis', units='xpxl',
+                                                  data=data_spread[:, 0], index=0, spread_order=0),
+                                             Axis('yaxis', units='ypxl',
+                                                  data=data_spread[:, 1], index=0, spread_order=1)])
 
     prog = Viewer2D(widget)
     widget.show()
@@ -1195,8 +1208,7 @@ def generate_uniform_data() -> DataRaw:
     x = 0.5 * np.linspace(-Nx / 2, Nx / 2 - 1, Nx)
     y = 0.2 * np.linspace(-Ny / 2, Ny / 2 - 1, Ny)
     x0 = 5
-    data_red = 3 * np.cos((x-x0) / 5) * gauss2D(x, x0, Nx / 10, y, -1, Ny / 10, 1, 90) + 0.5 * data_random
-    data_red[data_red < -2] = np.nan
+    data_red = 13 * np.cos((x-x0) / 5)**2 * gauss2D(x, x0, Nx / 10, y, -1, Ny / 10, 1, 90) + 0.5 * data_random
     data_green = 10 * gauss2D(x, -20, Nx / 10, y, -10, Ny / 20, 1, 0)
     data_green[70:80, 7:12] = np.nan
 
@@ -1231,5 +1243,5 @@ def main_view():
 if __name__ == '__main__':  # pragma: no cover
 
     #main_view()
-    main('uniform')
-    #main('spread')
+    #main('uniform')
+    main('spread')
