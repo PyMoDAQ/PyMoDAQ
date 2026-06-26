@@ -180,7 +180,7 @@ class ParameterTreeWidget(ActionManager):
         self.add_action(
             "clear_settings",
             "Clear Settings",
-            "file_open",
+            "ink_eraser",
             "Clear the settings tree",
             visible="clear" in action_list,
         )
