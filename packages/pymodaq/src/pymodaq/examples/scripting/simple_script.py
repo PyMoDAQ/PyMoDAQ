@@ -2,8 +2,8 @@ from pathlib import Path
 
 from pymodaq_data import Q_
 from pymodaq_data.h5modules.backends import GroupType
-from pymodaq.scripting import Detector, Actuator
 
+from pymodaq.scripting import Detector, Actuator
 from pymodaq_data.h5modules.data_saving import DataToExportEnlargeableSaver
 
 theta = Actuator('Angle')

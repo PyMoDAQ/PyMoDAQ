@@ -47,7 +47,7 @@ class DataMixer(CustomExt):
     dte_computed_signal = QtCore.Signal(DataToExport)
 
     def __init__(self, parent: gutils.DockArea, dashboard):
-        super().__init__(parent, dashboard)
+        super().__init__(parent, dashboard, add_toolbar_break=False)
 
         self.model_class: Optional[DataMixerModel] = None
         self.datamixer_config = DataMixerConfig()
@@ -62,7 +62,6 @@ class DataMixer(CustomExt):
             model_class = find_dict_in_list_from_key_val(self.models, 'name', model_name)['class']
             params = getattr(model_class, 'params')
             self.settings.child('models', 'model_params').addChildren(params)
-
 
     def setup_docks_and_widgets(self):
         """Mandatory method to be subclassed to setup the docks layout

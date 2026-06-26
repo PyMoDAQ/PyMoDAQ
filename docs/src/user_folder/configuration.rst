@@ -3,8 +3,8 @@
 Configuration
 =============
 
-All configuration files used by PyMoDAQ will be located within two folders each called
-*.pymodaq*. One is system wide and located in one of these locations:
+All configuration files (regrouped in the DashBoard as the Preferences) used by PyMoDAQ will be located within
+two folders each called *.pymodaq*. One is system wide and located in one of these locations:
 
 * Windows: *ProgramData* folder
 * Mac: *Library/Application Support* folder

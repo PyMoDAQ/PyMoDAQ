@@ -146,6 +146,7 @@ class UiToMainViewer(StrEnum):
     SAVE_CURRENT = 'save_current'
     SAVE_NEW = 'save_new'
     OPEN = 'open'
+    RESET_LIVE = 'reset_live'
 
     DETECTOR_CHANGED = 'detector_changed'
     VIEWERS_CHANGED = 'viewers_changed'

@@ -137,6 +137,7 @@ class ParameterTreeWidget(ActionManager):
             - 'save': Adds a button to save settings to an XML file
             - 'update': Adds a button to update settings from an XML file
             - 'load': Adds a button to load settings from an XML file
+            - 'clear': Adds a button to clear the content of the tree
             Default is ('search', 'save', 'update', 'load').
 
         See Also
@@ -155,7 +156,7 @@ class ParameterTreeWidget(ActionManager):
         self.add_action(
             "save_settings",
             "Save Settings",
-            "saveTree",
+            "save",
             "Save current settings in an xml file",
             visible="save" in action_list,
         )
@@ -163,7 +164,7 @@ class ParameterTreeWidget(ActionManager):
         self.add_action(
             "update_settings",
             "Update Settings",
-            "updateTree",
+            "refresh",
             "Update the settings from an xml file, the settings structure loaded must be identical to the current one",
             visible="update" in action_list,
         )
@@ -171,9 +172,17 @@ class ParameterTreeWidget(ActionManager):
         self.add_action(
             "load_settings",
             "Load Settings",
-            "openTree",
+            "file_open",
             "Load current settings from an xml file, the current settings structure is erased and is replaced by the new one",
             visible="load" in action_list,
+        )
+        # Clear action
+        self.add_action(
+            "clear_settings",
+            "Clear Settings",
+            "file_open",
+            "Clear the settings tree",
+            visible="clear" in action_list,
         )
 
 
@@ -251,6 +260,10 @@ class ParameterManager:
         self._settings_tree.get_action(f"load_settings").connect_to(
             self.load_settings_slot,
         )
+        self._settings_tree.get_action(f"clear_settings").connect_to(
+            self.clear_settings_slot,
+        )
+
         # Add this line to connect the search widget
         if "search" in action_list:
             self._settings_tree.get_action("search_settings").searchTextChanged.connect(
@@ -702,6 +715,9 @@ class ParameterManager:
                 logger.info(
                     f"The loaded settings from {file_path} do not match the current settings structure and cannot be applied.",
                 )
+
+    def clear_settings_slot(self):
+        self.settings.clearChildren()
 
     def _apply_filter(self, text: str):
         """Apply search filter to the parameter tree with optimized updates.

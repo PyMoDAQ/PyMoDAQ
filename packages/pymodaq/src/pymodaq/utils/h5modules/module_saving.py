@@ -26,6 +26,7 @@ from pymodaq_data.h5modules.backends import GROUP, Node
 
 from pymodaq_gui.h5modules.saving import H5SaverBase
 from pymodaq_gui.parameter import ioxml
+from pymodaq.utils.managers.modules.utils import ModuleType
 
 if TYPE_CHECKING:
     from pymodaq.extensions.scan.daq_scan import DAQScan
@@ -574,22 +575,53 @@ class LoggerSaver(ScanSaver):
     module
     """
     group_type = GroupModuleType.DATALOGGER
+    def __init__(self, module):
+        super().__init__(module)
+
+    def update_after_h5changed(self):
+        for module in self._module.modules_manager.detectors_all:
+            module.module_and_data_saver = DetectorTimeSaver(module)
+            module.module_and_data_saver.h5saver = self.h5saver
+        for module in self._module.modules_manager.actuators_all:
+            module.module_and_data_saver = ActuatorTimeSaver(module)
+            module.module_and_data_saver.h5saver = self.h5saver
+
+    def get_set_node(self, where: Union[Node, str] = None, new=False) -> GROUP:
+        """Get the last group scan node
+
+        Get the last Logger Group or create one
+        get the last Scan Group if:
+        * there is one already created
+        * new is False
+
+        Parameters
+        ----------
+        where: Union[Node, str]
+            the path of a given node or the node itself
+        new: bool
+
+        Returns
+        -------
+        GROUP: the GROUP associated with this module
+        """
+        self._module_group = self.get_last_node(where)
+        new = new or (self._module_group is None)
+        if new:
+            self._module_group = self._add_module(where)
+        for module in self._module.modules_manager.modules:
+            module.module_and_data_saver.main_module = False
+            module.module_and_data_saver.get_set_node(self._module_group)
+        return self._module_group
 
     def add_data(self, dte: DataToExport):
         """Add data to it's corresponding control module
 
         The name of the control module is the DataToExport name attribute
         """
-        if dte.name in self._module.modules_manager.detectors_name:
-            control_module = self._module.modules_manager.detectors[
-                self._module.modules_manager.detectors_name.index(dte.name)]
-        elif dte.name in self._module.modules_manager.actuators_name:
-            control_module = self._module.modules_manager.actuators[
-                self._module.modules_manager.actuators_name.index(dte.name)]
-        else:
-            return
+        control_module = self._module.modules_manager.get_mod_from_name(dte.name, ModuleType.Control)
 
-        control_module.append_data(dte=dte, where=self._module_group)
+        if control_module is not None:
+            control_module.append_data(dte=dte, where=self._module_group)
 
 
 class OptimizerSaver(ScanSaver):
@@ -614,6 +646,7 @@ class OptimizerSaver(ScanSaver):
             module.module_and_data_saver = DetectorEnlargeableSaver(
                 module, self.enl_axis_names, self.enl_axis_units)
             module.module_and_data_saver.h5saver = self.h5saver
+        self._time_saver.h5saver = self.h5saver
 
 
     def add_data(self, *args, axis_values: List[Union[float, np.ndarray]] = None,

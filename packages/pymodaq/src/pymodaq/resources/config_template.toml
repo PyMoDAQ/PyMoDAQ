@@ -49,3 +49,7 @@ wait_time_between = 0
     [optimizer.bounds]
     actuator_min = -10
     actuator_max = 10
+
+[launcher]
+max_history_size = 20
+keep_duplicates = false

@@ -2,6 +2,8 @@ import copy
 
 import numpy as np
 from qtpy.QtCore import QLocale, Qt, QModelIndex
+
+from pymodaq_data.data import parse_quantity
 from pymodaq_utils import utils
 from pymodaq_gui.qvariant import QVariant
 from pymodaq_gui.qt_utils import decode_data
@@ -243,7 +245,7 @@ class SpinBoxDelegate(QtWidgets.QStyledItemDelegate):
         return doubleSpinBox
 
     def setEditorData(self, editor: SpinBox, index):
-        editor.setValue(Q_(index.data()).magnitude)
+        editor.setValue(parse_quantity(index.data()).magnitude)
         #editor.setSuffix(Q_(index.data()).units)
 
     def setModelData(self, editor: SpinBox, model, index):

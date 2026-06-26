@@ -9,6 +9,7 @@ from __future__ import annotations
 from abc import ABCMeta, abstractmethod
 from copy import deepcopy
 import numbers
+import re
 
 import numpy as np
 from numpy.lib.mixins import NDArrayOperatorsMixin
@@ -27,7 +28,7 @@ from pint.compat import upcast_type_map
 from multipledispatch import dispatch
 
 
-from pymodaq_utils.enums import BaseEnum, enum_checker
+from pymodaq_utils.enums import BaseEnum, enum_checker, StrEnum
 from pymodaq_utils.warnings import deprecation_msg
 from pymodaq_utils.utils import find_objects_in_list_from_attr_name_val
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -45,6 +46,32 @@ config = Config()
 plotter_factory = PlotterFactory()
 ser_factory = SerializableFactory()
 logger = set_logger(get_module_name(__file__))
+
+
+
+
+def parse_quantity(quantity: str) -> Q_:
+    """
+    Converts a string into a Pint Quantity object using
+    a regex to split it in two parts and force usage of
+    Q_(value, unit) constructor as Q_(value_unit_str)
+    induces some errors.
+    Parameters
+    ----------
+    quantity: The string to convert
+
+    Returns
+    -------
+    The Quantity object
+
+    """
+    match = re.match(r'^([+-]?\d*\.?\d*(?:[eE][+-]?\d+)?)\s*(.*)$', quantity.strip())
+    if match:
+        value, unit = float(match.group(1)), match.group(2).strip()
+        value = float(value)
+        unit = unit.strip() or 'dimensionless'
+        return Q_(value, unit)
+    return Q_(quantity)
 
 def dimensionless_aware_reduce_units(q: Type[Q_]) -> Type[Q_]:
     """
@@ -120,6 +147,13 @@ class DataDimError(Exception):
 
 class DataUnitError(Exception):
     pass
+
+
+class Averaging(StrEnum):
+    """ Keywords to describe averaging in Data objects"""
+    AVERAGED = 'averaged'
+    N_AVERAGED = 'n_averaged'
+
 
 
 class DwaType(BaseEnum):
@@ -792,6 +826,8 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
         self._units = check_units(units)
         self._errors = None
         self.origin = origin
+        self._averaged = False
+        self._n_averaged = 0
 
         source = enum_checker(DataSource, source)
         self._source = source
@@ -952,6 +988,17 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
         """
         return f'{self.origin}/{self.name}'
 
+    @staticmethod
+    def get_origin_name_from_full_name(full_name: str):
+        """ Standardize the obtention of the origin and name from the full name expression
+
+        Origin is always the first bit before the first '/' character while the name will be the remaining characters
+        """
+        name_bits = full_name.split('/')
+        origin = name_bits[0]
+        name = full_name.split(f'{origin}/')[1]
+        return origin, name
+
     def __repr__(self):
         return (f'{self.__class__.__name__} <{self.name}> '
                 f'<u: {self.units}> '
@@ -1066,6 +1113,42 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
     def deepcopy(self):
         return copy.deepcopy(self)
 
+    @property
+    def averaged(self) -> bool:
+        """ Get/Set a boolean depending if self is the result of an average operation
+
+        See Also
+        --------
+        n_averaged
+        average
+        """
+        return self._averaged
+
+    @averaged.setter
+    def averaged(self, status: bool):
+        self._averaged = status
+
+    @property
+    def n_averaged(self) -> int:
+        """ Get/set the number of averaging that resulted in this data
+
+        See Also
+        --------
+        averaged
+        average
+        """
+        return self._n_averaged
+
+    @n_averaged.setter
+    def n_averaged(self, n_data: int):
+        """ Return the number of averaging that resulted in this data
+
+        See Also
+        --------
+        averaged
+        """
+        self._n_averaged = n_data
+
     def average(self, other: 'DataBase', weight: int) -> 'DataBase':
         """ Compute the weighted average between self and other DataBase
 
@@ -1079,7 +1162,11 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
         DataBase: the averaged DataBase object
         """
         if isinstance(other, DataBase) and len(other) == len(self) and isinstance(weight, numbers.Number):
-            return (other * weight + self) / (weight + 1)
+            averaged_data = (other * weight + self) / (weight + 1)
+            averaged_data.name = self.name
+            averaged_data.add_extra_attribute(**{Averaging.AVERAGED: True,
+                                                 Averaging.N_AVERAGED: weight + 1})
+            return averaged_data
         else:
             raise TypeError(f'Could not average a {other.__class__.__name__} or a {self.__class__.__name__} '
                             f'of a different length')

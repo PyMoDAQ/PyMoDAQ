@@ -13,7 +13,7 @@ from pymodaq.extensions.optimizers_base.utils import logger, individual_as_dta
 from pymodaq.extensions.optimizers_base.algorithm import GenericAlgorithm
 from pymodaq.utils.data import DataToActuators
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager
-from pymodaq_data import DataToExport, DataDim
+from pymodaq_data import DataToExport, DataDim, DataBase
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
 from pymodaq_utils.utils import get_entrypoints, find_dict_in_list_from_key_val
 
@@ -171,7 +171,7 @@ class OptimizerModelDefault(OptimizerModelGeneric):
 
         """
         data_name: str = self.settings['optimizing_signal', 'optimize_0d']['selected'][0]
-        origin, name = data_name.split('/')
+        origin, name = DataBase.get_origin_name_from_full_name(data_name)
         return float(measurements.get_data_from_name_origin(name, origin).data[0][0])
 
     def convert_output(self, outputs: dict[str, Union[float, np.ndarray]],
