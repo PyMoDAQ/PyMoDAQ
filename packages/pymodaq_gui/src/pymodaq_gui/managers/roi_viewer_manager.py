@@ -86,6 +86,8 @@ class ROIParameterManager(ParameterManager):
             pass
 
     def set_settings(self, settings: Union[Parameter, List[Dict[str, str]], Path]):
+        """ If empty create the standard structure otherwise empty the ROIs and readd them  one by one
+        for the ROI to reflects the param changes"""
         if not hasattr(self, '_settings') or 'rois' not in [child.name() for child in self._settings.children()]:
             super().set_settings(settings)
         else:
@@ -93,7 +95,6 @@ class ROIParameterManager(ParameterManager):
             self.clear_settings_slot()
             for child in settings.child('rois').children():
                 self.rois_setting.addChild(child.saveState())
-
 
 
 class ROIMeta:
