@@ -216,6 +216,8 @@ def _rotate_icon(icon: QtGui.QIcon, angle: int = 0) -> QtGui.QIcon:
     angle: int
         The angle in degrees to rotate the icon.
     """
+    if angle == 0:
+        return icon
     transform = QtGui.QTransform().rotate(angle)
     return transform_icon(icon, transform)
 
