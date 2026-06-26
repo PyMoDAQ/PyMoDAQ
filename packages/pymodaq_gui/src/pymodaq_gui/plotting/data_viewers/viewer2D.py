@@ -733,12 +733,10 @@ class View2D(ActionManager, QtCore.QObject):
 
     def show_ROI_select(self, pos=None, size=None):
         self.ROIselect.setVisible(self.is_action_checked('ROIselect'))
-        rect = self.data_displayer.get_image('red').boundingRect()
-        if size is None:
-            size = rect.size() * 2 / 3
-            pos = rect.center()-QtCore.QPointF(rect.width() * 2 / 3, rect.height() * 2 / 3)/2
+        range = self.get_view_range()
+        size = np.array((range[0][1] - range[0][0], range[1][1] - range[1][0])) * 2/3
         self.ROIselect.setSize(size, center=(0.5, 0.5))
-        self.ROIselect.setPos(pos)
+        self.ROIselect.setPos(np.mean(range, 1)-size/2)
 
     def set_image_labels(self, labels: List[str]):
         if self.data_displayer.labels != labels:
@@ -1232,5 +1230,5 @@ def main_view():
 if __name__ == '__main__':  # pragma: no cover
 
     #main_view()
-    #main('uniform')
-    main('spread')
+    main('uniform')
+    #main('spread')
