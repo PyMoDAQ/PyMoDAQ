@@ -17,7 +17,8 @@ from pymodaq_data.data import DataFromRoi, DataToExport, Axis, DataWithAxes
 from pymodaq_data import data as data_mod
 from pymodaq_data.post_treatment.process_to_scalar import DataProcessorFactory
 
-from pymodaq_gui.managers.roi_manager import ROIManager, LinearROI, RectROI
+from pymodaq_gui.managers.roi_viewer_manager import ROIViewerManager
+from  pymodaq_gui.plotting.items.roi import LinearROI, RectROI
 from pymodaq_gui.plotting.items.crosshair import Crosshair
 from pymodaq_gui.plotting.items.image import UniformImageItem
 from pymodaq_gui.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
@@ -226,7 +227,7 @@ class Filter1DFromRois(Filter):
 
     Parameters
     ----------
-    roi_manager:ROIManager
+    roi_manager:ROIViewerManager
     graph_item: PlotItems
     """
     def __init__(self, roi_manager: ROIViewerManager):
@@ -291,13 +292,13 @@ class Filter2DFromRois(Filter):
 
     Parameters
     ----------
-    roi_manager: ROIManager
+    roi_manager: ROIViewerManager
     graph_item: UniformImageItem or SpreadImageItem
         The graphical item where data and ROIs are plotted
     image_keys : (list) list of string identifier to link datas to their graph_items. This means that in
         _filter_data, datas.data[key] is plotted on graph_items[key] for key in image_keys
     """
-    def __init__(self, roi_manager: ROIManager, graph_item: UniformImageItem, image_keys):
+    def __init__(self, roi_manager: ROIViewerManager, graph_item: UniformImageItem, image_keys):
 
         super().__init__()
         self._image_keys = image_keys

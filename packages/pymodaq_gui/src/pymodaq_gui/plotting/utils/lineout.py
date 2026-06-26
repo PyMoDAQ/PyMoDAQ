@@ -10,7 +10,7 @@ from qtpy.QtCore import QObject, Signal, Slot
 
 from pymodaq_data.plotting.utils import PlotColors
 from pymodaq_gui.plotting.utils.plot_utils import Data0DWithHistory
-from pymodaq_gui.managers.roi_manager import ROIManager
+from pymodaq_gui.managers.roi_viewer_manager import ROIViewerManager
 from pymodaq_gui.plotting.items.crosshair import Crosshair
 from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -56,7 +56,7 @@ class LineoutPlotter(QObject):
     graph_widgets: OrderedDict
         Includes plotwidgets to display data
     roi_manager:
-        The ROIManager to create ROIs and manage their properties
+        The ROIViewerManager to create ROIs and manage their properties
     crosshair:
         The Crosshair object
     """
@@ -67,7 +67,7 @@ class LineoutPlotter(QObject):
 
     lineout_widgets = [Lineouts.INT]  # should be reimplemented see viewer2D
 
-    def __init__(self, graph_widgets: OrderedDict, roi_manager: ROIManager, crosshair: Crosshair):
+    def __init__(self, graph_widgets: OrderedDict, roi_manager: ROIViewerManager, crosshair: Crosshair):
         super().__init__()
 
         self._roi_manager = roi_manager
