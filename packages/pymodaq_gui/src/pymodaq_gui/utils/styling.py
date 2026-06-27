@@ -250,7 +250,8 @@ def create_icon(icon_name: Union[QtGui.QIcon, str, Path],
                 icon_color: Union[QtGui.QColor, bytes, str] = None,
                 icon_checked_color: Union[QtGui.QColor, bytes, str] = None,
                 flip_h: bool = False,
-                flip_v: bool = False):
+                flip_v: bool = False,
+                fill: bool = None):
     """ Create an icon from various sources by order of preference:
 
     1) icon_name is a MaterialIcon
@@ -273,6 +274,9 @@ def create_icon(icon_name: Union[QtGui.QIcon, str, Path],
         Mirror the icon horizontally (left ↔ right).
     flip_v:
         Mirror the icon vertically (top ↔ bottom).
+    fill:
+        Is Material Icon filled or edged. If None, left to the user configuration else force the
+        choice on the icon
     """
     if isinstance(icon_name, MaterialIcon):
         icon_name.set_color(create_color(icon_color))
@@ -285,12 +289,12 @@ def create_icon(icon_name: Union[QtGui.QIcon, str, Path],
             MaterialIcon.resource_path(
                 icon_name,
                 style=MaterialIcon.Style(config('gui', 'style', 'icons', 'style')[0]),
-                fill=config('gui', 'style', 'icons', 'fill')[0],
+                fill=config('gui', 'style', 'icons', 'fill')[0] if fill is None else fill,
                 size=config('gui', 'style', 'icons', 'size')[0])):
         icon = MaterialIcon(
             icon_name,
             style=MaterialIcon.Style(config('gui', 'style', 'icons', 'style')[0]),
-            fill=config('gui', 'style', 'icons', 'fill')[0],
+            fill=config('gui', 'style', 'icons', 'fill')[0] if fill is None else fill,
             size=config('gui', 'style', 'icons', 'size')[0])
         icon.set_color(create_color(icon_color))
         if icon_checked_color is not None:
