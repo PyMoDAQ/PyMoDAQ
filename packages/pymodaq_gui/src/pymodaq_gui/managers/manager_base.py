@@ -16,7 +16,7 @@ from pymodaq_utils.enums import StrEnum
 from pymodaq_gui.messenger import dialog
 from pymodaq_gui.qt_utils import center_widget_on_screen_and_show, mkQApp
 from pymodaq_gui.utils.splash import get_pymodaq_pixmap
-from pymodaq_gui.utils.widgets.combo import ComboBox
+from pymodaq_gui.utils.widgets.highlighted_combo import HighlightedComboBox as ComboBox
 
 from pymodaq_gui.utils.widget_sync import WidgetSync, SyncMode
 
@@ -134,6 +134,7 @@ class ManagerBase(CustomExt):
                 'items': [],
                 'current': None,
                 'enabled': False,
+                'highlighted': None
         })
 
         self.setup_ui()
@@ -312,13 +313,19 @@ class ManagerBase(CustomExt):
         self.affect_to(ManagerActions.OPEN, toolbar)
         self.affect_to(ManagerActions.OPEN, menu)
 
-        self.add_widget(ManagerActions.LIST_EXTERNAL, ComboBox(), toolbar=toolbar,
+        external_combo = ComboBox()
+        self.add_widget(ManagerActions.LIST_EXTERNAL, external_combo, toolbar=toolbar,
                         tip=f'List of possible {self.entry_type}s')
         self.sync_entries_with(self.get_action(ManagerActions.LIST_EXTERNAL).widget)
         self.affect_to(ManagerActions.EXECUTE, toolbar)
         return toolbar, menu
 
+    def update_highlighted_item(self, item: str):
+        self.entries_sync.update_key('highlighted', item, force_emit=True)
+
     def connect_things_base(self):
+        self.applied_entry.connect(self.update_highlighted_item)
+
         self.connect_action(ManagerActions.COPY, lambda: self.copy_entry())
         self.connect_action(ManagerActions.NEW, lambda: self.create_entry())
         self.connect_action(ManagerActions.DELETE, lambda: self.delete_entry())
@@ -353,6 +360,10 @@ class ManagerBase(CustomExt):
                     'setter': combo.setEnabled,
                     'mode': SyncMode.BIDIRECTIONAL,
                 },
+                'highlighted': {
+                    'setter': combo.set_highlighted_item,
+                    'mode': SyncMode.FROM_SYNC
+                }
             },
         )
 
