@@ -18,6 +18,7 @@ from qtpy.QtWidgets import (
     QMessageBox,
 )
 
+from pymodaq.utils.managers.roi_manager.roi_manager import ROIManager
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
 from pymodaq_utils.utils import ThreadCommand
@@ -172,7 +173,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.experiment_manager: ExperimentManager = None  # instanciation in do_things_after_ui_setup
         self.state_manager: StateManager = None  # instanciation in do_things_after_ui_setup
         self.overshooter: Overshooter = None  # instanciation in do_things_after_ui_setup
-
+        self.roi_manager: ROIManager = None  # instanciation in do_things_after_ui_setup
         self.dockarea.dock_signal.connect(self.save_layout_state_auto)
 
         self.title = ""
@@ -228,6 +229,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.state_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('state'),
                                                      menu=self.get_menu('state'))
         self.state_manager.update_menu(self.get_menu('state'))
+        self.roi_manager = ROIManager(dashboard=self)
         self.overshooter = Overshooter(dashboard=self)
         self.overshooter.get_external_toolbar_menu(toolbar=self.get_toolbar('overshooter'),
                                                    menu=self.get_menu('overshooter'))
