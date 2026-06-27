@@ -228,7 +228,6 @@ def _rotate_icon(icon: QtGui.QIcon, angle: int = 0) -> QtGui.QIcon:
     transform = QtGui.QTransform().rotate(angle)
     return transform_icon(icon, transform)
 
-
 def _flip_icon(icon: QtGui.QIcon, flip_h: bool, flip_v: bool) -> QtGui.QIcon:
     """Return a new QIcon with all pixmaps mirrored.
 
