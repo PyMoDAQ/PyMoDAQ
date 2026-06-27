@@ -156,20 +156,27 @@ def transform_icon(icon: QtGui.QIcon, transform: QtGui.QTransform) -> QtGui.QIco
     """
     new_icon = QtGui.QIcon()
     sizes = icon.availableSizes() or [QtCore.QSize(s, s) for s in (20, 40)]
+    modes = (QtGui.QIcon.Mode.Normal, QtGui.QIcon.Mode.Disabled,
+             QtGui.QIcon.Mode.Active, QtGui.QIcon.Mode.Selected)
     for size in sizes:
-        for state in (QtGui.QIcon.State.Off, QtGui.QIcon.State.On):
-            px = icon.pixmap(size, QtGui.QIcon.Mode.Normal, state)
-            if not px.isNull():
-                if type(px) is not QtGui.QPixmap:
-                    px = QtGui.QPixmap.fromImage(px)
-                px_transformed = px.transformed(transform)
-                if type(px) is not QtGui.QPixmap:
-                    px_transformed = QtGui.QPixmap.fromImage(px.transformed(transform))
-                new_icon.addPixmap(
-                    px_transformed,
-                    QtGui.QIcon.Mode.Normal,
-                    state,
-                )
+        for mode in modes:
+            for state in (QtGui.QIcon.State.Off, QtGui.QIcon.State.On):
+                # Call QIcon's own pixmap() rather than icon.pixmap(): some icon
+                # sources (e.g. MaterialIcon) override pixmap() in Python and
+                # recompute from a default colour instead of returning the
+                # already-coloured pixmap cached via addPixmap()/set_color().
+                px = QtGui.QIcon.pixmap(icon, size, mode, state)
+                if not px.isNull():
+                    if type(px) is not QtGui.QPixmap:
+                        px = QtGui.QPixmap.fromImage(px)
+                    px_transformed = px.transformed(transform)
+                    if type(px) is not QtGui.QPixmap:
+                        px_transformed = QtGui.QPixmap.fromImage(px.transformed(transform))
+                    new_icon.addPixmap(
+                        px_transformed,
+                        mode,
+                        state,
+                    )
     return new_icon
 
 def _translate_icon(icon: QtGui.QIcon, x: int = 0, y: int = 0) -> QtGui.QIcon:
@@ -221,11 +228,12 @@ def _rotate_icon(icon: QtGui.QIcon, angle: int = 0) -> QtGui.QIcon:
 
 
 def _flip_icon(icon: QtGui.QIcon, flip_h: bool, flip_v: bool) -> QtGui.QIcon:
-    """Return a new QIcon with all Normal-mode pixmaps mirrored.
+    """Return a new QIcon with all pixmaps mirrored.
 
-    Only the Normal mode is transformed; Qt derives Disabled/Active/Selected
-    variants automatically.  Both Off and On states are handled so that
-    checkable actions with two visual states work correctly.
+    All modes (Normal/Disabled/Active/Selected) and both Off/On states are
+    transformed, so icons that bake in a distinct Disabled-mode pixmap
+    (e.g. MaterialIcon) keep their proper disabled appearance instead of
+    falling back to Qt's generic auto-generated disabled look.
 
     For SVG/vector icons (e.g. MaterialIcon) ``availableSizes()`` returns an
     empty list; the function falls back to the two standard Material sizes
