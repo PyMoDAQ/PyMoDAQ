@@ -34,18 +34,22 @@ class QAction(QtQAction):
                  icon_checked_color: Union[QtGui.QColor, bytes, str]=None,
                  flip_h: bool = False,
                  flip_v: bool = False,
-                 rotate: int = 0):
+                 rotate: int = 0,
+                 fill: bool = None,
+                 ):
 
         if icon_unchecked is not None:
             self.icon_unchecked = create_icon(icon_unchecked, icon_color, icon_checked_color,
-                                              flip_h=flip_h, flip_v=flip_v, rotate=rotate)
+                                              flip_h=flip_h, flip_v=flip_v, rotate=rotate,
+                                              fill=fill)
             super().__init__(self.icon_unchecked, name)
         else:
             super().__init__(name)
 
         if icon_unchecked is not None and icon_checked is not None and not isinstance(icon_checked, QtGui.QIcon):
             icon_checked = create_icon(icon_checked, icon_checked_color, icon_checked_color,
-                                       flip_h=flip_h, flip_v=flip_v, rotate=rotate)
+                                       flip_h=flip_h, flip_v=flip_v, rotate=rotate,
+                                       fill=fill)
             if isinstance(icon_unchecked, MaterialIcon):
                 self.icon_unchecked.set_icon(icon_checked, state=QtGui.QIcon.State.On)
             else:
@@ -188,7 +192,7 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
         else:
             action = QAction(icon_name, name, icon_checked=icon_checked,
                              icon_color=icon_color, icon_checked_color=icon_checked_color,
-                             flip_h=flip_h, flip_v=flip_v, rotate=rotate)
+                             flip_h=flip_h, flip_v=flip_v, rotate=rotate, fill=fill)
 
     if slot is not None:
         action.connect_to(slot)
