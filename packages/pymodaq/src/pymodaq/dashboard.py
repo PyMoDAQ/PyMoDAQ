@@ -263,6 +263,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.get_menu('extensions').setEnabled(True)
 
         self.state_manager.enable_actions(True)
+        self.roi_manager.enable_actions(True)
         self.overshooter.enable_actions(True)
         self.state_manager.execute_entry(self.state_manager.entry_filepath)
 
