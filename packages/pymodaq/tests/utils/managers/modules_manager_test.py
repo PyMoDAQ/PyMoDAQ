@@ -2,7 +2,7 @@
 """Tests for pymodaq.utils.managers.modules_manager"""
 import numpy as np
 import pytest
-from unittest.mock import patch
+from unittest.mock import patch, PropertyMock
 
 from qtpy.QtCore import QObject, Signal
 
@@ -65,6 +65,13 @@ def manager(detectors, actuators):
 # ---------------------------------------------------------------------------
 # Helpers to build controlled DataToExport for tree-building tests
 # ---------------------------------------------------------------------------
+
+def make_actuator_response(title: str, value: float) -> DataActuator:
+    """DataActuator as emitted by a real DAQ_Move: origin stamped with the module title."""
+    dact = DataActuator(title, data=value)
+    dact.origin = title
+    return dact
+
 
 def make_raw_dte(det_title: str, dwa_name: str = 'DWA_NANE') -> DataToExport:
     """DTE with a single raw 1D channel from a detector."""
@@ -270,24 +277,24 @@ class TestMoveDone:
     def test_flag_set_when_all_received(self, manager):
         self._init_move(manager, ['X_axis', 'Y_axis'])
 
-        manager.move_done(DataActuator('X_axis', data=1.0))
+        manager.move_done(make_actuator_response('X_axis', 1.0))
         assert not manager.move_done_flag
 
-        manager.move_done(DataActuator('Y_axis', data=2.0))
+        manager.move_done(make_actuator_response('Y_axis', 2.0))
         assert manager.move_done_flag
 
     def test_positions_accumulated(self, manager):
         self._init_move(manager, ['X_axis', 'Y_axis'])
 
-        manager.move_done(DataActuator('X_axis', data=1.0))
-        manager.move_done(DataActuator('Y_axis', data=2.0))
+        manager.move_done(make_actuator_response('X_axis', 1.0))
+        manager.move_done(make_actuator_response('Y_axis', 2.0))
         assert len(manager.move_done_positions) == 2
 
     def test_duplicate_ignored(self, manager):
         self._init_move(manager, ['X_axis', 'Y_axis'])
 
-        manager.move_done(DataActuator('X_axis', data=1.0))
-        manager.move_done(DataActuator('X_axis', data=9.0))  # duplicate
+        manager.move_done(make_actuator_response('X_axis', 1.0))
+        manager.move_done(make_actuator_response('X_axis', 9.0))  # duplicate
         assert len(manager.move_done_positions) == 1
         assert not manager.move_done_flag
 
@@ -387,3 +394,60 @@ class TestTestActuatorTree:
         )
         assert len(test_act.children()) == 1
         assert test_act.children()[0].value() == 5.0
+
+
+class TestTimeout:
+
+    def test_grab_data_timeout_reports_missing_detectors(self, qtbot, manager, detectors):
+        """If no detector answers, timeout_signal carries all selected detector names."""
+        manager.selected_detectors_name = ['Det1', 'Det2']
+        manager.connect_detectors(True)
+
+        with patch.object(type(manager), 'detector_timeout', new_callable=PropertyMock,
+                          return_value=1):
+            with qtbot.waitSignal(manager.timeout_signal, timeout=2000) as blocker:
+                manager.grab_data()
+
+        assert set(blocker.args[0]) == {'Det1', 'Det2'}
+
+    def test_grab_data_timeout_reports_only_missing_detector(self, qtbot, manager, detectors):
+        """If one detector answered, timeout_signal only lists the one still missing."""
+        manager.selected_detectors_name = ['Det1', 'Det2']
+        manager.connect_detectors(True)
+
+        def respond_det1(_cmd):
+            dte = DataToExport('a', control_module='DAQ_Viewer')
+            raw = DataRaw('CH0', data=[np.array([1.0])])
+            raw.origin = 'Det1'
+            dte.append(raw)
+            detectors[0].grab_done_signal.emit(dte)
+
+        detectors[0].command_hardware.connect(respond_det1)
+
+        with patch.object(type(manager), 'detector_timeout', new_callable=PropertyMock,
+                          return_value=1):
+            with qtbot.waitSignal(manager.timeout_signal, timeout=2000) as blocker:
+                manager.grab_data()
+
+        assert blocker.args[0] == ['Det2']
+
+    def test_move_actuators_timeout_reports_missing_actuator(self, qtbot, manager, actuators):
+        """If only one actuator answers move_done, timeout_signal lists the other one."""
+        manager.selected_actuators_name = ['X_axis', 'Y_axis']
+        manager.connect_actuators(True)
+
+        def respond_x(_cmd):
+            actuators[0].move_done_signal.emit(make_actuator_response('X_axis', 1.0))
+
+        actuators[0].command_hardware.connect(respond_x)
+
+        dte_act = DataToExport('Actuators', control_module='DAQ_Move')
+        dte_act.append(DataActuator('X_axis', data=1.0))
+        dte_act.append(DataActuator('Y_axis', data=2.0))
+
+        with patch.object(type(manager), 'actuator_timeout', new_callable=PropertyMock,
+                          return_value=1):
+            with qtbot.waitSignal(manager.timeout_signal, timeout=2000) as blocker:
+                manager.move_actuators(dte_act, polling=True)
+
+        assert blocker.args[0] == ['Y_axis']

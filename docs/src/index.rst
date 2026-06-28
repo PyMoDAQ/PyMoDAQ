@@ -46,12 +46,14 @@ Training sessions and gathering of the community are organized every year.
    Training sessions announcement and PyMoDAQ's days
 
 .. note::
-   * Training session in Gif sur Yvette, France, 1-5 december 2025, `CNRS Formation Entreprise`_
    * Training session in Gif sur Yvette, France, 3-7 march 2026, `CNRS Formation Entreprise`_
    * Training session in Bordeaux, France, 15-18 June 2026, Action Nationale de Formation CNRS
-   * Fifth edition of the PyMoDAQ's Days: Orsay 7-9 October 2026.
+   * Fifth edition of the PyMoDAQ's Days: Orsay 7-9 October 2026. `Registration are open!`_
 
 .. _CNRS Formation Entreprise: https://cnrsformation.cnrs.fr/liste-stages-mc-PyMoDAq.html
+
+.. _Registration are open!: https://jt-pymodaq26.sciencesconf.org/index
+
 
 Overview
 --------
