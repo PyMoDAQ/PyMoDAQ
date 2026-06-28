@@ -412,10 +412,12 @@ class DAQ_Move_UI_Base(ControlModuleUI):
     # -------------------------------------------------------------------------
 
     def show_controls(self, show: bool = True):
+        self.control_widget.setWindowTitle(f'{self.title} Controls')
         self.control_widget.setVisible(show)
         self.control_widget.closeEvent = lambda event: self.set_action_checked('show_controls', False)
 
     def show_graph(self, show: bool = True):
+        self.control_widget.setWindowTitle(f'{self.title} Graph')
         self.graph_widget.setVisible(show)
         self.graph_widget.closeEvent = lambda event: self.set_action_checked('show_graph', False)
 
