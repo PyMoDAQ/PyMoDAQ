@@ -258,7 +258,8 @@ class ManagerBase(CustomExt):
         # self.add_widget('entry_label', QtWidgets.QLabel(
         #     f'{self.entry_type.capitalize()}:'))
         self.add_widget(ManagerActions.LIST, ComboBox(),
-                        tip=f'Name of the current {self.entry_type}',
+                        tip=f'List of possible {self.entry_type}s, '
+                            f'in green the one currently activated',
                         kwargs={'setReadOnly': True})
         self.get_action_list().addItems(self.entries)
 
@@ -315,13 +316,14 @@ class ManagerBase(CustomExt):
 
         external_combo = ComboBox()
         self.add_widget(ManagerActions.LIST_EXTERNAL, external_combo, toolbar=toolbar,
-                        tip=f'List of possible {self.entry_type}s')
+                        tip=f'List of possible {self.entry_type}s, '
+                            f'in green the one currently activated',)
         self.sync_entries_with(self.get_action(ManagerActions.LIST_EXTERNAL).widget)
         self.affect_to(ManagerActions.EXECUTE, toolbar)
         return toolbar, menu
 
     def update_highlighted_item(self, item: str):
-        self.entries_sync.update_key('highlighted', item, force_emit=True)
+        self.entries_sync.update_key('highlighted', item)
 
     def connect_things_base(self):
         self.applied_entry.connect(self.update_highlighted_item)
