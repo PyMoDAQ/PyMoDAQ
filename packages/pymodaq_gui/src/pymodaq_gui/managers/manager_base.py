@@ -328,12 +328,15 @@ class ManagerBase(CustomExt):
         self.connect_action(ManagerActions.DELETE, lambda: self.delete_entry())
         self.connect_action(ManagerActions.SAVE, lambda: self.save_check())
         self.connect_action(ManagerActions.RELOAD, lambda: self.update_entry())
-        self.connect_action(ManagerActions.EXECUTE, lambda: self.execute_entry())
+        self.connect_action(ManagerActions.EXECUTE, lambda: self.execute_current_entry())
 
         self.connect_action(ManagerActions.OPEN, lambda: self.show())
 
         self.entries_sync.value_changed.connect(lambda value: self.update_entry(value['current']))
         self.sync_entries_with(self.get_action_list())
+
+    def execute_current_entry(self):
+        self.execute_entry(self.entry)
 
     def sync_entries_with(self, combo: ComboBox):
         self.entries_sync.bind_properties(
