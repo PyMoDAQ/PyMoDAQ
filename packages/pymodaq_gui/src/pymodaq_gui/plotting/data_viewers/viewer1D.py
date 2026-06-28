@@ -454,7 +454,8 @@ class View1D(ActionManager, QObject):
         self.ROIselect.setVisible(self.is_action_checked('ROIselect'))
 
     def setup_actions(self):
-        self.add_action('do_math', 'Math', 'calculate', 'Do Math using ROI', checkable=True)
+        self.add_action('roi', 'Math', 'calculate', 'Do Math using ROI', checkable=True)
+        self._actions['do_math'] = self.get_action('roi')  # for backcompatibility
         self.add_action('crosshair', 'Crosshair', 'add_2', 'Show data cursor', checkable=True)
         self.add_action('aspect_ratio', 'AspectRatio', 'aspect_ratio', 'Fix the aspect ratio',
                         checkable=True)
@@ -542,15 +543,6 @@ class Viewer1D(ViewerBase):
             self.view.data_displayer.update_colors(colors)
         elif displayer in self.view.other_data_displayers:
             self.view.other_data_displayers[displayer].update_colors(colors)
-
-    @property
-    def roi_manager(self):
-        """Convenience method """
-        return self.view.roi_manager
-
-    @property
-    def roi_target(self) -> pg.InfiniteLine:
-        return self.view.roi_target
 
     def move_roi_target(self, pos: Iterable[float] = None):
         """move a specific read only ROI at the given position on the viewer"""
