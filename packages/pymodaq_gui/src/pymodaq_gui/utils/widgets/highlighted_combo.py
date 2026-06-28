@@ -51,9 +51,12 @@ class HighlightedComboBox(ComboBox):
 
         self.setModel(ComboModel(parent=self))
         self.currentIndexChanged.connect(self.set_style)
-        self.currentTextChanged.connect(self.set_style)
 
         self._activated_color = get_theme().green
+
+    def setCurrentText(self, text: str):
+        super().setCurrentText(text)
+        self.set_style(self.get_items().index(text))
 
     @property
     def activated_color(self):
@@ -89,7 +92,7 @@ class HighlightedComboBox(ComboBox):
         return self.combo_model().highlighted_index
 
     def set_style(self, index: int = None):
-        if index is None or isinstance(index, str):
+        if index is None:
             index = self.currentIndex()
         if self.highlighted_index == index:
             self.setStyleSheet(
