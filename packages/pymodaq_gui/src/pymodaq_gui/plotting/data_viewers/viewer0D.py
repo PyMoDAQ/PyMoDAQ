@@ -176,10 +176,10 @@ class DataDisplayer(QObject):
 
 class View0D(ActionManager, QObject):
     def __init__(self, parent_widget: QtWidgets.QWidget = None, show_toolbar=True,
-                 no_margins=False):
+                 no_margins=False, title=''):
         QObject.__init__(self)
         ActionManager.__init__(self, toolbar=QtWidgets.QToolBar())
-
+        self.title = title
         self.no_margins = no_margins
         self.data_displayer: DataDisplayer = None
         self.other_data_displayers: Dict[str, DataDisplayer] = {}
@@ -288,7 +288,8 @@ class Viewer0D(ViewerBase):
 
     def __init__(self, parent=None, title='', show_toolbar=True, no_margins=False):
         super().__init__(parent, title)
-        self.view = View0D(self.parent, show_toolbar=show_toolbar, no_margins=no_margins)
+        self.view = View0D(self.parent, show_toolbar=show_toolbar,
+                           no_margins=no_margins, title=title)
         self._labels = []
 
     def update_colors(self, colors: list, displayer=None):

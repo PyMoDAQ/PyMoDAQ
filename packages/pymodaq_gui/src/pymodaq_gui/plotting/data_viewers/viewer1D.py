@@ -257,10 +257,10 @@ class DataDisplayer(QObject):
 
 class View1D(ActionManager, QObject):
     def __init__(self, parent_widget: QtWidgets.QWidget = None, show_toolbar=True,
-                 no_margins=False, flip_axes=False):
+                 no_margins=False, flip_axes=False, title=''):
         QObject.__init__(self)
         ActionManager.__init__(self, toolbar=QtWidgets.QToolBar())
-
+        self.title = title
         self.no_margins = no_margins
         self.flip_axes = flip_axes
 
@@ -377,12 +377,11 @@ class View1D(ActionManager, QObject):
 
     def do_math(self):
         try:
-            if self.is_action_checked('do_math'):
-                self.roi_manager.roiwidget.show()
-                self.lineout_widgets.show()
-            else:
-                self.lineout_widgets.hide()
-                self.roi_manager.roiwidget.hide()
+            self.roi_manager.roiwidget.setWindowTitle(f'{self.title} ROIs')
+            self.roi_manager.roiwidget.setVisible(self.is_action_checked('do_math'))
+            self.roi_manager.roiwidget.closeEvent = lambda event: self.set_action_checked('do_math', False)
+
+            self.lineout_widgets.setVisible(self.is_action_checked('do_math'))
 
         except Exception as e:
             logger.exception(str(e))
@@ -397,12 +396,9 @@ class View1D(ActionManager, QObject):
         self.parent_widget.setLayout(QtWidgets.QVBoxLayout())
         if self.no_margins:
             self.parent_widget.layout().setContentsMargins(0, 0, 0, 0)
-        splitter_hor = QtWidgets.QSplitter(Qt.Horizontal)
-        self.parent_widget.layout().addWidget(splitter_hor)
-
         self.splitter_ver = QtWidgets.QSplitter(Qt.Vertical)
-        splitter_hor.addWidget(self.splitter_ver)
-        splitter_hor.addWidget(self.roi_manager.roiwidget)
+        self.parent_widget.layout().addWidget(self.splitter_ver)
+
         self.roi_manager.roiwidget.hide()
 
         self.splitter_ver.addWidget(self.toolbar)
@@ -525,7 +521,9 @@ class Viewer1D(ViewerBase):
                  flip_axes=False):
         super().__init__(parent=parent, title=title)
 
-        self.view = View1D(self.parent, show_toolbar=show_toolbar, no_margins=no_margins, flip_axes=flip_axes)
+        self.view = View1D(self.parent, show_toolbar=show_toolbar,
+                           no_margins=no_margins, flip_axes=flip_axes,
+                           title=title)
 
         self.filter_from_rois = Filter1DFromRois(self.view.roi_manager)
         self.filter_from_rois.register_activation_signal(self.view.get_action('do_math').triggered)
