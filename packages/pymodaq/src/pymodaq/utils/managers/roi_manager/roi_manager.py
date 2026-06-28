@@ -45,7 +45,7 @@ class ROIManager(ManagerBase):
     in_user_folder = True
     icon_name = 'select'
 
-    params = [{'title': 'Viewers:', 'name': 'viewers', 'type': 'itemselect', 'checkbox': True,
+    params = [{'title': 'Viewers:', 'name': 'viewers', 'type': 'itemselect', 'readonly': True,
                'value': {'all_items': [], 'selected': []}}]
 
     def __init__(self, dashboard: 'DashBoard' = None, **kwargs):
