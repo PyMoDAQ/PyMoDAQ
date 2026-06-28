@@ -289,12 +289,12 @@ def create_icon(icon_name: Union[QtGui.QIcon, str, Path],
             MaterialIcon.resource_path(
                 icon_name,
                 style=MaterialIcon.Style(config('gui', 'style', 'icons', 'style')[0]),
-                fill=config('gui', 'style', 'icons', 'fill')[0] if fill is None else fill,
+                fill=config('gui', 'style', 'icons', 'fill')[0],
                 size=config('gui', 'style', 'icons', 'size')[0])):
         icon = MaterialIcon(
             icon_name,
             style=MaterialIcon.Style(config('gui', 'style', 'icons', 'style')[0]),
-            fill=config('gui', 'style', 'icons', 'fill')[0] if fill is None else fill,
+            fill=config('gui', 'style', 'icons', 'fill')[0],
             size=config('gui', 'style', 'icons', 'size')[0])
         icon.set_color(create_color(icon_color))
         if icon_checked_color is not None:

@@ -129,8 +129,7 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
               flip_v: bool = False,
               rotate: int = 0,
               before: QtQAction = None,
-              action: QtQAction | QtWidgets.QWidgetAction = None,
-              fill: bool = None,
+              action: QtQAction | QtWidgets.QWidgetAction = None
               ):
     """Create a new action and add it eventually to a toolbar and a menu
 
@@ -179,8 +178,6 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
         if set, the action is inserted before this action in the toolbar/menu;
         if None the action is appended at the end
     action: QAction, QWidgetAction, optional
-    fill: bool, optional
-        Fill or not the icon, if None left to the user configuration
     """
     if action is None:
         if icon_name is None or icon_name == '':
@@ -406,7 +403,6 @@ class ActionManager:
                    rotate: int = 0,
                    before: Union[str, 'QAction', WidgetActionProxy, None] = None,
                    action: QtQAction | QtWidgets.QWidgetAction = None,
-                   fill: bool = None,
                    ):
         """Create a new action and add it to toolbar and menu
 
@@ -467,8 +463,6 @@ class ActionManager:
             if set, the action is inserted before this action in the toolbar/menu;
             accepts a short_name str, a QAction instance, or a WidgetActionProxy
         action: QAction, QWidgetAction, optional
-        fill: bool, optional
-            Fill or not the icon, if None left to the user configuration
 
         See Also
         --------
@@ -489,8 +483,7 @@ class ActionManager:
                                               flip_v=flip_v,
                                               rotate=rotate,
                                               before=before,
-                                              action=action,
-                                              fill=fill)
+                                              action=action)
         return self._actions[short_name]
 
     def add_widget(self, short_name, klass: Union[str, QtWidgets.QWidget, object], *args, tip='',
