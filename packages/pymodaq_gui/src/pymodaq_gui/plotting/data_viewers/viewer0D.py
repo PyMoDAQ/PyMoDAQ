@@ -7,6 +7,7 @@ import sys
 import pyqtgraph
 
 from pymodaq_utils import utils
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_data import data as data_mod
 from pymodaq_data.plotting.utils import PlotColors
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -201,8 +202,6 @@ class View0D(ActionManager, QObject):
         if not show_toolbar:
             self.splitter.setSizes([0,1])
 
-        self.get_action('Nhistory').setValue(200)  #default history length
-
     def setup_actions(self):
         self.add_action('clear', 'Clear plot', 'clear2', 'Clear the current plots')
         self.add_widget('Nhistory', pyqtgraph.SpinBox, tip='Set the history length of the plot',
@@ -246,7 +245,13 @@ class View0D(ActionManager, QObject):
     def _prepare_ui(self):
         """add here everything needed at startup"""
         self.values_list.setVisible(False)
-        self.get_action('sync_x_axis').setChecked(True)
+        config = Config()
+        self.get_action('Nhistory').setValue(config('gui', 'viewer', 'viewer0D', 'Nhistory'))
+        for action_name in ('show_data_as_list', 'show_min_max'):
+            if config('gui', 'viewer', 'viewer0D', action_name):
+                self.get_action(action_name).trigger()
+        if not config('gui', 'viewer', 'viewer0D', 'sync_x_axis'):
+            self.get_action('sync_x_axis').trigger()
 
     def get_double_clicked(self):
         return self.plot_widget.view.sig_double_clicked

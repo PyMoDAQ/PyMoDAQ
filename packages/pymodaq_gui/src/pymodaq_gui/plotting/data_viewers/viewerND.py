@@ -15,6 +15,7 @@ from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal, QRectF, QPointF
 
 from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_gui.utils.dock import DockArea, Dock
 from pymodaq_gui.plotting.data_viewers.viewer1D import Viewer1D
 from pymodaq_gui.plotting.utils.axes_viewer import AxesViewer
@@ -709,6 +710,10 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
         self.viewer2D.setVisible(False)
         self.navigator1D.setVisible(False)
         self.viewer2D.setVisible(False)
+        config = Config()
+        for action_name in ('setaxes', 'integrate_nav'):
+            if config('gui', 'viewer', 'viewerND', action_name):
+                self.get_action(action_name).trigger()
 
     def setup_actions(self):
         self.add_action('setaxes', icon_name='cartesian', checkable=True, tip='Change navigation/signal axes')
