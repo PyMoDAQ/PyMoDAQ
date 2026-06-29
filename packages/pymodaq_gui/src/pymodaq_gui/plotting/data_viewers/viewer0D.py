@@ -4,7 +4,7 @@ from numbers import Real
 from qtpy import QtWidgets, QtGui
 from qtpy.QtCore import QObject, Slot, Signal, Qt
 import sys
-import pyqtgraph
+import pyqtgraph as pg
 
 from pymodaq_utils import utils
 from pymodaq_data import data as data_mod
@@ -31,16 +31,16 @@ class DataDisplayer(QObject):
     updated_item = Signal(list)
     labels_changed = Signal(list)
 
-    def __init__(self, plotitem: pyqtgraph.PlotItem, plot_colors=PLOT_COLORS):
+    def __init__(self, plotitem: pg.PlotItem, plot_colors=PLOT_COLORS):
         super().__init__()
         self._plotitem = plotitem
         self.colors = plot_colors
         self._do_scatter = False
         self._do_xy = False
         self._plotitem.addLegend()
-        self._plot_items: Dict[str, pyqtgraph.PlotDataItem] = {}
-        self._min_lines: Dict[str, pyqtgraph.InfiniteLine] = {}
-        self._max_lines: Dict[str, pyqtgraph.InfiniteLine] = {}
+        self._plot_items: Dict[str, pg.PlotDataItem] = {}
+        self._min_lines: Dict[str, pg.InfiniteLine] = {}
+        self._max_lines: Dict[str, pg.InfiniteLine] = {}
         self._data = Data0DWithHistory()
         self.use_timestamps = False
 
@@ -66,13 +66,13 @@ class DataDisplayer(QObject):
         self._color_indices[label] = color_idx
         color = self.colors[color_idx]
 
-        plot_item = pyqtgraph.PlotDataItem(pen=color)
+        plot_item = pg.PlotDataItem(pen=color)
         self._plot_items[label] = plot_item
         self._plotitem.addItem(plot_item)
         self.legend.addItem(plot_item, f"{label} ({units})")
-        dash_pen = pyqtgraph.mkPen(color=color['color'], style=Qt.PenStyle.DashLine)
-        max_line = pyqtgraph.InfiniteLine(angle=0, pen=dash_pen)
-        min_line = pyqtgraph.InfiniteLine(angle=0, pen=dash_pen)
+        dash_pen = pg.mkPen(color=color['color'], style=Qt.PenStyle.DashLine)
+        max_line = pg.InfiniteLine(angle=0, pen=dash_pen)
+        min_line = pg.InfiniteLine(angle=0, pen=dash_pen)
         self._max_lines[label] = max_line
         self._min_lines[label] = min_line
         max_line.setVisible(self._show_lines)
@@ -130,7 +130,7 @@ class DataDisplayer(QObject):
             self._plot_items[label].setSymbol(symbol_type)
             self._plot_items[label].setSymbolSize(symbol_size)
 
-            dash_pen = pyqtgraph.mkPen(color=color['color'], style=Qt.PenStyle.DashLine)
+            dash_pen = pg.mkPen(color=color['color'], style=Qt.PenStyle.DashLine)
             self._max_lines[label].setPen(dash_pen)
             self._min_lines[label].setPen(dash_pen)
         self.update_plots()
@@ -154,7 +154,7 @@ class DataDisplayer(QObject):
             self.set_use_timestamps(self.use_timestamps)
 
     @property
-    def legend(self) -> pyqtgraph.LegendItem:
+    def legend(self) -> pg.LegendItem:
         return self._plotitem.legend
 
     @property
@@ -267,7 +267,7 @@ class View0D(ActionManager, QObject):
 
     def setup_actions(self):
         self.add_action('clear', 'Clear plot', 'clear2', 'Clear the current plots')
-        self.add_widget('Nhistory', pyqtgraph.SpinBox, tip='Set the history length of the plot',
+        self.add_widget('Nhistory', pg.SpinBox, tip='Set the history length of the plot',
                         setters=dict(setMaximumWidth=100))
         self.add_action('show_data_as_list', 'Show numbers', 'ChnNum', 'If triggered, will display last data as numbers'
                                                                        'in a side panel', checkable=True)
@@ -314,8 +314,17 @@ class View0D(ActionManager, QObject):
         self.connect_action('show_min_max', self.data_displayer.show_min_max)
         self.connect_action('sync_x_axis', self.data_displayer.set_sync_x_axis)
         self.connect_action('use_timestamps', self.data_displayer.set_use_timestamps)
+        self.connect_action('use_timestamps', self.set_x_axis_type)
         self.connect_action('scatter', self.data_displayer.update_scatter)
         self.connect_action('xyplot', self.data_displayer.update_xyplot)
+        self.connect_action('xyplot', self.set_x_axis_type)
+
+    def set_x_axis_type(self):
+        if self.is_action_checked('use_timestamps') and not self.is_action_checked('xyplot'):
+            self.plot_widget.plotItem.setAxisItems({'bottom': pg.DateAxisItem()})
+        else:
+            self.plot_widget.plotItem.setAxisItems({'bottom': pg.AxisItem('bottom')})
+
 
     def _prepare_ui(self):
         """add here everything needed at startup"""
