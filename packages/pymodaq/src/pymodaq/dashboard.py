@@ -18,9 +18,7 @@ from qtpy.QtWidgets import (
     QMessageBox,
 )
 
-
-
-
+from pymodaq.control_modules.utils import ControllerThread
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
 from pymodaq_utils.utils import ThreadCommand
@@ -872,30 +870,32 @@ class DashBoard(CustomApp, LECOComponentMixin):
         actuators_modules.append(mov_mod_tmp)
         return mov_mod_tmp
 
-    def init_module(self, module, controller=None):
+    def init_module(self, module, controller: ControllerThread = None):
         """Initialize a control module, optionally wiring it to an existing controller.
 
         Parameters
         ----------
         module: DAQ_Move or DAQ_Viewer
-        controller: object, optional
+        controller: ControllerThread, optional
             If given, assigned to module.controller before init (slave mode).
         """
         if controller is not None:
-            module.controller = controller
+            module.controller_thread = controller
         module.init_hardware_ui()
         QtWidgets.QApplication.processEvents()
         self.modules_manager.poll_init(module)
         QtWidgets.QApplication.processEvents()
 
-    def _finalize_extension_module(self, module, instrument_controller, module_list):
+    def _finalize_extension_module(self, module,
+                                   instrument_controller: ControllerThread,
+                                   module_list):
         """Finalize a module added from an extension: wire controller, init, append to list."""
-        module.master = False
+        module.is_master = False
         self.init_module(module, controller=instrument_controller)
         module_list.append(module)
 
     def add_move_from_extension(
-        self, name: str, instrument_name: str, instrument_controller: Any,
+        self, name: str, instrument_name: str, instrument_controller: ControllerThread,
             ui_identifier=None,
             **kwargs,
     ):
@@ -912,7 +912,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         instrument_name: str
             The name of the instrument class, for instance PID for the daq_move_PID
             module and the DAQ_Move_PID instrument class
-        instrument_controller: object
+        instrument_controller: ControllerThread
             whatever object is used to communicate between the instrument module and the extension
             which created it
         ui_identifier: str
@@ -992,7 +992,8 @@ class DashBoard(CustomApp, LECOComponentMixin):
                     mod.override_grab_from_extension = True
 
     def add_det_from_extension(
-        self, name: str, daq_type: str, instrument_name: str, instrument_controller: Any,
+            self, name: str, daq_type: str, instrument_name: str,
+            instrument_controller: ControllerThread,
     ):
         """Specific method to add a DAQ_Viewer within the Dashboard. This Particular detector
         should be defined in the plugin of the extension and is used to mimic a grab while data
@@ -1010,7 +1011,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         instrument_name: str
             The name of the instrument class, for instance DataMixer for the daq_0Dviewer_DataMixer
             module and the DAQ_0DViewer_DataMixer instrument class
-        instrument_controller: object
+        instrument_controller: ControllerThread
             whatever object is used to communicate between the instrument module and the extension
             which created it
         """
