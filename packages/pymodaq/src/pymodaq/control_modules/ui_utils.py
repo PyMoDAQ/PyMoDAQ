@@ -5,6 +5,7 @@ from typing import Union
 from qtpy import QtCore, QtWidgets
 import qt_themes
 
+from pymodaq_gui.managers.action_manager import QAction
 from pymodaq_gui.utils import CustomApp
 from pymodaq_gui.utils.widgets import LabelWithFont
 from pymodaq_gui.utils.styling import create_font, create_icon
@@ -77,6 +78,10 @@ class ControlModuleUI(CustomApp):
                         tip=tip, icon_color=self.get_theme().red,
                         icon_checked_color=self.get_theme().green,
                         toolbar=toolbar)
+
+    @property
+    def init_action(self) -> QAction:
+        return self.get_action(self._init_action_name)
 
     def _setup_settings_action(self, toolbar: QtWidgets.QToolBar = None) -> None:
         """Add the show settings action to the toolbar
