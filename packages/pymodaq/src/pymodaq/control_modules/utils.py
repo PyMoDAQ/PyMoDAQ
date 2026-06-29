@@ -4,9 +4,9 @@ Created the 03/10/2022
 
 @author: Sebastien Weber
 """
-
+import dataclasses
 from random import randint
-from typing import Optional, Type, Union, TYPE_CHECKING
+from typing import Optional, Type, Union, TYPE_CHECKING, Any
 from easydict import EasyDict as edict
 from qtpy import QtWidgets
 
@@ -36,6 +36,109 @@ if TYPE_CHECKING:
 
 config = Config()
 logger = set_logger(get_module_name(__file__))
+
+class HardwareWorkerBase(QObject):
+    """Abstract base shared by ActuatorWorker and DetectorWorker.
+
+    Provides common signals, a unified plugin reference, shared update_settings
+    dispatch, and a queue_command handler for the commands that both
+    worker classes share (ini_hardware, close).
+
+    Subclasses must implement:
+        ini_hardware(params_state, controller) -> edict
+        close() -> str
+    and set class attribute:
+        _kind: str  e.g. 'actuator' or 'detector'
+    The settings key is derived automatically as "<kind>_settings".
+    """
+
+    status_sig = Signal(ThreadCommand)
+
+    # Subclasses set _kind to 'actuator' or 'detector'.
+    # _plugin_settings_key is derived automatically as "<kind>_settings".
+    _kind: str = ''
+
+    @property
+    def _plugin_settings_key(self) -> str:
+        return f"{self._kind}_settings"
+
+    def __init__(self, title: str, plugin_name: str) -> None:
+        super().__init__()
+        self._title = title
+        self._plugin_name = plugin_name
+        self.plugin = None              # set by subclass after ini_hardware
+        self.controller_address = None
+
+    @property
+    def title(self) -> str:
+        return self._title
+
+    @property
+    def plugin_name(self) -> str:
+        return self._plugin_name
+
+    def ini_hardware(self, params_state=None, controller=None):
+        raise NotImplementedError
+
+    def update_settings(self, settings_parameter_dict) -> None:
+        """Route a settings change to either main_settings or the plugin subtree."""
+        path = settings_parameter_dict['path']
+        param = settings_parameter_dict['param']
+        if path[0] == 'main_settings':
+            if hasattr(self, path[-1]):
+                setattr(self, path[-1], param.value())
+        elif path[0] == self._plugin_settings_key:
+            if self.plugin is not None:
+                self.plugin.update_settings(settings_parameter_dict)
+
+    def _dispatch_custom_command(self, command) -> None:
+        """Forward an unrecognised ThreadCommand to the plugin instance."""
+        if self.plugin is not None and hasattr(self.plugin, command.command):
+            cmd = getattr(self.plugin, command.command)
+            if isinstance(command.attribute, list):
+                cmd(*command.attribute)
+            elif isinstance(command.attribute, dict):
+                cmd(**command.attribute)
+            else:
+                cmd(command.attribute)
+
+    def close_hardware(self):
+        status = self.close()
+        self.status_sig.emit(ThreadCommand(ThreadStatus.CLOSE, [status]))
+
+
+    def queue_command(self, command) -> bool:
+        """Handle commands shared by all hardware workers.
+
+        Returns True if the command was consumed, False so the subclass
+        can handle its own commands.
+        """
+        if command.command == ControlToHardware.INI_HARDWARE:
+            status = self.ini_hardware(*command.attribute)
+            self.status_sig.emit(ThreadCommand(ThreadStatus.INI_HARDWARE, status))
+        elif command.command == ControlToHardware.CLOSE:
+            self.close_hardware()
+        else:
+            return False
+        return True
+
+
+class QThread(QThread):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self._hardwares = {}
+
+    def add_hardware(self, name: str, worker: HardwareWorkerBase):
+            self._hardwares[name] = worker
+
+    def remove_hardware(self, name) -> HardwareWorkerBase:
+        return self._hardwares.pop(name, None)
+
+    @property
+    def hardware_names(self) -> list[str]:
+        return list(self._hardwares.keys())
+
 
 def create_controller_param(axis_name: str = None, axis_names: Optional[list[str]] = None) -> dict:
     controller_param = {'title': 'Controller:', 'name': 'controller', 'type': 'group', 'children': [
@@ -78,6 +181,19 @@ def create_remote_connection_params() -> list[dict]:
              'value': config('utils', 'network', 'leco-server', 'port')},
         ]},
     ]
+
+
+@dataclasses.dataclass
+class ControllerThread:
+    """ Container for the control module worker thread and hardware plugin "controller" object and some related status
+     """
+    thread: QThread = None
+    controller: Any = None
+    is_master: bool = True
+    id: int = None
+    initialized: bool = False
+
+
 class ControlModule(QObject):
     """Abstract Base class common to both DAQ_Move and DAQ_Viewer control modules
 
@@ -104,17 +220,18 @@ class ControlModule(QObject):
         self.ui: Union['DAQ_Move_UI_Base', 'DAQ_Viewer_UI'] = None
 
         self._title = ""
+
+        self._controller_and_thread = ControllerThread()
+        # the hardware controller instance set after initialization and to be used by other modules if they share the
+        # same controller
+
         self.config = config
         # Fallback logger; subclasses should set self.logger before calling super().__init__()
         # so that log messages carry the instance title.
         if not hasattr(self, 'logger'):
             self.logger = logger
-        # the hardware controller instance set after initialization and to be used by other modules if they share the
-        # same controller
-        self.controller = None
-        self._initialized_state = False
+
         self._send_to_leco = False
-        self._hardware_thread = None
 
         self._h5saver: Optional[H5Saver] = None
         self._module_and_data_saver = None
@@ -201,8 +318,8 @@ class ControlModule(QObject):
             except Exception as e:
                 self.logger.exception(f'Wrong call to the "close" command: \n{str(e)}')
 
-            self._initialized_state = False
-            self.init_signal.emit(self._initialized_state)
+            self._controller_and_thread.initialized = False
+            self.init_signal.emit(self._controller_and_thread.initialized)
 
         elif status.command == ThreadStatus.UPDATE_UI:
             try:
@@ -226,7 +343,7 @@ class ControlModule(QObject):
     @property
     def initialized_state(self):
         """bool: Check if the module is initialized"""
-        return self._initialized_state
+        return self._controller_and_thread.initialized
 
     @property
     def title(self):
@@ -445,6 +562,10 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
                 self._leco_client.name = param.value()
             except AttributeError:
                 pass
+        elif param.name() in ('controller_status', 'controller_ID'):
+            self.controller_thread.is_master = (
+                    self.settings[self._hw_settings_name, 'controller', 'controller_status'] == 'Master')
+            self.controller_thread.id = self.settings[self._hw_settings_name, 'controller', 'controller_ID']
 
         self._module_value_changed(param)
 
@@ -469,20 +590,21 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
 
     def quit_fun(self):
         """Programmatic quitting: deinit hardware, emit quit signal, run cleanup hook, close UI."""
-        if self._initialized_state:
+        if self._controller_and_thread.initialized:
             self.init_hardware(False)
             # The hardware worker emits status_sig(CLOSE) just before self-exiting.
             # That signal is queued on the main thread.  Flush it now so that
             # thread_status(CLOSE) (which calls update_status / display_status)
             # fires while the UI is still alive, not later when it may be closed.
             QtWidgets.QApplication.processEvents()
-        self.quit_signal.emit()
+
         self._quit_cleanup()
         try:
             if self.ui is not None:
                 self.ui.close()
         except Exception as e:
             self.logger.exception(str(e))
+        self.quit_signal.emit()
 
     def _quit_cleanup(self):
         """Override in subclasses to add module-specific teardown before UI close."""
@@ -509,15 +631,25 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
         # Listener.stop_listen() which joins the zmq listener thread.
         self.connect_leco(False)
         try:
-            self.command_hardware.emit(ThreadCommand(ControlToHardware.CLOSE))
-            if self._hardware_thread is not None and self._hardware_thread.isRunning():
-                self._hardware_thread.quit()
-                if not self._hardware_thread.wait(5000):
-                    self._hardware_thread.terminate()
-                    self._hardware_thread.wait()
-                    self.logger.warning('Hardware thread did not stop cleanly; terminated.')
-            else:
+            self.command_hardware.emit(ThreadCommand(ControlToHardware.CLOSE))  #terminate worker actions
+            QtWidgets.QApplication.processEvents()
+
+            self.controller_thread.thread.remove_hardware(self.title) #remove the handle onto the hardware worker even if slave
+
+            if (self.controller_thread.is_master and self.controller_thread.thread is not None and
+                    self.controller_thread.thread.isRunning()):
+
+                for hardware_name in self.controller_thread.thread.hardware_names:
+                    hardware = self.controller_thread.thread.remove_hardware(hardware_name)
+                    hardware.close_hardware()
                 QtWidgets.QApplication.processEvents()
+                self.controller_thread.thread.quit()
+
+                if not self.controller_thread.thread.wait(5000):
+                    self.controller_thread.thread.terminate()
+                    self.controller_thread.thread.wait()
+                    self.logger.warning('Hardware thread did not stop cleanly; terminated.')
+
             if self.ui is not None and self._ui_init_attr:
                 setattr(self.ui, self._ui_init_attr, False)
         except Exception as e:
@@ -551,7 +683,14 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
             return
         try:
             hardware = self._create_hardware()
-            self._hardware_thread = QThread()
+            if self.controller_thread.is_master:
+                self.controller_thread.thread = QThread()
+            else:
+                if self.controller_thread.thread is None:
+                    if self.ui is not None:
+                        self.ui.init_action.setChecked(False)
+                    raise ValueError("You set this module as slave but no Master Controller is set")
+
             self._setup_hardware_thread(hardware)
 
             self.command_hardware[ThreadCommand].connect(hardware.queue_command)
@@ -559,12 +698,20 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
             self._update_settings_signal[edict].connect(hardware.update_settings)
             self._connect_hardware_signals(hardware)
 
-            self._hardware_thread.hardware = hardware
+            self.controller_thread.thread.add_hardware(self.title, hardware) # to hold a reference
             self.command_hardware.emit(self._ini_hardware_command())
             self._post_hardware_init()
             self.connect_leco(True)
         except Exception as e:
             self.logger.exception(str(e))
+
+    @property
+    def controller_thread(self) -> ControllerThread | None:
+        return self._controller_and_thread
+
+    @controller_thread.setter
+    def controller_thread(self, controller: ControllerThread | None) -> None:
+        self._controller_and_thread = controller
 
     def _create_hardware(self):
         """Instantiate and return the hardware worker object. Must be overridden."""
@@ -576,9 +723,9 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
         Default: always move and start. Override when the move/start should be
         conditional (e.g. DAQ_Viewer's ``viewer_in_thread`` config option).
         """
-        hardware.moveToThread(self._hardware_thread)
-        self._hardware_thread.finished.connect(hardware.deleteLater)
-        self._hardware_thread.start()
+        hardware.moveToThread(self.controller_thread.thread)
+        self.controller_thread.thread.finished.connect(hardware.deleteLater)
+        self.controller_thread.thread.start()
 
     def _connect_hardware_signals(self, hardware):
         """Connect module-specific signals from *hardware*. Default: no-op."""
@@ -593,7 +740,8 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
         """
         return ThreadCommand(
             self._ini_hw_cmd,
-            attribute=[self.settings.child(self._hw_settings_name).saveState(), self.controller],
+            attribute=[self.settings.child(self._hw_settings_name).saveState(),
+                       self._controller_and_thread.controller],
         )
 
     def _post_hardware_init(self):
@@ -604,8 +752,7 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
     def master(self) -> bool:
         """Get/Set programmatically the Master/Slave status of the module's controller."""
         if self.initialized_state:
-            return (self.settings[self._hw_settings_name, 'controller', 'controller_status']
-                    == ControllerStatus.MASTER)
+            return self._controller_and_thread.is_master
         return True
 
     @master.setter
@@ -613,6 +760,7 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
         if self.initialized_state:
             self.settings.child(self._hw_settings_name, 'controller', 'controller_status').setValue(
                 ControllerStatus.MASTER if is_master else ControllerStatus.SLAVE)
+            self.controller_thread.is_master = self.master
 
     def param_deleted(self, param):
         """Propagate parameter deletion to the hardware thread."""
@@ -820,85 +968,3 @@ class PluginBase(QObject):
             self.emit_status(ThreadCommand(ThreadStatus.UPDATE_STATUS, str(e)))
 
 
-class HardwareWorkerBase(QObject):
-    """Abstract base shared by ActuatorWorker and DetectorWorker.
-
-    Provides common signals, a unified plugin reference, shared update_settings
-    dispatch, and a queue_command handler for the commands that both
-    worker classes share (ini_hardware, close).
-
-    Subclasses must implement:
-        ini_hardware(params_state, controller) -> edict
-        close() -> str
-    and set class attribute:
-        _kind: str  e.g. 'actuator' or 'detector'
-    The settings key is derived automatically as "<kind>_settings".
-    """
-
-    status_sig = Signal(ThreadCommand)
-
-    # Subclasses set _kind to 'actuator' or 'detector'.
-    # _plugin_settings_key is derived automatically as "<kind>_settings".
-    _kind: str = ''
-
-    @property
-    def _plugin_settings_key(self) -> str:
-        return f"{self._kind}_settings"
-
-    def __init__(self, title: str, plugin_name: str) -> None:
-        super().__init__()
-        self._title = title
-        self._plugin_name = plugin_name
-        self.plugin = None              # set by subclass after ini_hardware
-        self.controller_address = None
-
-    @property
-    def title(self) -> str:
-        return self._title
-
-    @property
-    def plugin_name(self) -> str:
-        return self._plugin_name
-
-    def ini_hardware(self, params_state=None, controller=None):
-        raise NotImplementedError
-
-    def update_settings(self, settings_parameter_dict) -> None:
-        """Route a settings change to either main_settings or the plugin subtree."""
-        path = settings_parameter_dict['path']
-        param = settings_parameter_dict['param']
-        if path[0] == 'main_settings':
-            if hasattr(self, path[-1]):
-                setattr(self, path[-1], param.value())
-        elif path[0] == self._plugin_settings_key:
-            if self.plugin is not None:
-                self.plugin.update_settings(settings_parameter_dict)
-
-    def _dispatch_custom_command(self, command) -> None:
-        """Forward an unrecognised ThreadCommand to the plugin instance."""
-        if self.plugin is not None and hasattr(self.plugin, command.command):
-            cmd = getattr(self.plugin, command.command)
-            if isinstance(command.attribute, list):
-                cmd(*command.attribute)
-            elif isinstance(command.attribute, dict):
-                cmd(**command.attribute)
-            else:
-                cmd(command.attribute)
-
-    def queue_command(self, command) -> bool:
-        """Handle commands shared by all hardware workers.
-
-        Returns True if the command was consumed, False so the subclass
-        can handle its own commands.
-        """
-        if command.command == ControlToHardware.INI_HARDWARE:
-            status = self.ini_hardware(*command.attribute)
-            self.status_sig.emit(ThreadCommand(ThreadStatus.INI_HARDWARE, status))
-        elif command.command == ControlToHardware.CLOSE:
-            status = self.close()
-            self.status_sig.emit(ThreadCommand(ThreadStatus.CLOSE, [status]))
-            if self.thread() is not None:
-                self.thread().quit()
-        else:
-            return False
-        return True
