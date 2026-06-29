@@ -146,14 +146,11 @@ class DataDisplayer(QObject):
         plot_items = [self._plot_items[label] for label in labels]
         xaxis = self._plotitem.getAxis('bottom')
         yaxis = self._plotitem.getAxis('left')
-        if do_xy and len(labels) == 2:
-            plot_items[1].setVisible(False)
+        if do_xy and len(labels) >= 2:
+            plot_items[0].setVisible(False)
             xaxis.setLabel(text=labels[0], units='')
-            yaxis.setLabel(text=labels[1], units='')
         else:
-            if len(plot_items) > 1:
-                plot_items[1].setVisible(True)
-            yaxis.setLabel(text='', units='')
+            plot_items[0].setVisible(True)
             self.set_use_timestamps(self.use_timestamps)
 
     @property
@@ -193,11 +190,12 @@ class DataDisplayer(QObject):
 
     def update_plots(self):
 
-        if self._do_xy and len(self._data.datas) == 2:
+        if self._do_xy and len(self._data.datas) >= 2:
             labels = list(self._data.datas.keys())
             plot_items = [self._plot_items[label] for label in labels]
             data_list = [self._data.datas[label] for label in labels]
-            plot_items[0].setData(data_list[0], data_list[1])
+            for ind in range(1, len(data_list)):
+                plot_items[ind].setData(data_list[0], data_list[ind])
         else:
             for label, plot_item in self._plot_items.items():
                 if label in self._data.datas:
@@ -332,7 +330,7 @@ class View0D(ActionManager, QObject):
         return self.plot_widget.plotItem
 
     def display_data(self, data: data_mod.DataWithAxes, displayer: str = None, **kwargs):
-        self.set_action_visible('xyplot', len(data) == 2)
+        self.set_action_visible('xyplot', len(data) >= 2)
         if displayer is None:
             self.data_displayer.update_data(data)
         elif displayer in self.other_data_displayers:
@@ -411,7 +409,9 @@ def main():
     prog.get_action('show_data_as_list').trigger()
     prog.get_action('use_timestamps').trigger()
     for ind, data in enumerate(y1):
-        prog.show_data(data_mod.DataRaw('mydata', data=[np.array([data]), np.array([y2[ind]])],
+        prog.show_data(data_mod.DataRaw('mydata', data=[np.array([data]),
+                                                        np.array([y2[ind]]),
+                                                        -np.array([y2[ind]])],
                                         labels=['lab1', 'lab2'], units="V"))
         QtWidgets.QApplication.processEvents()
 
