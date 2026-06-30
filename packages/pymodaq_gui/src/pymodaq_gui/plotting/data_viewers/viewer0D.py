@@ -142,7 +142,7 @@ class DataDisplayer(QObject):
     def update_xyplot(self, do_xy=True):
         self._do_xy = do_xy
         self.update_plots()
-        labels = list(self._data.datas.keys())
+        labels = list(self._data.data.keys())
         plot_items = [self._plot_items[label] for label in labels]
         xaxis = self._plotitem.getAxis('bottom')
         yaxis = self._plotitem.getAxis('left')
@@ -185,23 +185,23 @@ class DataDisplayer(QObject):
             if set(data.labels) != set(self._plot_items.keys()) or force_update:
                 self.update_display_items(data)
 
-            self._data.add_datas(data)
+            self._data.add_data(data)
             self.update_plots()
 
     def update_plots(self):
 
-        if self._do_xy and len(self._data.datas) >= 2:
-            labels = list(self._data.datas.keys())
+        if self._do_xy and len(self._data.data) >= 2:
+            labels = list(self._data.data.keys())
             plot_items = [self._plot_items[label] for label in labels]
-            data_list = [self._data.datas[label] for label in labels]
+            data_list = [self._data.data[label] for label in labels]
             for ind in range(1, len(data_list)):
                 plot_items[ind].setData(data_list[0], data_list[ind])
         else:
             for label, plot_item in self._plot_items.items():
-                if label in self._data.datas:
-                    plot_item.setData(self.axis, self._data.datas[label])
+                if label in self._data.data:
+                    plot_item.setData(self.axis, self._data.data[label])
 
-        for label, values in self._data.datas.items():
+        for label, values in self._data.data.items():
             if label not in self._mins:
                 self._mins[label] = float(np.nanmin(values))
                 self._maxs[label] = float(np.nanmax(values))

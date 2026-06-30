@@ -413,7 +413,7 @@ class Data0DWithHistory:
     """Object to store scalar values and keep a history of a given length to them"""
     def __init__(self, Nsamples=200, sync_x_axis=True):
         super().__init__()
-        self._datas = dict([])
+        self._data = dict([])
         self.last_data: data_mod.DataRaw = None
         self._Nsamples = Nsamples
         self._xaxis = None
@@ -445,14 +445,14 @@ class Data0DWithHistory:
     def __len__(self):
         return self.length
 
-    def add_datas(self, data: data_mod.DataWithAxes, timestamp: float = None):
+    def add_data(self, data: data_mod.DataWithAxes, timestamp: float = None):
         self.last_data = data
         if timestamp is None:
             timestamp = data.timestamp
         datas = {data.labels[ind]: data.data[ind] for ind in range(len(data))}
-        self.add_datas_dict(datas, timestamp)
+        self.add_data_dict(datas, timestamp)
 
-    def add_datas_list(self, data: list, timestamp: float = None):
+    def add_data_list(self, data: list, timestamp: float = None):
         """
         Add datas to the history
         Parameters
@@ -461,9 +461,9 @@ class Data0DWithHistory:
         """
         self.last_data = data_mod.DataRaw('Data0D', data=[np.array([dat]) for dat in data])
         datas = {f'data_{ind:02d}': data[ind] for ind in range(len(data))}
-        self.add_datas_dict(datas, timestamp)
+        self.add_data_dict(datas, timestamp)
 
-    def add_datas_dict(self, datas: dict, timestamp: float = None):
+    def add_data_dict(self, datas: dict, timestamp: float = None):
         """
         Add datas to the history on the form of a dict of key/data pairs (data is a numpy 0D array)
         Parameters
@@ -472,16 +472,16 @@ class Data0DWithHistory:
         """
         if timestamp is None:
             timestamp = time.time()
-        if datas.keys() != self._datas.keys():
+        if datas.keys() != self._data.keys():
             if self._sync_x_axis:
                 self.clear_data()
             else:
                 # Drop channels that disappeared
-                for gone in set(self._datas.keys()) - set(datas.keys()):
-                    self._datas.pop(gone)
+                for gone in set(self._data.keys()) - set(datas.keys()):
+                    self._data.pop(gone)
                 # Pad new channels with NaN so they share the current xaxis
-                for new in set(datas.keys()) - set(self._datas.keys()):
-                    self._datas[new] = np.full(self._data_length, np.nan)
+                for new in set(datas.keys()) - set(self._data.keys()):
+                    self._data[new] = np.full(self._data_length, np.nan)
 
         self._data_length += 1
 
@@ -495,11 +495,11 @@ class Data0DWithHistory:
                 data = np.array([data])
 
             if self._data_length == 1:
-                self._datas[data_key] = data
+                self._data[data_key] = data
             else:
-                self._datas[data_key] = np.concatenate((self._datas[data_key], data))
+                self._data[data_key] = np.concatenate((self._data[data_key], data))
             if self._data_length > self._Nsamples:
-                self._datas[data_key] = self._datas[data_key][1:]
+                self._data[data_key] = self._data[data_key][1:]
 
         if self._data_length == 1:
             self._timestamps = np.atleast_1d(timestamp)
@@ -509,8 +509,8 @@ class Data0DWithHistory:
             self._timestamps = self._timestamps[1:]
 
     @property
-    def datas(self):
-        return self._datas
+    def data(self):
+        return self._data
 
     @property
     def xaxis(self):
@@ -521,7 +521,7 @@ class Data0DWithHistory:
         return self._timestamps
 
     def clear_data(self):
-        self._datas = dict([])
+        self._data = dict([])
         self._data_length = 0
         self._xaxis = np.array([])
         self._timestamps = np.array([])
