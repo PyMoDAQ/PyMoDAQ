@@ -11,6 +11,7 @@ import numpy as np
 import pymodaq_data.plotting.utils
 from pymodaq_data.data import DataRaw, DataFromRoi, Axis, DataToExport, DataCalculated, DataWithAxes
 from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.plotting.items.crosshair import Crosshair
 from pymodaq_utils import utils
@@ -374,6 +375,11 @@ class View1D(ActionManager, QObject):
 
     def prepare_ui(self):
         self.show_hide_crosshair(False)
+        config = Config()
+        for action_name in ('do_math', 'crosshair', 'aspect_ratio', 'scatter',
+                            'overlay', 'errors', 'sort', 'ROIselect'):
+            if config('gui', 'viewer', 'viewer1D', action_name):
+                self.get_action(action_name).trigger()
 
     def do_math(self):
         try:

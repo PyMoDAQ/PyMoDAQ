@@ -12,6 +12,7 @@ from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 from pyqtgraph import ROI as pgROI
 
 from pymodaq_utils import utils
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.logger import set_logger, get_module_name
 
 from pymodaq_data.data import (Axis, DataToExport, DataFromRoi, DataRaw,
@@ -537,6 +538,14 @@ class View2D(ActionManager, QtCore.QObject):
         self.ROIselect.setVisible(False)
         self.show_hide_crosshair(False)
         self.show_lineout_widgets()
+        config = Config()
+        for action_name in ('autolevels', 'auto_levels_sym', 'histo', 'roi', 'isocurve',
+                            'crosshair', 'ROIselect', 'flip_ud', 'flip_lr', 'rotate',
+                            'opposite', 'legend'):
+            if config('gui', 'viewer', 'viewer2D', action_name):
+                self.get_action(action_name).trigger()
+        if not config('gui', 'viewer', 'viewer2D', 'aspect_ratio'):
+            self.get_action('aspect_ratio').trigger()
 
     @Slot(DataRaw)
     def display_images(self, datas):
