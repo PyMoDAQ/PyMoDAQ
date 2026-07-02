@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+from pyqtgraph import mkColor
 from qtpy import QtWidgets
 from pymodaq_gui.utils.styling import create_icon
 import random
@@ -28,7 +29,19 @@ def test_icon_transform(qtbot, fliph, flipv, rotate):
                 rotate=rotate)
 
 
+def test_icon_color_transform(qtbot):
+    icon_name = random.choice(icons)
 
+    icon = create_icon(icon_name=icon_name,
+                       icon_color=mkColor(123, 45, 45),
+                       flip_h=True,
+                       flip_v=True,
+                       rotate=45)
 
+    button = QtWidgets.QPushButton(icon_name)
+    button.setIcon(icon)
+    qtbot.addWidget(button)
+    button.show()
+    pass
 
 
