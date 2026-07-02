@@ -1,5 +1,8 @@
 from pathlib import Path
+from random import choice, choices
 
+import numpy as np
+from pyqtgraph import mkColor
 from qtpy import QtGui, QtWidgets
 
 from pymodaq_gui.resources.material_icons import MaterialIcon
@@ -15,7 +18,7 @@ icons = toml.load(here.parent.joinpath('resources/icons.toml'))['icons']['names'
 icons.sort()
 
 class Icons():
-    def __init__(self, widget: QtWidgets.QWidget):
+    def __init__(self, widget: QtWidgets.QWidget, with_transform=False):
         super().__init__()
         self.widget = widget
 
@@ -26,7 +29,14 @@ class Icons():
         layout_material = QtWidgets.QGridLayout()
         for n, name in enumerate(icons):
             btn = QtWidgets.QPushButton(name)
-            btn.setIcon(create_icon(name))
+            icon = create_icon(name,
+                               icon_color=mkColor(*choices(np.arange(256), k=3)),
+                               flip_h=choice((True, False)) if with_transform else False,
+                               flip_v=choice((True, False)) if with_transform else False,
+                               fill=choice((True, False)) if with_transform else False,
+                               rotate=choice(np.arange(360)) if with_transform else False,
+                               )
+            btn.setIcon(icon)
 
             layout_material.addWidget(btn, int(n/Ncol), int(n%Ncol))
 
@@ -37,7 +47,7 @@ def main():
     import sys
     app = mkQApp("Icon list")
 
-    w = Icons(QtWidgets.QWidget())
+    w = Icons(QtWidgets.QWidget(), False)
     w.widget.show()
 
     sys.exit(app.exec())
