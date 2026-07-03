@@ -184,6 +184,8 @@ class DataDisplayer(QObject):
         for ind, plot_item in enumerate(self.get_plot_items()):
             if color is None:
                 scatter_color = self._plot_colors[ind]
+            else:
+                scatter_color = color
             if with_scatter:
                 pen = None
                 symbol_type = symbol
@@ -845,7 +847,7 @@ if __name__ == '__main__':  # pragma: no cover
     #main()
     # main_random()
     #main_errors()
-    #main_extra_scatter()
-    main_xy()
+    main_extra_scatter()
+    #main_xy()
     #main_view1D()
     #main_nans()
