@@ -1,11 +1,12 @@
 from importlib import import_module
 from pathlib import Path
 from typing import Union
-
+import numpy as np
 from qtpy import QtCore, QtWidgets
 import qt_themes
 
 from pymodaq_gui.utils import CustomApp
+from pymodaq_gui.utils import Dock
 from pymodaq_gui.utils.widgets import LabelWithFont
 from pymodaq_gui.utils.styling import create_font, create_icon
 
@@ -34,11 +35,22 @@ class ControlModuleUI(CustomApp):
     # Common icon name for initialization action
     INIT_ICON = 'cable'
 
-    def __init__(self, parent):
-        super().__init__(parent)
+    def __init__(self, parent, title, settings_dock: Dock = None,):
+        super().__init__(parent, title=title)
+        self.settings_dock: Dock = settings_dock
         self.config = config
         self._ini_state = False
-        self._settings_widget: QtWidgets.QWidget = None
+
+        self._settings_widget = QtWidgets.QWidget()
+        self._settings_widget.setLayout(QtWidgets.QVBoxLayout())
+        label = LabelWithFont(f'{self.title}',
+                              font_name="Tahoma",
+                              font_size=14, isbold=True, isitalic=True)
+        self._settings_widget.label = label
+        self._settings_widget.layout().addWidget(label)
+
+    def add_setting_tree(self, tree):
+        self._settings_widget.layout().addWidget(tree)
 
     # ---- Common action setup methods ----
 
@@ -120,9 +132,34 @@ class ControlModuleUI(CustomApp):
 
     def _show_settings(self, show: bool = True):
         """Slot connected to the show_settings action."""
-        self._settings_widget.setWindowTitle(f'{self.title} settings')
-        self._settings_widget.setVisible(show)
-        self._settings_widget.closeEvent = lambda event: self.set_action_checked('show_settings', False)
+        if (self.config('pymodaq', 'control_modules', 'settings_as_popup')
+            or self.settings_dock is None):
+            if self.settings_dock is not None:
+                self.settings_dock.removeWidgets(close=False)
+                self.settings_dock.setVisible(False)
+
+            self._settings_widget.setWindowTitle(f'{self.title} settings')
+            self._settings_widget.setVisible(show)
+            self._settings_widget.closeEvent = lambda event: self.set_action_checked('show_settings', False)
+        else:
+            self._display_in_dock(show,
+                                  self._settings_widget,
+                                  self.settings_dock)
+
+    def _display_in_dock(self, show: bool, widget: QtWidgets.QWidget,
+                         dock: Dock,
+                         orientation=QtCore.Qt.Orientation.Horizontal):
+        if widget not in dock.widgets:
+            if orientation == QtCore.Qt.Orientation.Horizontal:
+                dock.addWidget(widget,
+                               row=0,
+                               col=dock.layout.count())
+            else:
+                dock.addWidget(widget)
+        widget.setVisible(show)
+        dock.setVisible(True)
+        dock.setVisible(
+            bool(np.any([widget.isVisible() for widget in dock.widgets])))
 
     def show_settings(self, show=True):
         """Programmatically show/hide the settings widget. API entry."""

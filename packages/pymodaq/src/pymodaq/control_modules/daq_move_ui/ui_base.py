@@ -1,8 +1,8 @@
 from abc import abstractmethod
-
+import numpy as np
 from qtpy.QtWidgets import QComboBox
 from pint import DimensionalityError
-from qtpy import QtWidgets
+from qtpy import QtWidgets, QtCore, QtGui
 from typing import Union, List
 
 from pymodaq_utils.config import GlobalConfig as Config
@@ -12,7 +12,9 @@ from pymodaq.utils.data import DataActuator
 from pymodaq_data import Q_
 from pymodaq_data import DataToExport
 from pymodaq_gui.plotting.data_viewers import ViewerDispatcher
-from pymodaq_gui.utils import DockArea, QSpinBoxWithShortcut, PushButtonIcon, QLED, QSpinBox_ro
+from pymodaq_gui.utils import (DockArea, QSpinBoxWithShortcut,
+                               PushButtonIcon, QLED, QSpinBox_ro,
+                               Dock)
 from pymodaq_gui.utils.widgets import LabelWithFont
 from pymodaq_utils.utils import ThreadCommand
 
@@ -54,9 +56,17 @@ class DAQ_Move_UI_Base(ControlModuleUI):
 
     is_compact = False
 
-    def __init__(self, parent: Union[DockArea, QtWidgets.QWidget], title="DAQ_Move"):
-        super().__init__(parent)
-        self.title = title
+    def __init__(self, parent: Union[DockArea, QtWidgets.QWidget],
+                 title="DAQ_Move",
+                 controls_dock: Dock = None,
+                 settings_dock: Dock = None,):
+
+        super().__init__(parent,
+                         title=title,
+                         settings_dock=settings_dock,)
+
+        self.controls_dock = controls_dock
+
         self._unit = ''
 
         self.actuators_combo: QComboBox = None
@@ -76,8 +86,6 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.control_widget: QtWidgets.QWidget = None
         self.graph_widget: QtWidgets.QWidget = None
         self.viewer: ViewerDispatcher = None
-
-        self._settings_widget: QtWidgets.QWidget = None
 
         self.setup_ui()
 
@@ -173,6 +181,11 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         
     def populate_control_ui(self,  widget: QtWidgets.QWidget):
         widget.setLayout(QtWidgets.QVBoxLayout())
+        label = LabelWithFont(f'{self.title}',
+                              font_name="Tahoma",
+                              font_size=14, isbold=True, isitalic=True)
+        widget.label = label
+        widget.layout().addWidget(label)
         container_widget = QtWidgets.QWidget()
         widget.layout().addWidget(container_widget)
         widget.layout().addStretch()
@@ -212,7 +225,9 @@ class DAQ_Move_UI_Base(ControlModuleUI):
                         toolbar=toolbar, icon_color=self.get_theme().red)
         toolbar.addSeparator()
         self.add_action('show_controls', 'Show Controls',
-                        'discover_tune', "Show more controls", checkable=True,
+                        'discover_tune', "Show more controls",
+                        icon_checked_color=self.get_theme().green,
+                        checkable=True,
                         toolbar=toolbar)
         self.add_action('show_graph', 'Show Graph', 'bid_landscape', 'Show/Hide the Graph Widget',
                         checkable=True, checked=True, icon_checked='bid_landscape_disabled',
@@ -384,9 +399,6 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.abs_value_sb_2.setOpts(siPrefix=show)
         self.rel_value_sb.setOpts(siPrefix=show)
 
-    def set_settings_tree(self, tree):
-        self._settings_widget = tree
-
     # -------------------------------------------------------------------------
     # Slots / Event Handlers
     # -------------------------------------------------------------------------
@@ -412,9 +424,20 @@ class DAQ_Move_UI_Base(ControlModuleUI):
     # -------------------------------------------------------------------------
 
     def show_controls(self, show: bool = True):
-        self.control_widget.setWindowTitle(f'{self.title} controls')
-        self.control_widget.setVisible(show)
-        self.control_widget.closeEvent = lambda event: self.set_action_checked('show_controls', False)
+        if (self.config('pymodaq', 'actuator', 'controls_as_popup')
+                or self.controls_dock is None):
+            if self.controls_dock is not None:
+                self.controls_dock.removeWidgets(close=False)
+                self.controls_dock.setVisible(False)
+
+            self.control_widget.setWindowTitle(f'{self.title} controls')
+            self.control_widget.setVisible(show)
+            self.control_widget.closeEvent = lambda event: self.set_action_checked('show_controls', False)
+        else:
+            self._display_in_dock(show,
+                                  self.control_widget,
+                                  self.controls_dock,
+                                  orientation=QtCore.Qt.Orientation.Vertical)
 
     def show_graph(self, show: bool = True):
         self.graph_widget.setWindowTitle(f'{self.title} graph')

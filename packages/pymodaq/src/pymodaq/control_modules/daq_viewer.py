@@ -120,7 +120,6 @@ class DAQ_Viewer(ParameterControlModule):
         daq_type=config("pymodaq", "viewer", "daq_type"),
         **kwargs,
     ):
-
         self.logger = set_logger(f'{logger.name}.{title}')
         self.logger.info(f'Initializing DAQ_Viewer: {title}')
 
@@ -136,7 +135,9 @@ class DAQ_Viewer(ParameterControlModule):
 
         self.parent = parent
         if parent is not None:
-            self.ui = DAQ_Viewer_UI(parent, title)
+            self.ui = DAQ_Viewer_UI(parent, title,
+                                    rois_dock=kwargs.pop('rois_dock', None),
+                                    settings_dock=kwargs.pop('settings_dock', None),)
         else:
             self.ui = None
 
