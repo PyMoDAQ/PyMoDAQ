@@ -17,6 +17,7 @@ from pyqtgraph.parametertree.parameterTypes.basetypes import GroupParameter
 from pymodaq_gui.managers.action_manager import QAction
 
 from pymodaq_data.plotting.utils import PlotColors
+from pymodaq_gui.utils.widgets import LabelWithFont
 from pymodaq_utils.logger import get_module_name, set_logger
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_gui.config import get_set_roi_path
@@ -146,8 +147,10 @@ class ROIManager(QObject):
     roi_changed = Signal()
     color_list = np.array(plot_colors)
 
-    def __init__(self, viewer_widget=None, ROI_type=DataDim.Data1D):
+    def __init__(self, viewer_widget=None, ROI_type=DataDim.Data1D,
+                 title: str=''):
         super().__init__()
+        self.title = title
         self.ROI_type = ROI_type
         self.roiwidget = QtWidgets.QWidget()
         self.viewer_widget = viewer_widget  # either a PlotWidget or a ImageWidget
@@ -191,7 +194,11 @@ class ROIManager(QObject):
 
         vlayout = QtWidgets.QVBoxLayout()
         self.roiwidget.setLayout(vlayout)
-
+        self.roiwidget.label = LabelWithFont(self.title,
+                                             font_name='Tahoma',
+                                             font_size=14, isbold=True,
+                                             isitalic=True)
+        self.roiwidget.layout().addWidget(self.roiwidget.label)
         self.toolbar = QtWidgets.QToolBar()
         vlayout.addWidget(self.toolbar)
 

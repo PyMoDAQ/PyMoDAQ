@@ -15,6 +15,7 @@ from pymodaq_gui.plotting.data_viewers.viewer import ViewerBase
 from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_gui.plotting.widgets import PlotWidget
 from pymodaq_gui.plotting.utils.plot_utils import Data0DWithHistory
+from pymodaq_gui.utils.dock import Dock
 
 import numpy as np
 from collections import OrderedDict
@@ -291,7 +292,9 @@ class Viewer0D(ViewerBase):
     Datas and measurements are then exported with the signal data_to_export_signal
     """
 
-    def __init__(self, parent=None, title='', show_toolbar=True, no_margins=False):
+    def __init__(self, parent=None, title='', show_toolbar=True,
+                 no_margins=False,
+                 rois_dock: Dock = None):
         super().__init__(parent, title)
         self.view = View0D(self.parent, show_toolbar=show_toolbar,
                            no_margins=no_margins, title=title)

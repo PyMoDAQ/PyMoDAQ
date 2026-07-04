@@ -32,8 +32,11 @@ from pymodaq_gui.plotting.items.axis_scaled import AXIS_POSITIONS, AxisItem_Scal
 from pymodaq_gui.plotting.items.crosshair import Crosshair
 from pymodaq_gui.plotting.utils.filter import Filter2DFromCrosshair, Filter2DFromRois
 from pymodaq_gui.plotting.utils.plot_utils import make_dashed_pens
+from pymodaq_gui.utils.dock import Dock
+from pymodaq_gui.plotting.utils.plot_utils import display_in_dock
 
 logger = set_logger(get_module_name(__file__))
+config = Config()
 
 Gradients.update(OrderedDict([
     ('red', {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (255, 0, 0, 255))], 'mode': 'rgb'}),
@@ -307,10 +310,12 @@ class View2D(ActionManager, QtCore.QObject):
 
     lineout_types = ['hor', 'ver', 'int']
 
-    def __init__(self, parent_widget=None, title=''):
+    def __init__(self, parent_widget=None, title='',
+                 rois_dock: Dock = None):
         QtCore.QObject.__init__(self)
         ActionManager.__init__(self, toolbar=QtWidgets.QToolBar())
         self.title = title
+        self.rois_dock = rois_dock
         self.ROIselect = SimpleRectROI([0, 0], [10, 10], centered=True, sideScalers=True)
 
         self._lineout_widgets = {widg_key: QtWidgets.QWidget() for widg_key in self.lineout_types}
@@ -327,7 +332,8 @@ class View2D(ActionManager, QtCore.QObject):
             self.parent_widget.show()
 
         self.image_widget = ImageWidget()
-        self.roi_manager = ROIManager(self.image_widget, DataDim.Data2D)
+        self.roi_manager = ROIManager(self.image_widget, DataDim.Data2D,
+                                      title=self.title)
 
         self.roi_target: Union[pgROI, Crosshair] = None
 
@@ -576,9 +582,20 @@ class View2D(ActionManager, QtCore.QObject):
 
     @Slot(bool)
     def roi_clicked(self, isroichecked=True):
-        self.roi_manager.roiwidget.setWindowTitle(f'{self.title} ROIs')
-        self.roi_manager.roiwidget.setVisible(isroichecked)
-        self.roi_manager.roiwidget.closeEvent = lambda event: self.set_action_checked('roi', False)
+
+        if (config('pymodaq', 'viewer', 'rois_as_popup')
+            or self.rois_dock is None):
+            if self.rois_dock is not None:
+                self.rois_dock.removeWidgets(close=False)
+                self.rois_dock.setVisible(False)
+
+            self.roi_manager.roiwidget.setWindowTitle(f'{self.title} ROIs')
+            self.roi_manager.roiwidget.setVisible(isroichecked)
+            self.roi_manager.roiwidget.closeEvent = lambda event: self.set_action_checked('roi', False)
+        else:
+            display_in_dock(isroichecked,
+                            self.roi_manager.roiwidget,
+                            self.rois_dock)
 
         for k, roi in self.roi_manager.ROIs.items():
             roi.setVisible(isroichecked)
@@ -750,7 +767,8 @@ class View2D(ActionManager, QtCore.QObject):
 class Viewer2D(ViewerBase):
     """Object managing plotting and manipulation of 2D data using a View2D"""
 
-    def __init__(self, parent: QtWidgets.QWidget = None, title=''):
+    def __init__(self, parent: QtWidgets.QWidget = None, title='',
+                 rois_dock: Dock = None):
         super().__init__(parent, title)
 
         self.just_init = True
@@ -759,7 +777,8 @@ class Viewer2D(ViewerBase):
         self.isdata = dict([])
         self._is_gradient_manually_set = False
 
-        self.view : View2D= View2D(parent, title)
+        self.view : View2D= View2D(parent, title,
+                                   rois_dock = rois_dock)
         self.filter_from_rois = Filter2DFromRois(self.view.roi_manager, self.view.data_displayer.get_image('red'),
                                                  IMAGE_TYPES)
         self.filter_from_rois.register_activation_signal(self.view.get_action('roi').triggered)

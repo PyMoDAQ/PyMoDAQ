@@ -121,11 +121,13 @@ class DAQ_Viewer(ParameterControlModule):
         area: DockArea = None,
         **kwargs,
     ):
+
         self.logger = set_logger(f'{logger.name}.{title}')
         self.logger.info(f'Initializing DAQ_Viewer: {title}')
 
         super().__init__(listener_class=ViewerActorListener, **kwargs)
 
+        self.rois_dock: Dock = kwargs.pop('rois_dock', None)
         self._detector = SelectedModule(daq_type=DAQTypesEnum[daq_type])
 
         self._viewer_types: List[ViewersEnum] = []
@@ -138,7 +140,7 @@ class DAQ_Viewer(ParameterControlModule):
         if parent is not None:
             self.ui = DAQ_Viewer_UI(parent, title,
                                     area = area,
-                                    rois_dock=kwargs.pop('rois_dock', None),
+                                    rois_dock=self.rois_dock,
                                     settings_dock=kwargs.pop('settings_dock', None),)
         else:
             self.ui = None
@@ -287,6 +289,7 @@ class DAQ_Viewer(ParameterControlModule):
     def detector(self, det: SelectedModule):
         self._detector = det
         self.update_plugin_config()
+        self.rois_dock.removeWidgets()
         if self.ui is not None:
             self.ui.detector = det
         self._reload_plugin_settings()

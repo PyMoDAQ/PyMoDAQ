@@ -4,7 +4,7 @@ from qtpy.QtWidgets import QComboBox
 from pint import DimensionalityError
 from qtpy import QtWidgets, QtCore, QtGui
 from typing import Union, List
-
+from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq.control_modules.thread_commands import UiToMainMove
 from pymodaq.control_modules.ui_utils import ControlModuleUI
@@ -16,7 +16,8 @@ from pymodaq_gui.utils import (DockArea, QSpinBoxWithShortcut,
                                PushButtonIcon, QLED, QSpinBox_ro,
                                Dock)
 from pymodaq_gui.utils.widgets import LabelWithFont
-from pymodaq_utils.utils import ThreadCommand
+from pymodaq_gui.plotting.utils.plot_utils import display_in_dock
+
 
 config = Config()
 
@@ -434,10 +435,10 @@ class DAQ_Move_UI_Base(ControlModuleUI):
             self.control_widget.setVisible(show)
             self.control_widget.closeEvent = lambda event: self.set_action_checked('show_controls', False)
         else:
-            self._display_in_dock(show,
-                                  self.control_widget,
-                                  self.controls_dock,
-                                  orientation=QtCore.Qt.Orientation.Vertical)
+            display_in_dock(show,
+                            self.control_widget,
+                            self.controls_dock,
+                            orientation=QtCore.Qt.Orientation.Vertical)
 
     def show_graph(self, show: bool = True):
         self.graph_widget.setWindowTitle(f'{self.title} graph')

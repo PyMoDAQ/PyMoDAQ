@@ -9,7 +9,7 @@ from pymodaq_gui.utils import CustomApp
 from pymodaq_gui.utils import Dock
 from pymodaq_gui.utils.widgets import LabelWithFont
 from pymodaq_gui.utils.styling import create_font, create_icon
-
+from pymodaq_gui.plotting.utils.plot_utils import display_in_dock
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import GlobalConfig as Config
 
@@ -142,24 +142,9 @@ class ControlModuleUI(CustomApp):
             self._settings_widget.setVisible(show)
             self._settings_widget.closeEvent = lambda event: self.set_action_checked('show_settings', False)
         else:
-            self._display_in_dock(show,
-                                  self._settings_widget,
-                                  self.settings_dock)
-
-    def _display_in_dock(self, show: bool, widget: QtWidgets.QWidget,
-                         dock: Dock,
-                         orientation=QtCore.Qt.Orientation.Horizontal):
-        if widget not in dock.widgets:
-            if orientation == QtCore.Qt.Orientation.Horizontal:
-                dock.addWidget(widget,
-                               row=0,
-                               col=dock.layout.count())
-            else:
-                dock.addWidget(widget)
-        widget.setVisible(show)
-        dock.setVisible(True)
-        dock.setVisible(
-            bool(np.any([widget.isVisible() for widget in dock.widgets])))
+            display_in_dock(show,
+                            self._settings_widget,
+                            self.settings_dock)
 
     def show_settings(self, show=True):
         """Programmatically show/hide the settings widget. API entry."""

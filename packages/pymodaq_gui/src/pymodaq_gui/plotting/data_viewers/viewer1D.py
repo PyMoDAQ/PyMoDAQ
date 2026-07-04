@@ -24,9 +24,11 @@ from pymodaq_gui.managers.roi_manager import ROIManager, LinearROI, DataDim
 from pymodaq_gui.plotting.utils.filter import Filter1DFromCrosshair, Filter1DFromRois
 from pymodaq_gui.plotting.widgets import PlotWidget
 from pymodaq_gui.plotting.data_viewers.viewer0D import Viewer0D
+from pymodaq_gui.utils.dock import Dock
+from pymodaq_gui.plotting.utils.plot_utils import display_in_dock
 
 logger = set_logger(get_module_name(__file__))
-
+config = Config()
 PLOT_COLORS = pymodaq_data.plotting.utils.PlotColors()
 
 
@@ -258,10 +260,12 @@ class DataDisplayer(QObject):
 
 class View1D(ActionManager, QObject):
     def __init__(self, parent_widget: QtWidgets.QWidget = None, show_toolbar=True,
-                 no_margins=False, flip_axes=False, title=''):
+                 no_margins=False, flip_axes=False, title='',
+                 rois_dock: Dock = None):
         QObject.__init__(self)
         ActionManager.__init__(self, toolbar=QtWidgets.QToolBar())
         self.title = title
+        self.rois_dock = rois_dock
         self.no_margins = no_margins
         self.flip_axes = flip_axes
 
@@ -282,7 +286,7 @@ class View1D(ActionManager, QObject):
             self.parent_widget.show()
 
         self.plot_widget = PlotWidget()
-        self.roi_manager = ROIManager(DataDim.Data1D)
+        self.roi_manager = ROIManager(DataDim.Data1D, title=self.title)
         self.data_displayer = DataDisplayer(self.plotitem, flip_axes=self.flip_axes)
         self.other_data_displayers: Dict[str, DataDisplayer] = {}
         self.setup_widgets()
@@ -383,9 +387,19 @@ class View1D(ActionManager, QObject):
 
     def do_math(self):
         try:
-            self.roi_manager.roiwidget.setWindowTitle(f'{self.title} ROIs')
-            self.roi_manager.roiwidget.setVisible(self.is_action_checked('do_math'))
-            self.roi_manager.roiwidget.closeEvent = lambda event: self.set_action_checked('do_math', False)
+            if (config('pymodaq', 'viewer', 'rois_as_popup')
+                    or self.rois_dock is None):
+                if self.rois_dock is not None:
+                    self.rois_dock.removeWidgets(close=False)
+                    self.rois_dock.setVisible(False)
+
+                self.roi_manager.roiwidget.setWindowTitle(f'{self.title} ROIs')
+                self.roi_manager.roiwidget.setVisible(self.is_action_checked('do_math'))
+                self.roi_manager.roiwidget.closeEvent = lambda event: self.set_action_checked('do_math', False)
+            else:
+                display_in_dock(self.is_action_checked('do_math'),
+                                self.roi_manager.roiwidget,
+                                self.rois_dock)
 
             self.lineout_widgets.setVisible(self.is_action_checked('do_math'))
 
@@ -523,13 +537,16 @@ class Viewer1D(ViewerBase):
 
     """
 
-    def __init__(self, parent: QtWidgets.QWidget = None, title='', show_toolbar=True, no_margins=False,
-                 flip_axes=False):
+    def __init__(self, parent: QtWidgets.QWidget = None, title='',
+                 show_toolbar=True, no_margins=False,
+                 flip_axes=False,
+                 rois_dock: Dock = None):
         super().__init__(parent=parent, title=title)
 
         self.view = View1D(self.parent, show_toolbar=show_toolbar,
                            no_margins=no_margins, flip_axes=flip_axes,
-                           title=title)
+                           title=title,
+                           rois_dock=rois_dock)
 
         self.filter_from_rois = Filter1DFromRois(self.view.roi_manager)
         self.filter_from_rois.register_activation_signal(self.view.get_action('do_math').triggered)

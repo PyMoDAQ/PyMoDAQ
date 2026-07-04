@@ -81,7 +81,6 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
                  settings_dock: Dock = None,
                  area: DockArea = None,
                  **kwargs):
-        self.rois_dock = rois_dock
 
         ControlModuleUI.__init__(self, parent,
                                  title=title,
@@ -91,7 +90,8 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         else:
             self.dockarea = DockArea()
 
-        ViewerDispatcher.__init__(self, self.dockarea, title=title)
+        ViewerDispatcher.__init__(self, self.dockarea, title=title,
+                                  rois_dock=rois_dock)
 
         self._data_ready = False
         self._detector_widget = None

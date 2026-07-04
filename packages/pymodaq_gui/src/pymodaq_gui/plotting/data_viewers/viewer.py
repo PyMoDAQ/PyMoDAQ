@@ -43,23 +43,31 @@ class ViewerFactory(ObjectFactory):
 
 
 @ViewerFactory.register('Viewer0D')
-def create_viewer0D(parent: QtWidgets.QWidget = None, title='', **_ignored):
-    return data_viewers.viewer0D.Viewer0D(parent, title=title)
+def create_viewer0D(parent: QtWidgets.QWidget = None, title='',
+                    rois_dock: Dock = None, **_ignored):
+    return data_viewers.viewer0D.Viewer0D(parent, title=title,
+                                          rois_dock=rois_dock)
 
 
 @ViewerFactory.register('Viewer1D')
-def create_viewer1D(parent: QtWidgets.QWidget, title='', **_ignored):
-    return data_viewers.viewer1D.Viewer1D(parent, title=title)
+def create_viewer1D(parent: QtWidgets.QWidget, title='',
+                    rois_dock: Dock = None, **_ignored):
+    return data_viewers.viewer1D.Viewer1D(parent, title=title,
+                                          rois_dock=rois_dock)
 
 
 @ViewerFactory.register('Viewer2D')
-def create_viewer2D(parent: QtWidgets.QWidget, title='', **_ignored):
-    return data_viewers.viewer2D.Viewer2D(parent, title=title)
+def create_viewer2D(parent: QtWidgets.QWidget, title='',
+                    rois_dock: Dock = None, **_ignored):
+    return data_viewers.viewer2D.Viewer2D(parent, title=title,
+                                          rois_dock=rois_dock)
 
 
 @ViewerFactory.register('ViewerND')
-def create_viewerND(parent: QtWidgets.QWidget, title='', **_ignored):
-    return data_viewers.viewerND.ViewerND(parent, title=title)
+def create_viewerND(parent: QtWidgets.QWidget, title='',
+                    rois_dock: Dock = None, **_ignored):
+    return data_viewers.viewerND.ViewerND(parent, title=title,
+                                          rois_dock=rois_dock)
 
 
 # @ViewerFactory.register('ViewerSequential')
@@ -85,11 +93,13 @@ class ViewerDispatcher:
 
     """
 
-    def __init__(self, dockarea: DockArea = None, title: str = '', next_to_dock: Dock = None,
-                 direction='right'):
+    def __init__(self, dockarea: DockArea = None, title: str = '',
+                 next_to_dock: Dock = None,
+                 direction='right',
+                 rois_dock: Dock = None,):
         super().__init__()
         self._title = title if title != '' else self.__class__.__name__
-
+        self.rois_dock = rois_dock
         self._next_to_dock = next_to_dock
 
         if dockarea is None:
@@ -153,7 +163,8 @@ class ViewerDispatcher:
         self._viewer_widgets.append(QtWidgets.QWidget())
         self.viewers.append(viewer_factory.get(viewer_type.name,
                                                parent=self._viewer_widgets[-1],
-                                               title=dock_name))
+                                               title=dock_name,
+                                               rois_dock=self.rois_dock))
 
         self.viewer_types.append(viewer_type)
 

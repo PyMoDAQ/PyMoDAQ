@@ -54,12 +54,17 @@ def create_load_daq_viewer(title='DAQ_Viewer') -> tuple[SharedUI, 'DAQ_Viewer']:
     area = DockArea()
 
     settings_dock = Dock('Settings')
+    rois_dock = Dock('ROIs')
 
     area.addDock(settings_dock, 'right')
+    area.addDock(rois_dock, 'right', settings_dock)
     settings_dock.setVisible(False)
+    rois_dock.setVisible(False)
+
     daq_viewer = DAQ_Viewer(widget, title=title,
                             area=area,
-                            settings_dock=settings_dock,)
+                            settings_dock=settings_dock,
+                            rois_dock=rois_dock,)
 
     shared_ui = SharedUI(win)
     shared_ui.affect_application(daq_viewer.ui)
