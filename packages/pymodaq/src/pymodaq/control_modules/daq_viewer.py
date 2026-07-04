@@ -289,7 +289,11 @@ class DAQ_Viewer(ParameterControlModule):
     def detector(self, det: SelectedModule):
         self._detector = det
         self.update_plugin_config()
+        for viewer in self.viewers:
+            if hasattr(viewer.view, 'roi_manager'):
+                viewer.view.roi_manager.clear_ROI()
         self.rois_dock.removeWidgets()
+        self.rois_dock.setVisible(False)
         if self.ui is not None:
             self.ui.detector = det
         self._reload_plugin_settings()
