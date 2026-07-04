@@ -1,7 +1,7 @@
 control_module_ini_polling = 60 # in seconds
 
 [control_modules]
-settings_as_popup = true
+settings_as_popup = false
 
 [actuator]
 ui = ['Simple', 'Original', 'Binary'] #other eventual options will be added programmaticaly at startup
@@ -13,7 +13,7 @@ timeout = 10000  # default duration in ms to wait for data to be acquirred
 siprefix = true  # tell if printing of current value use a SI prefix or not (µ, m, k, M...)
 siprefix_even_without_units = false
 display_units = true # display units in the SpinBoxes
-controls_as_popup = true
+controls_as_popup = false
 
 [actuator.allowed_units]
 V = 'V'
@@ -33,6 +33,7 @@ daq_type = 'DAQ0D' #either "DAQ0D", "DAQ1D", "DAQ2D", "DAQND"
 viewer_in_thread = true
 timeout = 10000  # default duration in ms to wait for data to be acquirred
 allow_settings_edition = false
+rois_as_popup = false
 
 [scan]
 scan_in_thread = true
