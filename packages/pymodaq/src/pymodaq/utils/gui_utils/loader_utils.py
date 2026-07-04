@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from qtpy import QtWidgets
 
 from pymodaq.extensions.custom_ext import CustomExt
+from pymodaq_gui.utils import DockArea
 from pymodaq_gui.utils.widgets.window import make_window
 
 from pymodaq.utils.shared_ui import SharedUI
@@ -36,11 +37,20 @@ def create_load_daq_move(ui_identifier='Original', title="DAQ_Move") -> tuple[Sh
 
 
 def create_load_daq_viewer(title='DAQ_Viewer') -> tuple[SharedUI, 'DAQ_Viewer']:
-    from pymodaq.control_modules.daq_viewer import DAQ_Viewer
+    from pymodaq.control_modules.daq_viewer import DAQ_Viewer, Dock
     win, area = make_window(area=False, title='DAQ_Viewer')
     widget = QtWidgets.QWidget()
     win.setCentralWidget(widget)
-    daq_viewer = DAQ_Viewer(widget, title=title)
+
+    area = DockArea()
+
+    settings_dock = Dock('Settings')
+
+    area.addDock(settings_dock, 'right')
+    settings_dock.setVisible(False)
+    daq_viewer = DAQ_Viewer(widget, title=title,
+                            area=area,
+                            settings_dock=settings_dock,)
 
     shared_ui = SharedUI(win)
     shared_ui.affect_application(daq_viewer.ui)

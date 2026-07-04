@@ -78,14 +78,18 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
     def __init__(self, parent: QtWidgets.QWidget, title="DAQ_Viewer",
                  rois_dock: Dock = None,
-                 settings_dock: Dock = None, **kwargs):
+                 settings_dock: Dock = None,
+                 area: DockArea = None,
+                 **kwargs):
         self.rois_dock = rois_dock
 
         ControlModuleUI.__init__(self, parent,
                                  title=title,
                                  settings_dock=settings_dock,)
-
-        self.dockarea = DockArea()
+        if area is not None:
+            self.dockarea = area
+        else:
+            self.dockarea = DockArea()
 
         ViewerDispatcher.__init__(self, self.dockarea, title=title)
 

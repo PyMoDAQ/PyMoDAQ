@@ -118,6 +118,7 @@ class DAQ_Viewer(ParameterControlModule):
         parent: Optional[QtWidgets.QWidget] = None,
         title: str = "Testing",
         daq_type=config("pymodaq", "viewer", "daq_type"),
+        area: DockArea = None,
         **kwargs,
     ):
         self.logger = set_logger(f'{logger.name}.{title}')
@@ -136,6 +137,7 @@ class DAQ_Viewer(ParameterControlModule):
         self.parent = parent
         if parent is not None:
             self.ui = DAQ_Viewer_UI(parent, title,
+                                    area = area,
                                     rois_dock=kwargs.pop('rois_dock', None),
                                     settings_dock=kwargs.pop('settings_dock', None),)
         else:
