@@ -314,7 +314,7 @@ class View2D(ActionManager, QtCore.QObject):
                  rois_dock: Dock = None):
         QtCore.QObject.__init__(self)
         ActionManager.__init__(self, toolbar=QtWidgets.QToolBar())
-        self.title = title
+        self._title = title
         self.rois_dock = rois_dock
         self.ROIselect = SimpleRectROI([0, 0], [10, 10], centered=True, sideScalers=True)
 
@@ -352,6 +352,15 @@ class View2D(ActionManager, QtCore.QObject):
         self.set_axis_label('left', label='', units='index')
 
         self.set_image_displayer(DataDistribution['uniform'])
+
+    @property
+    def title(self) -> str:
+        return self._title
+
+    @title.setter
+    def title(self, value: str):
+        self._title = value
+        self.roi_manager.title = value
 
     def clear_plot_item(self):
         for item in self.plotitem.items[:]:

@@ -264,7 +264,7 @@ class View1D(ActionManager, QObject):
                  rois_dock: Dock = None):
         QObject.__init__(self)
         ActionManager.__init__(self, toolbar=QtWidgets.QToolBar())
-        self.title = title
+        self._title = title
         self.rois_dock = rois_dock
         self.no_margins = no_margins
         self.flip_axes = flip_axes
@@ -302,6 +302,15 @@ class View1D(ActionManager, QObject):
         self.show_toolbar = show_toolbar
         if not self.show_toolbar:
             self.splitter_ver.setSizes([0, 1, 0])
+
+    @property
+    def title(self) -> str:
+        return self._title
+
+    @title.setter
+    def title(self, value: str):
+        self._title = value
+        self.roi_manager.title = value
 
     def add_data_displayer(self, displayer_name: str, plot_colors=PLOT_COLORS):
         self.other_data_displayers[displayer_name] = DataDisplayer(self.plotitem, self.flip_axes,

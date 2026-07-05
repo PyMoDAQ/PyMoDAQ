@@ -249,7 +249,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
     def update_viewers(self, viewers_type: List[Union[str, ViewersEnum]],
                        viewers_name: List[str] = None, force=False):
-        super().update_viewers(viewers_type)
+        super().update_viewers(viewers_type, viewers_name=viewers_name)
         self.command_sig.emit(ThreadCommand(UiToMainViewer.VIEWERS_CHANGED,
                                             attribute=dict(viewer_types=self.viewer_types,
                                                            viewers=self.viewers)))

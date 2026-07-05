@@ -147,9 +147,12 @@ class ViewerDispatcher:
             widget.close()
             dock = self.viewer_docks.pop()
             dock.close()
-            self.viewers.pop()
+            viewer = self.viewers.pop()
+            if hasattr(viewer.view, 'roi_manager'):
+                self.rois_dock.removeWidget(viewer.view.roi_manager.roiwidget)
             self.viewer_types.pop()
             QtWidgets.QApplication.processEvents()
+        self.rois_dock.setVisible(False)
 
     def add_viewer(self, viewer_type: ViewersEnum, dock_viewer=None, dock_name=None):
         viewer_type = enum_checker(ViewersEnum, viewer_type)
@@ -169,13 +172,6 @@ class ViewerDispatcher:
         self.viewer_types.append(viewer_type)
 
         self.viewer_docks[-1].addWidget(self._viewer_widgets[-1])
-        # if len(self.viewer_docks) == 1:
-        #     if self._next_to_dock is not None:
-        #         self.dockarea.addDock(self.viewer_docks[-1], 'right', self._next_to_dock)
-        #     else:
-        #         self.dockarea.addDock(self.viewer_docks[-1])
-        # else:
-        #     self.dockarea.addDock(self.viewer_docks[-1], 'right', self.viewer_docks[-2])
         self.dockarea.addDock(self.viewer_docks[-1], self._direction)
 
     def update_viewers(self, viewers_type: List[Union[str, ViewersEnum]],

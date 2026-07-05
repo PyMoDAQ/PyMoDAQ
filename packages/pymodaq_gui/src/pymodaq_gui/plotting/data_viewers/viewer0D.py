@@ -181,7 +181,7 @@ class View0D(ActionManager, QObject):
                  no_margins=False, title=''):
         QObject.__init__(self)
         ActionManager.__init__(self, toolbar=QtWidgets.QToolBar())
-        self.title = title
+        self._title = title
         self.no_margins = no_margins
         self.data_displayer: DataDisplayer = None
         self.other_data_displayers: Dict[str, DataDisplayer] = {}
@@ -202,6 +202,14 @@ class View0D(ActionManager, QObject):
         self._prepare_ui()
         if not show_toolbar:
             self.splitter.setSizes([0,1])
+
+    @property
+    def title(self) -> str:
+        return self._title
+
+    @title.setter
+    def title(self, value: str):
+        self._title = value
 
     def setup_actions(self):
         self.add_action('clear', 'Clear plot', 'clear2', 'Clear the current plots')

@@ -150,12 +150,21 @@ class ROIManager(QObject):
     def __init__(self, viewer_widget=None, ROI_type=DataDim.Data1D,
                  title: str=''):
         super().__init__()
-        self.title = title
+        self._title = title
         self.ROI_type = ROI_type
         self.roiwidget = QtWidgets.QWidget()
         self.viewer_widget = viewer_widget  # either a PlotWidget or a ImageWidget
         self._ROIs: OrderedDict[str, ROI] = OrderedDict([])
         self.setupUI()
+
+    @property
+    def title(self) -> str:
+        return self._title
+
+    @title.setter
+    def title(self, value: str):
+        self._title = value
+        self.roiwidget.label.setText(value)
 
     @staticmethod
     def roi_format(index):
