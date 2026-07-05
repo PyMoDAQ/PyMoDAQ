@@ -137,9 +137,11 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.actuators_combo = QComboBox()
         self.abs_value_sb = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('pymodaq', 'actuator', 'siprefix'))
         self.abs_value_sb.setStyleSheet("background-color : lightgreen; color: black")
+        self.abs_value_sb.setValue(config('pymodaq', 'actuator', 'default_value_green'))
 
         self.abs_value_sb_2 = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('pymodaq', 'actuator', 'siprefix'))
         self.abs_value_sb_2.setStyleSheet("background-color : lightcoral; color: black")
+        self.abs_value_sb_2.setValue(config('pymodaq', 'actuator', 'default_value_red'))
 
         self.abs_value_sb_bis = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('pymodaq', 'actuator', 'siprefix'))
         self.move_done_led = QLED(readonly=True)

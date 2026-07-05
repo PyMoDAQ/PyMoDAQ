@@ -10,6 +10,9 @@ timeout = 10000  # default duration in ms to wait for data to be acquirred
 siprefix = true  # tell if printing of current value use a SI prefix or not (µ, m, k, M...)
 siprefix_even_without_units = false
 display_units = true # display units in the SpinBoxes
+default_value_red = 0.0
+default_value_green = 10.0
+
 
 [actuator.allowed_units]
 V = 'V'
