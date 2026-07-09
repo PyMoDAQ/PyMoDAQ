@@ -1032,10 +1032,10 @@ class ActuatorWorker(HardwareWorkerBase):
         self.plugin.poll_timer.stop()
 
 
-def main(init_qt=True):
+def main():
     from pymodaq.utils.gui_utils.loader_utils import create_load_daq_move
     app = mkQApp("PyMoDAQ Move")
-    shared_ui, daq_move = create_load_daq_move('simple')
+    shared_ui, daq_move = create_load_daq_move('Simple')
     shared_ui.show()
     sys.exit(app.exec())
 
