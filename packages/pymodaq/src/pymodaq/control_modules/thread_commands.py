@@ -130,6 +130,7 @@ class UiToMainMove(StrEnum):
     REL_VALUE = 'rel_value'
 
     LOOP_GET_VALUE = 'loop_get_value'
+    RESET_COUNTER = 'reset_counter'
 
 
 class UiToMainViewer(StrEnum):

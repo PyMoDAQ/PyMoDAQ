@@ -17,7 +17,7 @@ from pint.errors import OffsetUnitCalculusError
 from pymodaq_utils.utils import ThreadCommand, find_keys_from_val
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_utils.enums import BaseEnum, enum_checker
+from pymodaq_utils.enums import BaseEnum, enum_checker, StrEnum
 from pymodaq_utils.serialize.mysocket import Socket
 from pymodaq_utils.serialize.serializer_legacy import DeSerializer, Serializer
 
@@ -75,6 +75,12 @@ class DataActuatorType(BaseEnum):
     """Enum for new or old style holding the value of the actuator"""
     float = 0
     DataActuator = 1
+
+class UiType(StrEnum):
+    NONE = 'None'
+    SIMPLE = 'Simple'
+    BINARY = 'Binary'
+    RELATIVE = 'Relative'
 
 
 def comon_parameters(epsilon=config('pymodaq', 'actuator', 'epsilon_default'),
@@ -186,6 +192,8 @@ params = [
          'value': config('pymodaq', 'actuator', 'default_value_green')},
         {'title': 'Value Red:', 'name': 'default_value_red', 'type': 'float',
         'value': config('pymodaq', 'actuator', 'default_value_red')},
+        {'title': 'Value Relative:', 'name': 'default_value_relative', 'type': 'float',
+        'value': config('pymodaq', 'actuator', 'default_value_relative')},
 
     ] + create_remote_connection_params()},
     {'title': 'Actuator Settings:', 'name': HW_SETTINGS_KEY, 'type': 'group'}
@@ -289,7 +297,8 @@ class DAQ_Move_base(PluginBase):
 
     params = []
 
-    data_actuator_type = DataActuatorType.float
+    data_actuator_type = DataActuatorType.float  # for backcompatibility, but new plugins should have DataActuatorType.DataActuator
+    ui_type = UiType.NONE  # should precise/force what should be the ui type to be used with this actuator
     data_shape = (1,)  # expected shape of the underlying actuator's value (in general a float so shape = (1, ))
 
     def __init__(self, parent: Optional['ActuatorWorker'] = None,
