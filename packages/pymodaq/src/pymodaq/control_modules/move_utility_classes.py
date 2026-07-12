@@ -306,6 +306,7 @@ class DAQ_Move_base(PluginBase):
 
     data_actuator_type = DataActuatorType.float  # for backcompatibility, but new plugins should have DataActuatorType.DataActuator
     ui_type = UiType.NONE  # should precise/force what should be the ui type to be used with this actuator
+    has_encoder = True
     data_shape = (1,)  # expected shape of the underlying actuator's value (in general a float so shape = (1, ))
 
     def __init__(self, parent: Optional['ActuatorWorker'] = None,
@@ -725,17 +726,21 @@ class DAQ_Move_base(PluginBase):
             if self.ispolling:
                 self.poll_timer.start()
             else:
-                if self.data_actuator_type == DataActuatorType.float:
-                    self._current_value = DataActuator(data=self.get_actuator_value(),
-                                                       units=self.axis_unit)
+                if not self.has_encoder:
+                    self._current_value = self.target_value
                 else:
-                    self._current_value = self.get_actuator_value()
-                    if (not Unit(self.axis_unit).is_compatible_with(
-                            Unit(self._current_value.units)) and
-                            self._current_value.units == ''):
-                        # this happens if the units have not been specified in
-                        # the plugin
-                        self._current_value.force_units(self.axis_unit)
+                    if self.data_actuator_type == DataActuatorType.float:
+                        self._current_value = DataActuator(
+                            data=self.get_actuator_value(),
+                            units=self.axis_unit)
+                    else:
+                        self._current_value = self.get_actuator_value()
+                        if (not Unit(self.axis_unit).is_compatible_with(
+                                Unit(self._current_value.units)) and
+                                self._current_value.units == ''):
+                            # this happens if the units have not been specified in
+                            # the plugin
+                            self._current_value.force_units(self.axis_unit)
 
                 logger.debug(f'Current position: {self._current_value}')
                 self.move_done(self._current_value)

@@ -262,7 +262,7 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.add_action('move_rel_minus', 'Set Rel. (-)', 'step_into',
                         toolbar=toolbar,
                         icon_color=self.get_theme().blue,)
-        self.add_action('reset_counter', 'Reset Internal Counter', 'restart_alt',
+        self.add_action('reset_value', 'Reset Internal Value (no encoder)', 'restart_alt',
                         toolbar=toolbar,)
 
     def connect_things(self):
@@ -280,9 +280,9 @@ class DAQ_Move_UI_Base(ControlModuleUI):
             self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.STOP, )))
         if 'show_config' in self.actions_names:
             self.connect_action('show_config', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.SHOW_CONFIG, )))
-        if 'reset_counter' in self.actions_names:
-            self.connect_action('reset_counter',
-                                lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.RESET_COUNTER, )))
+        if 'reset_value' in self.actions_names:
+            self.connect_action('reset_value',
+                                lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.RESET_VALUE, )))
 
         self.move_abs_pb.clicked.connect(lambda: self.emit_move_abs(self.abs_value_sb_bis))
         self.abs_value_sb.shortcut["Ctrl+E"].activated.connect(lambda: self.emit_move_abs(self.abs_value_sb))

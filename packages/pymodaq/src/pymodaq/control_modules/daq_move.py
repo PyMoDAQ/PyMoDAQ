@@ -43,7 +43,7 @@ from pymodaq.control_modules.thread_commands import (ThreadStatus, ThreadStatusM
                                                      ControlToHardwareMove, UiToMainMove,
                                                      )
 from pymodaq.control_modules.move_utility_classes import (ThreadCommand, MoveCommand, DAQ_Move_base, DataActuatorType,
-                                                           check_units)
+                                                          check_units, UiType)
 
 
 from pymodaq.control_modules.move_utility_classes import params as daq_move_params
@@ -306,9 +306,10 @@ class DAQ_Move(ParameterControlModule):
             self.actuator = cmd.attribute
         elif cmd.command == UiToMainMove.REL_VALUE:
             self._relative_value = cmd.attribute
-        elif cmd.command == UiToMainMove.RESET_COUNTER:
-            self._current_value = DataActuator(data=0., units=self.units)
-            self.current_value_signal.emit(self._current_value)
+        elif cmd.command == UiToMainMove.RESET_VALUE:
+            self.command_hardware.emit(
+                ThreadCommand(ControlToHardwareMove.RESET_VALUE),
+            )
 
     # -------------------------------------------------------------------------
     # Hardware lifecycle hooks
@@ -406,8 +407,8 @@ class DAQ_Move(ParameterControlModule):
         except Exception as e:
             self.logger.exception(str(e))
 
-    def move_rel(
-        self, rel_value: Union[DataActuator, numbers.Number], send_to_leco=False,
+    def move_rel(self, rel_value: Union[DataActuator, numbers.Number],
+                 send_to_leco=False,
     ):
         """Move the connected hardware to the relative value
 
@@ -436,7 +437,8 @@ class DAQ_Move(ParameterControlModule):
                 ThreadCommand(ControlToHardwareMove.RESET_STOP_MOTION),
             )
             self.command_hardware.emit(
-                ThreadCommand(ControlToHardwareMove.MOVE_REL, attribute=[rel_value]),
+                ThreadCommand(ControlToHardwareMove.MOVE_REL,
+                              attribute=[rel_value]),
             )
 
         except Exception as e:
@@ -909,7 +911,11 @@ class ActuatorWorker(HardwareWorkerBase):
             if status.initialized:
                 self.status_sig.emit(
                     ThreadCommand(
-                        ThreadStatusMove.GET_ACTUATOR_VALUE, self.get_actuator_value(),
+                        ThreadStatusMove.GET_ACTUATOR_VALUE,
+                        self.get_actuator_value() if self.plugin.has_encoder else
+                        DataActuator(self.title,
+                                     data=0.,
+                                     units=self.plugin.axis_unit),
                     ),
                 )
 
@@ -942,7 +948,7 @@ class ActuatorWorker(HardwareWorkerBase):
         assert self.plugin is not None
         rel_position = check_units(rel_position, self.plugin.axis_unit)
         self.plugin.move_is_done = False
-        self.plugin.ispolling = polling
+        self.plugin.ispolling = polling if self.plugin.has_encoder else False
         self._move_completed = False
 
         if self.plugin.data_actuator_type.name == 'float':
@@ -972,10 +978,14 @@ class ActuatorWorker(HardwareWorkerBase):
         if self._move_completed:
             return
         self._move_completed = True
-        self._current_value = pos
         self.status_sig.emit(
             ThreadCommand(command=ThreadStatusMove.MOVE_DONE, attribute=pos),
         )
+
+    def reset_value(self):
+        self._move_completed = False
+        self.plugin.current_value = self.plugin.current_value * 0.
+        self.move_done(self.plugin.current_value)
 
     @Slot(ThreadCommand)
     def queue_command(self, command: ThreadCommand):
@@ -1015,6 +1025,9 @@ class ActuatorWorker(HardwareWorkerBase):
 
             elif command.command == ControlToHardwareMove.RESET_STOP_MOTION:
                 self.motion_stopped = False
+
+            elif  command.command == ControlToHardwareMove.RESET_VALUE:
+                self.reset_value()
 
             else:  # custom commands for particular plugins
                 self._dispatch_custom_command(command)
