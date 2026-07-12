@@ -421,6 +421,7 @@ class DAQ_Move_UI_Base(ControlModuleUI):
                                                                                 units=self._unit)))
 
     def emit_move_rel(self, sign):
+        self.rel_value_sb.editingFinished.emit()
         self.command_sig.emit(ThreadCommand(
             UiToMainMove.MOVE_REL,
             DataActuator(data=self.rel_value_sb.value() * (1 if sign == '+' else -1),
