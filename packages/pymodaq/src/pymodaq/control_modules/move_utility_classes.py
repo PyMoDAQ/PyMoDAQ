@@ -1,5 +1,6 @@
 import numbers
 
+
 HW_KIND = 'actuator'
 HW_SETTINGS_KEY = f'{HW_KIND}_settings'
 from abc import abstractmethod
@@ -209,12 +210,18 @@ def main(plugin_file, init=True, title='test'):
     """
     import sys
     from pathlib import Path
+    from pymodaq.control_modules.instruments import find_actuator_class_from_name
+    from pymodaq.utils.gui_utils.loader_utils import create_load_daq_move
 
     act = Path(plugin_file).stem.split('daq_move_')[1]
+    class_ = find_actuator_class_from_name(act)
+    if hasattr(class_, 'ui_type'):
+        ui_identifier = class_.ui_type
+    else:
+        ui_identifier = config('pymodaq', 'actuator', 'ui')
 
-    from pymodaq.utils.gui_utils.loader_utils import create_load_daq_move
     app = mkQApp("PyMoDAQ Move")
-    shared_ui, daq_move = create_load_daq_move('simple')
+    shared_ui, daq_move = create_load_daq_move(ui_identifier)
 
     daq_move.actuator = act
 
