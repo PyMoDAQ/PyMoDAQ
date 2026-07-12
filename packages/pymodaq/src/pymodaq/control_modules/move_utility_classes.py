@@ -1,5 +1,6 @@
 import numbers
 
+from pymodaq.control_modules.daq_move_ui.utils import UiType
 
 HW_KIND = 'actuator'
 HW_SETTINGS_KEY = f'{HW_KIND}_settings'
@@ -10,23 +11,18 @@ from typing import Union, List, Dict, TYPE_CHECKING, Optional, TypeVar
 
 from easydict import EasyDict as edict
 import numpy as np
-from qtpy import QtWidgets
-from qtpy.QtCore import QObject, Slot, Signal, QTimer
+from qtpy.QtCore import Slot, Signal, QTimer
 from pint.errors import OffsetUnitCalculusError
 
 
 from pymodaq_utils.utils import ThreadCommand, find_keys_from_val
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_utils.enums import BaseEnum, enum_checker, StrEnum
-from pymodaq_utils.serialize.mysocket import Socket
-from pymodaq_utils.serialize.serializer_legacy import DeSerializer, Serializer
+from pymodaq_utils.enums import BaseEnum
 
 from pymodaq_data.data import DataUnitError, Q_, Unit
 
-import pymodaq_gui.parameter.utils as putils
 from pymodaq_gui.parameter import Parameter
-from pymodaq_gui.parameter import ioxml
 from pymodaq_gui.qt_utils import mkQApp
 
 from pymodaq.utils.messenger import deprecation_msg
@@ -35,8 +31,6 @@ from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusMo
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 from pymodaq.control_modules.utils import (create_controller_param, create_remote_connection_params,
                                             ControllerStatus, PluginBase)
-from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
-
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import ActuatorWorker
@@ -76,12 +70,6 @@ class DataActuatorType(BaseEnum):
     """Enum for new or old style holding the value of the actuator"""
     float = 0
     DataActuator = 1
-
-class UiType(StrEnum):
-    NONE = 'None'
-    SIMPLE = 'Simple'
-    BINARY = 'Binary'
-    RELATIVE = 'Relative'
 
 
 def comon_parameters(epsilon=config('pymodaq', 'actuator', 'epsilon_default'),

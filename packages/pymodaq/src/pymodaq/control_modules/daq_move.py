@@ -43,8 +43,7 @@ from pymodaq.control_modules.thread_commands import (ThreadStatus, ThreadStatusM
                                                      ControlToHardwareMove, UiToMainMove,
                                                      )
 from pymodaq.control_modules.move_utility_classes import (ThreadCommand, MoveCommand, DAQ_Move_base, DataActuatorType,
-                                                          check_units, UiType)
-
+                                                          check_units)
 
 from pymodaq.control_modules.move_utility_classes import params as daq_move_params
 from pymodaq.utils.leco.pymodaq_listener import (MoveActorListener, LECOMoveCommands, LECOCommands,)
@@ -52,9 +51,7 @@ from pymodaq import Q_, Unit
 
 
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
-
-if TYPE_CHECKING:
-    from pymodaq.control_modules.daq_move_ui.ui_base import DAQ_Move_UI_Base
+from pymodaq.control_modules.daq_move_ui.ui_base import DAQMoveUI
 
 sys.path.append(str(get_set_local_dir()))
 logger = set_logger(get_module_name(__file__))
@@ -98,7 +95,7 @@ class DAQ_Move(ParameterControlModule):
          'visible': True, 'children': H5Saver.get_params_for_save_type(SaveType.actuator), 'expanded': False}]
 
     listener_class = MoveActorListener
-    ui: Optional[DAQ_Move_UI_Base]
+    ui: Optional[DAQMoveUI]
 
     def __init__(self, parent=None, title="DAQ Move", ui_identifier: Optional[str] = None, **kwargs) -> None:
         """
@@ -124,11 +121,9 @@ class DAQ_Move(ParameterControlModule):
         self.settings.child("main_settings", "ui_type").setValue(ui_identifier)
         self.settings.child("main_settings", "ui_type").setOpts(readonly=True)
 
-        DAQ_Move_UI = ActuatorUIFactory.get(ui_identifier)
-
         self.parent = parent
         if parent is not None:
-            self.ui = DAQ_Move_UI(parent, title)
+            self.ui = DAQMoveUI(parent, title)
         else:
             self.ui = None
 

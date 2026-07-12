@@ -19,7 +19,7 @@ from qtpy.QtWidgets import (
 )
 
 from pymodaq.control_modules.instruments import find_actuator_class_from_name
-from pymodaq.control_modules.move_utility_classes import UiType
+from pymodaq.control_modules.daq_move_ui.utils import UiType
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
 from pymodaq_utils.utils import ThreadCommand

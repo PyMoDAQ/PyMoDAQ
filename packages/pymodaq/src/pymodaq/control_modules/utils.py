@@ -30,7 +30,7 @@ from pymodaq.control_modules.thread_commands import (ThreadStatus, ControlToHard
                                                      ControleModuleType, ControllerStatus)  # noqa: F401
 
 if TYPE_CHECKING:
-    from .daq_move_ui.ui_base import DAQ_Move_UI_Base
+    from .daq_move_ui.ui_base import DAQMoveUI
     from .daq_viewer_ui.ui_base import DAQ_Viewer_UI
 
 
@@ -101,7 +101,7 @@ class ControlModule(QObject):
     def __init__(self):
         QObject.__init__(self)
 
-        self.ui: Union['DAQ_Move_UI_Base', 'DAQ_Viewer_UI'] = None
+        self.ui: Union['DAQMoveUI', 'DAQ_Viewer_UI'] = None
 
         self._title = ""
         self.config = config
@@ -520,6 +520,7 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
                 QtWidgets.QApplication.processEvents()
             if self.ui is not None and self._ui_init_attr:
                 setattr(self.ui, self._ui_init_attr, False)
+                self.ui.cleanup_after_desinit()
         except Exception as e:
             self.logger.exception(str(e))
 

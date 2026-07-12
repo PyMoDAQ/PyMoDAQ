@@ -17,14 +17,12 @@ from pymodaq_gui.plotting.data_viewers import ViewerDispatcher
 from pymodaq_gui.utils import DockArea, QSpinBoxWithShortcut, PushButtonIcon, QLED, QSpinBox_ro
 from pymodaq_gui.utils.widgets import LabelWithFont
 from pymodaq_utils.utils import ThreadCommand
-
+from pymodaq.control_modules.daq_move_ui.utils import UiType
 config = Config()
 
-if TYPE_CHECKING:
-    from pymodaq.control_modules.move_utility_classes import UiType
 
 
-class DAQ_Move_UI_Base(ControlModuleUI):
+class DAQMoveUI(ControlModuleUI):
     """DAQ_Move user interface.
 
     This class manages the UI and emit dedicated signals depending on actions from the user
@@ -139,7 +137,7 @@ class DAQ_Move_UI_Base(ControlModuleUI):
 
     def setup_docks_and_widgets(self):
         self.parent.setLayout(QtWidgets.QHBoxLayout())
-
+        self.parent.layout().setContentsMargins(0, 0, 0, 0)
         self.control_widget = QtWidgets.QWidget()
 
         self.actuators_combo = QComboBox()
@@ -158,6 +156,11 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.current_value_sb = QSpinBox_ro(font_size=10, min_height=20,
                                             siPrefix=config('pymodaq', 'actuator', 'siprefix'),
                                             )
+        self.current_value_sb.setMinimumWidth(80)
+        self.abs_value_sb_2.setMinimumWidth(80)
+        self.abs_value_sb.setMinimumWidth(80)
+        self.current_value_sb.set_font_size(10)
+        self.current_value_sb.setMinimumHeight(20)
         self.current_value_sb.setMinimumWidth(80)
 
         self.find_home_pb = PushButtonIcon('home', 'Find Home', icon_color=self.get_theme().magenta)
@@ -180,6 +183,11 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.graph_widget.layout().addWidget(dockarea)
         self.viewer = ViewerDispatcher(dockarea)
         self.actuator_init = False
+
+
+
+
+        self.populate_control_ui(self.control_widget)
 
     def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
         self.add_toolbar('move', 'DAQMove')
@@ -210,7 +218,9 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         container_widget.layout().setContentsMargins(0, 0, 0, 0)
         widget.setVisible(False)
 
-    def setup_actions_in_toolbar(self, toolbar: QtWidgets.QToolBar):
+    def setup_actions(self, toolbar: QtWidgets.QToolBar = None):
+        if toolbar is None:
+            toolbar = self.toolbar
         self._setup_name_widget(toolbar=toolbar)
         self.add_widget('actuators_combo', self.actuators_combo, toolbar=toolbar)
         self._setup_init_action(toolbar=toolbar, action_name='ini_actuator',
@@ -219,8 +229,6 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         toolbar.addSeparator()
         self.add_widget('current', self.current_value_sb, toolbar=toolbar)
         self.add_widget('move_done', self.move_done_led, toolbar=toolbar)
-
-        self._setup_move_actions(toolbar)
 
         self.add_action('stop', 'Stop', 'stop_circle', "Stop Motion",
                         toolbar=toolbar, icon_color=self.get_theme().red)
@@ -238,54 +246,100 @@ class DAQ_Move_UI_Base(ControlModuleUI):
                         icon_checked_color=self.get_theme().green)
         self.add_widget('status', self.statusbar, toolbar=toolbar)
 
-    def _setup_move_actions(self, toolbar: QtWidgets.QToolBar):
-        """ to be reimplemented in dedicated UI class
+    def setup_absolute_spinbox_actions(self, toolbar: QtWidgets.QToolBar = None):
+        if toolbar is None:
+            toolbar = self.toolbar
+        self.add_widget('abs_green', self.abs_value_sb, toolbar=toolbar,
+                        before='stop')
+        self.add_widget('abs_red', self.abs_value_sb_2, toolbar=toolbar,
+                        before='stop')
 
-        either: self._setup_absolute_actions(), self._setup_relative_actions(), ...
-        """
-        pass
+    def remove_absolute_spinbox_actions(self, toolbar: QtWidgets.QToolBar = None):
+        self.remove_action(toolbar, action='abs_green')
+        self.remove_action(toolbar, action='abs_red')
 
-    def _setup_absolute_spinbox_actions(self, toolbar: QtWidgets.QToolBar):
-        self.add_widget('abs_green', self.abs_value_sb, toolbar=toolbar)
-        self.add_widget('abs_red', self.abs_value_sb_2, toolbar=toolbar)
+    def setup_absolute_actions(self, toolbar: QtWidgets.QToolBar = None):
+        if toolbar is None:
+            toolbar = self.toolbar
 
-    def _setup_absolute_actions(self, toolbar: QtWidgets.QToolBar):
         self.add_action('move_abs_green', 'Move Abs', 'step',
                         "Move to the set absolute value",
                         icon_color=self.get_theme().green,
-                        toolbar=toolbar)
+                        toolbar=toolbar,
+                        before='stop')
         self.add_action('move_abs_red', 'Move Abs', 'step',
                         "Move to the other set absolute value",
                         icon_color=self.get_theme().red,
-                        toolbar=toolbar)
+                        toolbar=toolbar,
+                        before='stop')
 
-    def _setup_relative_actions(self, toolbar: QtWidgets.QToolBar):
+    def remove_absolute_actions(self, toolbar: QtWidgets.QToolBar = None):
+        self.remove_action(toolbar, action='move_abs_green')
+        self.remove_action(toolbar, action='move_abs_red')
 
-        self.add_widget('rel_move', self.rel_value_sb, toolbar=toolbar)
+    def setup_relative_actions(self, toolbar: QtWidgets.QToolBar = None):
+        if toolbar is None:
+            toolbar = self.toolbar
+
+        self.add_widget('rel_move', self.rel_value_sb, toolbar=toolbar,
+                        before='stop')
         self.add_action('move_rel_plus', 'Set Rel. (+)', 'step_out',
                         toolbar=toolbar,
-                        icon_color=self.get_theme().yellow,)
+                        icon_color=self.get_theme().yellow,
+                        before='stop')
         self.add_action('move_rel_minus', 'Set Rel. (-)', 'step_into',
                         toolbar=toolbar,
-                        icon_color=self.get_theme().blue,)
+                        icon_color=self.get_theme().blue,
+                        before='stop')
         self.add_action('reset_value', 'Reset Internal Value (no encoder)', 'restart_alt',
-                        toolbar=toolbar,)
+                        toolbar=toolbar,
+                        before='stop')
 
-    def connect_things(self):
-        self._connect_common_actions()
+    def remove_relative_actions(self, toolbar: QtWidgets.QToolBar = None):
+        self.remove_action(toolbar, action='rel_move')
+        self.remove_action(toolbar, action='move_rel_plus')
+        self.remove_action(toolbar, action='move_rel_minus')
+        self.remove_action(toolbar, action='reset_value')
 
+    def set_ui_type(self, ui_type: UiType):
+        """ Called after initialization to finalize the UI setup given the
+        chosen UI type"""
+        from pymodaq import ActuatorUIFactory
+        if ui_type == UiType.NONE:
+            ui_type = config('pymodaq', 'actuator', 'ui')[0]
+        custom_ui = ActuatorUIFactory.get(ui_type)(self)
+        custom_ui.setup_docks_and_widgets()
+        custom_ui.setup_move_actions()
+        self.connect_move_actions()
+        custom_ui.setup_action_visibility()
+
+    def cleanup_after_desinit(self):
+        self.remove_absolute_spinbox_actions(self.toolbar)
+        self.remove_absolute_actions(self.toolbar)
+        self.remove_relative_actions(self.toolbar)
+
+    def connect_common_move_actions(self):
         if 'show_controls' in self.actions_names:
             self.connect_action('show_controls', self.show_controls)
         if 'show_graph' in self.actions_names:
             self.connect_action('show_graph', lambda checked: self.show_graph(not checked))
-        if 'move_abs_green' in self.actions_names:
-            self.connect_action('move_abs_green', lambda: self.emit_move_abs(self.abs_value_sb))
-        if 'move_abs_red' in self.actions_names:
-            self.connect_action('move_abs_red', lambda: self.emit_move_abs(self.abs_value_sb_2))
         if 'stop' in self.actions_names:
             self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.STOP, )))
         if 'show_config' in self.actions_names:
             self.connect_action('show_config', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.SHOW_CONFIG, )))
+        if 'refresh_value' in self.actions_names:
+            self.connect_action('refresh_value',
+                                lambda do_refresh: self.command_sig.emit(ThreadCommand(UiToMainMove.LOOP_GET_VALUE,
+                                                                                   do_refresh)))
+    def connect_things(self):
+        self._connect_common_actions()
+        self.connect_common_move_actions()
+
+    def connect_move_actions(self):
+        if 'move_abs_green' in self.actions_names:
+            self.connect_action('move_abs_green', lambda: self.emit_move_abs(self.abs_value_sb))
+        if 'move_abs_red' in self.actions_names:
+            self.connect_action('move_abs_red', lambda: self.emit_move_abs(self.abs_value_sb_2))
         if 'reset_value' in self.actions_names:
             self.connect_action('reset_value',
                                 lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.RESET_VALUE, )))
@@ -307,10 +361,6 @@ class DAQ_Move_UI_Base(ControlModuleUI):
 
         self.actuators_combo.currentTextChanged.connect(
             lambda act: self.command_sig.emit(ThreadCommand(UiToMainMove.ACTUATOR_CHANGED, act)))
-        if 'refresh_value' in self.actions_names:
-            self.connect_action('refresh_value',
-                                lambda do_refresh: self.command_sig.emit(ThreadCommand(UiToMainMove.LOOP_GET_VALUE,
-                                                                                   do_refresh)))
 
     # -------------------------------------------------------------------------
     # Public API
@@ -376,11 +426,6 @@ class DAQ_Move_UI_Base(ControlModuleUI):
             self.abs_value_sb.setSingleStep(properties['step'])
             self.abs_value_sb_2.setSingleStep(properties['step'])
             self.abs_value_sb_bis.setSingleStep(properties['step'])
-
-    def set_ui_type(self, ui_type: 'UiType'):
-        """ Should be used after initialization to setup the UI given the
-        chosen UI type"""
-        pass
 
     def set_abs_value_red(self, value: Q_):
         self.abs_value_sb_2.setValue(value.m_as(self._unit))
