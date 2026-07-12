@@ -52,9 +52,10 @@ def test_required_config_entries():
     assert 'siprefix_even_without_units' in config('actuator')
     assert 'display_units' in config('actuator')
 
-    assert 'binary' in config('actuator')
-    assert 'value_1' in config('actuator', 'binary')
-    assert 'value_2' in config('actuator', 'binary')
+    assert 'Binary' in config('actuator')
+    assert 'default_value_red' in config('actuator')
+    assert 'default_value_green' in config('actuator')
+    assert 'default_value_relative' in config('actuator')
 
     assert 'viewer' in config
     assert 'daq_type' in config('viewer')
