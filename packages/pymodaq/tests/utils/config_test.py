@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pymodaq_gui.config
+from pymodaq import ActuatorUIFactory
 from pymodaq.utils import config as config_mod_pymodaq
 from pymodaq_utils import config as config_mod
 
@@ -52,7 +53,8 @@ def test_required_config_entries():
     assert 'siprefix_even_without_units' in config('actuator')
     assert 'display_units' in config('actuator')
 
-    assert 'Binary' in config('actuator')
+    for ui in ActuatorUIFactory.keys():
+        assert ui in config('actuator', 'ui')
     assert 'default_value_red' in config('actuator')
     assert 'default_value_green' in config('actuator')
     assert 'default_value_relative' in config('actuator')
