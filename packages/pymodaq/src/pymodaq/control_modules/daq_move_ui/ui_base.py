@@ -1,9 +1,11 @@
 from abc import abstractmethod
+from typing import TYPE_CHECKING
 
 from qtpy.QtWidgets import QComboBox
 from pint import DimensionalityError
 from qtpy import QtWidgets
 from typing import Union, List
+
 
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq.control_modules.thread_commands import UiToMainMove
@@ -17,6 +19,9 @@ from pymodaq_gui.utils.widgets import LabelWithFont
 from pymodaq_utils.utils import ThreadCommand
 
 config = Config()
+
+if TYPE_CHECKING:
+    from pymodaq.control_modules.move_utility_classes import UiType
 
 
 class DAQ_Move_UI_Base(ControlModuleUI):
@@ -54,7 +59,8 @@ class DAQ_Move_UI_Base(ControlModuleUI):
 
     is_compact = False
 
-    def __init__(self, parent: Union[DockArea, QtWidgets.QWidget], title="DAQ_Move"):
+    def __init__(self, parent: Union[DockArea, QtWidgets.QWidget],
+                 title="DAQ_Move"):
         super().__init__(parent)
         self.title = title
         self._unit = ''
@@ -370,6 +376,11 @@ class DAQ_Move_UI_Base(ControlModuleUI):
             self.abs_value_sb.setSingleStep(properties['step'])
             self.abs_value_sb_2.setSingleStep(properties['step'])
             self.abs_value_sb_bis.setSingleStep(properties['step'])
+
+    def set_ui_type(self, ui_type: 'UiType'):
+        """ Should be used after initialization to setup the UI given the
+        chosen UI type"""
+        pass
 
     def set_abs_value_red(self, value: Q_):
         self.abs_value_sb_2.setValue(value.m_as(self._unit))

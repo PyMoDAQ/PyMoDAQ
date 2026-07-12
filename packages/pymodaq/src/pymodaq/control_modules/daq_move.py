@@ -725,6 +725,7 @@ class DAQ_Move(ParameterControlModule):
                 self.controller = status.attribute["controller"]
                 if self.ui is not None:
                     self.ui.actuator_init = True
+                    self.ui.set_ui_type(status.attribute["ui_type"])
                 self._initialized_state = True
             else:
                 self._initialized_state = False
@@ -779,6 +780,9 @@ class DAQ_Move(ParameterControlModule):
 
         elif status.command == ThreadStatusMove.UNITS:
             self.units = status.attribute
+
+        elif status.command == ThreadStatusMove.SET_UI:
+            self.ui.set_ui_type(status.attribute)
 
     # -------------------------------------------------------------------------
     # LECO
@@ -906,6 +910,7 @@ class ActuatorWorker(HardwareWorkerBase):
                 status.info = infos[0]
                 status.initialized = infos[1]
             status.controller = self.plugin.controller
+            status.ui_type = self.plugin.ui_type
             self.controller_address = self.plugin.controller
             self.plugin.move_done_signal.connect(self.move_done)
             if status.initialized:
