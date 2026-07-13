@@ -1345,7 +1345,23 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.status_signal.emit(txt)
         logger.info(txt)
 
+    def show_warnings(self):
+        paths = ""
+        if config.system_backup_dir:
+            paths += f"<b><tt>{config.system_backup_dir}</tt></b><br>"
+        if config.user_backup_dir:
+            paths += f"<b><tt>{config.user_backup_dir}</tt></b><br>"
 
+        if paths:
+            message = f"""
+                Configuration template changed.<br><br>
+                Best effort was made to <b>keep</b> your preferences.<br><br>
+                
+                The old config files can be found in:<br>
+                {paths}
+            """
+            QtWidgets.QMessageBox.warning(None, "Configuration backup", message)
+            
 def create_load_dashboard() -> tuple[SharedUI, DashBoard]:
 
     win, area = make_window(title='PyMoDAQ Dashboard')

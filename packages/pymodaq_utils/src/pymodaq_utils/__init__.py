@@ -20,6 +20,7 @@ try:
 
     from pymodaq_utils.config import GlobalConfig as Config
 
+    #TODO: remove it as it is managed by config itself
     CONFIG = Config()  # to ckeck for config file existence, otherwise create one
 
 

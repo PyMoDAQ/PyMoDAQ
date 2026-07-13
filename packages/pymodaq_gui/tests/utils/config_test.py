@@ -14,6 +14,7 @@ class CustomConfig(config_mod.BaseConfig):
     """Main class to deal with configuration values for this plugin"""
     config_template_path = None
     config_name = f"custom_settings"
+    _should_register = False
 
 
 class TestGetSet:

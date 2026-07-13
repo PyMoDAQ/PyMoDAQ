@@ -58,7 +58,7 @@ def get_instrument_plugins():  # pragma: no cover
         #print(f'Looking for valid instrument plugins in package: {module.value}')
         try:
             plugin_utils = importlib.import_module(f'{entrypoint.value}.utils', entrypoint.value)
-            GlobalConfig.register()(plugin_utils.Config)
+
             try:
                 movemodule = importlib.import_module(f'{entrypoint.value}.daq_move_plugins', entrypoint.value)
                 plugin_list.extend([{'name': mod[len('daq_move') + 1:],

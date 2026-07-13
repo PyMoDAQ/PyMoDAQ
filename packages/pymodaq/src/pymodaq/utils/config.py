@@ -45,7 +45,6 @@ def get_set_overshoot_path(user=False):
     return get_set_config_dir('overshoot_configs', user=user)
 
 
-@GlobalConfig.register()
 class Config(BaseConfig):
     """Main class to deal with configuration values for this plugin"""
     config_template_path = Path(__file__).parent.parent.joinpath('resources/config_template.toml')

@@ -14,7 +14,7 @@ from typing import Any, cast, List, Optional, Tuple
 import numpy as np
 
 from pymodaq_utils import logger as logger_module
-from pymodaq_utils.config import GlobalConfig as Config
+
 from pymodaq_utils.warnings import deprecation_msg
 from serializall import SerializableFactory, SerializableBase
 
@@ -32,7 +32,6 @@ else:
 
 logger = logger_module.set_logger(logger_module.get_module_name(__file__))
 
-config = Config()
 
 
 def is_64bits():
@@ -621,6 +620,7 @@ def get_module_path(module_name: str) -> Path:
 def format_dir_path(path: Path) -> str:
         dir_trailing_symbol = '\\' if sys.platform == 'win32' else '/'
         return f'{path}{dir_trailing_symbol if path.is_dir() else ""}'
+
 
 
 if __name__ == '__main__':

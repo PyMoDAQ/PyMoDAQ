@@ -29,6 +29,9 @@ timeout = 10000  # default duration in ms to wait for data to be acquirred
 allow_settings_edition = false
 settings_as_popup = true
 
+[compact_dock]
+control_panel_position = 'right'
+
 [scan]
 scan_in_thread = true
 show_popups = true

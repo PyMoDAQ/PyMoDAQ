@@ -1,16 +1,17 @@
 import atexit
+import os
 import threading
 from abc import abstractproperty
 from collections.abc import Iterable
 
 import copy
-import functools
-from functools import cached_property
+from functools import lru_cache, cached_property
+
 from os import environ
 import sys
 import datetime
 from pathlib import Path
-from typing import Union, Dict, TypeVar, Any, List, TYPE_CHECKING, Callable, Type
+from typing import Union, Dict, TypeVar, Any, TYPE_CHECKING, Callable, Type, cast
 from typing import Iterable as IterableType
 
 from pymodaq_utils import warnings
@@ -19,9 +20,23 @@ from fasteners import ReaderWriterLock
 
 import toml
 import logging
+
+
 if TYPE_CHECKING:
     from pymodaq_gui.parameter import Parameter
 
+import os
+import platform
+import subprocess
+import ctypes
+import shutil
+import time
+
+from pathlib import Path
+from subprocess import CalledProcessError
+from typing import Union
+
+SYSTEM = platform.system()  # "Windows", "Linux", "Darwin"
 
 USER = environ.get('USERNAME' if sys.platform == 'win32' else 'USER', 'unknown_user')
 
@@ -31,8 +46,78 @@ CONFIG_BASE_PATH = (
     Path('/etc')
 )
 
+CONFIG_USER_PATH = Path.home()
+
 
 KeyType = TypeVar('KeyType')
+
+
+def _get_version_hash() -> str:
+    import hashlib
+    from importlib import metadata
+    packages = ["pymodaq_utils", "pymodaq_data", "pymodaq_gui", "pymodaq"]
+    versions = []
+    for package in packages:
+        try:
+            versions.append(metadata.version(package))
+        except metadata.PackageNotFoundError:
+            pass
+    hashed = hashlib.sha256(''.join(versions).encode()).digest()[:8].hex()
+    return hashed + '-dev' if any('dev' in version for version in versions) else ''
+
+
+def _generate_env_path(base_path: Path, folder_name: str, *args) -> Path:
+    if args:
+        suffix = "_" + "_".join(str(arg) for arg in args)
+        folder_name = f"{folder_name}{suffix}"
+
+    return base_path / folder_name
+
+def _generate_backup_path(base_path: Path) -> Path:
+    date = datetime.datetime.now().strftime('%Y%m%d')
+    candidate = base_path / '.pymodaq_{}'.format(date)
+    counter = 0
+    while candidate.exists():
+        counter += 1
+        candidate = base_path / ('.pymodaq_{}'.format(date) + f'-{counter}')
+    return candidate
+
+
+def __dict_to_type(a : Any) -> Any:
+    if isinstance(a, dict):
+        return { k : __dict_to_type(v) for k,v in a.items()}
+    if isinstance(a, list):
+        return [__dict_to_type(x) for x in a]
+    return type(a)
+
+
+T = TypeVar('T')
+
+def deep_type_equals(a : T, b : T) -> bool:
+    '''
+    Compares two objects a and b not on their values but on their types.
+    For iterable objects like lists and dictionaries the function recursively
+    compare the types of nested elements.
+
+    Initially made to work with data loaded from toml.
+    Parameters
+    ----------
+    a : T
+        The first element to compare
+    b : T
+        The second element to compare
+
+    Returns
+    -------
+        True if types are all recursively equals, False otherwise.
+    '''
+    if type(a) != type(b):
+        return False
+    if isinstance(a, dict):
+        return a.keys() == b.keys() and all(deep_type_equals(a[k], b[k]) for k in a)
+    if isinstance(a, list):
+        return all(deep_type_equals(x, y) for x, y in zip(a, b))
+    return True
 
 
 def replace_item_in_list(items: list[Any],
@@ -99,6 +184,26 @@ def getitem_recursive(dic, *args, ndepth=0, create_if_missing=False):
                 raise e
     return dic
 
+def recursive_dict_paths(d : dict) -> list[tuple[str, ...]]:
+    """Gives a list of all paths in a dict to a direct value
+    Parameters
+    ----------
+    d: the dict to extract keys from
+
+    Returns
+    -------
+    a list of tuple where each tuple is a key that leads directly to a value
+    """
+    def _internal_recursive_dict_paths(d: dict, parent: tuple[str, ...] = ()) -> list[tuple[str, ...]]:
+        paths = []
+        for key, value in d.items():
+            current = parent + (key,)
+            if isinstance(value, dict):
+                paths.extend(_internal_recursive_dict_paths(value, current))
+            else:
+                paths.append(current)
+        return paths
+    return _internal_recursive_dict_paths(d, ())
 
 def recursive_iterable_flattening(aniterable: IterableType):
     flatten_iter = []
@@ -111,22 +216,24 @@ def recursive_iterable_flattening(aniterable: IterableType):
 
 
 def get_set_path(a_base_path: Path, dir_name: str) -> Path:
-    path_to_get = a_base_path.joinpath(dir_name)
+    path_to_get = Path(a_base_path) / dir_name
     if not path_to_get.is_dir():
         try:
-            path_to_get.mkdir()
-        except PermissionError as e:
-            logging.warning(f"Cannot create local config folder at this location: {path_to_get}"
-                            f", try using admin rights. "
-                            f"Changing the not permitted path to a user "
-                            f"one: {Path.home().joinpath(dir_name)}.")
-            path_to_get = Path.home().joinpath(dir_name)
-            if not path_to_get.is_dir():
-                path_to_get.mkdir()
+            path_to_get.mkdir(parents=True)
+        except PermissionError:
+            from pymodaq_utils.filesystem import create_folder_with_elevation
+            if not create_folder_with_elevation(path_to_get, 0o757):
+                logging.warning(f"Cannot create local config folder at this location: {path_to_get}"
+                                f", try using admin rights. "
+                                f"Changing the not permitted path to a user "
+                                f"one: {Path.home().joinpath(dir_name)}.")
+                path_to_get = Path.home().joinpath(dir_name)
+                if not path_to_get.is_dir():
+                    path_to_get.mkdir(parents=True)
     return path_to_get
 
 
-@functools.cache
+
 def get_set_local_dir(user=False) -> Path:
     """Defines, creates and returns a local folder where configuration files will be saved
 
@@ -143,14 +250,36 @@ def get_set_local_dir(user=False) -> Path:
     Path: the local path
     """
     if user:
-        local_path = get_set_path(Path.home(), '.pymodaq')
+        local_path = get_set_path(CONFIG_USER_PATH, '.pymodaq')
     else:
         local_path = get_set_path(CONFIG_BASE_PATH, '.pymodaq')
     return local_path
 
 
+def has_read_write_access(path : Path) -> bool:
+    """
+    A function to check if a Path is readable/writable, directly is it is an
+    already existing file, or by checking its parents rights when it is not.
+    Parameters
+    ----------
+    path: the Path to check
+
+    Returns
+    -------
+    True if the given path is readable and writable, False otherwise
+    """
+    try:
+        target = path if path.exists() else path.parent
+        return os.access(target, os.R_OK | os.W_OK)
+    except PermissionError:
+        return False
+
 def get_config_file(config_file_name: str, user=False) -> Path:
-    return get_set_config_dir('config',user=user).joinpath(replace_file_extension(config_file_name, 'toml'))
+
+    path = get_set_config_dir('config',user=user).joinpath(replace_file_extension(config_file_name, 'toml'))
+    if not user and not has_read_write_access(path):
+        return get_config_file(config_file_name, user=True)
+    return path
 
 
 def get_set_config_dir(config_name='config', user=False):
@@ -184,29 +313,29 @@ def create_toml_from_dict(mydict: dict, dest_path: Path):
     dest_path.write_text(toml.dumps(mydict))
 
 
-def check_config(config_base: dict, config_local: dict):
-        """Compare two configuration dictionaries. Adding missing keys
+def check_config(template: dict, config: dict):
+    """Compare two configuration dictionaries. Adding missing keys
 
-        Parameters
-        ----------
-        config_base: dict
-            The base dictionaries with possible new keys
-        config_local: dict
-            a dict from a local config file potentially missing keys
+    Parameters
+    ----------
+    template: dict
+        The base dictionaries with possible new keys
+    config: dict
+        a dict from a local config file potentially missing keys
 
-        Returns
-        -------
-        bool: True if keys where missing else False
-        """
-        status = False
-        for key in config_base:
-            if key in config_local:
-                if isinstance(config_base[key], dict):
-                    status = status or check_config(config_base[key], config_local[key])
-            else:
-                config_local[key] = config_base[key]
-                status = True
-        return status
+    Returns
+    -------
+    bool: True if keys where missing else False
+    """
+    status = False
+    for key in template:
+        if key in config:
+            if isinstance(template[key], dict):
+                status = status or check_config(template[key], config[key])
+        else:
+            config[key] = template[key]
+            status = True
+    return status
 
 
 def copy_template_config(config_file_name: str = 'config', source_path: Union[Path, str] = None,
@@ -259,9 +388,9 @@ def load_system_config_and_update_from_user(config_file_name: str):
     dict: contains the toml system-wide file update with the user file
     """
     config_dict = dict([])
-    toml_base_path = get_config_file(config_file_name, user=False)
-    if toml_base_path.is_file():
-        config_dict = toml.load(toml_base_path)
+    toml_system_path = get_config_file(config_file_name, user=False)
+    if toml_system_path.is_file():
+        config_dict = toml.load(toml_system_path)
     toml_user_path = get_config_file(config_file_name, user=True)
     if toml_user_path.is_file():
         config_dict = deep_update(config_dict, toml.load(toml_user_path))
@@ -278,8 +407,7 @@ class ConfigSingleton(Singleton):
         if not cls._allow_direct_call:
             warnings.deprecation_msg(
                 "Calling a constructor on Config classes is deprecated.\n"
-                "You should use @GlobalConfig.register() decorator instead.\n"
-                f"Your config entries will then be stored inside GlobalConfig "
+                "There are automatically registered in a GlobalConfig "
                 f"object, prefixed with `config_name` "
                 f"(i.e. config['an_entry'] -> config['{getattr(cls, 'config_name', '`self.config_name`')}', 'an_entry'])",
             )
@@ -300,8 +428,22 @@ class BaseConfig(metaclass=ConfigSingleton):
         The Path of the template from which the config is constructed
 
     """
+
     config_template_path: Path = NotImplemented
     config_name: str = NotImplemented
+    _should_register : bool = True
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+
+        # Check if any parent shouldn't register
+        should_register = cls._should_register and all(getattr(p, '_should_register', True) for p in cls.__mro__)
+
+        if (should_register and
+            cls.config_name is not NotImplemented and
+            cls.config_template_path is not NotImplemented
+        ):
+            GlobalConfig.register()(cls)
 
 
     def __init__(self):
@@ -394,34 +536,89 @@ class BaseConfig(metaclass=ConfigSingleton):
         """Get the system_wide config path"""
         return get_config_file(self.config_name, user=False)
 
+
+    def migrate_values(self):
+        self._unload()
+        self._backport_values()
+        self.load()
+
+    def _backport_values(self):
+        """
+        Migrates the compatible subset of system user config values into the current config using
+        the template for reference.
+
+        Template values are copied as system one and overridden by already existing system values if type-compatible.
+        User values are applied after system values, only if they still exist in the template and are type-compatible.
+
+        """
+        template = toml.load(self.config_template_path)
+
+        old_system_config = toml.load(get_config_file(self.config_name, user=False))
+        old_user_config = toml.load(get_config_file(self.config_name, user=True))
+
+
+        # Direct usage of config object  out of convenience because it accepts a tuple key
+        with self._lock.write_lock():
+            for key in recursive_dict_paths(template):
+                template_value = getitem_recursive(template, *key)
+                try:
+                    system_value = getitem_recursive(old_system_config, *key)
+                    if type(template_value) == type(system_value):
+                        self[key] = system_value
+                except KeyError:
+                    self[key] = template_value
+            get_config_file(self.config_name, user=False).write_text(toml.dumps(self._config))
+            self._unload()
+
+            for key in recursive_dict_paths(old_user_config):
+                try:
+                    template_value = getitem_recursive(template, *key)
+                    user_value = getitem_recursive(old_user_config, *key)
+                    if type(template_value) == type(user_value):
+                        self[key] = user_value
+                except KeyError:
+                    pass
+            get_config_file(self.config_name, user=True).write_text(toml.dumps(self._config))
+            self._unload()
+
     def load(self):
         """Load a configuration file from both system-wide and user file
         check also if missing entries in the configuration file compared to the template"""
 
         # write lock because it MODIFIES config
         with self._lock.write_lock():
-            toml_system_path = get_config_file(self.config_name, user=False)
-            toml_user_path = get_config_file(self.config_name, user=True)
-            if toml_system_path.is_file():
-                config = toml.load(toml_system_path)
+            if isinstance(self.config_name, Path) and self.config_name.is_file():
+                system_config_path = self.config_name
+                user_config_path = self.config_name
+            else:
+                system_config_path = get_config_file(str(self.config_name), user=False)
+                user_config_path = get_config_file(str(self.config_name), user=True)
+            if system_config_path.is_file():
+                config = toml.load(system_config_path)
                 if self.config_template_path is not None:
                     config_template = toml.load(self.config_template_path)
                 else:
                     config_template = {}
                 if check_config(config_template, config):  # check if all fields from template are there
                     # (could have been  modified by some commits)
-                    create_toml_from_dict(config, toml_system_path)
+                    create_toml_from_dict(config, system_config_path)
 
             else:
-                copy_template_config(self.config_name, self.config_template_path, toml_system_path.parent)
+                copy_template_config(str(self.config_name), self.config_template_path, system_config_path.parent)
 
-            if not toml_user_path.is_file():
+            if not user_config_path.is_file():
                 # create the author from environment variable
                 config_dict = self.dict_to_add_to_user()
                 if config_dict is not None:
-                    create_toml_from_dict(config_dict, toml_user_path)
-            self._config = load_system_config_and_update_from_user(self.config_name)
-            self._modified_config = toml.load(get_config_file(self.config_name, user=True))
+                    create_toml_from_dict(config_dict, user_config_path)
+
+            self._config = load_system_config_and_update_from_user(str(self.config_name))
+            self._modified_config = toml.load(get_config_file(str(self.config_name), user=True))
+
+    def _unload(self):
+        with self._lock.write_lock():
+            self._config = {}
+            self._modified_config = {}
 
     def save(self):
         """Save the current Config object into the user toml file and reload it """
@@ -440,13 +637,19 @@ class BaseConfig(metaclass=ConfigSingleton):
 
 class CacheConfig(BaseConfig):
     _allow_direct_call: bool = True
+    _should_register: bool = False
 
 class GlobalConfig(metaclass=Singleton):
     config_name: str = 'global'
-    _register_lock: threading.Lock = threading.Lock()
 
+    _config_migration_needed: bool = False
+    _register_lock: threading.Lock = threading.Lock()
+    
     def __init__(self):
         self._configs = {}
+        self.system_backup_dir = None
+        self.user_backup_dir = None
+        
 
     @classmethod
     def register(cls) -> Callable:
@@ -461,18 +664,30 @@ class GlobalConfig(metaclass=Singleton):
                 raise NotImplementedError(f'{wrapped_class} does not properly provide a valid value for '
                                           f'`config_template_path` ({wrapped_class.config_template_path}) or for '
                                           f'`config_name` ({wrapped_class.config_name})')
-            config = cls()
+            global_config = cls()
             name = wrapped_class.config_name
-            if 'config_' in name:
-                name = name.split('config_')[-1]
+            if isinstance(name, Path) and name.is_file():
+                name = str(name.stem)
 
+            if "config_" in name:
+                name = name.split("config_")[1]
             with cls._register_lock:
-                if name in config._configs:
-                    raise ValueError(f'Failed to register {wrapped_class.__name__}. Config {name} already registered for {config._configs[name].__class__.__name__}')
+                if name in global_config._configs:
+                    raise ValueError(f'Failed to register {wrapped_class.__name__}. Config {name} already registered for {global_config._configs[name].__class__.__name__}')
 
                 wrapped_class._allow_direct_call = True
-                config.add_config(name, wrapped_class())
+                config = wrapped_class()
+                global_config.add_config(name, config)
+                #Need to migrate the next loaded config values!
+                if cls._config_migration_needed:
+                    config.migrate_values()
                 wrapped_class._allow_direct_call = False
+
+                # After adding a config we check if it's valid.
+                if not global_config._config_is_valid(name):
+                    cls._config_migration_needed = True
+                    global_config._backup_and_reset_config_folders()
+                    global_config._migrate_configs()
             return wrapped_class
 
         return inner_wrapper
@@ -491,12 +706,9 @@ class GlobalConfig(metaclass=Singleton):
         return get_set_config_dir(user=False)
 
     def __str__(self):
-        return ('Managing configurations for:\n'
-            + '\n'.join(map(
-                lambda kv: f'\t{kv[0]}: {kv[1]}',
-                self._configs.items(),
-            ))
-        )
+        lines = [f'\t{key}: {value}' for key, value in self._configs.items()]
+        return 'Managing configurations for:\n' + '\n'.join(lines)
+
     def __contains__(self, item):
         return item in self._configs
 
@@ -534,17 +746,60 @@ class GlobalConfig(metaclass=Singleton):
         for config in self._configs.values():
             config.save()
 
-@GlobalConfig.register()
+    def _get_registered_config_names(self) -> list[str]:
+        """Get the list of registered config names"""
+        return list(self._configs.keys())
+
+    def _config_is_valid(self, name : str) -> bool:
+        def _filter_config(template: dict, config: dict) -> dict:
+            return {
+                k: _filter_config(template[k], config[k]) if isinstance(template[k], dict) else config[k]
+                for k in template
+            }
+
+        template = toml.load(cast(BaseConfig, self._configs[name]).config_template_path)
+        config = _filter_config(template, self._configs[name].to_dict())
+        return deep_type_equals(template,  config)
+
+
+    def _migrate_configs(self):
+        for name in self._configs.keys():
+            cast(BaseConfig, self._configs[name]).migrate_values()
+
+    def _backup_and_reset_config_folders(self):
+        logging.critical("Migration of configuration folder.")
+        logging.critical("Your configuration will be reset. Old files are in backup dirs.")
+        # environment_version_specific_dir = _generate_env_path(
+        #     CONFIG_USER_PATH,
+        #     '.pymodaq',
+        #     guess_virtual_environment(),
+        #     _get_version_hash()
+        # )
+
+        self.user_backup_dir = _generate_backup_path(CONFIG_USER_PATH)
+        self.system_backup_dir = _generate_backup_path(CONFIG_BASE_PATH)
+
+        logging.critical(f"backup_dirs: ({self.user_backup_dir}, {self.system_backup_dir})")
+
+        shutil.copytree(get_set_local_dir(user=True), self.user_backup_dir, dirs_exist_ok=True)
+        try:
+            shutil.copytree(get_set_local_dir(user=False), self.system_backup_dir, dirs_exist_ok=True)
+        except PermissionError:
+            from pymodaq_utils.filesystem import copy_with_elevation
+            if not copy_with_elevation(get_set_local_dir(user=False), self.system_backup_dir):
+                self.system_backup_dir = None
+        finally:
+            get_set_local_dir(user=False)
+
+
 class Config(BaseConfig):
     """Main class to deal with configuration values for PyMoDAQ"""
-    config_template_path = Path(__file__).parent.joinpath('resources/config_template.toml')
+    config_template_path = Path(__file__).parent.joinpath("resources/config_template.toml")
     config_name = 'utils'
-
 
     def dict_to_add_to_user(self):
         """To subclass"""
         return dict(user=dict(name=USER))
-
     def __call__(self, *args):
         if 'backends' in args:
             try:
@@ -618,5 +873,9 @@ def _delete_config_files(config : BaseConfig):
     -------
 
     """
-    get_config_file(config.config_name, user=False).unlink(missing_ok=True)
-    get_config_file(config.config_name, user=True).unlink(missing_ok=True)
+    if isinstance(config.config_name, Path) and config.config_name.is_file():
+        config.config_name.unlink(missing_ok=True)
+    else:
+        get_config_file(str(config.config_name), user=False).unlink(missing_ok=True)
+        get_config_file(str(config.config_name), user=True).unlink(missing_ok=True)
+
