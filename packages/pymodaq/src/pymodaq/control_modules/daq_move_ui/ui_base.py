@@ -149,9 +149,11 @@ class DAQ_Move_UI_Base(ControlModuleUI):
 
         self.abs_value_sb_bis = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('pymodaq', 'actuator', 'siprefix'))
         self.move_done_led = QLED(readonly=True)
-        self.current_value_sb = QSpinBox_ro(font_size=20, min_height=27,
+        self.current_value_sb = QSpinBox_ro(font_size=10, min_height=20,
                                             siPrefix=config('pymodaq', 'actuator', 'siprefix'),
                                             )
+        self.current_value_sb.setMinimumWidth(80)
+
         self.find_home_pb = PushButtonIcon('home', 'Find Home', icon_color=self.get_theme().magenta)
         self.move_rel_plus_pb = PushButtonIcon('step_out', 'Set Rel. (+)', icon_color=self.get_theme().yellow)
         self.move_abs_pb = PushButtonIcon('step', 'Set Abs.',
@@ -252,11 +254,16 @@ class DAQ_Move_UI_Base(ControlModuleUI):
                         toolbar=toolbar)
 
     def _setup_relative_actions(self, toolbar: QtWidgets.QToolBar):
+
         self.add_widget('rel_move', self.rel_value_sb, toolbar=toolbar)
         self.add_action('move_rel_plus', 'Set Rel. (+)', 'step_out',
-                        toolbar=toolbar)
+                        toolbar=toolbar,
+                        icon_color=self.get_theme().yellow,)
         self.add_action('move_rel_minus', 'Set Rel. (-)', 'step_into',
-                        toolbar=toolbar)
+                        toolbar=toolbar,
+                        icon_color=self.get_theme().blue,)
+        self.add_action('reset_value', 'Reset Internal Value (no encoder)', 'restart_alt',
+                        toolbar=toolbar,)
 
     def connect_things(self):
         self._connect_common_actions()
@@ -273,6 +280,9 @@ class DAQ_Move_UI_Base(ControlModuleUI):
             self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.STOP, )))
         if 'show_config' in self.actions_names:
             self.connect_action('show_config', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.SHOW_CONFIG, )))
+        if 'reset_value' in self.actions_names:
+            self.connect_action('reset_value',
+                                lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.RESET_VALUE, )))
 
         self.move_abs_pb.clicked.connect(lambda: self.emit_move_abs(self.abs_value_sb_bis))
         self.abs_value_sb.shortcut["Ctrl+E"].activated.connect(lambda: self.emit_move_abs(self.abs_value_sb))
@@ -370,6 +380,9 @@ class DAQ_Move_UI_Base(ControlModuleUI):
     def set_abs_value(self, value: Q_):
         self.abs_value_sb_bis.setValue(value.m_as(self._unit))
 
+    def set_relative_value(self, value: Q_):
+        self.rel_value_sb.setValue(value.m_as(self._unit))
+
     def set_rel_value(self, value: Q_):
         self.rel_value_sb.setValue(value.m_as(self._unit))
 
@@ -408,6 +421,7 @@ class DAQ_Move_UI_Base(ControlModuleUI):
                                                                                 units=self._unit)))
 
     def emit_move_rel(self, sign):
+        self.rel_value_sb.editingFinished.emit()
         self.command_sig.emit(ThreadCommand(
             UiToMainMove.MOVE_REL,
             DataActuator(data=self.rel_value_sb.value() * (1 if sign == '+' else -1),

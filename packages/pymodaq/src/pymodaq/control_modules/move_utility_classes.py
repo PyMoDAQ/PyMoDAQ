@@ -1,5 +1,6 @@
 import numbers
 
+
 HW_KIND = 'actuator'
 HW_SETTINGS_KEY = f'{HW_KIND}_settings'
 from abc import abstractmethod
@@ -17,7 +18,7 @@ from pint.errors import OffsetUnitCalculusError
 from pymodaq_utils.utils import ThreadCommand, find_keys_from_val
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_utils.enums import BaseEnum, enum_checker
+from pymodaq_utils.enums import BaseEnum, enum_checker, StrEnum
 from pymodaq_utils.serialize.mysocket import Socket
 from pymodaq_utils.serialize.serializer_legacy import DeSerializer, Serializer
 
@@ -75,6 +76,12 @@ class DataActuatorType(BaseEnum):
     """Enum for new or old style holding the value of the actuator"""
     float = 0
     DataActuator = 1
+
+class UiType(StrEnum):
+    NONE = 'None'
+    SIMPLE = 'Simple'
+    BINARY = 'Binary'
+    RELATIVE = 'Relative'
 
 
 def comon_parameters(epsilon=config('pymodaq', 'actuator', 'epsilon_default'),
@@ -186,6 +193,8 @@ params = [
          'value': config('pymodaq', 'actuator', 'default_value_green')},
         {'title': 'Value Red:', 'name': 'default_value_red', 'type': 'float',
         'value': config('pymodaq', 'actuator', 'default_value_red')},
+        {'title': 'Value Relative:', 'name': 'default_value_relative', 'type': 'float',
+        'value': config('pymodaq', 'actuator', 'default_value_relative')},
 
     ] + create_remote_connection_params()},
     {'title': 'Actuator Settings:', 'name': HW_SETTINGS_KEY, 'type': 'group'}
@@ -201,12 +210,18 @@ def main(plugin_file, init=True, title='test'):
     """
     import sys
     from pathlib import Path
+    from pymodaq.control_modules.instruments import find_actuator_class_from_name
+    from pymodaq.utils.gui_utils.loader_utils import create_load_daq_move
 
     act = Path(plugin_file).stem.split('daq_move_')[1]
+    class_ = find_actuator_class_from_name(act)
+    if hasattr(class_, 'ui_type'):
+        ui_identifier = class_.ui_type
+    else:
+        ui_identifier = config('pymodaq', 'actuator', 'ui')
 
-    from pymodaq.utils.gui_utils.loader_utils import create_load_daq_move
     app = mkQApp("PyMoDAQ Move")
-    shared_ui, daq_move = create_load_daq_move('simple')
+    shared_ui, daq_move = create_load_daq_move(ui_identifier)
 
     daq_move.actuator = act
 
@@ -289,7 +304,9 @@ class DAQ_Move_base(PluginBase):
 
     params = []
 
-    data_actuator_type = DataActuatorType.float
+    data_actuator_type = DataActuatorType.float  # for backcompatibility, but new plugins should have DataActuatorType.DataActuator
+    ui_type = UiType.NONE  # should precise/force what should be the ui type to be used with this actuator
+    has_encoder = True
     data_shape = (1,)  # expected shape of the underlying actuator's value (in general a float so shape = (1, ))
 
     def __init__(self, parent: Optional['ActuatorWorker'] = None,
@@ -709,17 +726,21 @@ class DAQ_Move_base(PluginBase):
             if self.ispolling:
                 self.poll_timer.start()
             else:
-                if self.data_actuator_type == DataActuatorType.float:
-                    self._current_value = DataActuator(data=self.get_actuator_value(),
-                                                       units=self.axis_unit)
+                if not self.has_encoder:
+                    self._current_value = self.target_value
                 else:
-                    self._current_value = self.get_actuator_value()
-                    if (not Unit(self.axis_unit).is_compatible_with(
-                            Unit(self._current_value.units)) and
-                            self._current_value.units == ''):
-                        # this happens if the units have not been specified in
-                        # the plugin
-                        self._current_value.force_units(self.axis_unit)
+                    if self.data_actuator_type == DataActuatorType.float:
+                        self._current_value = DataActuator(
+                            data=self.get_actuator_value(),
+                            units=self.axis_unit)
+                    else:
+                        self._current_value = self.get_actuator_value()
+                        if (not Unit(self.axis_unit).is_compatible_with(
+                                Unit(self._current_value.units)) and
+                                self._current_value.units == ''):
+                            # this happens if the units have not been specified in
+                            # the plugin
+                            self._current_value.force_units(self.axis_unit)
 
                 logger.debug(f'Current position: {self._current_value}')
                 self.move_done(self._current_value)
