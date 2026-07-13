@@ -797,7 +797,24 @@ class DashBoard(CustomApp, LECOComponentMixin):
             actuators_modules: list[DAQ_Move] = None,
             ui_identifier: str = None,
             **kwargs,
-    ) -> DAQ_Move:        
+    ) -> DAQ_Move:
+        """
+
+        Parameters
+        ----------
+        plug_name: name/title of the DAQ_Move
+        plug_settings: deprecated, should not be used anymore
+        plug_type: name of the actuator class
+        actuator_docks: deprecated, should not be used anymore
+        actuator_widgets: list[QtWidgets.QWidget] container of the DAQ_Move
+        actuators_modules
+        ui_identifier
+        kwargs
+
+        Returns
+        -------
+
+        """
         if actuator_docks is None:
             actuator_docks = []
         if actuator_widgets is None:
@@ -819,31 +836,14 @@ class DashBoard(CustomApp, LECOComponentMixin):
             except KeyError:
                 ui_identifier = config("pymodaq", "actuator", "ui")
 
-        is_compact = (
-            ActuatorUIFactory.get(ui_identifier).is_compact
-            if ui_identifier is not None
-            else False
-        )
-
-        if is_compact:
-            # Create compact manager if needed
-            if self.compact_actuator_manager is None:
-                self.compact_actuator_manager = ActuatorCompactDock(
-                    "Actuators",
-                    self.dockarea,
-                    orientation=Qt.Orientation.Vertical,
-                )
-                self.compact_actuator_manager.show("top")
-            dock = None  # Compact widgets don't have individual docks
-
-        else:
-            dock = Dock(plug_name, size=(150, 250))
-            actuator_docks.append(dock)
-
-            if len(actuator_docks) == 1:
-                self.dockarea.addDock(dock, "top")
-            else:
-                self.dockarea.addDock(dock, "above", actuator_docks[-2])
+        # Create compact manager if needed
+        if self.compact_actuator_manager is None:
+            self.compact_actuator_manager = ActuatorCompactDock(
+                "Actuators",
+                self.dockarea,
+                orientation=Qt.Orientation.Vertical,
+            )
+            self.compact_actuator_manager.show("top")
         QtWidgets.QApplication.processEvents()
 
         actuator_widgets.append(QtWidgets.QWidget())
@@ -852,25 +852,9 @@ class DashBoard(CustomApp, LECOComponentMixin):
         mov_mod_tmp.actuator = plug_type
         QtWidgets.QApplication.processEvents()
 
-        if plug_settings is not None:
-            try:
-                putils.set_param_from_param(mov_mod_tmp.settings, plug_settings)
-            except KeyError as e:
-                mssg = (
-                    f"Could not set this setting: {str(e)}\n"
-                    f"The Experiment file is no more compatible with the plugin {plug_type}"
-                )
-                logger.warning(mssg)
-                self.splash_sc.showMessage(mssg)
-        QtWidgets.QApplication.processEvents()
-
         mov_mod_tmp.bounds_signal[bool].connect(self.do_stuff_from_out_bounds)
 
-        # Add widget to appropriate container
-        if is_compact:
-            self.compact_actuator_manager.add_module(mov_mod_tmp)
-        else:
-            dock.addWidget(actuator_widgets[-1])
+        self.compact_actuator_manager.add_module(mov_mod_tmp)
 
         actuators_modules.append(mov_mod_tmp)
         return mov_mod_tmp
@@ -929,10 +913,25 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
     def add_det(self, plug_name, plug_settings, detector_docks_viewer,
                 detector_modules, plug_type: str = None, plug_subtype: str = None) -> DAQ_Viewer:
+        """
+
+        Parameters
+        ----------
+        plug_name: name/title of the DAQ_Viewer
+        plug_settings: Parameter (deprecated, do not use anymore)
+        detector_docks_viewer: list[Dock]
+        detector_modules: list[DAQ_Viewer]
+        plug_type: either DAQ0D, 1D, 2D or ND
+        plug_subtype: name of the instrument class
+
+        Returns
+        -------
+
+        """
         if plug_type is None:
-            plug_type = plug_settings.child("main_settings", "DAQ_type").value()
+            raise ValueError('DAQ_Viewer type not specified')
         if plug_subtype is None:
-            plug_subtype = plug_settings.child("main_settings", "detector_type").value()
+            raise ValueError('DAQ_Viewer subtype not specified')
 
         # Create compact manager if needed
         if self.compact_detector_manager is None:
