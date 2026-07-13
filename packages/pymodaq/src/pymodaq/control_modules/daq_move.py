@@ -217,6 +217,12 @@ class DAQ_Move(ParameterControlModule):
                 config("pymodaq", "actuator", "siprefix")
                 and (unit != "" or config("pymodaq", "actuator", "siprefix_even_without_units"))
             )
+        self.update_default_abs_values()
+
+    def update_default_abs_values(self):
+        self.value_changed(self.settings.child('main_settings', 'default_value_green'))
+        self.value_changed(self.settings.child('main_settings', 'default_value_red'))
+
 
     @property
     def axis_names(self) -> Union[List, Dict]:
@@ -623,6 +629,7 @@ class DAQ_Move(ParameterControlModule):
         """Reload plugin settings, also updating the move_type in main_settings."""
         self.settings.child("main_settings", "move_type").setValue(self._actuator_type)
         super()._reload_plugin_settings()
+        self.update_default_abs_values()
 
     def _module_value_changed(self, param: Parameter):
         """Handle actuator-specific parameter changes."""
@@ -633,7 +640,12 @@ class DAQ_Move(ParameterControlModule):
             if param.name() == 'do_save':
                 self.setup_continuous_saving(param.value())
                 self.h5saver.settings.child(*path[1:]).setValue(param.value())
-
+        elif param.name() == 'default_value_red':
+            if self.ui is not None:
+                self.ui.set_abs_value_red(Q_(param.value(), self.units))
+        elif param.name() == 'default_value_green':
+            if self.ui is not None:
+                self.ui.set_abs_value_green(Q_(param.value(), self.units))
     # -------------------------------------------------------------------------
     # Thread status handler
     # -------------------------------------------------------------------------
@@ -1020,10 +1032,10 @@ class ActuatorWorker(HardwareWorkerBase):
         self.plugin.poll_timer.stop()
 
 
-def main(init_qt=True):
+def main():
     from pymodaq.utils.gui_utils.loader_utils import create_load_daq_move
     app = mkQApp("PyMoDAQ Move")
-    shared_ui, daq_move = create_load_daq_move('simple')
+    shared_ui, daq_move = create_load_daq_move('Simple')
     shared_ui.show()
     sys.exit(app.exec())
 

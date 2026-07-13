@@ -182,6 +182,11 @@ params = [
          'limits': ActuatorUIFactory.keys()},
         {'title': 'Refresh value (ms):', 'name': 'refresh_timeout', 'type': 'int',
          'value': config('pymodaq', 'actuator', 'refresh_timeout_ms')},
+        {'title': 'Value Green:', 'name': 'default_value_green', 'type': 'float',
+         'value': config('pymodaq', 'actuator', 'default_value_green')},
+        {'title': 'Value Red:', 'name': 'default_value_red', 'type': 'float',
+        'value': config('pymodaq', 'actuator', 'default_value_red')},
+
     ] + create_remote_connection_params()},
     {'title': 'Actuator Settings:', 'name': HW_SETTINGS_KEY, 'type': 'group'}
 ]
