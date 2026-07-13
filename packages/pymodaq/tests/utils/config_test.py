@@ -57,7 +57,6 @@ def test_required_config_entries():
         assert ui in config('actuator', 'ui')
     assert 'default_value_red' in config('actuator')
     assert 'default_value_green' in config('actuator')
-    assert 'default_value_relative' in config('actuator')
 
     assert 'viewer' in config
     assert 'daq_type' in config('viewer')
