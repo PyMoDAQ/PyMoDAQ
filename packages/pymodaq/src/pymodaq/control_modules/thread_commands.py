@@ -54,7 +54,6 @@ class ThreadStatusMove(StrEnum):
     SET_ALLOWED_VALUES = 'set_allowed_values'
     STOP = 'stop'                   # deprecated: use ThreadStatus.STOP
     UNITS = 'units'
-    SET_UI = 'set_ui'
 
 
 class ThreadStatusViewer(StrEnum):

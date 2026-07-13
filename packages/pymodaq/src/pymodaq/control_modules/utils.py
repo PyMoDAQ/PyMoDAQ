@@ -520,7 +520,6 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
                 QtWidgets.QApplication.processEvents()
             if self.ui is not None and self._ui_init_attr:
                 setattr(self.ui, self._ui_init_attr, False)
-                self.ui.cleanup_after_desinit()
         except Exception as e:
             self.logger.exception(str(e))
 

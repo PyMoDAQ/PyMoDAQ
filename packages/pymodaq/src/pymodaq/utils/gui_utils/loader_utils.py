@@ -18,19 +18,18 @@ if TYPE_CHECKING:
 config = GlobalConfig()
 
 
-def create_load_daq_move(ui_identifier=config('pymodaq', 'actuator', 'ui'),
-                         title="DAQ_Move") -> tuple[SharedUI, 'DAQ_Move']:
+def create_load_daq_move(title="DAQ_Move") -> tuple[SharedUI, 'DAQ_Move']:
     from pymodaq.control_modules.daq_move import DAQ_Move
 
     win, area = make_window(area=False, title='DAQ_Move')
     widget = QtWidgets.QWidget()
-    daq_move = DAQ_Move(widget, title=title,
-                        ui_identifier=ui_identifier)
+    daq_move = DAQ_Move(widget, title=title)
     win.setCentralWidget(widget)
     shared_ui = SharedUI(win)
     shared_ui.affect_application(daq_move.ui)
 
-    shared_ui.add_toolbar('move_toolbar', 'Move', win, toolbar=daq_move.ui.toolbar,
+    shared_ui.add_toolbar('move_toolbar', 'Move', win,
+                          toolbar=daq_move.ui.toolbar,
                           add_break=False)
     daq_move.settings_tree.setVisible(False)
     widget.layout().addWidget(daq_move.ui.control_widget)

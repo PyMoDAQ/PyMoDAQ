@@ -313,7 +313,7 @@ class DAQMoveUI(ControlModuleUI):
         self.connect_move_actions()
         custom_ui.setup_action_visibility()
 
-    def cleanup_after_desinit(self):
+    def cleanup_ui(self):
         self.remove_absolute_spinbox_actions(self.toolbar)
         self.remove_absolute_actions(self.toolbar)
         self.remove_relative_actions(self.toolbar)
