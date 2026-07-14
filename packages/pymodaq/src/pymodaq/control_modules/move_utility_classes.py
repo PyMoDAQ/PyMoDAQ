@@ -293,8 +293,12 @@ class DAQ_Move_base(PluginBase):
     params = []
 
     data_actuator_type = DataActuatorType.float  # for backcompatibility, but new plugins should have DataActuatorType.DataActuator
-    ui_type = UiType.NONE  # should precise/force what should be the ui type to be used with this actuator
-    has_encoder = True
+    ui_type = UiType.NONE  # should precise (force if possible) what should be the ui type to be used with this
+    # actuator. If NONE, PyMoDAQ will use the default ui type (see preferences).
+    has_encoder = True  # tell PyMoDAQ if this actuator is able to set an absolute position and read the controller
+    # value. If False, you should consider having ui_type = UiType.RELATIVE
+
+
     data_shape = (1,)  # expected shape of the underlying actuator's value (in general a float so shape = (1, ))
 
     def __init__(self, parent: Optional['ActuatorWorker'] = None,
