@@ -6,7 +6,9 @@ from pint import DimensionalityError
 from qtpy import QtWidgets
 from typing import Union, List
 
-
+from pymodaq.utils.shared_ui import SharedUI
+from pymodaq_gui.qt_utils import mkQApp
+from pymodaq_gui.utils.widgets.window import make_window
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq.control_modules.thread_commands import UiToMainMove
 from pymodaq.control_modules.ui_utils import ControlModuleUI
@@ -195,8 +197,12 @@ class DAQMoveUI(ControlModuleUI):
         
     def populate_control_ui(self,  widget: QtWidgets.QWidget):
         widget.setLayout(QtWidgets.QVBoxLayout())
+        vwidget = QtWidgets.QWidget()
+        vwidget.setLayout(QtWidgets.QHBoxLayout())
         container_widget = QtWidgets.QWidget()
-        widget.layout().addWidget(container_widget)
+        vwidget.layout().addWidget(container_widget)
+        vwidget.layout().addStretch()
+        widget.layout().addWidget(vwidget)
         widget.layout().addStretch()
 
         container_widget.setLayout(QtWidgets.QGridLayout())
@@ -502,3 +508,24 @@ class DAQMoveUI(ControlModuleUI):
         self.graph_widget.close()
         self.control_widget.close()
         super().close()
+
+
+if __name__ == '__main__':
+
+    app = mkQApp('DAQ_Move')
+    win, area = make_window(area=False, title='DAQ_Move')
+    widget = QtWidgets.QWidget()
+    daq_move = DAQMoveUI(widget)
+    win.setCentralWidget(widget)
+    shared_ui = SharedUI(win)
+    shared_ui.affect_application(daq_move)
+
+    shared_ui.add_toolbar('move_toolbar', 'Move', win,
+                          toolbar=daq_move.toolbar,
+                          add_break=False)
+    daq_move.settings_tree.setVisible(False)
+    widget.layout().addWidget(daq_move.control_widget)
+    widget.layout().addWidget(daq_move.settings_tree)
+    widget.layout().addWidget(daq_move.graph_widget)
+
+    app.exec()

@@ -8,23 +8,8 @@ that one can control and may vary during an experiment.  The default actuator
 is a Mock one (a kind of software based
 actuator displaying a *position* and accepting absolute or relative *positioning*).
 
-Introduction
-------------
-
-This module has a generic interface in the form of a dockable panel containing the interface for initialization,
-the manual control of the actuator *position* and a side tree like interface displaying all the settings.
-:numref:`daq_move_gui_base` shows the minimal interface of the module (in order to take minimal place in the
-Dashboard)
-
-
-   .. _daq_move_gui_base:
-
-.. figure:: /image/DAQ_Move/daq_move_gui_base.PNG
-   :alt: daq_move_gui_base
-
-   Minimal DAQ_Move user interface
-
-
+.. |select| image:: /image/DAQ_Move/select.PNG
+    :height: 20pt
 
 .. |green_arrow| image:: /image/DAQ_Move/green_arrow.PNG
     :width: 20pt
@@ -79,14 +64,39 @@ Dashboard)
     :height: 20pt
 
 .. |init| image:: /image/DAQ_Move/init.PNG
-    :width: 80pt
+    :width: 20pt
     :height: 20pt
+
+.. |reset| image:: /image/DAQ_Move/reset.PNG
+    :width: 20pt
+    :height: 20pt
+
+.. |display| image:: /image/DAQ_Move/show_data_graph.PNG
+    :width: 20pt
+    :height: 20pt
+
+Introduction
+------------
+
+This module when used as a standalone application has a UI in the form of a toolbar with several buttons and widgets
+allowing the actuator type selection and initialization |init| as well as the current value display and some other
+functionalities described below. :numref:`daq_move_gui_base` shows the minimal interface of the module (in order to take minimal place in the
+Dashboard)
+
+
+   .. _daq_move_gui_base:
+
+.. figure:: /image/DAQ_Move/daq_move_gui_base.PNG
+   :alt: daq_move_gui_base
+
+   Minimal DAQ_Move user interface
+
 
 Hardware initialization
 -----------------------
 
-* ``Actuator``: list of available instrument plugins of the DAQ_Move type, see :numref:`daq_move_gui_base_actuators`.
-* |init|: Initialize the hardware with the given settings (see :ref:`instrument_plugin_doc` for details
+* |select|: list of available instrument plugins of actuator type, see :numref:`daq_move_gui_base_actuators`.
+* |init|: Initialize/Desinitialize the hardware with the given settings (see :ref:`instrument_plugin_doc` for details
   on how to set hardware settings.)
 * |quit|: De-initialize the hardware and quit the module
 
@@ -98,16 +108,38 @@ Hardware initialization
 
    Menu list displaying the available instrument plugin of type ``DAQ_Move``
 
+
+Specialized User Interfaces
+---------------------------
+In fact the UI adapts itself to the peculiarities of the chosen actuator: either able to do absolute positioning
+or not (relative only) or binary (can only set two different values). The core ui is depicted on
+:numref:`daq_move_gui_base_base`
+
+   .. _daq_move_gui_base_base:
+
+.. figure:: /image/DAQ_Move/daq_move_gui_base_base.PNG
+   :alt: daq_move_gui_base_base
+
+   The base UI shared by all specialized interfaces
+
+
+General User Interface
+++++++++++++++++++++++
+
+The interface depicted on :ref:`daq_move_gui_base` is the default one used for actuators
+with encoders (or equivalent) able to do absolute value/positioning.
+
 Positioning
------------
+###########
 
 Once the hardware is initialized, the actuator's *value* is displayed on the *Current value* display
-(bottom of :numref:`daq_move_gui_base`) while the absolute *value* can be set using one of the top spinbox
+(right of the |settings| button) while the absolute *value* can be set using one of the top spinbox
 (respectively green or red) and apply it using respectively the |green_arrow| or |red_arrow| button. This double
 positioning allows to quickly define two values and switch between them.
 
+
 Advanced positioning
---------------------
+####################
 
 More options can be displayed in order to precisely control the actuator by pressing the |plus_button| button.
 The user interface will then look like :numref:`daq_move_gui_rel`.
@@ -129,6 +161,53 @@ The two new displayed spinbox relate to *Absolute* positioning and *Relative* on
 * |move_rel_m|: the actuator will try to reach a *relative* position (-increment)
 * |where|: will update the current actuator's value display
 * |stop|: stop the current motion (if possible)
+
+Other actions
+#############
+
+Other actions present in the toolbar allow to:
+
+* |stop|: stop the current motion (if possible)
+* |display|: stop the current motion (if possible)
+* |refresh|: Refresh the current value periodically (period can be set in the settings)
+
+Binary User Interface
++++++++++++++++++++++
+
+For actuators that need only to set two different values (like beam shutters, relays, ...), the `Binary` ui
+can be used and is displayed on figure :numref:`daq_move_gui_binary`
+
+   .. _daq_move_gui_binary:
+
+.. figure:: /image/DAQ_Move/daq_move_gui_base_binary.PNG
+   :alt: daq_move_gui_base_binary
+
+   Specialized UI for binary actuators
+
+In this UI the absolute green and red spinboxes have been removed has only two values can be set (one
+is represented as the green value and the other as the red value). The exact binary values can be set in the
+actuator settings (see purple rectangle in figure :numref:`daq_move_gui_settings`)
+
+
+Relative User Interface
++++++++++++++++++++++++
+
+   .. _daq_move_gui_relative:
+
+.. figure:: /image/DAQ_Move/daq_move_gui_base_relative.PNG
+   :alt: daq_move_gui_base_relative
+
+   Specialized UI for relative only actuators
+
+
+In this UI the absolute green and red spinboxes have been replaced with a relative one while the green/red absolute
+move buttons have been replaced with the move up and down button allowing increment (relative value set in the spinbox)
+in the positive or negative direction.
+
+The current value is still displayed but this is the result of an internal encoding mechanism remembering the
+number and value of previously done increments. This is purely software and may be incorrect in term of absolute
+values after a few increments. The |reset| button allows to reset this encoding to zero!
+
 
 
 Settings
@@ -261,32 +340,3 @@ to tailor the module's behaviour. The various field are written below together w
 * display_units: display units in the SpinBoxes
 
 
-Other Actuator UI
------------------
-
-.. note::
-   New in 5.1.0
-
-It is now possible to declare in the Experiment Manager, the feel and shape of the Actuators Graphical User Interfaces. This
-has been done in order to compactify the DashBoard where regular Actuator UI can quickly take a lot of room. If you
-don't need an access to advanced features, you can choose the layout (see below) among:
-
-* *Original*: The usual full featured UI
-* *Simple*: UI on a single line allowing natively absolute moves
-* *Binary*: UI on a single line allowing natively two absolute moves only (configured in the config file)
-* *Relative*: UI on a single line allowing natively relative moves
-
-
-.. figure:: /image/DAQ_Move/ui_type.png
-   :alt: ui_types
-
-   Selection of one of the possible UI layout.
-
-
-The figure below shows the three possibilities in one Dashboard:
-
-
-.. figure:: /image/DAQ_Move/dashboard_with_various_actuators.png
-   :alt: ui_types
-
-   Dashboard with actuators having a UI of type *Original*, *Simple* or *Binary*
