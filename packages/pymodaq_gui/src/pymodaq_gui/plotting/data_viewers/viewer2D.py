@@ -15,6 +15,8 @@ from pymodaq_gui.plotting.items.roi_sync import roi_format
 from pymodaq_gui.plotting.utils.lineout import Lineouts
 from pymodaq_gui.plotting.utils.plot_utils import ViewBox
 from pymodaq_gui.qt_utils import mkQApp
+from pymodaq_utils import utils
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.logger import set_logger, get_module_name
 
 from pymodaq_data.data import (Axis, DataToExport, DataRaw,
@@ -307,9 +309,12 @@ class IsoCurver(QObject):
 
 class View2D(ActionManager, QtCore.QObject):
 
-    def __init__(self, parent_widget=None):
+    lineout_types = ['hor', 'ver', 'int']
+
+    def __init__(self, parent_widget=None, title=''):
         QtCore.QObject.__init__(self)
         ActionManager.__init__(self, toolbar=QtWidgets.QToolBar())
+        self.title = title
         self.roi_vb:  ViewBox = None
         self.ROIselect = SimpleRectROI([0, 0], [10, 10], centered=True, sideScalers=True)
 
@@ -498,7 +503,6 @@ class View2D(ActionManager, QtCore.QObject):
 
         self.image_widget.add_scaled_axis('left')
         self.image_widget.add_scaled_axis('bottom')
-        self.splitter.addWidget(self.roi_manager.roiwidget)
         self.roi_manager.roiwidget.setVisible(False)
 
     def setup_actions(self):
@@ -601,6 +605,14 @@ class View2D(ActionManager, QtCore.QObject):
         self.ROIselect.setVisible(False)
         self.show_hide_crosshair(False)
         self.show_lineout_widgets()
+        config = Config()
+        for action_name in ('autolevels', 'auto_levels_sym', 'histo', 'roi', 'isocurve',
+                            'crosshair', 'ROIselect', 'flip_ud', 'flip_lr', 'rotate',
+                            'opposite', 'legend'):
+            if config('gui', 'viewer', 'viewer2D', action_name):
+                self.get_action(action_name).trigger()
+        if not config('gui', 'viewer', 'viewer2D', 'aspect_ratio'):
+            self.get_action('aspect_ratio').trigger()
 
     @Slot(DataRaw)
     def display_images(self, datas):
@@ -632,7 +644,9 @@ class View2D(ActionManager, QtCore.QObject):
 
     @Slot(bool)
     def roi_clicked(self, isroichecked=True):
+        self.roi_manager.roiwidget.setWindowTitle(f'{self.title} ROIs')
         self.roi_manager.roiwidget.setVisible(isroichecked)
+        self.roi_manager.roiwidget.closeEvent = lambda event: self.set_action_checked('roi', False)
 
         for roi_meta in self.roi_manager.ROIs:
             roi_meta.roi.setVisible(isroichecked)
@@ -811,7 +825,7 @@ class Viewer2D(ViewerBase):
         self.isdata = dict([])
         self._is_gradient_manually_set = False
 
-        self.view : View2D= View2D(parent)
+        self.view : View2D= View2D(parent, title)
         self.filter_from_rois = Filter2DFromRois(self.view.roi_manager, self.view.data_displayer.get_image('red'),
                                                  IMAGE_TYPES)
         self.filter_from_rois.register_activation_signal(self.view.get_action('roi').triggered)

@@ -135,6 +135,7 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
               before: QtQAction = None,
               action: QtQAction | QtWidgets.QWidgetAction = None,
               fill: bool = None,
+              rotate: int = 0
               ):
     """Create a new action and add it eventually to a toolbar and a menu
 
@@ -185,6 +186,8 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
     action: QAction, QWidgetAction, optional
     fill: bool, optional
         Fill or not the icon, if None left to the user configuration
+    rotate: int, optional
+        Rotate the icon by this value in degree
     """
     if action is None:
         if icon_name is None or icon_name == '':
@@ -411,6 +414,7 @@ class ActionManager:
                    before: Union[str, 'QAction', WidgetActionProxy, None] = None,
                    action: QtQAction | QtWidgets.QWidgetAction = None,
                    fill: bool = None,
+                   rotate: int = 0
                    ):
         """Create a new action and add it to toolbar and menu
 
@@ -473,6 +477,8 @@ class ActionManager:
         action: QAction, QWidgetAction, optional
         fill: bool, optional
             Fill or not the icon, if None left to the user configuration
+        rotate: int, optional
+            Rotate the icon by this value in degree
 
         See Also
         --------
@@ -494,7 +500,8 @@ class ActionManager:
                                               rotate=rotate,
                                               before=before,
                                               action=action,
-                                              fill=fill)
+                                              fill=fill,
+                                              rotate=rotate)
         return self._actions[short_name]
 
     def add_widget(self, short_name, klass: Union[str, QtWidgets.QWidget, object], *args, tip='',

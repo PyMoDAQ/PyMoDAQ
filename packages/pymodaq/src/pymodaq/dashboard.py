@@ -18,9 +18,8 @@ from qtpy.QtWidgets import (
     QMessageBox,
 )
 
-
-
-
+from pymodaq.control_modules.instruments import find_actuator_class_from_name
+from pymodaq.control_modules.move_utility_classes import UiType
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
 from pymodaq_utils.utils import ThreadCommand
@@ -804,7 +803,11 @@ class DashBoard(CustomApp, LECOComponentMixin):
         if actuator_widgets is None:
             actuator_widgets = []
         if actuators_modules is None:
-            actuators_modules = []      
+            actuators_modules = []
+
+        actuator_class = find_actuator_class_from_name(plug_type)
+        forced_ui = actuator_class.ui_type
+        ui_identifier = forced_ui if forced_ui != UiType.NONE else ui_identifier
 
         if ui_identifier is not None:
             pass

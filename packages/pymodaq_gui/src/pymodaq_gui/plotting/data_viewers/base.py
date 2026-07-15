@@ -11,9 +11,9 @@ from pymodaq_data.data import DataToExport, DataWithAxes, DataDim, DataDistribut
 from pymodaq_gui.plotting.items.roi import RoiInfo
 
 if TYPE_CHECKING:
-    from pymodaq_gui.plotting.data_viewers.viewer0D import Viewer0D
-    from pymodaq_gui.plotting.data_viewers.viewer1D import Viewer1D
-    from pymodaq_gui.plotting.data_viewers.viewer2D import Viewer2D
+    from pymodaq_gui.plotting.data_viewers.viewer0D import View0D
+    from pymodaq_gui.plotting.data_viewers.viewer1D import View1D
+    from pymodaq_gui.plotting.data_viewers.viewer2D import View2D
     from pymodaq_gui.plotting.data_viewers.viewerND import ViewerND
 
 
@@ -164,20 +164,29 @@ class ViewerBase(QObject):
 
     def __init__(self, parent: QtWidgets.QWidget = None, title=''):
         super().__init__()
-        self.title = title if title != '' else self.__class__.__name__
 
         self._raw_data = None
-        self.data_to_export: DataToExport = DataToExport(name=self.title)
-        self.view: Union[Viewer0D, Viewer1D, Viewer2D, ViewerND] = None
+
+        self.view: Union[View0D, View1D, View2D] = None
 
         if parent is None:
             parent = QtWidgets.QWidget()
             parent.show()
         self.parent = parent
-
-        self.parent.setWindowTitle(self.title)
-
+        self.title = title if title != '' else self.__class__.__name__
+        self.data_to_export: DataToExport = DataToExport(name=self.title)
         self._display_temporary = False
+
+    @property
+    def title(self) -> str:
+        return self._title
+
+    @title.setter
+    def title(self, value: str):
+        self._title = value
+        self.parent.setWindowTitle(self._title)
+        if self.view is not None:
+            self.view.title = value
 
     @property
     def has_action(self):

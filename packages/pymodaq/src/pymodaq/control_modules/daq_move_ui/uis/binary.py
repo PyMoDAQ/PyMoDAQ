@@ -8,6 +8,7 @@ import qt_themes
 
 from pymodaq.control_modules.daq_move_ui.ui_base import DAQ_Move_UI_Base
 from pymodaq.control_modules.thread_commands import UiToMainMove
+from pymodaq_gui.qt_utils import mkQApp
 from pymodaq_gui.utils.widgets import LabelWithFont
 
 from pymodaq.utils.data import DataActuator
@@ -23,18 +24,13 @@ from enum import Enum
 config = Config()
 
 
-class BinaryValue(Enum):
-    VALUE_ONE = config('pymodaq', 'actuator', 'binary', 'value_1')
-    VALUE_TWO = config('pymodaq', 'actuator', 'binary', 'value_2')
-
-
 @ActuatorUIFactory.register('Binary')
 class DAQ_Move_UI_Binary(DAQ_Move_UI_Simple):
     """ UI for Actuators where only two values are encoded: 0 or 1 for instance
 
-    Some other numerical values can be set in the config: 'actuator', 'binary', 'value_1'
-    The green arrow button will fire the 'value_1'
-    The red arrow button will fire the 'value_2'
+    Some other numerical values can be set in the config: 'actuator', 'default_value_green'
+    The green arrow button will fire the 'default_value_green' (can be updated/customized using the settings)
+    The red arrow button will fire the 'default_value_red' (can be updated/customized using the settings)
 
     Could be used for 2 positions only actuators such as a Flip
     """
@@ -45,66 +41,7 @@ class DAQ_Move_UI_Binary(DAQ_Move_UI_Simple):
     def _setup_move_actions(self, toolbar: QtWidgets.QToolBar):
         self._setup_absolute_actions(toolbar)
 
-    def connect_things(self):
-        super().connect_things()
-        # first disconnect actions from  the base class
-        self.connect_action('move_abs', None, connect=False)
-        self.connect_action('move_abs_2', None, connect=False)
-
-        #then connect to the ones reimplemented here
-        self.connect_action('move_abs', lambda: self.emit_move_abs(BinaryValue.VALUE_ONE.value))
-        self.connect_action('move_abs_2', lambda: self.emit_move_abs(BinaryValue.VALUE_TWO.value))
-
-    def emit_move_abs(self, abs_value: Union[float, int]):
-        self.command_sig.emit(ThreadCommand(UiToMainMove.MOVE_ABS, DataActuator(data=abs_value,
-                                                                                units=self._unit)))
-
-def main(init_qt=True):
-    from pymodaq_gui.utils.dock import DockArea, Dock
-    if init_qt:  # used for the test suite
-        app = QtWidgets.QApplication(sys.argv)
-
-    actuators = [f'act{ind}' for ind in range(5)]
-
-    win = QtWidgets.QMainWindow()
-    area = DockArea()
-    win.setCentralWidget(area)
-    win.resize(1000, 500)
-    win.setWindowTitle('extension_name')
-
-
-    dock = Dock('Test')
-    dock.layout.setSpacing(0)
-    dock.layout.setContentsMargins(0,0,0,0)
-    area.addDock(dock)
-    widget = QtWidgets.QWidget()
-    widget.setMaximumHeight(60)
-    prog = DAQ_Move_UI_Simple(widget, title="test")
-    widget.show()
-
-    for ind in range(10):
-        widget = QtWidgets.QWidget()
-        widget.setMaximumHeight(60)
-        dock.addWidget(widget)
-        prog = DAQ_Move_UI_Binary(widget, title="test")
-
-
-        def print_command_sig(cmd_sig):
-            print(cmd_sig)
-            if cmd_sig.command == UiToMainMove.INIT:
-                prog.enable_move_buttons(True)
-            elif cmd_sig.command == UiToMainMove.MOVE_ABS:
-                prog.display_value(cmd_sig.attribute)
-
-        prog.command_sig.connect(print_command_sig)
-        prog.actuators = actuators
-
-    win.show()
-    if init_qt:
-        sys.exit(app.exec())
-    return prog, widget
-
-
-if __name__ == '__main__':
-    main()
-
+    def setup_docks_and_widgets(self):
+        super().setup_docks_and_widgets()
+        self.abs_value_sb_red.setVisible(False)
+        self.abs_value_sb_green.setVisible(False)
