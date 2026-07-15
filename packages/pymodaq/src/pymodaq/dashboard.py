@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
+import itertools
 import sys
 import datetime
 import subprocess
@@ -243,7 +243,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.get_toolbar('overshooter').setEnabled(False)
         self.experiment_manager.enable_actions(True)
 
-        self.connect_leco(connect=True)
+
 
 
     def do_things_after_experiment_set(self, experiment_name: str):
@@ -267,6 +267,10 @@ class DashBoard(CustomApp, LECOComponentMixin):
             self._scripted_experiment_load = False
             self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.APPLIED_EXPERIMENT_DONE, True))
 
+        for device in itertools.chain(self.actuators_modules, self.detector_modules):
+            self._connect_leco_request.connect(device.connect_leco)
+        self._connect_leco_request.emit(self._connected)
+
     def get_leco_name(self) -> str:
         return "dashboard"
 
@@ -284,10 +288,10 @@ class DashBoard(CustomApp, LECOComponentMixin):
                 'detectors': [ detector.get_leco_name() for detector in self.detector_modules],
             }
             self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.SEND_DEVICES, devices))
-        elif status.command == LECODashboardCommands.GET_CONFIGURATIONS:
+        elif status.command == LECODashboardCommands.GET_STATES:
             entries = self.state_manager.entries if self.state_manager.is_action_enabled(ManagerActions.LIST) else []
-            self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.SEND_CONFIGURATIONS, entries))
-        elif status.command == LECODashboardCommands.APPLY_CONFIGURATION:
+            self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.SEND_STATES, entries))
+        elif status.command == LECODashboardCommands.APPLY_STATE:
             configuration = status.attribute
             loaded = False
             if (configuration in self.state_manager.entries and
@@ -298,7 +302,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
                 self.state_manager.execute_entry(self.state_manager.entry_filepath)
                 loaded = True
 
-            self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.APPLIED_CONFIGURATION_DONE, loaded))
+            self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.APPLIED_STATE_DONE, loaded))
         elif status.command == LECODashboardCommands.GET_EXPERIMENTS:
             self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.SEND_EXPERIMENTS, self.experiment_manager.entries))
         elif status.command == LECODashboardCommands.APPLY_EXPERIMENT:
