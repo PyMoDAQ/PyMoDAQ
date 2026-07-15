@@ -96,6 +96,7 @@ class ControlModule(QObject):
     _update_settings_signal = Signal(edict)
     status_sig = Signal(str)
     custom_sig = Signal(ThreadCommand)
+    timeout_signal = Signal(str)
     ui = None
 
     def __init__(self):
@@ -163,6 +164,7 @@ class ControlModule(QObject):
     def raise_timeout(self):
         """Handle a timeout event: display a status message."""
         self.update_status("Timeout occurred")
+        self.timeout_signal.emit(self.title)
 
     def thread_status(self, status: ThreadCommand):
         """Get back info (using the ThreadCommand object) from the hardware
