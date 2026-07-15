@@ -11,6 +11,7 @@ User's Guide
    user_folder/launcher
    user_folder/dashboard_control_modules
    user_folder/extensions
+   user_folder/shared_ui
    user_folder/configuration
    user_folder/module_manager
    user_folder/dashboard_manager
