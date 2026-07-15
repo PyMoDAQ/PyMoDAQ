@@ -330,7 +330,6 @@ class DAQ_Move_base(PluginBase):
 
         self.poll_timer = QTimer(self)
         self.poll_timer.setInterval(config('pymodaq', 'actuator', 'polling_interval_ms'))
-        self._poll_timeout = config('pymodaq', 'actuator', 'polling_timeout_s')
         self.poll_timer.timeout.connect(self.check_target_reached)
 
         self.ini_attributes()

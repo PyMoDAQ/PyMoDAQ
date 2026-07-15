@@ -19,7 +19,7 @@ from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.utils import Dock
 
 from pymodaq.utils.data import DataActuator
-from pymodaq.control_modules.thread_commands import ControlToHardwareViewer
+from pymodaq.control_modules.thread_commands import ControlToHardwareMove
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
@@ -104,7 +104,7 @@ class ModulesManager(QObject, ParameterManager):
 
     @property
     def actuator_timeout(self):
-        return config('pymodaq', 'actuator', 'timeout')
+        return config('pymodaq', 'actuator', 'polling_timeout_s')
 
     @property
     def detector_timeout(self):
@@ -543,9 +543,9 @@ class ModulesManager(QObject, ParameterManager):
         self.settings.child('test_actuator').setValue(self.move_done_flag)
 
         if mode == 'abs':
-            command = 'move_abs'
+            command = ControlToHardwareMove.MOVE_ABS
         elif mode == 'rel':
-            command = 'move_rel'
+            command = ControlToHardwareMove.MOVE_REL
         else:
             logger.error(f'Invalid positioning mode: {mode}')
             return self.move_done_positions
@@ -565,7 +565,7 @@ class ModulesManager(QObject, ParameterManager):
             while not self.move_done_flag:  # polling move done
 
                 QtWidgets.QApplication.processEvents()  # mandatory for the det_done_flag boolean to be modified in the corresponding method
-                if time.perf_counter() - tzero > self.actuator_timeout / 1000:  # timeout in seconds
+                if time.perf_counter() - tzero > self.actuator_timeout:  # timeout in seconds
                     # match on origin (stable per-module id) rather than name: dte_act's
                     # `.name` holds the requested actuator's title, which is what gets
                     # stamped as `.origin` on the DataActuator the actuator reports back
@@ -580,6 +580,9 @@ class ModulesManager(QObject, ParameterManager):
 
         self.move_done_signal.emit(self.move_done_positions)
         return self.move_done_positions
+
+    def raise_actuator_timeout(self, module_name: str):
+        pass
 
     def reset_signals(self):
         self.move_done_flag = True
