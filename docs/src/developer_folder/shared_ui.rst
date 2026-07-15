@@ -23,8 +23,10 @@ object take this window as an argument and will build on it the menus and action
 see :numref:`naked_shared_ui`
 
 .. code-block::
-
+    from pymodaq_gui.utils.widgets.window import make_window
+    from pymodaq_gui.utils.shared_ui import SharedUI
     from pymodaq_gui.qt_utils import mkQApp
+
     app = mkQApp('CommonWindow')
 
     win, area = make_window(area=False, title='SharedUI')
@@ -32,60 +34,36 @@ see :numref:`naked_shared_ui`
 
     window.show()
 
-    # Run application
     sys.exit(app.exec())
 
 
-  .. _naked_shared_ui:
 
+.. _naked_shared_ui:
 .. figure:: /image/shared_ui/shared_ui_naked.png
    :alt: Shared UI
 
    SharedUI interface.
 
-And Wrapping it around a CustomApp
-----------------------------------
-
 
 Menu Bar Description
 --------------------
 
-Figure :numref:`dashboard_menu` displays the menu of the *Dashboard* window with access to all the tools useful
+Figure :numref:`naked_shared_ui` displays the menu of the *SharedUI* window with access to all the tools useful
 within PyMoDAQ and described below:
 
-  .. _dashboard_menu:
 
-.. figure:: /image/dashboard/dashboard_menu.png
-   :alt: dashboard_menu
+The **File** menu will allow you to *Restart* or *Quit* the DashBoard
 
-   Dashboard menu bar.
-
-The **File** menu will allow you to:
-
-* create a new Experiment file
-* Restart or Quit the DashBoard
-
-The **View** menu is allowing the user to save/load layouts of docked windows within the *Dashboard* and display or not
-the various toolbars
-
-.. note::
-
-    Docked Windows Layout: when an *Experiment* has been loaded and if the arrangement of the *Control Modules*
-    (their docked panels) is
-    modified, then a *layout* configuration file whose name derive from the loaded experiment filename will be created.
-    At each later loading of this experiment, the *Control Modules* arrangement will then be restored.
-
+The **View** menu is allowing to display or not the various toolbars
 
 The **Tools** menu will allow you to:
 
-* Open the Experiment Manager (see :ref:`experiment_manager`)
-* Open the State Manager
-* the Overshoot Manager
-* Load Extensions of the DashBoard
 * Look at the current log file in the default editor. The older logs can be found in the *.pymodaq* folder,
   see :ref:`section_configuration`.
 * Open and modify the Preferences related to all pymodaq modules and plugins (see Fig. :numref:`edit_config`)
-* Run the leco Coordinator (see :ref:`leco_communication`)
+* Run the leco Coordinator (see :ref:`leco_communication`) if the pymodaq SharedUI is used:
+  ``pymodaq.utils.shared_ui import SharedUI`` is used (adding some more functionalities compared to
+  the pymodaq_gui one).
 
 
   .. _edit_config:
@@ -95,28 +73,42 @@ The **Tools** menu will allow you to:
 
    Preferences popup window.
 
+Finally, the **Help** menu will allow you to:
 
-The **Tools/Experiment** menu enables to create or modify (using the :ref:`experiment_manager`) *experiments* that are XML
-files defining a set of actuators and detectors used for a given experiment. Each experiment has therefore a corresponding
-experiment file. At startup, the program checks for existing experiment files and create a menu entry for each of them.
+* Browse the documentation
+* Check for PyMoDAQ updates
+* Print the current versions of PyMoDAQ.
 
-The **State** menu, new from version 5.2.x, enables to create or modify (using the :ref:`state_manager`)
-*States* that are binary files defining a set of status for the settings of all actuators and detectors
-declared in the DashBoard (from the loaded experiment). One can therefore easily switch between different states, hence
-different settings for the control modules. Special *actions* are also available such as the initialization of control
-modules (could be interesting if some settings have to be set before initialization) or defining a value for an actuator.
 
-The **Overshoot** menu is used to configure actions like stoping the acquisition or setting the value of a given
-actuator when a detected value (from a running detector module) gets
-out of range with respect to some predefined bounds. For details, see :ref:`overshoot_manager`.
 
-The **ROI Modes** menu, see :ref:`roi_manager`, is used to save the state of all regions of interest defined by a user
-within the 1D or 2D viewers declared in the *DAQ_Viewers* control modules in the *Dashboard*. You can then, in one go,
-recall a particular complex configuration for data acquisition.
+Wrapping a SharedUI around a CustomApp
+--------------------------------------
 
-The **Remote/Shortcuts Control** menu, see :ref:`Remote_module`, is used to define key sequences on a keyboard or buttons/joysticks on a gamepad to
-trigger specific actions from the *Control modules*, for instance jogging of the actuator values using a joystick or grabing
-data from a detector using a button.
+As displayed on :numref:`naked_shared_ui` several menus are already created in the SharedUI. Therefore when it will
+wrap a CustomApp, the application menu will be merged (if named identically) together to offer some more advanced
+options while providing the basic one without having to recode them. The code to allow this is shown below for the
+DashBoard case:
 
-The **Extensions** menu let the user load a specific installed extensions. Default ones are the *DAQ_Scan* or
-*DAQ_Logger* ones. More specific ones can be installed, for instance the package `Pymodaq Femto`__
+.. code-block::
+
+    from pymodaq_gui.utils.widgets.window import make_window
+    from pymodaq_gui.utils.shared_ui import SharedUI
+    from pymodaq_gui.qt_utils import mkQApp
+
+    from pymodaq.dashboard import DashBoard
+
+
+    app = mkQApp('CommonWindow')
+
+    win, area = make_window(title='PyMoDAQ Dashboard')
+
+    shared_ui = SharedUI(win)
+    dashboard = DashBoard(area)
+    shared_ui.affect_application(dashboard)
+
+    sys.exit(app.exec())
+
+
+where all the *magic* is done using the line: :code:`shared_ui.affect_application(dashboard)`
+to add the menus and actions described above on top of those of the DashBoard.
+
