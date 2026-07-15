@@ -38,6 +38,7 @@ names = [
     'check_box_outline_blank',
     'circle',
     'close',
+    'code_blocks',
     'compare_arrows',
     'calculate',
     'contrast_square',
