@@ -92,7 +92,7 @@ class Console(CustomExt):
              'np': np})
 
     def setup_docks_and_widgets(self):
-        self.create_dashboard_toolbar()
+        self.create_dashboard_toolbar(add_break=False)
         self.mainwindow.setCentralWidget(self.console)
 
     def setup_actions(self):
