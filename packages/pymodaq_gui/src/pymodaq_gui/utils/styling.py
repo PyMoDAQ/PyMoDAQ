@@ -253,8 +253,8 @@ def create_icon(icon_name: Union[QtGui.QIcon, str, Path],
                 icon_checked_color: Union[QtGui.QColor, bytes, str] = None,
                 flip_h: bool = False,
                 flip_v: bool = False,
-                fill: bool = None,
-                rotate: int = 0):
+                rotate: int = 0,
+                fill: bool = None):
     """ Create an icon from various sources by order of preference:
 
     1) icon_name is a MaterialIcon
@@ -277,6 +277,8 @@ def create_icon(icon_name: Union[QtGui.QIcon, str, Path],
         Mirror the icon horizontally (left ↔ right).
     flip_v:
         Mirror the icon vertically (top ↔ bottom).
+    rotate:
+        Rotate the icon given the value in degrees
     fill:
         Is Material Icon filled or edged. If None, left to the user configuration else force the
         choice on the icon
@@ -320,7 +322,7 @@ def create_icon(icon_name: Union[QtGui.QIcon, str, Path],
     else:
         icon = QtGui.QIcon()
     icon = _flip_icon(icon, flip_h, flip_v)
-    return _rotate_icon(icon, rotate)
+    return _rotate_icon(icon, angle=rotate)
 
 
 def resource_path_exists(path: str) -> bool:

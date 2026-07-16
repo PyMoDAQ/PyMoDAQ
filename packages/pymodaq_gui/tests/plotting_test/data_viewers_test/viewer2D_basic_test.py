@@ -1,6 +1,6 @@
 from qtpy import QtWidgets
 from pymodaq_gui.plotting.data_viewers.viewer2D_basic import Viewer2DBasic
-from pymodaq_gui.plotting.utils.plot_utils import View_cust
+from pymodaq_gui.plotting.utils.plot_utils import ViewBox
 from pymodaq_gui.plotting.widgets import ImageWidget
 
 import pytest
@@ -30,7 +30,7 @@ def init_image(qtbot):
 @pytest.fixture
 def init_view(qtbot):
     form = QtWidgets.QWidget()
-    view = View_cust()
+    view = ViewBox()
     qtbot.addWidget(form)
     yield view
     form.close()
@@ -69,5 +69,5 @@ class TestView_cust:
     def test_init(self, init_view):
         view = init_view
 
-        assert isinstance(view, View_cust)
+        assert isinstance(view, ViewBox)
 

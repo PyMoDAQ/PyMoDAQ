@@ -203,16 +203,17 @@ class View0D(ActionManager, QObject):
             self.splitter.setSizes([0,1])
 
     def setup_actions(self):
-        self.add_action('clear', 'Clear plot', 'clear2', 'Clear the current plots')
+        self.add_action('clear', 'Clear plot', 'ink_eraser', 'Clear the current plots')
         self.add_widget('Nhistory', pyqtgraph.SpinBox, tip='Set the history length of the plot',
                         setters=dict(setMaximumWidth=100))
-        self.add_action('show_data_as_list', 'Show numbers', 'ChnNum', 'If triggered, will display last data as numbers'
+        self.add_action('show_data_as_list', 'Show numbers', 'pin', 'If triggered, will display last data as numbers'
                                                                        'in a side panel', checkable=True)
-        self.add_action('show_min_max', 'Show Min/Max lines', 'Statistics',
+        self.add_action('show_min_max', 'Show Min/Max lines', 'contrast_square',
                         'If triggered, will display horizontal dashed lines for min/max of data', checkable=True)
         self.add_action('sync_x_axis', 'Sync X axis', 'sync_disabled',
                         'If checked, adding a new channel resets all histories so curves '
-                        'share the same x-axis origin', checkable=True, checked=True, icon_checked='sync_lock',
+                        'share the same x-axis origin', checkable=True, checked=True,
+                        icon_checked='sync_lock',
                         icon_color='#F9A825', icon_checked_color='#607D8B')
 
     def _setup_widgets(self):

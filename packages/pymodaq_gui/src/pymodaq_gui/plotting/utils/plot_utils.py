@@ -512,7 +512,7 @@ class Data0DWithHistory:
         self._xaxis = np.array([])
 
 
-class View_cust(pg.ViewBox):
+class ViewBox(pg.ViewBox):
     """Custom ViewBox used to enable other properties compared to parent class: pg.ViewBox
 
     """
