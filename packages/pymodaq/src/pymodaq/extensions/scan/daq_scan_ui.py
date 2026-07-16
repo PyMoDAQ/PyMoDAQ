@@ -154,7 +154,7 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.connect_action('batch', lambda: self.command_sig.emit(ThreadCommand('batch')))
 
     def finalize_ui(self, app: 'DAQScan'):
-        app.create_dashboard_toolbar()
+        app.create_dashboard_toolbar(add_break=False)
 
         self.populate_toolbox_widget([app.settings_tree,
                                       app._h5saver.settings_tree],
