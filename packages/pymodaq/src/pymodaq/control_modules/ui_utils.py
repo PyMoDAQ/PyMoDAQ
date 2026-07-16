@@ -38,7 +38,7 @@ class ControlModuleUI(CustomApp):
         super().__init__(parent)
         self.config = config
         self._ini_state = False
-        self._settings_widget = None
+        self._settings_widget: QtWidgets.QWidget = None
 
     # ---- Common action setup methods ----
 
@@ -120,6 +120,7 @@ class ControlModuleUI(CustomApp):
 
     def _show_settings(self, show: bool = True):
         """Slot connected to the show_settings action."""
+        self._settings_widget.setWindowTitle(f'{self.title} settings')
         self._settings_widget.setVisible(show)
         self._settings_widget.closeEvent = lambda event: self.set_action_checked('show_settings', False)
 

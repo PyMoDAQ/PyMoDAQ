@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
+import itertools
 import sys
 import datetime
 import subprocess
@@ -19,6 +19,8 @@ from qtpy.QtWidgets import (
 )
 
 from pymodaq.utils.managers.roi_manager.roi_manager import ROIManager
+from pymodaq.control_modules.instruments import find_actuator_class_from_name
+from pymodaq.control_modules.move_utility_classes import UiType
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
 from pymodaq_utils.utils import ThreadCommand
@@ -245,7 +247,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.get_toolbar('overshooter').setEnabled(False)
         self.experiment_manager.enable_actions(True)
 
-        self.connect_leco(connect=True)
+
 
 
     def do_things_after_experiment_set(self, experiment_name: str):
@@ -273,6 +275,10 @@ class DashBoard(CustomApp, LECOComponentMixin):
             self._scripted_experiment_load = False
             self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.APPLIED_EXPERIMENT_DONE, True))
 
+        for device in itertools.chain(self.actuators_modules, self.detector_modules):
+            self._connect_leco_request.connect(device.connect_leco)
+        self._connect_leco_request.emit(self._connected)
+
     def get_leco_name(self) -> str:
         return "dashboard"
 
@@ -290,10 +296,10 @@ class DashBoard(CustomApp, LECOComponentMixin):
                 'detectors': [ detector.get_leco_name() for detector in self.detector_modules],
             }
             self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.SEND_DEVICES, devices))
-        elif status.command == LECODashboardCommands.GET_CONFIGURATIONS:
+        elif status.command == LECODashboardCommands.GET_STATES:
             entries = self.state_manager.entries if self.state_manager.is_action_enabled(ManagerActions.LIST) else []
-            self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.SEND_CONFIGURATIONS, entries))
-        elif status.command == LECODashboardCommands.APPLY_CONFIGURATION:
+            self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.SEND_STATES, entries))
+        elif status.command == LECODashboardCommands.APPLY_STATE:
             configuration = status.attribute
             loaded = False
             if (configuration in self.state_manager.entries and
@@ -304,7 +310,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
                 self.state_manager.execute_entry(self.state_manager.entry_filepath)
                 loaded = True
 
-            self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.APPLIED_CONFIGURATION_DONE, loaded))
+            self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.APPLIED_STATE_DONE, loaded))
         elif status.command == LECODashboardCommands.GET_EXPERIMENTS:
             self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.SEND_EXPERIMENTS, self.experiment_manager.entries))
         elif status.command == LECODashboardCommands.APPLY_EXPERIMENT:
@@ -764,7 +770,11 @@ class DashBoard(CustomApp, LECOComponentMixin):
         if actuator_widgets is None:
             actuator_widgets = []
         if actuators_modules is None:
-            actuators_modules = []      
+            actuators_modules = []
+
+        actuator_class = find_actuator_class_from_name(plug_type)
+        forced_ui = actuator_class.ui_type
+        ui_identifier = forced_ui if forced_ui != UiType.NONE else ui_identifier
 
         if ui_identifier is not None:
             pass

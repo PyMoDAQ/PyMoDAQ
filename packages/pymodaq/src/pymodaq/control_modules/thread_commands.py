@@ -90,6 +90,8 @@ class ControlToHardwareMove(StrEnum):
     MOVE_HOME = 'move_home'
     GET_ACTUATOR_VALUE = 'get_actuator_value'
     CLOSE = 'close'             # deprecated: use ControlToHardware.CLOSE
+    RESET_VALUE = 'reset_value'  # only valid for Relative actuator
+
 
 class ControlToHardwareViewer(StrEnum):
     """ Allowed commands sent from a DAQ_Viewer to its DetectorWorker in another thread
@@ -130,6 +132,7 @@ class UiToMainMove(StrEnum):
     REL_VALUE = 'rel_value'
 
     LOOP_GET_VALUE = 'loop_get_value'
+    RESET_VALUE = 'reset_value'  # only valid for Relative actuator
 
 
 class UiToMainViewer(StrEnum):

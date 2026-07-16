@@ -11,6 +11,7 @@ import numpy as np
 import pymodaq_data.plotting.utils
 from pymodaq_data.data import DataRaw, DataFromRoi, Axis, DataToExport, DataCalculated, DataWithAxes
 from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.plotting.items.crosshair import Crosshair
 from pymodaq_utils import utils
@@ -184,6 +185,8 @@ class DataDisplayer(QObject):
         for ind, plot_item in enumerate(self.get_plot_items()):
             if color is None:
                 scatter_color = self._plot_colors[ind]
+            else:
+                scatter_color = color
             if with_scatter:
                 pen = None
                 symbol_type = symbol
@@ -258,10 +261,10 @@ class DataDisplayer(QObject):
 
 class View1D(ActionManager, QObject):
     def __init__(self, parent_widget: QtWidgets.QWidget = None, show_toolbar=True,
-                 no_margins=False, flip_axes=False):
+                 no_margins=False, flip_axes=False, title=''):
         QObject.__init__(self)
         ActionManager.__init__(self, toolbar=QtWidgets.QToolBar())
-
+        self.title = title
         self.no_margins = no_margins
         self.flip_axes = flip_axes
 
@@ -373,15 +376,19 @@ class View1D(ActionManager, QObject):
 
     def prepare_ui(self):
         self.show_hide_crosshair(False)
+        config = Config()
+        for action_name in ('do_math', 'crosshair', 'aspect_ratio', 'scatter',
+                            'overlay', 'errors', 'sort', 'ROIselect'):
+            if config('gui', 'viewer', 'viewer1D', action_name):
+                self.get_action(action_name).trigger()
 
     def do_math(self):
         try:
-            if self.is_action_checked('do_math'):
-                self.roi_manager.roiwidget.show()
-                self.lineout_widgets.show()
-            else:
-                self.lineout_widgets.hide()
-                self.roi_manager.roiwidget.hide()
+            self.roi_manager.roiwidget.setWindowTitle(f'{self.title} ROIs')
+            self.roi_manager.roiwidget.setVisible(self.is_action_checked('do_math'))
+            self.roi_manager.roiwidget.closeEvent = lambda event: self.set_action_checked('do_math', False)
+
+            self.lineout_widgets.setVisible(self.is_action_checked('do_math'))
 
         except Exception as e:
             logger.exception(str(e))
@@ -395,12 +402,9 @@ class View1D(ActionManager, QObject):
         self.parent_widget.setLayout(QtWidgets.QVBoxLayout())
         if self.no_margins:
             self.parent_widget.layout().setContentsMargins(0, 0, 0, 0)
-        splitter_hor = QtWidgets.QSplitter(Qt.Horizontal)
-        self.parent_widget.layout().addWidget(splitter_hor)
-
         self.splitter_ver = QtWidgets.QSplitter(Qt.Vertical)
-        splitter_hor.addWidget(self.splitter_ver)
-        splitter_hor.addWidget(self.roi_manager.roiwidget)
+        self.parent_widget.layout().addWidget(self.splitter_ver)
+
         self.roi_manager.roiwidget.hide()
 
         self.splitter_ver.addWidget(self.toolbar)
@@ -524,7 +528,9 @@ class Viewer1D(ViewerBase):
                  flip_axes=False):
         super().__init__(parent=parent, title=title)
 
-        self.view = View1D(self.parent, show_toolbar=show_toolbar, no_margins=no_margins, flip_axes=flip_axes)
+        self.view = View1D(self.parent, show_toolbar=show_toolbar,
+                           no_margins=no_margins, flip_axes=flip_axes,
+                           title=title)
 
         self.filter_from_rois = Filter1DFromRois(self.view.roi_manager)
         self.filter_from_rois.register_activation_signal(self.view.get_action('do_math').triggered)
@@ -837,7 +843,7 @@ if __name__ == '__main__':  # pragma: no cover
     #main()
     # main_random()
     #main_errors()
-    #main_extra_scatter()
-    main_xy()
+    main_extra_scatter()
+    #main_xy()
     #main_view1D()
     #main_nans()

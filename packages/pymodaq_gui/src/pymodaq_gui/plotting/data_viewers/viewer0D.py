@@ -7,6 +7,7 @@ import sys
 import pyqtgraph
 
 from pymodaq_utils import utils
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_data import data as data_mod
 from pymodaq_data.plotting.utils import PlotColors
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -176,10 +177,10 @@ class DataDisplayer(QObject):
 
 class View0D(ActionManager, QObject):
     def __init__(self, parent_widget: QtWidgets.QWidget = None, show_toolbar=True,
-                 no_margins=False):
+                 no_margins=False, title=''):
         QObject.__init__(self)
         ActionManager.__init__(self, toolbar=QtWidgets.QToolBar())
-
+        self.title = title
         self.no_margins = no_margins
         self.data_displayer: DataDisplayer = None
         self.other_data_displayers: Dict[str, DataDisplayer] = {}
@@ -200,8 +201,6 @@ class View0D(ActionManager, QObject):
         self._prepare_ui()
         if not show_toolbar:
             self.splitter.setSizes([0,1])
-
-        self.get_action('Nhistory').setValue(200)  #default history length
 
     def setup_actions(self):
         self.add_action('clear', 'Clear plot', 'ink_eraser', 'Clear the current plots')
@@ -247,7 +246,13 @@ class View0D(ActionManager, QObject):
     def _prepare_ui(self):
         """add here everything needed at startup"""
         self.values_list.setVisible(False)
-        self.get_action('sync_x_axis').setChecked(True)
+        config = Config()
+        self.get_action('Nhistory').setValue(config('gui', 'viewer', 'viewer0D', 'Nhistory'))
+        for action_name in ('show_data_as_list', 'show_min_max'):
+            if config('gui', 'viewer', 'viewer0D', action_name):
+                self.get_action(action_name).trigger()
+        if not config('gui', 'viewer', 'viewer0D', 'sync_x_axis'):
+            self.get_action('sync_x_axis').trigger()
 
     def get_double_clicked(self):
         return self.plot_widget.view.sig_double_clicked
@@ -289,7 +294,8 @@ class Viewer0D(ViewerBase):
 
     def __init__(self, parent=None, title='', show_toolbar=True, no_margins=False):
         super().__init__(parent, title)
-        self.view = View0D(self.parent, show_toolbar=show_toolbar, no_margins=no_margins)
+        self.view = View0D(self.parent, show_toolbar=show_toolbar,
+                           no_margins=no_margins, title=title)
         self._labels = []
 
     def update_colors(self, colors: list, displayer=None):

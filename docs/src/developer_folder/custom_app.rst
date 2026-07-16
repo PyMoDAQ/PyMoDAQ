@@ -20,8 +20,9 @@ interface build using only PyMoDAQ's building blocks. The corresponding script t
 
 .. note::
 
-  A generic base class `CustomApp` located in `pymodaq.utils.gui_utils` can be used to
-  build very quickly standalone *Application* or *Dashboard* extensions. The *DAQ_Logger* extension
+  A generic base class `CustomApp` located in `pymodaq_gui.utils.custom_app` can be used to
+  build very quickly standalone *Application* or *Dashboard* extensions (using some more advanced
+  functionalities from the class :py:class:`pymodaq.extensions.custom_ext`. The *DAQ_Logger* extension
   has been built using it as well as some examples in the example folder.
 
 Below you'll find the skeleton of a *CustomApp* subclassing the base class and methods you
@@ -47,16 +48,7 @@ have to override with your App/Extension specifics:
             # init the App specific attributes
             self.raw_data = []
 
-        def setup_actions(self):
-            '''
-            subclass method from ActionManager
-            '''
-            logger.debug('setting actions')
-            self.add_action('quit', 'Quit', 'close2', "Quit program", toolbar=self.toolbar)
-            self.add_action('grab', 'Grab', 'camera', "Grab from camera", checkable=True, toolbar=self.toolbar)
-            logger.debug('actions set')
-
-        def setup_docks(self):
+        def setup_docks_and_widgets(self):
             '''
             subclass method from CustomApp
             '''
@@ -66,6 +58,25 @@ have to override with your App/Extension specifics:
             self.dock_settings.addWidget(self.settings_tree, 10)
             logger.debug('docks are set')
 
+        def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
+            '''
+            subclass method from CustomApp
+            '''
+            logger.debug('settings menu')
+            file_menu = self.add_menu('file', 'File')
+            file_menu.addSeparator()
+            logger.debug('menu set')
+
+        def setup_actions(self):
+            '''
+            subclass method from ActionManager
+            '''
+            logger.debug('setting actions')
+            self.add_action('quit', 'Quit', 'close2', "Quit program",
+                toolbar=self.toolbar, menu='file')
+            self.add_action('grab', 'Grab', 'camera', "Grab from camera", checkable=True, toolbar=self.toolbar)
+            logger.debug('actions set')
+
         def connect_things(self):
             '''
             subclass method from CustomApp
@@ -74,16 +85,6 @@ have to override with your App/Extension specifics:
             self.actions['quit'].connect(self.quit_function)
             self.actions['grab'].connect(self.detector.grab)
             logger.debug('connecting done')
-
-        def setup_menu(self):
-            '''
-            subclass method from CustomApp
-            '''
-            logger.debug('settings menu')
-            file_menu = self.mainwindow.menuBar().addMenu('File')
-            self.affect_to('quit', file_menu)
-            file_menu.addSeparator()
-             logger.debug('menu set')
 
         def value_changed(self, param):
             logger.debug(f'calling value_changed with param {param.name()}')

@@ -2,6 +2,8 @@ from typing import TYPE_CHECKING
 
 from qtpy import QtWidgets
 
+from pymodaq_utils.config import GlobalConfig
+
 from pymodaq.extensions.custom_ext import CustomExt
 from pymodaq_gui.utils.widgets.window import make_window
 
@@ -13,8 +15,11 @@ if TYPE_CHECKING:
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
     from pymodaq.dashboard import DashBoard
 
+config = GlobalConfig()
 
-def create_load_daq_move(ui_identifier='Original', title="DAQ_Move") -> tuple[SharedUI, 'DAQ_Move']:
+
+def create_load_daq_move(ui_identifier=config('pymodaq', 'actuator', 'ui'),
+                         title="DAQ_Move") -> tuple[SharedUI, 'DAQ_Move']:
     from pymodaq.control_modules.daq_move import DAQ_Move
 
     win, area = make_window(area=False, title='DAQ_Move')
@@ -70,7 +75,7 @@ def create_extension(dashboard: 'DashBoard',
     extension = extension_class(dockarea, dashboard, *ext_args, **ext_kwargs)
 
     shared_ui.affect_application(extension)
-    shared_ui.mainwindow.addToolBar(extension.get_toolbar('dashboard'))
+
     if add_toolbarbreak:
         shared_ui.mainwindow.addToolBarBreak()
     toolbars = extension.get_app_toolbars()

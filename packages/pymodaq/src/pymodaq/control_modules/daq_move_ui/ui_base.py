@@ -61,7 +61,9 @@ class DAQ_Move_UI_Base(ControlModuleUI):
 
         self.actuators_combo: QComboBox = None
         self.abs_value_sb: QSpinBoxWithShortcut = None
+        self.abs_value_sb_green: QSpinBoxWithShortcut = None
         self.abs_value_sb_2: QSpinBoxWithShortcut = None
+        self.abs_value_sb_red: QSpinBoxWithShortcut = None
         self.abs_value_sb_bis: QSpinBoxWithShortcut = None
         self.move_done_led: QLED = None
         self.current_value_sb: QSpinBox_ro = None
@@ -137,15 +139,21 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.actuators_combo = QComboBox()
         self.abs_value_sb = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('pymodaq', 'actuator', 'siprefix'))
         self.abs_value_sb.setStyleSheet("background-color : lightgreen; color: black")
+        self.abs_value_sb.setValue(config('pymodaq', 'actuator', 'default_value_green'))
+        self.abs_value_sb_green = self.abs_value_sb
 
         self.abs_value_sb_2 = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('pymodaq', 'actuator', 'siprefix'))
         self.abs_value_sb_2.setStyleSheet("background-color : lightcoral; color: black")
+        self.abs_value_sb_2.setValue(config('pymodaq', 'actuator', 'default_value_red'))
+        self.abs_value_sb_red = self.abs_value_sb_2
 
         self.abs_value_sb_bis = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('pymodaq', 'actuator', 'siprefix'))
         self.move_done_led = QLED(readonly=True)
-        self.current_value_sb = QSpinBox_ro(font_size=20, min_height=27,
+        self.current_value_sb = QSpinBox_ro(font_size=10, min_height=20,
                                             siPrefix=config('pymodaq', 'actuator', 'siprefix'),
                                             )
+        self.current_value_sb.setMinimumWidth(80)
+
         self.find_home_pb = PushButtonIcon('home', 'Find Home', icon_color=self.get_theme().magenta)
         self.move_rel_plus_pb = PushButtonIcon('step_out', 'Set Rel. (+)', icon_color=self.get_theme().yellow)
         self.move_abs_pb = PushButtonIcon('step', 'Set Abs.',
@@ -236,21 +244,26 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.add_widget('abs_red', self.abs_value_sb_2, toolbar=toolbar)
 
     def _setup_absolute_actions(self, toolbar: QtWidgets.QToolBar):
-        self.add_action('move_abs', 'Move Abs', 'step',
+        self.add_action('move_abs_green', 'Move Abs', 'step',
                         "Move to the set absolute value",
                         icon_color=self.get_theme().green,
                         toolbar=toolbar)
-        self.add_action('move_abs_2', 'Move Abs', 'step',
+        self.add_action('move_abs_red', 'Move Abs', 'step',
                         "Move to the other set absolute value",
                         icon_color=self.get_theme().red,
                         toolbar=toolbar)
 
     def _setup_relative_actions(self, toolbar: QtWidgets.QToolBar):
+
         self.add_widget('rel_move', self.rel_value_sb, toolbar=toolbar)
         self.add_action('move_rel_plus', 'Set Rel. (+)', 'step_out',
-                        toolbar=toolbar)
+                        toolbar=toolbar,
+                        icon_color=self.get_theme().yellow,)
         self.add_action('move_rel_minus', 'Set Rel. (-)', 'step_into',
-                        toolbar=toolbar)
+                        toolbar=toolbar,
+                        icon_color=self.get_theme().blue,)
+        self.add_action('reset_value', 'Reset Internal Value (no encoder)', 'restart_alt',
+                        toolbar=toolbar,)
 
     def connect_things(self):
         self._connect_common_actions()
@@ -259,14 +272,17 @@ class DAQ_Move_UI_Base(ControlModuleUI):
             self.connect_action('show_controls', self.show_controls)
         if 'show_graph' in self.actions_names:
             self.connect_action('show_graph', lambda checked: self.show_graph(not checked))
-        if 'move_abs' in self.actions_names:
-            self.connect_action('move_abs', lambda: self.emit_move_abs(self.abs_value_sb))
-        if 'move_abs_2' in self.actions_names:
-            self.connect_action('move_abs_2', lambda: self.emit_move_abs(self.abs_value_sb_2))
+        if 'move_abs_green' in self.actions_names:
+            self.connect_action('move_abs_green', lambda: self.emit_move_abs(self.abs_value_sb))
+        if 'move_abs_red' in self.actions_names:
+            self.connect_action('move_abs_red', lambda: self.emit_move_abs(self.abs_value_sb_2))
         if 'stop' in self.actions_names:
             self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.STOP, )))
         if 'show_config' in self.actions_names:
             self.connect_action('show_config', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.SHOW_CONFIG, )))
+        if 'reset_value' in self.actions_names:
+            self.connect_action('reset_value',
+                                lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.RESET_VALUE, )))
 
         self.move_abs_pb.clicked.connect(lambda: self.emit_move_abs(self.abs_value_sb_bis))
         self.abs_value_sb.shortcut["Ctrl+E"].activated.connect(lambda: self.emit_move_abs(self.abs_value_sb))
@@ -318,7 +334,7 @@ class DAQ_Move_UI_Base(ControlModuleUI):
     def enable_move_buttons(self, status):
         self.abs_value_sb.setEnabled(status)
         self.abs_value_sb_2.setEnabled(status)
-        for action_name in ('move_abs', 'move_abs_2', 'move_rel'):
+        for action_name in ('move_abs_green', 'move_abs_red', 'move_rel'):
             if action_name in self.actions_names:
                 self.get_action(action_name).setEnabled(status)
 
@@ -364,6 +380,9 @@ class DAQ_Move_UI_Base(ControlModuleUI):
     def set_abs_value(self, value: Q_):
         self.abs_value_sb_bis.setValue(value.m_as(self._unit))
 
+    def set_relative_value(self, value: Q_):
+        self.rel_value_sb.setValue(value.m_as(self._unit))
+
     def set_rel_value(self, value: Q_):
         self.rel_value_sb.setValue(value.m_as(self._unit))
 
@@ -402,6 +421,7 @@ class DAQ_Move_UI_Base(ControlModuleUI):
                                                                                 units=self._unit)))
 
     def emit_move_rel(self, sign):
+        self.rel_value_sb.editingFinished.emit()
         self.command_sig.emit(ThreadCommand(
             UiToMainMove.MOVE_REL,
             DataActuator(data=self.rel_value_sb.value() * (1 if sign == '+' else -1),
@@ -412,10 +432,12 @@ class DAQ_Move_UI_Base(ControlModuleUI):
     # -------------------------------------------------------------------------
 
     def show_controls(self, show: bool = True):
+        self.control_widget.setWindowTitle(f'{self.title} controls')
         self.control_widget.setVisible(show)
         self.control_widget.closeEvent = lambda event: self.set_action_checked('show_controls', False)
 
     def show_graph(self, show: bool = True):
+        self.graph_widget.setWindowTitle(f'{self.title} graph')
         self.graph_widget.setVisible(show)
         self.graph_widget.closeEvent = lambda event: self.set_action_checked('show_graph', False)
 
