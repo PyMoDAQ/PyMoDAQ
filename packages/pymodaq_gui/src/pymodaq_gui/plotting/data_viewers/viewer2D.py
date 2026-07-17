@@ -176,17 +176,31 @@ class ImageDisplayer(QObject):
         for ind, img_key in enumerate(IMAGE_TYPES):
             self._image_items[img_key] = image_item_factory(self.display_type)
             self._image_items[img_key].setZValue(ind)
-            self._image_items[img_key].setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
             self._plotitem.addItem(self._image_items[img_key])
+
             if ind < len(labels):
                 self.legend.addItem(self._image_items[img_key], labels[ind])
+        self.set_composition()
         self.updated_item.emit(self._image_items)
+
+    def set_composition(self, images: list[str] = None):
+        if images is None:
+            images = IMAGE_TYPES
+        for ind, img_key in enumerate(images):
+            if ind == 0:
+                self._image_items[img_key].setCompositionMode(QtGui.QPainter.CompositionMode.CompositionMode_SourceOver)
+            else:
+                self._image_items[img_key].setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
 
     def update_image_visibility(self, are_items_visible):
         if len(are_items_visible) != len(self._image_items):
             raise ValueError(f'The length of the argument is not equal with the number of images')
+        visible_images = []
         for ind, key in enumerate(IMAGE_TYPES):
             self._image_items[key].setVisible(are_items_visible[ind])
+            if are_items_visible[ind]:
+                visible_images.append(key)
+        self.set_composition(visible_images)
 
 
 class Histogrammer(QObject):
