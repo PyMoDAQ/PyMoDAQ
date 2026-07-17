@@ -3,7 +3,6 @@ import copy
 import numpy as np
 import sys
 from typing import Union, Iterable, List, Dict
-
 import qt_themes
 from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal
@@ -11,12 +10,14 @@ import pyqtgraph as pg
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 from pyqtgraph import ROI as pgROI
 
+import pymodaq_data
+from pymodaq_gui import foreground_color
 from pymodaq_gui.plotting.items.roi_sync import roi_format
 from pymodaq_gui.plotting.utils.lineout import Lineouts
 from pymodaq_gui.plotting.utils.plot_utils import ViewBox
 from pymodaq_gui.qt_utils import mkQApp
 from pymodaq_utils import utils
-from pymodaq_utils.config import GlobalConfig as Config
+from pymodaq_utils.config import GlobalConfig
 from pymodaq_utils.logger import set_logger, get_module_name
 
 from pymodaq_data.data import (Axis, DataToExport, DataRaw,
@@ -52,15 +53,15 @@ COLORS_DICT = dict(red=(255, 0, 0), green=(0, 255, 0), blue=(0, 0, 255), spread=
 IMAGE_TYPES = ['red', 'green', 'blue']
 COLOR_LIST = PlotColors()
 crosshair_pens = make_dashed_pens(color=(255, 255, 0))
+config = GlobalConfig()
 
 
-def image_item_factory(item_type='uniform', axisOrder='row-major', pen='r') -> Union[UniformImageItem, SpreadImageItem]:
+def image_item_factory(item_type='uniform', axisOrder='row-major') -> Union[UniformImageItem, SpreadImageItem]:
     if item_type == 'uniform':
-        image = UniformImageItem(pen=pen)
+        image = UniformImageItem()
         image.setOpts(axisOrder=axisOrder)
     elif item_type == 'spread':
-        image = SpreadImageItem(pen=pen)
-    image.setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
+        image = SpreadImageItem()
     return image
 
 
@@ -173,7 +174,9 @@ class ImageDisplayer(QObject):
                 labels.append(IMAGE_TYPES[len(labels)])
 
         for ind, img_key in enumerate(IMAGE_TYPES):
-            self._image_items[img_key] = image_item_factory(self.display_type, pen=img_key[0])
+            self._image_items[img_key] = image_item_factory(self.display_type)
+            self._image_items[img_key].setZValue(ind)
+            self._image_items[img_key].setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
             self._plotitem.addItem(self._image_items[img_key])
             if ind < len(labels):
                 self.legend.addItem(self._image_items[img_key], labels[ind])
@@ -421,11 +424,11 @@ class View2D(ActionManager, QtCore.QObject):
 
         if data_distribution.name == 'uniform':
             self.roi_target = pgROI(pos=(0, 0), size=(20, 20), movable=False, rotatable=False,
-                                    resizable=False)
+                                    resizable=False, pen=foreground_color)
             self.plotitem.addItem(self.roi_target)
 
         elif data_distribution.name == 'spread':
-            self.roi_target = Crosshair(self.image_widget, pen=(255, 255, 255))
+            self.roi_target = Crosshair(self.image_widget, pen=foreground_color)
         self.roi_target.setVisible(False)
 
     def show_roi_target(self, show=True):
@@ -473,8 +476,6 @@ class View2D(ActionManager, QtCore.QObject):
         self.graphs_widget.layout().setContentsMargins(0, 0, 0, 0)
         self.setup_graphs(self.graphs_widget.layout())
         splitter_vertical.addWidget(self.graphs_widget)
-
-
 
         self.splitter_VLeft.splitterMoved[int, int].connect(self.move_right_splitter)
         self.splitter_VRight.splitterMoved[int, int].connect(self.move_left_splitter)
@@ -605,7 +606,7 @@ class View2D(ActionManager, QtCore.QObject):
         self.ROIselect.setVisible(False)
         self.show_hide_crosshair(False)
         self.show_lineout_widgets()
-        config = Config()
+
         for action_name in ('autolevels', 'auto_levels_sym', 'histo', 'roi', 'isocurve',
                             'crosshair', 'ROIselect', 'flip_ud', 'flip_lr', 'rotate',
                             'opposite', 'legend'):
