@@ -3,6 +3,7 @@ import datetime
 from collections import OrderedDict
 from typing import List, Iterable, Union, Dict, Tuple
 
+from pyqtgraph import mkPen
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal, Qt, QRectF
 import pyqtgraph as pg
@@ -11,8 +12,7 @@ import numpy as np
 import pymodaq_data.plotting.utils
 from pymodaq_data.data import DataRaw, DataFromRoi, Axis, DataToExport, DataCalculated, DataWithAxes
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_utils.config import GlobalConfig as Config
-from pymodaq_gui.parameter import utils as putils
+from pymodaq_utils.config import GlobalConfig
 from pymodaq_gui.plotting.items.crosshair import Crosshair
 from pymodaq_utils import utils
 
@@ -25,10 +25,12 @@ from pymodaq_gui.managers.roi_viewer_manager import ROIViewerManager, roi_format
 from pymodaq_gui.plotting.utils.filter import Filter1DFromCrosshair, Filter1DFromRois
 from pymodaq_gui.plotting.widgets import PlotWidget
 from pymodaq_gui.plotting.data_viewers.viewer0D import Viewer0D
+from pymodaq_gui import foreground_color
 
 logger = set_logger(get_module_name(__file__))
 
 PLOT_COLORS = pymodaq_data.plotting.utils.PlotColors()
+config = GlobalConfig()
 
 
 class DataDisplayer(QObject):
@@ -78,6 +80,10 @@ class DataDisplayer(QObject):
 
     def get_axis(self) -> Axis:
         return self._axis
+
+    @property
+    def linewidth(self) -> int:
+        return config('data', 'plotting', 'linewidth')
 
     def get_plot_items(self):
         return self._plot_items
@@ -193,7 +199,7 @@ class DataDisplayer(QObject):
                 brush = scatter_color
 
             else:
-                pen = scatter_color
+                pen = mkPen(scatter_color, width=self.linewidth)
                 symbol_type = None
                 brush = None
 
@@ -213,12 +219,15 @@ class DataDisplayer(QObject):
 
         if data is not None:
             for ind in range(len(data)):
-                self._plot_items.append(pg.PlotDataItem(pen=self._plot_colors[ind]))
+                self._plot_items.append(pg.PlotDataItem(pen=mkPen(self._plot_colors[ind],
+                                                                  width=self.linewidth)))
                 self._plotitem.addItem(self._plot_items[-1])
                 self.legend.addItem(self._plot_items[-1], data.labels[ind])
                 if show_errors:
-                    self._boundary_items.append((pg.PlotDataItem(pen=list(self._plot_colors[ind]) + [100]),
-                                                 pg.PlotDataItem(pen=list(self._plot_colors[ind]) + [100])))
+                    self._boundary_items.append((pg.PlotDataItem(pen=mkPen(list(self._plot_colors[ind]) + [100],
+                                                                           width=self.linewidth)),
+                                                 pg.PlotDataItem(pen=mkPen(list(self._plot_colors[ind]) + [100],
+                                                                           width=self.linewidth))))
                     self._plotitem.addItem(self._boundary_items[-1][0])
                     self._plotitem.addItem(self._boundary_items[-1][1])
                     self._fill_items.append(pg.FillBetweenItem(*self._boundary_items[-1],
@@ -274,8 +283,8 @@ class View1D(ActionManager, QObject):
         self.lineout_viewers: Viewer0D = None
         self.crosshair: Crosshair = None
 
-        self.roi_target = pg.InfiniteLine(pen='w')
-        self.ROIselect = LinearROI(pen='w')
+        self.roi_target = pg.InfiniteLine(pen=foreground_color)
+        self.ROIselect = LinearROI(pen=foreground_color)
 
         self.setup_actions()
 
@@ -376,7 +385,6 @@ class View1D(ActionManager, QObject):
 
     def prepare_ui(self):
         self.show_hide_crosshair(False)
-        config = Config()
         for action_name in ('do_math', 'crosshair', 'aspect_ratio', 'scatter',
                             'overlay', 'errors', 'sort', 'ROIselect'):
             if config('gui', 'viewer', 'viewer1D', action_name):

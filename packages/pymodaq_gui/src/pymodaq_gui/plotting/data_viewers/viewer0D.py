@@ -5,23 +5,26 @@ from qtpy import QtWidgets, QtGui
 from qtpy.QtCore import QObject, Slot, Signal, Qt
 import sys
 import pyqtgraph
+from pyqtgraph import mkPen
 
-from pymodaq_utils import utils
-from pymodaq_utils.config import GlobalConfig as Config
+from pymodaq_utils.config import GlobalConfig
+from pymodaq_utils.logger import set_logger, get_module_name
+
 from pymodaq_data import data as data_mod
 from pymodaq_data.plotting.utils import PlotColors
-from pymodaq_utils.logger import set_logger, get_module_name
+
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerBase
 from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_gui.plotting.widgets import PlotWidget
 from pymodaq_gui.plotting.utils.plot_utils import Data0DWithHistory
-
+from pymodaq_gui import foreground_color
 import numpy as np
 from collections import OrderedDict
 import datetime
 
 logger = set_logger(get_module_name(__file__))
 PLOT_COLORS = [dict(color=color) for color in PlotColors()]
+config = GlobalConfig()
 
 
 class DataDisplayer(QObject):
@@ -64,7 +67,7 @@ class DataDisplayer(QObject):
         self._color_indices[label] = color_idx
         color = self.colors[color_idx]
 
-        plot_item = pyqtgraph.PlotDataItem(pen=color)
+        plot_item = pyqtgraph.PlotDataItem(pen=mkPen(color=color['color'], width=self.linewidth))
         self._plot_items[label] = plot_item
         self._plotitem.addItem(plot_item)
         self.legend.addItem(plot_item, f"{label} ({units})")
@@ -97,11 +100,15 @@ class DataDisplayer(QObject):
         self._mins.pop(label, None)
         self._maxs.pop(label, None)
 
+    @property
+    def linewidth(self) -> int:
+        return config('data', 'plotting', 'linewidth')
+
     def update_colors(self, colors: List[QtGui.QPen]):
         self.colors[0:len(colors)] = colors
         for label, color_idx in self._color_indices.items():
             color = self.colors[color_idx]
-            self._plot_items[label].setPen(color)
+            self._plot_items[label].setPen(color=color['color'], width=self.linewidth)
             dash_pen = pyqtgraph.mkPen(color=color['color'], style=Qt.PenStyle.DashLine)
             self._max_lines[label].setPen(dash_pen)
             self._min_lines[label].setPen(dash_pen)
@@ -246,7 +253,6 @@ class View0D(ActionManager, QObject):
     def _prepare_ui(self):
         """add here everything needed at startup"""
         self.values_list.setVisible(False)
-        config = Config()
         self.get_action('Nhistory').setValue(config('gui', 'viewer', 'viewer0D', 'Nhistory'))
         for action_name in ('show_data_as_list', 'show_min_max'):
             if config('gui', 'viewer', 'viewer0D', action_name):
