@@ -71,7 +71,9 @@ class DataDisplayer(QObject):
         self._plot_items[label] = plot_item
         self._plotitem.addItem(plot_item)
         self.legend.addItem(plot_item, f"{label} ({units})")
-        dash_pen = pyqtgraph.mkPen(color=color['color'], style=Qt.PenStyle.DashLine)
+        dash_pen = pyqtgraph.mkPen(color=color['color'],
+                                   style=Qt.PenStyle.DashLine,
+                                   )
         max_line = pyqtgraph.InfiniteLine(angle=0, pen=dash_pen)
         min_line = pyqtgraph.InfiniteLine(angle=0, pen=dash_pen)
         self._max_lines[label] = max_line
@@ -104,12 +106,15 @@ class DataDisplayer(QObject):
     def linewidth(self) -> int:
         return config('data', 'plotting', 'linewidth')
 
-    def update_colors(self, colors: List[QtGui.QPen]):
+    def update_colors(self, colors: List[dict]):
         self.colors[0:len(colors)] = colors
         for label, color_idx in self._color_indices.items():
             color = self.colors[color_idx]
-            self._plot_items[label].setPen(color=color['color'], width=self.linewidth)
-            dash_pen = pyqtgraph.mkPen(color=color['color'], style=Qt.PenStyle.DashLine)
+            width = color.pop('width', self.linewidth)
+
+            self._plot_items[label].setPen(mkPen(width=width, **color))
+            dash_pen = pyqtgraph.mkPen(color=color['color'],
+                                       style=Qt.PenStyle.DashLine)
             self._max_lines[label].setPen(dash_pen)
             self._min_lines[label].setPen(dash_pen)
 

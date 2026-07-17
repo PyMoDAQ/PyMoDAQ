@@ -312,7 +312,8 @@ class View1D(ActionManager, QObject):
             self.splitter_ver.setSizes([0, 1, 0])
 
     def add_data_displayer(self, displayer_name: str, plot_colors=PLOT_COLORS):
-        self.other_data_displayers[displayer_name] = DataDisplayer(self.plotitem, self.flip_axes,
+        self.other_data_displayers[displayer_name] = DataDisplayer(self.plotitem,
+                                                                   self.flip_axes,
                                                                    plot_colors)
 
     def remove_data_displayer(self, displayer_name: str):

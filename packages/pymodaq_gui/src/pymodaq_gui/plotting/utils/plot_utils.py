@@ -11,14 +11,19 @@ import pyqtgraph as pg
 from qtpy import QtGui, QtCore
 from scipy.spatial import Delaunay as Triangulation
 
+from pymodaq_utils.config import GlobalConfig
 from pymodaq_data import data as data_mod
+
+config = GlobalConfig()
 
 
 def make_dashed_pens(color: tuple, nstyle=3):
-    pens = [dict(color=color)]
+    pens = [dict(color=color, width=config('data', 'plotting', 'linewidth'))]
     if nstyle > 1:
         for ind in range(nstyle - 1):
-            pens.append(dict(color=color, dash=np.array([5, 5]) * (ind + 1)))
+            pens.append(dict(color=color,
+                             dash=np.array([5, 5]) * (ind + 1),
+                             width=config('data', 'plotting', 'linewidth')))
     return pens
 
 
