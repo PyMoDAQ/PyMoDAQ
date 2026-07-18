@@ -6,9 +6,7 @@
 Contains all objects related to the DAQScan module, to do automated scans, saving data...
 """
 
-import sys
 from collections import OrderedDict
-import datetime
 from typing import TYPE_CHECKING, Union
 
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -25,7 +23,7 @@ from pymodaq_gui.utils.widgets import QLED
 from pymodaq.extensions.daq_logger.h5logging import H5Logger
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 from pymodaq.utils.data import DataActuator, DataToExport
-from pymodaq.extensions.custom_ext import CustomExt
+from pymodaq.utils.custom_ext import CustomExt
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard

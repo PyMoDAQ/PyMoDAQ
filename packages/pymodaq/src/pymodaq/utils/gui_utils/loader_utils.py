@@ -4,7 +4,7 @@ from qtpy import QtWidgets
 
 from pymodaq_utils.config import GlobalConfig
 
-from pymodaq.extensions.custom_ext import CustomExt
+from pymodaq.utils.custom_ext import CustomExt
 from pymodaq_gui.utils.widgets.window import make_window
 
 from pymodaq.utils.shared_ui import SharedUI

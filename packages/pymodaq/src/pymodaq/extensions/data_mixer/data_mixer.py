@@ -1,18 +1,15 @@
-import sys
-
 from qtpy import QtWidgets, QtCore
-import numpy as np
 from pathlib import Path
 
 from typing import Optional
 
 from pymodaq_gui import utils as gutils
-from pymodaq_utils.config import ConfigError, GlobalConfig as Config
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import find_dict_in_list_from_key_val
-from pymodaq_data.data import DataToExport, DataWithAxes
+from pymodaq_data.data import DataToExport
 
-from pymodaq.extensions.custom_ext import CustomExt
+from pymodaq.utils.custom_ext import CustomExt
 
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerDispatcher
 from pymodaq_gui.utils.widgets.qled import QLED
@@ -20,7 +17,7 @@ from pymodaq_gui.parameter import utils as putils
 
 
 from pymodaq.extensions.data_mixer.model import get_models, DataMixerModel
-from pymodaq.extensions.data_mixer.utils import DataMixerConfig, find_key_in_nested_dict
+from pymodaq.extensions.data_mixer.utils import DataMixerConfig
 
 logger = set_logger(get_module_name(__file__))
 

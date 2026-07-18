@@ -1,24 +1,24 @@
 import time
 from pymodaq.control_modules.move_utility_classes import HW_SETTINGS_KEY as ACTUATOR_SETTINGS_KEY
 from functools import partial  # needed for the button to sync setpoint with currpoint
-from typing import Dict, List, TYPE_CHECKING
+from typing import Dict, TYPE_CHECKING
 from collections import deque
 import numpy as np
 
-from qtpy import QtGui, QtWidgets
+from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, QThread, Signal
 
 from simple_pid import PID
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import ThreadCommand, find_dict_in_list_from_key_val
-from pymodaq.utils.exceptions import DetectorError, ActuatorError, PIDError
+from pymodaq.utils.exceptions import PIDError
 
 from pymodaq_gui.parameter import utils as putils
-from pymodaq_gui.parameter import Parameter, ParameterTree
+from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.plotting.data_viewers.viewer0D import Viewer0D
 from pymodaq_gui.utils.widgets import QLED, LabelWithFont, SpinBox
-from pymodaq_gui.utils.dock import DockArea, Dock
+from pymodaq_gui.utils.dock import Dock
 
 
 from pymodaq_data.data import DataToExport, DataCalculated, DataRaw
@@ -30,10 +30,10 @@ from pymodaq.utils.data import DataActuator, DataToActuators
 from pymodaq.extensions.pid.actuator_controller import PIDController
 from pymodaq.extensions.pid.utils import PIDModelGeneric
 
-from pymodaq.extensions.custom_ext import CustomExt
+from pymodaq.utils.custom_ext import CustomExt
 
 if TYPE_CHECKING:
-    from pymodaq.control_modules.daq_move import DAQ_Move
+    pass
 
 
 config = Config()

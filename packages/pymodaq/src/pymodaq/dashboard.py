@@ -9,8 +9,8 @@ from pathlib import Path
 from typing import Union, List, Any, TYPE_CHECKING, Sequence
 import argparse
 
-from qtpy import QtGui, QtWidgets, QtCore
-from qtpy.QtCore import Qt, QThread, Signal, QSize
+from qtpy import QtWidgets, QtCore
+from qtpy.QtCore import Qt, Signal, QSize
 from qtpy.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
@@ -25,17 +25,16 @@ from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import GlobalConfig as Config
-from pymodaq_utils.enums import BaseEnum, StrEnum
-
+from pymodaq_utils.enums import BaseEnum
 
 from pymodaq_gui.parameter import ParameterTree, Parameter
-from pymodaq_gui.utils import DockArea, Dock, select_file
+from pymodaq_gui.utils import DockArea, Dock
 import pymodaq_gui.utils.layout as layout_mod
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.managers.roi_viewer_manager import ROISaver
 from pymodaq_gui.utils.custom_app import CustomApp
 from pymodaq_gui.utils.shared_ui import MenuToolbarNames
-from pymodaq_gui.config import get_set_layout_path, get_set_roi_path
+from pymodaq_gui.config import get_set_layout_path
 from pymodaq_gui.utils.widgets.window import make_window
 
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager
@@ -62,7 +61,7 @@ from pymodaq_gui.managers.manager_base import ManagerActions # should be importe
 
 
 if TYPE_CHECKING:
-    from pymodaq.extensions.custom_ext import CustomExt
+    from pymodaq.utils.custom_ext import CustomExt
 
 logger = set_logger(get_module_name(__file__))
 
