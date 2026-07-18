@@ -369,7 +369,7 @@ class DAQ_PID(CustomExt):
         file_menu.addSeparator()
         self.actions_manager.affect_to('quit', file_menu)
         """
-        self.create_dashboard_toolbar()
+        self.create_dashboard_toolbar(add_break=False)
 
     def value_changed(self, param):
         """to be subclassed for actions to perform when one of the param's value in self.settings is changed

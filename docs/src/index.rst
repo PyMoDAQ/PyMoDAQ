@@ -20,6 +20,7 @@ actuator hardware to go straight to the data acquisition of interest. It provide
        allowfullscreen></iframe>
    </div>
 
+
 French version `here`_
 
 .. _here: https://youtu.be/TrRy6HL3h3c
@@ -138,3 +139,4 @@ If you would like to get updated with the evolutions of the project, please subs
 
    PyMoDAQ Femto <https://pymodaq-femto.readthedocs.io/en/latest/>
    PyMoDAQ Plugins DAQmx <https://pymodaq.github.io/pymodaq_plugins_daqmx/>
+   PyMoDAQ BeamShaping <https://pymodaq-plugins-beam-shaping.readthedocs.io/en/latest//>

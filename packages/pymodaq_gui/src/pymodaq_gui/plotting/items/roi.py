@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING, List, Tuple, Union, Callable, Iterable as Iter
 
 import numpy as np
 import pyqtgraph as pg
+
+from pymodaq_data import DataDim
 from pymodaq_data.post_treatment.process_to_scalar import DataProcessorFactory
 from pymodaq_gui.plotting.utils.plot_utils import Point
 from pymodaq_utils.logger import get_module_name, set_logger
@@ -12,7 +14,7 @@ from pymodaq_utils.math_utils import rotate2D
 
 from pymodaq_data.plotting.utils import PlotColors
 
-from pyqtgraph import ROI as pgROI, ROI, LinearRegionItem
+from pyqtgraph import ROI as pgROI, ROI, LinearRegionItem, mkColor
 from pyqtgraph import LinearRegionItem as pgLinearROI
 from pyqtgraph import functions as fn
 from qtpy import QtCore, QtGui, QtWidgets
@@ -35,15 +37,123 @@ def roi_format(index):
     return f'{ROI_NAME_PREFIX}{index:02d}'
 
 
-class DataDim(StrEnum):
-    Data1D = 'Data1D'
-    Data2D = 'Data2D'
+class ROIDim(StrEnum):
+    ROI1D = 'data_1D'
+    ROI2D = 'data_2D'
+
+    def map_to_datadim(self) -> DataDim:
+        if self == ROIDim.ROI1D:
+            return DataDim.Data1D
+        else:
+            return DataDim.Data2D
 
 
 class ROIBase:
     """ Base class to be inherited for ROI to be created by the factory"""
-    DIMENSIONALITY: DataDim = NotImplemented
+    DIMENSIONALITY: ROIDim = NotImplemented
     DESCRIPTOR: str = NotImplemented  # the identifier of the ROI, its name!
+
+    index_signal = Signal(int)
+
+    def __init__(self, index=0, name='roi', compute=True):
+        self.name = name
+        self.index = index
+        self._compute = compute
+        self.menu = None
+        self.signalBlocker = None
+        self._clipboard = None
+
+    def init_qt(self):
+        self.signalBlocker = QSignalBlocker(self)
+        self.signalBlocker.unblock()
+        self._clipboard = QtGui.QGuiApplication.clipboard()
+
+
+    def emit_index_signal(self):
+        self.index_signal.emit(self.index)
+
+    @abstractmethod
+    def mouseClickEvent(self, ev):
+        ...
+
+    @abstractmethod
+    def getMenu(self):
+        ...
+
+    def _emitCopyRequest(self):
+        self.sigCopyRequested.emit(self)
+
+    def mouseDoubleClickEvent(self, ev):
+        if ev.button() == QtCore.Qt.MouseButton.LeftButton:
+            ev.accept()
+            self.sigDoubleClicked.emit(self, ev)
+
+    @abstractmethod
+    def to_info(self) -> 'RoiInfo':
+        """ Return the info about the ROI
+
+        To be Reimplemented for different ROI types"""
+        ...
+
+    def copy_clipboard(self):
+        info = self.to_info()
+        self._clipboard.setText(str(info.to_slices()))
+
+    def color(self):
+        raise NotImplementedError
+
+    def set_color(self, value):
+        raise NotImplementedError
+
+    def center(self) -> IterableType[float]:
+        raise NotImplementedError
+
+    def set_center(self, value: IterableType[float]):
+        raise NotImplementedError
+
+    def width(self) -> float:
+        raise NotImplementedError
+
+    def set_width(self, value: float):
+        raise NotImplementedError
+
+    def height(self) -> float:
+        raise NotImplementedError
+
+    def set_height(self, value: float):
+        raise NotImplementedError
+
+    def x(self) -> float:
+        raise NotImplementedError
+
+    def set_x(self, value: float):
+        raise NotImplementedError
+
+    def y(self) -> float:
+        raise NotImplementedError
+
+    def set_y(self, value: float):
+        raise NotImplementedError
+
+    def key(self) -> str:
+        return roi_format(self.index)
+
+    def type(self) -> str:
+        return type(self).__name__
+
+    def doShow(self, status: bool = True):
+        if status:
+            self.show()
+        else:
+            self.hide()
+
+    @property
+    def compute(self):
+        return self._compute
+
+    @compute.setter
+    def compute(self, compute: bool = True):
+        self._compute = compute
 
 
 class ROIFactory():
@@ -72,12 +182,12 @@ class ROIFactory():
         return inner_wrapper
 
     @classmethod
-    def create(cls, dimensionality: DataDim, descriptor: str, *args, **kwargs) -> ROIBase:
+    def create(cls, dimensionality: ROIDim, descriptor: str, *args, **kwargs) -> ROIBase:
         """Factory command to create the ROI object.
         This method gets the appropriate ROI class from the registry and instantiates it.
         Parameters
         ----------
-        dimensionality: DataDim
+        dimensionality: ROIDim
             the dimensionality of the ROI
         descriptor: str
             the roi descriptor string
@@ -98,114 +208,36 @@ class ROIFactory():
         return list(cls.registry.keys()).sort()
 
     @classmethod
-    def get_descriptors_from_dimensionality(cls, dim: DataDim):
+    def get_descriptors_from_dimensionality(cls, dim: ROIDim):
         """Returns a list of ROi descriptors for a given dimensionality"""
         descriptors = list(cls.registry[dim].keys())
         descriptors.sort()
         return descriptors
 
 
-class ROIMixin:
-    index_signal = Signal(int)
-
-    def __init__(self, index=0, name='roi', compute=True):
-        self.name = name
-        self.index = index
-        self._compute = compute
-        self.menu = None
-        self.signalBlocker = None
-        self._clipboard = None
-
-    def init_qt(self):
-        self.signalBlocker = QSignalBlocker(self)
-        self.signalBlocker.unblock()
-        self._clipboard = QtGui.QGuiApplication.clipboard()
-
-
-    def emit_index_signal(self):
-        self.index_signal.emit(self.index)
-
-    @abstractmethod
-    def mouseClickEvent(self, ev):
-        ...
-
-    @abstractmethod
-    def color(self):
-        ...
-
-    @abstractmethod
-    def getMenu(self):
-        ...
-
-    def _emitCopyRequest(self):
-        self.sigCopyRequested.emit(self)
-
-    def mouseDoubleClickEvent(self, ev):
-        if ev.button() == QtCore.Qt.MouseButton.LeftButton:
-            ev.accept()
-            self.sigDoubleClicked.emit(self, ev)
-
-    @abstractmethod
-    def to_info(self) -> 'RoiInfo':
-        """ Return the info about the ROI
-
-        To be Reimplemented for different ROI types"""
-        ...
-
-    def copy_clipboard(self):
-        info = self.to_info()
-        self._clipboard.setText(str(info.to_slices()))
-
-    @abstractmethod
-    def center(self):
-        ...
-
-    @abstractmethod
-    def width(self):
-        ...
-    @abstractmethod
-    def height(self):
-        ...
-
-    def key(self) -> str:
-        return roi_format(self.index)
-
-    def type(self) -> str:
-        return type(self).__name__
-
-    def doShow(self, status: bool = True):
-        if status:
-            self.show()
-        else:
-            self.hide()
-
-    @property
-    def compute(self):
-        return self._compute
-
-    @compute.setter
-    def compute(self, compute: bool = True):
-        self._compute = compute
-
-
-class ROI(pgROI, ROIMixin, ROIBase):
+class ROI(pgROI, ROIBase):
     """ Base class for all 2D ROI"""
     sigCopyRequested = Signal(object)
     sigDoubleClicked = Signal(object, object)
     sigRemoveRequested = Signal(object)
 
     def __init__(self, *args, index=0, name='roi', compute=True, **kwargs):
+        color = kwargs.pop('color', None)
+        angle = kwargs.pop('angle', None)
         pgROI.__init__(self, *args, **kwargs)
-        ROIBase.__init__(self)
-        ROIMixin.__init__(self, index=index, name=name, compute=compute)
+        ROIBase.__init__(self, index=index, name=name, compute=compute)
 
         self.init_qt()
+        if color is not None:
+            self.set_color(color)
+        if angle is not None:
+            self.setAngle(angle)
 
     def getMenu(self):
         if self.menu is None:
             self.menu = QtWidgets.QMenu()
             self.menu.setTitle(translate("ROI", "ROI"))
-            self.menu.addAction('Copy ROI to clipboard', self.copy_clipboard)
+            self.menu.addAction('Copy ROI slice to clipboard', self.copy_clipboard)
             self.menu.addAction("Copy ROI", self._emitCopyRequest)
             self.menu.addAction("Remove ROI", self._emitRemoveRequest)
         return self.menu
@@ -237,9 +269,11 @@ class ROI(pgROI, ROIMixin, ROIBase):
         else:
             ev.ignore()
 
-    @property
     def color(self):
         return self.pen.color()
+
+    def set_color(self, value):
+        self.pen.setColor(value)
 
     def center(self) -> pg.Point:
         """ Get the center position of the ROI """
@@ -247,7 +281,11 @@ class ROI(pgROI, ROIMixin, ROIBase):
 
     def set_center(self, center: Union[pg.Point, Tuple[float, float]]):
         """ Set the center position of the ROI """
-        self.setPos(center - rotate2D(point=(self.width()/2,self.height()/2), angle=np.deg2rad(self.angle())))
+        if isinstance(center, pg.Point):
+            center = (center.x(), center.y())
+        pos = tuple(np.array(center) -
+                    np.array(rotate2D(point=(self.width()/2, self.height()/2), angle=np.deg2rad(self.angle()))))
+        self.setPos(pos)
 
     def to_info(self) -> 'RoiInfo':
         """ Return the info about the ROI """
@@ -256,8 +294,27 @@ class ROI(pgROI, ROIMixin, ROIBase):
     def width(self) -> float:
         return self.size().x()
 
+    def set_width(self, value: float):
+        self.setSize((value, self.height()), center=(0.5, 0.5))
+
     def height(self) -> float:
         return self.size().y()
+
+    def set_height(self, value: float):
+        self.setSize((self.width(), value), center=(0.5, 0.5))
+
+    def x(self) -> float:
+        return self.pos().x()
+
+    def set_x(self, value: float):
+        self.setPos(value, self.y())
+
+    def y(self) -> float:
+        return self.pos().y()
+
+    def set_y(self, value: float):
+        self.setPos(self.x(), value)
+
 
 
 class ROIBrushable(ROI):
@@ -290,20 +347,22 @@ class ROIBrushable(ROI):
 
 
 @ROIFactory.register()
-class LinearROI(pgLinearROI, ROIMixin, ROIBase):
+class LinearROI(pgLinearROI, ROIBase):
     sigCopyRequested = Signal(object)
     sigDoubleClicked = Signal(object,object)
     sigRemoveRequested = Signal(object)
 
-    DIMENSIONALITY = DataDim.Data1D
+    DIMENSIONALITY = ROIDim.ROI1D
     DESCRIPTOR = 'LinearROI'
 
     def __init__(self, index=0, pos=[0, 10], name='roi', compute=True, **kwargs):
+        color = kwargs.pop('color', None)
         pgLinearROI.__init__(self, values=pos, **kwargs)
-        ROIBase.__init__(self)
-        ROIMixin.__init__(self, index=index, name=name, compute=compute)
+        ROIBase.__init__(self, index=index, name=name, compute=compute)
 
         self.init_qt()
+        if color is not None:
+            self.set_color(color)
 
     def getMenu(self):
         if self.menu is None:
@@ -348,19 +407,39 @@ class LinearROI(pgLinearROI, ROIMixin, ROIBase):
     def pos(self) -> Tuple[float, float]:
         return self.getRegion()
 
-    def center(self) -> float:
-        pos = self.pos()
-        return (pos[0] + pos[1]) / 2
-
-    def setPos(self, pos: Tuple[int, int]):
+    def setPos(self, pos: Tuple[float, float]):
         self.setRegion(pos)
 
     def setPen(self, color):
         self.setBrush(color)
 
-    @property
     def color(self):
         return self.brush.color()
+
+    def set_color(self, value):
+        self.brush.setColor(value)
+        line_color = mkColor(value)
+        line_color.setAlpha(255)
+        for line in self.lines:
+            line.setPen(value)
+
+    def center(self) -> float:
+        """ Get the center position of the ROI """
+        pos = self.pos()
+        return (pos[0] + pos[1]) / 2
+
+    def x(self) -> float:
+        return self.pos()[0]
+
+    def set_x(self, value: float):
+        self.setPos((value, self.y()))
+
+    def y(self) -> float:
+        return self.pos()[1]
+
+    def set_y(self, value: float):
+        self.setPos((self.x(), value))
+
 
 @ROIFactory.register()
 class EllipseROI(ROI):
@@ -377,7 +456,7 @@ class EllipseROI(ROI):
 
     """
 
-    DIMENSIONALITY = DataDim.Data2D
+    DIMENSIONALITY = ROIDim.ROI2D
     DESCRIPTOR = 'EllipseROI'
 
     def __init__(self, index=0, pos=[0, 0], size=[10, 10], **kwargs):
@@ -434,7 +513,7 @@ class EllipseROI(ROI):
 @ROIFactory.register()
 class CircularROI(EllipseROI):
 
-    DIMENSIONALITY = DataDim.Data2D
+    DIMENSIONALITY = ROIDim.ROI2D
     DESCRIPTOR = 'CircularROI'
 
     def __init__(self, index=0, pos=[0, 0], size=[10, 10], **kwargs):
@@ -464,7 +543,7 @@ class SimpleRectROI(ROI):
 @ROIFactory.register()
 class RectROI(ROI):
 
-    DIMENSIONALITY = DataDim.Data2D
+    DIMENSIONALITY = ROIDim.ROI2D
     DESCRIPTOR = 'RectROI'
 
     def __init__(self, index=0, pos=[0, 0], size=[10, 10], **kwargs):
@@ -560,6 +639,11 @@ class RoiInfo:
             self.origin += Point((self.size[0] / 2, self.size[1] / 2))
             self.centered = True
 
+    def uncenter_origin(self):
+        if self.centered:
+            self.origin -= Point((self.size[0] / 2, self.size[1] / 2))
+            self.centered = False
+
     def __repr__(self):
         return f'Origin: {self.origin}, Size: {self.size}, Centered: {self.centered}'
 
@@ -573,24 +657,28 @@ class RoiInfo:
                    size=Point(*[_slice.stop - _slice.start for _slice in slices]),
                    roi_class=RectROI if len(slices) == 2 else LinearROI)
 
-    def to_slices(self) -> IterableType[slice]:
+    def to_slices(self, as_integer=True) -> IterableType[slice]:
         """Get slices to be used directly to slice DataWithAxes"""
+        if not as_integer:
+            cast = float
+        else:
+            cast = int
         if issubclass(self.roi_class, pgROI):
             if self.centered:
-                return (slice(int(self.origin[0] - self.size[0] / 2),
-                              int(self.origin[0] + self.size[0] / 2)),
-                        slice(int(self.origin[1] - self.size[1] / 2),
-                              int(self.origin[1] + self.size[1] / 2)),
+                return (slice(cast(self.origin[0] - self.size[0] / 2),
+                              cast(self.origin[0] + self.size[0] / 2)),
+                        slice(cast(self.origin[1] - self.size[1] / 2),
+                              cast(self.origin[1] + self.size[1] / 2)),
                         )
             else:
-                return (slice(int(self.origin[0]),
-                              int(self.origin[0] + self.size[0])),
-                        slice(int(self.origin[1]),
-                              int(self.origin[1] + self.size[1])),
+                return (slice(cast(self.origin[0]),
+                              cast(self.origin[0] + self.size[0])),
+                        slice(cast(self.origin[1]),
+                              cast(self.origin[1] + self.size[1])),
                         )
         elif issubclass(self.roi_class, pgLinearROI):
             if self.centered:
-                return (slice((self.origin[0] - self.size[0] / 2),
-                              (self.origin[0] + self.size[0] / 2)),)
+                return (slice(cast(self.origin[0] - self.size[0] / 2),
+                              cast(self.origin[0] + self.size[0] / 2)),)
             else:
-                return (slice((self.origin[0]), (self.origin[0] + self.size[0])),)
+                return (slice(cast(self.origin[0]), cast(self.origin[0] + self.size[0])),)

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import copy
+
 from typing import Union, Any
 from pathlib import Path
 
@@ -24,6 +26,34 @@ from pyqtgraph.parametertree.Parameter import PARAM_TYPES, PARAM_NAMES
 
 VALID_FOR_CONFIGURATION = 'valid_for_configuration'
 logger = set_logger(get_module_name(__file__))
+
+required_boolean_options = {'visible': True,
+                            'removable': False,
+                            'readonly': False,
+                            'enabled': True,
+                            'renamable': True,
+                            'expanded': True,
+                            'syncExpanded': True,
+                            'showTop': False,
+                            'strictNaming': False,
+                            }
+
+optional_boolean_options = {'show_pb': None,
+                            VALID_FOR_CONFIGURATION: None,
+                            'filetype': None,
+                            }
+
+optional_str_options = {'label': None,
+                        'suffix': None,
+                        }
+
+optional_int_options = {}
+
+optional_eval_options = {'addList': None,
+                        'addText': None,
+                        'detList': None,
+                         'movelist': None,
+                         }
 
 
 def basic_serialization(param_val: Any, within_dict=False) -> str:
@@ -162,87 +192,43 @@ def dict_from_param(param: Parameter):
     add_text_to_elt, walk_parameters_to_xml, dict_from_param
     """
     opts = dict([])
-    param_type = str(param.type())
-    opts.update(dict(type=param_type))
-    title = param.opts['title']
-    if title is None:
-        title = param.name()
-    opts.update(dict(title=title))
 
-    visible = '1'
-    if 'visible' in param.opts:
-        if param.opts['visible']:
-            visible = '1'
-        else:
-            visible = '0'
+    param_opts = param.opts
 
-    opts.update(dict(visible=visible))
+    opts['type'] = str(param_opts.get('type'))
+    title = param_opts.get('title', None)
+    opts['title'] = title if title is not None else param.name()
 
-    removable = '1'
-    if 'removable' in param.opts:
-        if param.opts['removable']:
-            removable = '1'
-        else:
-            removable = '0'
-    opts.update(dict(removable=removable))
+    for option_str, default in required_boolean_options.items():
+        opt_as_str = '1' if param_opts.get(option_str, default) else '0'
+        opts[option_str] = opt_as_str
 
-    readonly = '0'
-    if 'readonly' in param.opts:
-        if param.opts['readonly']:
-            readonly = '1'
-        else:
-            readonly = '0'
-    opts.update(dict(readonly=readonly))
+    for option_str in optional_boolean_options:
+        if option_str in param_opts:
+            opt_as_str = '1' if param_opts.get(option_str) else '0'
+            opts[option_str] = opt_as_str
 
-    if VALID_FOR_CONFIGURATION in param.opts:
-        opts.update({VALID_FOR_CONFIGURATION: '1' if param.opts[VALID_FOR_CONFIGURATION] else '0'})
+    for option_str in optional_str_options:
+        if option_str in param_opts:
+            opts[option_str] = param_opts.get(option_str)
 
-    if 'limits' in param.opts:
-        if isinstance(param.opts['limits'], dict):
+    for option_int in optional_int_options:
+        if option_int in param_opts:
+            opts[option_int] = f'{param_opts.get(option_int)}'
+
+    for eval_option in optional_eval_options:
+        if eval_option in param_opts:
+            opts[eval_option] = str(param_opts.get(eval_option))
+
+    if 'limits' in param_opts:
+        limits_opt = param_opts.get('limits')
+        if isinstance(limits_opt, dict):
             limits = {}
-            for key in param.opts['limits']:
-                limits[key] = basic_serialization(param.opts['limits'][key], within_dict=True)
+            for key in limits_opt:
+                limits[key] = basic_serialization(limits_opt[key], within_dict=True)
         else:
-            limits = str(param.opts['limits'])
+            limits = str(limits_opt)
         opts.update(dict(limits=limits))
-
-    if 'addList' in param.opts:
-        addList = str(param.opts['addList'])
-        opts.update(dict(addList=addList))
-
-    if 'addText' in param.opts:
-        addText = str(param.opts['addText'])
-        opts.update(dict(addText=addText))
-
-    if 'detlist' in param.opts:
-        detlist = str(param.opts['detlist'])
-        opts.update(dict(detlist=detlist))
-
-    if 'movelist' in param.opts:
-        movelist = str(param.opts['movelist'])
-        opts.update(dict(movelist=movelist))
-
-    if 'label' in param.opts:
-        label = str(param.opts['label'])
-        opts.update(dict(label=label))
-
-    if 'suffix' in param.opts:
-        suffix = str(param.opts['suffix'])
-        opts.update(dict(suffix=suffix))
-
-    if 'show_pb' in param.opts:
-        if param.opts['show_pb']:
-            show_pb = '1'
-        else:
-            show_pb = '0'
-        opts.update(dict(show_pb=show_pb))
-
-    if 'filetype' in param.opts:
-        if param.opts['filetype']:
-            filetype = '1'
-        else:
-            filetype = '0'
-        opts.update(dict(filetype=filetype))
 
     return opts
 
@@ -266,72 +252,21 @@ def elt_to_dict(el):
     param_type = el.get('type')
     param.update(dict(type=param_type))
 
-    title = el.get('title')
-    if title == 'None':
-        title = el.tag
-    param.update(dict(title=title))
+    for attribute in el.attrib.keys():
+        if attribute in required_boolean_options or attribute in optional_boolean_options:
+            param[attribute] = bool(int(el.get(attribute)))
 
-    if 'visible' not in el.attrib.keys():
-        visible = True
-    else:
-        visible = bool(int(el.get('visible')))
-    param.update(dict(visible=visible))
+        elif attribute in optional_int_options:
+            param[attribute] = int(el.get(attribute))
 
-    if 'removable' not in el.attrib.keys():
-        removable = False
-    else:
-        removable = bool(int(el.get('removable')))
-    param.update(dict(removable=removable))
+        elif attribute in optional_str_options:
+            param[attribute] = str(el.get(attribute))
 
-    if 'readonly' not in el.attrib.keys():
-        readonly = False
-    else:
-        readonly = bool(int(el.get('readonly')))
-    param.update(dict(readonly=readonly))
-
-    if VALID_FOR_CONFIGURATION in el.attrib.keys():
-        valid = bool(int(el.get(VALID_FOR_CONFIGURATION)))
-        param.update({VALID_FOR_CONFIGURATION: valid})
-
-    if 'show_pb' in el.attrib.keys():
-        show_pb = bool(int(el.get('show_pb')))
-    else:
-        show_pb = False
-    param.update(dict(show_pb=show_pb))
-
-    if 'readonly' not in el.attrib.keys():
-        readonly = False
-    else:
-        readonly = bool(int(el.get('readonly')))
-    param.update(dict(readonly=readonly))
-
-    if 'filetype' in el.attrib.keys():
-        filetype = bool(int(el.get('filetype')))
-        param.update(dict(filetype=filetype))
-
-    if 'detlist' in el.attrib.keys():
-        detlist = eval(el.get('detlist'))
-        param.update(dict(detlist=detlist))
-
-    if 'movelist' in el.attrib.keys():
-        movelist = eval(el.get('movelist'))
-        param.update(dict(movelist=movelist))
-
-    if 'addList' in el.attrib.keys():
-        addList = eval(el.get('addList'))
-        param.update(dict(addList=addList))
-
-    if 'addText' in el.attrib.keys():
-        addText = str(el.get('addText'))
-        param.update(dict(addText=addText))
-
-    if 'label' in el.attrib.keys():
-        label = str(el.get('label'))
-        param.update(dict(label=label))
-
-    if 'suffix' in el.attrib.keys():
-        suffix = str(el.get('suffix'))
-        param.update(dict(suffix=suffix))
+        elif attribute in optional_eval_options:
+            try:
+                param[attribute] = eval(el.get(attribute))
+            except Exception as e:
+                logger.warning(f'could not restore setting option {attribute}')
 
     if 'limits' in el.attrib.keys():
         try:

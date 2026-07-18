@@ -1,4 +1,6 @@
 import numpy as np
+
+from pymodaq_gui.managers.roi_viewer_manager import ROIViewerManager
 from pymodaq_gui.parameter import Parameter
 from qtpy import QtCore, QtWidgets, QtGui
 from qtpy.QtCore import QPointF, Slot, Signal, QObject
@@ -6,6 +8,7 @@ from typing import List, Tuple
 
 from pyqtgraph import LinearRegionItem
 
+from pymodaq_gui.plotting.items.roi_sync import roi_format
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
 from pymodaq_utils import math_utils as mutils
@@ -14,11 +17,12 @@ from pymodaq_data.data import DataFromRoi, DataToExport, Axis, DataWithAxes
 from pymodaq_data import data as data_mod
 from pymodaq_data.post_treatment.process_to_scalar import DataProcessorFactory
 
-from pymodaq_gui.managers.roi_manager import ROIManager, LinearROI, RectROI
+from pymodaq_gui.managers.roi_viewer_manager import ROIViewerManager
+from  pymodaq_gui.plotting.items.roi import LinearROI, RectROI
 from pymodaq_gui.plotting.items.crosshair import Crosshair
 from pymodaq_gui.plotting.items.image import UniformImageItem
 from pymodaq_gui.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
-
+from pymodaq_gui.plotting.utils.lineout import Lineouts
 
 logger = set_logger(get_module_name(__file__))
 
@@ -135,7 +139,7 @@ class Filter2DFromCrosshair(Filter):
                 raise IndexError
             dwa_hor = dwa.isig[H_indexes]
             dwa_hor.labels = [f'Crosshair/{label}' for label in dwa_hor.labels]
-            dwa_hor.name = 'hor'
+            dwa_hor.name = Lineouts.HOR
             dte.append(dwa_hor)
         except IndexError:
             pass
@@ -144,7 +148,7 @@ class Filter2DFromCrosshair(Filter):
                 raise IndexError
             dwa_ver = dwa.isig[V_indexes]
             dwa_ver.labels = [f'Crosshair/{label}' for label in dwa_ver.labels]
-            dwa_ver.name = 'ver'
+            dwa_ver.name = Lineouts.VER
             dte.append(dwa_ver)
         except IndexError:
             pass
@@ -155,7 +159,7 @@ class Filter2DFromCrosshair(Filter):
                 raise IndexError
             dwa_int = dwa.isig[utils.rint(indy), utils.rint(indx)]
             dwa_int.labels = [f'Crosshair/{label}' for label in dwa_int.labels]
-            dwa_int.name = 'int'
+            dwa_int.name = Lineouts.INT
             dte.append(dwa_int)
         except IndexError:
             pass
@@ -191,13 +195,13 @@ class Filter2DFromCrosshair(Filter):
 
         dte = DataToExport('Crosshair')
         if len(hor_data) > 0 and len(hor_axis) > 0:
-            dte.append(DataFromRoi('hor', data=hor_data,
+            dte.append(DataFromRoi(Lineouts.HOR, data=hor_data,
                                    axes=[Axis(dwa.axes[1].label, dwa.axes[1].units, data=hor_axis)]))
         if len(ver_data) > 0 and len(ver_axis) > 0:
-            dte.append(DataFromRoi('ver', data=ver_data,
+            dte.append(DataFromRoi(Lineouts.VER, data=ver_data,
                                    axes=[Axis(dwa.axes[0].label, dwa.axes[0].units, data=ver_axis)]))
         if len(int_data) > 0:
-            dte.append(DataFromRoi('int', data=int_data))
+            dte.append(DataFromRoi(Lineouts.INT, data=int_data))
 
         return dte
 
@@ -223,13 +227,12 @@ class Filter1DFromRois(Filter):
 
     Parameters
     ----------
-    roi_manager:ROIManager
+    roi_manager:ROIViewerManager
     graph_item: PlotItems
     """
-    def __init__(self, roi_manager: ROIManager):
+    def __init__(self, roi_manager: ROIViewerManager):
 
         super().__init__()
-        self._roi_settings = roi_manager.settings
         self._ROIs = roi_manager.ROIs
         self._axis: data_mod.Axis = None
 
@@ -243,15 +246,17 @@ class Filter1DFromRois(Filter):
             if axis is not None:
                 self.update_axis(axis)
             if data is not None:
-                for roi_key, roi in self._ROIs.items():
-                    if roi.compute:
+                for roi_meta in self._ROIs:
+                    if roi_meta.roi.compute:
                         sub_data = data.deepcopy()
-                        labels = self._roi_settings['ROIs', roi_key, 'use_channel']['selected']
+                        labels = roi_meta.param['use_channel']['selected']
                         if labels:
                             sub_data.data = [sub_data[sub_data.labels.index(label)] for label in labels]
                             sub_data.labels = [label for label in labels]
-                        dte_tmp = self.get_data_from_roi(roi, self._roi_settings.child('ROIs', roi_key),
-                                                                        sub_data)
+                        dte_tmp = self.get_data_from_roi(
+                            roi_meta.roi,
+                            roi_meta.param,
+                            sub_data)
                         dte.append(dte_tmp)
         except Exception as e:
             logger.warning(f'Issue with the ROI: {str(e)}')
@@ -260,8 +265,7 @@ class Filter1DFromRois(Filter):
     def get_data_from_roi(self, roi: LinearROI, roi_param: Parameter, data: data_mod.DataWithAxes) -> DataToExport:
         if data is not None:
             dte = DataToExport('ROI1D')
-            _slice = self.get_slice_from_roi(roi, data)
-            sub_data: DataFromRoi = data.isig[_slice]
+            sub_data: DataFromRoi = data.vsig[roi.to_info().to_slices(False)]
             sub_data.name = 'HorData'
             sub_data.origin = roi_param.name()
             sub_data.labels = [f'{roi_param.name()}/{label}' for label in sub_data.labels]
@@ -288,16 +292,15 @@ class Filter2DFromRois(Filter):
 
     Parameters
     ----------
-    roi_manager: ROIManager
+    roi_manager: ROIViewerManager
     graph_item: UniformImageItem or SpreadImageItem
         The graphical item where data and ROIs are plotted
     image_keys : (list) list of string identifier to link datas to their graph_items. This means that in
         _filter_data, datas.data[key] is plotted on graph_items[key] for key in image_keys
     """
-    def __init__(self, roi_manager: ROIManager, graph_item: UniformImageItem, image_keys):
+    def __init__(self, roi_manager: ROIViewerManager, graph_item: UniformImageItem, image_keys):
 
         super().__init__()
-        self._roi_settings = roi_manager.settings
         self._image_keys = image_keys
         self._graph_item = graph_item
         self.axes = (0, 1)
@@ -308,31 +311,20 @@ class Filter2DFromRois(Filter):
         if dwa is not None:
             try:
                 labels = []
-                for roi_key, roi in self._ROIs.items():
-                    if roi.compute:
-                        labels = self._roi_settings['ROIs', roi_key, 'use_channel']['selected']
+                for roi_meta in self._ROIs:
+                    if roi_meta.roi.compute:
+                        labels = roi_meta.param['use_channel']['selected']
                         sub_data = dwa.deepcopy()
                         if labels:
                             sub_data.data = [dwa[dwa.labels.index(label)] for label in labels]
                             sub_data.labels = [label for label in labels]
-                            dte_temp = self.get_xydata_from_roi(roi, sub_data,
-                                                                    self._roi_settings['ROIs',
-                                                                    roi_key, 'math_function'])
+                            dte_temp = self.get_xydata_from_roi(roi_meta.roi, sub_data,
+                                                                roi_meta.param['math_function'])
 
                             dte.append(dte_temp)
             except Exception as e:
                 logger.warning(f'Issue with the ROI: {str(e)}')
         return dte
-
-    def get_slices_from_roi(self, roi: RectROI, data_shape: tuple) -> Tuple[slice, slice]:
-        x, y = roi.pos().x(), roi.pos().y()
-        width, height = roi.size().x(), roi.size().y()
-        size_y, size_x = data_shape
-        ind_x_min = int(min(max(x, 0), size_x))
-        ind_y_min = int(min(max(y, 0), size_y))
-        ind_x_max = int(max(0, min(x+width, size_x)))
-        ind_y_max = int(max(0, min(y+height, size_y)))
-        return slice(ind_y_min,ind_y_max), slice(ind_x_min, ind_x_max)
 
     def get_xydata_from_roi(self, roi: RectROI, dwa: DataWithAxes, math_function: str) -> DataToExport:
         dte = DataToExport(roi.name)
@@ -354,12 +346,15 @@ class Filter2DFromRois(Filter):
                 x_axis = Axis(_x_axis.label, _x_axis.units, data=xvals, index=0, spread_order=0)
                 _y_axis = dwa.get_axis_from_index_spread(0, 1)
                 y_axis = Axis(_y_axis.label, _y_axis.units, data=yvals, index=0, spread_order=0)
-                sub_data_hor = DataFromRoi('hor', distribution='spread', data=[data_H], axes=[x_axis])
-                sub_data_ver = DataFromRoi('ver', distribution='spread', data=[data_V], axes=[y_axis])
-                math_data = DataFromRoi('int', data=int_data)
+                sub_data_hor = DataFromRoi(Lineouts.HOR, distribution='spread', data=[data_H], axes=[x_axis])
+                sub_data_ver = DataFromRoi(Lineouts.VER, distribution='spread', data=[data_V], axes=[y_axis])
+                math_data = DataFromRoi(Lineouts.INT, data=int_data)
             else:
-                slices = self.get_slices_from_roi(roi, dwa.shape)
-                sub_data: DataFromRoi = dwa.isig[slices[0], slices[1]]
+                # slices = self.get_slices_from_roi(roi, dwa.shape)
+                # sub_data: DataFromRoi = dwa.isig[slices[0], slices[1]]
+
+                sub_data: DataFromRoi = dwa.vsig[roi.to_info().to_slices(False)]
+
                 sub_data.name = 'Cropped'
                 sub_data.origin = roi.name
                 sub_data.labels = labels
@@ -367,13 +362,13 @@ class Filter2DFromRois(Filter):
                 sub_data_ver = sub_data.mean(1)
                 math_data = data_processors.get(math_function).process(sub_data)
 
-            sub_data_hor.name = 'hor'
+            sub_data_hor.name = Lineouts.HOR
             sub_data_hor.origin = roi.name
             sub_data_hor.labels = labels
-            sub_data_ver.name = 'ver'
+            sub_data_ver.name = Lineouts.VER
             sub_data_ver.origin = roi.name
             sub_data_ver.labels = labels
-            math_data.name = 'int'
+            math_data.name = Lineouts.INT
             math_data.origin = roi.name
             math_data.labels = labels
 

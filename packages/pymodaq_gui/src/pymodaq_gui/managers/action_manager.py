@@ -34,21 +34,22 @@ class QAction(QtQAction):
                  icon_checked_color: Union[QtGui.QColor, bytes, str]=None,
                  flip_h: bool = False,
                  flip_v: bool = False,
+                 rotate: int = 0,
                  fill: bool = None,
-                 rotate: int = 0):
+                 ):
 
         if icon_unchecked is not None:
             self.icon_unchecked = create_icon(icon_unchecked, icon_color, icon_checked_color,
-                                              flip_h=flip_h, flip_v=flip_v, fill=fill,
-                                              rotate=rotate)
+                                              flip_h=flip_h, flip_v=flip_v, rotate=rotate,
+                                              fill=fill)
             super().__init__(self.icon_unchecked, name)
         else:
             super().__init__(name)
 
         if icon_unchecked is not None and icon_checked is not None and not isinstance(icon_checked, QtGui.QIcon):
             icon_checked = create_icon(icon_checked, icon_checked_color, icon_checked_color,
-                                       flip_h=flip_h, flip_v=flip_v, fill=fill,
-                                       rotate=rotate)
+                                       flip_h=flip_h, flip_v=flip_v, rotate=rotate,
+                                       fill=fill)
             if isinstance(icon_unchecked, MaterialIcon):
                 self.icon_unchecked.set_icon(icon_checked, state=QtGui.QIcon.State.On)
             else:
@@ -176,6 +177,8 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
         mirror the icon horizontally (left ↔ right)
     flip_v: bool
         mirror the icon vertically (top ↔ bottom)
+    rotate: int
+        rotate the icon by the given value in degrees
     before: QAction, optional
         if set, the action is inserted before this action in the toolbar/menu;
         if None the action is appended at the end
@@ -191,8 +194,7 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
         else:
             action = QAction(icon_name, name, icon_checked=icon_checked,
                              icon_color=icon_color, icon_checked_color=icon_checked_color,
-                             flip_h=flip_h, flip_v=flip_v, fill=fill,
-                             rotate=rotate)
+                             flip_h=flip_h, flip_v=flip_v, rotate=rotate, fill=fill)
 
     if slot is not None:
         action.connect_to(slot)
@@ -465,6 +467,8 @@ class ActionManager:
             mirror the icon horizontally (left ↔ right)
         flip_v: bool
             mirror the icon vertically (top ↔ bottom)
+        rotate: int
+            rotate the icon by the given value in degree
         before: str, QAction, WidgetActionProxy, or None, optional
             if set, the action is inserted before this action in the toolbar/menu;
             accepts a short_name str, a QAction instance, or a WidgetActionProxy
