@@ -35,8 +35,10 @@ class DataDisplayer(QObject):
     updated_item = Signal(list)
     labels_changed = Signal(list)
 
-    def __init__(self, plotitem: pyqtgraph.PlotItem, plot_colors=PLOT_COLORS):
+    def __init__(self, plotitem: pyqtgraph.PlotItem, plot_colors=None):
         super().__init__()
+        if plot_colors is None:
+            plot_colors = PLOT_COLORS
         self._plotitem = plotitem
         self.colors = plot_colors
         self._plotitem.addLegend()
@@ -66,8 +68,9 @@ class DataDisplayer(QObject):
         color_idx = self._next_color_index()
         self._color_indices[label] = color_idx
         color = self.colors[color_idx]
-
-        plot_item = pyqtgraph.PlotDataItem(pen=mkPen(color=color['color'], width=self.linewidth))
+        width = color.pop('width', self.linewidth)
+        plot_item = pyqtgraph.PlotDataItem(pen=mkPen(width=width,
+                                                     **color))
         self._plot_items[label] = plot_item
         self._plotitem.addItem(plot_item)
         self.legend.addItem(plot_item, f"{label} ({units})")
