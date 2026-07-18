@@ -982,8 +982,13 @@ class DAQ_Viewer(ParameterControlModule):
             QtWidgets.QApplication.processEvents()
 
         elif status.command == ThreadStatusViewer.LCD:
-            """status.attribute should be a list of numpy arrays of shape (1,)"""
-            self._lcd.setvalues(status.attribute)
+            """status.attribute should be a list of arguments for the
+            LCD setvalues method. The first argument is a list of 
+            numpy arrays of shape (1,), use np.atleast_1D"""
+            if isinstance(status.attribute, list):
+                #for backcompatibility
+                status.attribute = dict(values = status.attribute)
+            self._lcd.setvalues(**status.attribute)
 
         elif status.command in (ThreadStatus.STOP, ThreadStatusViewer.STOP):
             self.stop_grab()
