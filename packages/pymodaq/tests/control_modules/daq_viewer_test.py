@@ -18,8 +18,7 @@ from pymodaq.utils.conftests import qtbotskip, main_modules_skip
 from pymodaq.utils.config import GlobalConfig
 
 from pymodaq_gui.parameter import utils as putils
-from pymodaq_gui.parameter import Parameter
-from pymodaq_data.h5modules.browsing import H5BrowserUtil
+
 
 config = GlobalConfig()
 

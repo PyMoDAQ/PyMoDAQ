@@ -705,7 +705,6 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
             self.controller_thread.thread.add_hardware(self.title, hardware) # to hold a reference
             self.command_hardware.emit(self._ini_hardware_command())
             self._post_hardware_init()
-            self.connect_leco(True)
         except Exception as e:
             self.logger.exception(str(e))
 

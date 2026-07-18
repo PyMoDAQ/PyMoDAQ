@@ -198,7 +198,7 @@ class DataMixer(CustomExt):
         self.model_class.ini_model_base()
 
     def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
-        self.create_dashboard_toolbar()
+        self.create_dashboard_toolbar(add_break=False)
 
     def value_changed(self, param):
         """ Actions to perform when one of the param's value in self.settings is changed from the

@@ -1,7 +1,7 @@
 control_module_ini_polling = 60 # in seconds
 
 [actuator]
-ui = ['Simple', 'Original', 'Binary'] #other eventual options will be added programmaticaly at startup
+ui = ['Simple', 'Relative', 'Binary'] #other eventual options will be added programmaticaly at startup
 epsilon_default = 1
 polling_interval_ms = 100  # ms Careful when using TCP/IP connection as you can saturate the connection with too much polling
 polling_timeout_s = 20  # s
@@ -10,6 +10,9 @@ timeout = 10000  # default duration in ms to wait for data to be acquirred
 siprefix = true  # tell if printing of current value use a SI prefix or not (µ, m, k, M...)
 siprefix_even_without_units = false
 display_units = true # display units in the SpinBoxes
+default_value_red = 0.0
+default_value_green = 1.0
+default_value_relative = 1.0
 
 [actuator.allowed_units]
 V = 'V'
@@ -18,10 +21,6 @@ W = 'W'
 Hz = 'Hz'
 rpm = 'rpm'
 revolutions_per_minute = 'revolutions_per_minute'
-
-[actuator.binary]
-value_1 = 0
-value_2 = 1
 
 [viewer]
 daq_type = 'DAQ0D' #either "DAQ0D", "DAQ1D", "DAQ2D", "DAQND"

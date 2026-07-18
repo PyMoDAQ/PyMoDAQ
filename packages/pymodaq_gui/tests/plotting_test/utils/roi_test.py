@@ -27,7 +27,7 @@ class TestInfoFromROI:
 
         assert linear_roi_info.origin == Point(pos_linear[0])
         assert linear_roi_info.size[0] == pytest.approx(pos_linear[1]-pos_linear[0])
-        assert linear_roi_info.color == mkColor(linear_color)
+        assert linear_roi_info.color() == mkColor(linear_color)
         assert len(linear_roi_info.size) == 1
         assert linear_roi_info.roi_class == LinearROI
 
@@ -52,7 +52,7 @@ class TestInfoFromROI:
         assert len(roi_info.size) == 2
         assert roi_info.size[0] == pytest.approx(size[1])  # ROI takes argument as (x, y) while
         # roi_info refers to the index of the numpy data (line, column, ...)
-        assert roi_info.color == mkColor(color)
+        assert roi_info.color() == mkColor(color)
         assert roi_info.size[1] == pytest.approx(size[0])  # ROI takes argument as (x, y) while
         # roi_info refers to the index of the numpy data (line, column, ...)
         assert roi_info.roi_class == RectROI

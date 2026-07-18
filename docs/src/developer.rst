@@ -8,6 +8,7 @@ Developer's Guide
    /developer_folder/contributing
    /developer_folder/plugins
    /developer_folder/custom_app
+   /developer_folder/shared_ui
    /developer_folder/managers
    /developer_folder/widget_sync
    /developer_folder/whats_new34

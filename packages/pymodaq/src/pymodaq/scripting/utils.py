@@ -301,17 +301,17 @@ class LECODashboardWrapper(LECOBaseWrapper):
     def __init__(self, **kwargs) -> None:
         self._experiments_future: Optional[Future[list[str]]] = None
         self._applied_experiment_future: Optional[Future[bool]] = None
-        self._configurations_future: Optional[Future[list[str]]] = None
-        self._applied_configuration_future: Optional[Future[bool]] = None
+        self._states_future: Optional[Future[list[str]]] = None
+        self._applied_state_future: Optional[Future[bool]] = None
         self._devices_list_future: Optional[Future[dict[str, list[str]]]] = None
 
         super().__init__('dashboard', **kwargs)
 
         self._listener.register_binary_rpc_method(self.send_devices, accept_binary_input=True)
-        self._listener.register_rpc_method(self.send_configurations)
+        self._listener.register_rpc_method(self.send_states)
         self._listener.register_rpc_method(self.send_experiments)
         self._listener.register_rpc_method(self.applied_experiment_done)
-        self._listener.register_rpc_method(self.applied_configuration_done)
+        self._listener.register_rpc_method(self.applied_state_done)
 
     def get_devices(self) -> Future[dict[str, list[str]]]:
         future = Future()
@@ -322,21 +322,21 @@ class LECODashboardWrapper(LECOBaseWrapper):
 
         return future
 
-    def get_configurations(self) -> Future[list[str]]:
+    def get_states(self) -> Future[list[str]]:
         future = Future()
-        self._configurations_future = future
+        self._states_future = future
 
         self.set_remote_name()
-        self._director.ask_rpc("get_configurations")
+        self._director.ask_rpc("get_states")
 
         return future
 
-    def apply_configuration(self, configuration: str) -> Future[bool]:
+    def apply_state(self, state: str) -> Future[bool]:
         future = Future()
-        self._applied_configuration_future = future
+        self._applied_state_future = future
 
         self.set_remote_name()
-        self._director.ask_rpc("apply_configuration", configuration=configuration)
+        self._director.ask_rpc("apply_state", state=state)
 
         return future
 
@@ -345,16 +345,16 @@ class LECODashboardWrapper(LECOBaseWrapper):
         self._experiments_future = future
 
         self.set_remote_name()
-        self._director.ask_rpc("get_presets")
+        self._director.ask_rpc("get_experiments")
 
         return future
 
-    def apply_experiment(self, preset: str) -> Future[bool]:
+    def apply_experiment(self, experiment: str) -> Future[bool]:
         future = Future()
         self._applied_experiment_future = future
 
         self.set_remote_name()
-        self._director.ask_rpc("apply_preset", preset=preset)
+        self._director.ask_rpc("apply_experiment", experiment=experiment)
 
         return future
 
@@ -366,16 +366,16 @@ class LECODashboardWrapper(LECOBaseWrapper):
         except (InvalidStateError, AttributeError):
             pass
 
-    def send_configurations(self, configurations: list[str]):
+    def send_states(self, states: list[str]):
         try:
-            self._configurations_future.set_result(configurations)
-            self._configurations_future = None
+            self._states_future.set_result(states)
+            self._states_future = None
         except (InvalidStateError, AttributeError):
             pass
 
-    def send_experiments(self, presets: list[str]):
+    def send_experiments(self, experiments: list[str]):
         try:
-            self._experiments_future.set_result(presets)
+            self._experiments_future.set_result(experiments)
             self._experiments_future = None
         except (InvalidStateError, AttributeError):
             pass
@@ -387,10 +387,10 @@ class LECODashboardWrapper(LECOBaseWrapper):
         except (InvalidStateError, AttributeError):
             pass
 
-    def applied_configuration_done(self, done: bool):
+    def applied_state_done(self, done: bool):
         try:
-            self._applied_configuration_future.set_result(done)
-            self._applied_configuration_future = None
+            self._applied_state_future.set_result(done)
+            self._applied_state_future = None
         except (InvalidStateError, AttributeError):
             pass
 

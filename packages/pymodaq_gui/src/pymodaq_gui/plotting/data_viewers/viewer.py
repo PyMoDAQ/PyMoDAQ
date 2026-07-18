@@ -43,23 +43,23 @@ class ViewerFactory(ObjectFactory):
 
 
 @ViewerFactory.register('Viewer0D')
-def create_viewer0D(parent: QtWidgets.QWidget = None, **_ignored):
-    return data_viewers.viewer0D.Viewer0D(parent)
+def create_viewer0D(parent: QtWidgets.QWidget = None, title='', **_ignored):
+    return data_viewers.viewer0D.Viewer0D(parent, title=title)
 
 
 @ViewerFactory.register('Viewer1D')
-def create_viewer1D(parent: QtWidgets.QWidget, **_ignored):
-    return data_viewers.viewer1D.Viewer1D(parent)
+def create_viewer1D(parent: QtWidgets.QWidget, title='', **_ignored):
+    return data_viewers.viewer1D.Viewer1D(parent, title=title)
 
 
 @ViewerFactory.register('Viewer2D')
-def create_viewer2D(parent: QtWidgets.QWidget, **_ignored):
-    return data_viewers.viewer2D.Viewer2D(parent)
+def create_viewer2D(parent: QtWidgets.QWidget, title='', **_ignored):
+    return data_viewers.viewer2D.Viewer2D(parent, title=title)
 
 
 @ViewerFactory.register('ViewerND')
-def create_viewerND(parent: QtWidgets.QWidget, **_ignored):
-    return data_viewers.viewerND.ViewerND(parent)
+def create_viewerND(parent: QtWidgets.QWidget, title='', **_ignored):
+    return data_viewers.viewerND.ViewerND(parent, title=title)
 
 
 # @ViewerFactory.register('ViewerSequential')
@@ -151,7 +151,9 @@ class ViewerDispatcher:
         self.viewer_docks.append(dock_viewer)
 
         self._viewer_widgets.append(QtWidgets.QWidget())
-        self.viewers.append(viewer_factory.get(viewer_type.name, parent=self._viewer_widgets[-1]))
+        self.viewers.append(viewer_factory.get(viewer_type.name,
+                                               parent=self._viewer_widgets[-1],
+                                               title=dock_name))
 
         self.viewer_types.append(viewer_type)
 

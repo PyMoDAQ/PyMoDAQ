@@ -29,3 +29,40 @@ country = "UnitedStates"
     size = [40, 20]  # pymodaq uses the first elt in config
     style = ['rounded']  # pymodaq uses the first elt in config
 
+[viewer]
+
+    [viewer.viewer0D]
+    show_data_as_list = false  # display last values as numbers in a side panel
+    show_min_max = false       # display horizontal dashed lines for min/max of each channel
+    sync_x_axis = true         # adding a new channel resets all histories so curves share the same x-axis origin
+    Nhistory = 200             # number of samples kept in the plot history
+
+    [viewer.viewer1D]
+    do_math = false     # enable ROI-based math operations
+    crosshair = false   # show data cursor
+    aspect_ratio = false  # fix the aspect ratio to 1:1
+    scatter = false     # switch to scatter plot instead of line plot
+    overlay = false     # plot overlays of current data
+    errors = false      # plot boundaries (error bars) of the data
+    sort = false        # display data sorted along the axis
+    ROIselect = false   # show the ROI selection area
+
+    [viewer.viewer2D]
+    autolevels = false      # auto-scale histogram to min/max intensity
+    auto_levels_sym = false # make auto-scale symmetric around 0
+    histo = false           # show the histogram panel
+    roi = false             # show the ROI manager
+    isocurve = false        # show iso-curve overlay
+    aspect_ratio = true     # fix the image aspect ratio
+    crosshair = false       # show the data crosshair
+    ROIselect = false       # show the rectangular ROI selection area
+    flip_ud = false         # flip the image up/down
+    flip_lr = false         # flip the image left/right
+    rotate = false          # rotate the image 90°
+    opposite = false        # display the opposite (negated) image
+    legend = false          # show the channel legend
+
+    [viewer.viewerND]
+    setaxes = false       # open the navigation/signal axes configuration panel
+    integrate_nav = false # integrate over the navigation axes
+

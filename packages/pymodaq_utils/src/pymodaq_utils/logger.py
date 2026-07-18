@@ -48,7 +48,7 @@ def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console
             sys.exit(-1)
         log_level = log_level[0]
     logger.setLevel(log_level)
-    if add_handler:
+    if add_handler and not logger.handlers:
         try:
             log_path = get_set_config_dir('log', user=True)
             log_file_path = log_path.joinpath(f'{logger_base_name}.log')
