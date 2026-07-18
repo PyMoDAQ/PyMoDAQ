@@ -18,6 +18,7 @@ from qtpy.QtWidgets import (
     QMessageBox,
 )
 
+from pymodaq.utils.managers.roi_manager.roi_manager import ROIManager
 from pymodaq.control_modules.instruments import find_actuator_class_from_name
 from pymodaq.control_modules.move_utility_classes import UiType
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -174,7 +175,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.experiment_manager: ExperimentManager = None  # instanciation in do_things_after_ui_setup
         self.state_manager: StateManager = None  # instanciation in do_things_after_ui_setup
         self.overshooter: Overshooter = None  # instanciation in do_things_after_ui_setup
-
+        self.roi_manager: ROIManager = None  # instanciation in do_things_after_ui_setup
         self.dockarea.dock_signal.connect(self.save_layout_state_auto)
 
         self.title = ""
@@ -230,6 +231,9 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.state_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('state'),
                                                      menu=self.get_menu('state'))
         self.state_manager.update_menu(self.get_menu('state'))
+        self.roi_manager = ROIManager(dashboard=self)
+        self.roi_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('rois'),
+                                                   menu=self.get_menu('rois'))
         self.overshooter = Overshooter(dashboard=self)
         self.overshooter.get_external_toolbar_menu(toolbar=self.get_toolbar('overshooter'),
                                                    menu=self.get_menu('overshooter'))
@@ -252,12 +256,16 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.get_menu('state').setEnabled(True)
         self.get_toolbar('state').setEnabled(True)
 
+        self.get_menu('rois').setEnabled(True)
+        self.get_toolbar('rois').setEnabled(True)
+
         self.get_menu('overshooter').setEnabled(True)
         self.get_toolbar('overshooter').setEnabled(True)
 
         self.get_menu('extensions').setEnabled(True)
 
         self.state_manager.enable_actions(True)
+        self.roi_manager.enable_actions(True)
         self.overshooter.enable_actions(True)
         self.state_manager.execute_entry(self.state_manager.entry_filepath)
 
@@ -484,12 +492,10 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.add_menu('experiment', 'Experiment', MenuToolbarNames.TOOLS, icon_name=ExperimentManager.icon_name)
         self.add_menu('state', 'State', MenuToolbarNames.TOOLS, icon_name=StateManager.icon_name)
         self.get_menu('state').setEnabled(False)
-
+        self.add_menu('rois', 'Rois', MenuToolbarNames.TOOLS, icon_name=ROIManager.icon_name)
+        self.get_menu('rois').setEnabled(False)
         self.add_menu('overshooter', 'Overshooter', MenuToolbarNames.TOOLS, icon_name=Overshooter.icon_name)
         self.get_menu('overshooter').setEnabled(False)
-
-        # self.roi_menu = self.add_menu('roi', 'ROI', auto_menu=False)
-        # self.update_roi_menu()
 
         # self.remote_menu = self.add_menu('remote', "Remote/Shortcuts Control")
         # self.update_remote_menu()
@@ -501,6 +507,8 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.add_toolbar('experiment', 'Experiment', parent=self.mainwindow,
                          add_break=False)
         self.add_toolbar('state', 'State', parent=self.mainwindow,
+                         add_break=False)
+        self.add_toolbar('rois', 'rois', parent=self.mainwindow,
                          add_break=False)
         self.add_toolbar('overshooter', 'Overshoot', parent=self.mainwindow,
                          add_break=False)
@@ -517,32 +525,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.add_action("show_log_widget", "Show/hide log window", "", checkable=True, auto_toolbar=False,
                         menu=MenuToolbarNames.VIEW)
 
-        # self.add_action("save_roi", "Save ROIs as a file", "", auto_toolbar=False,
-        #                 menu='roi')
-        # self.add_action("modify_roi", "Modify ROI file", "", auto_toolbar=False,
-        #                 menu='roi')
-
-        # for file in get_set_roi_path().iterdir():
-        #     if file.suffix == ".xml":
-        #         self.add_action(
-        #             self.get_action_from_file(file, ManagerEnums.roi),
-        #             file.stem,
-        #             "",
-        #             auto_toolbar=False,
-        #         )
-        # self.add_action('show_remote', "Show/Hide Remote", 'visibility',
-        #                 icon_checked='visibility_off', auto_toolbar=False, menu='remote')
-        # self.add_action("new_remote", "Create New Remote", "", auto_toolbar=False, menu='remote')
-        # self.add_action("modify_remote", "Modify Remote file", "", auto_toolbar=False, menu='remote')
-        # for file in get_set_remote_path().iterdir():
-        #     if file.suffix == ".xml":
-        #         self.add_action(
-        #             self.get_action_from_file(file, ManagerEnums.remote),
-        #             file.stem,
-        #             "",
-        #             auto_toolbar=False,
-        #         )
-
         for ext_name in ExtensionEnum.names():
             self.add_action(ExtensionEnum[ext_name], ExtensionEnum[ext_name].value,
                             auto_toolbar=False, menu='extensions',
@@ -556,15 +538,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.connect_action("save_layout", self.save_layout_state)
         self.connect_action("show_log_widget", self.show_log_widget)
 
-        # self.connect_action("save_roi", self.create_roi_file)
-        # self.connect_action("modify_roi", self.modify_roi)
-        #
-        # for file in get_set_roi_path().iterdir():
-        #     if file.suffix == ".xml":
-        #         self.connect_action(
-        #             self.get_action_from_file(file, ManagerEnums.roi),
-        #             self.create_menu_slot_roi(get_set_roi_path().joinpath(file)),
-        #         )
         # self.connect_action('show_remote', self.show_remote)
         # self.connect_action("new_remote", self.create_remote)
         # self.connect_action("modify_remote", self.modify_remote)
@@ -579,16 +552,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
             self.connect_action(ExtensionEnum[ext_name],
                                 self.create_extension_slot(ExtensionEnum[ext_name]))
 
-    # def update_roi_menu(self):
-    #     self.roi_menu.addSeparator()
-    #     load_roi_menu = self.roi_menu.addMenu("Load roi configs")
-    #
-    #     for file in get_set_roi_path().iterdir():
-    #         if file.suffix == ".xml":
-    #             load_roi_menu.addAction(
-    #                 self.get_action(self.get_action_from_file(file, ManagerEnums.roi))
-    #             )
-    #
     # def update_remote_menu(self):
     #     self.remote_menu.addAction(self.get_action("show_remote"))
     #     self.connect_action('show_remote', self.show_remote)

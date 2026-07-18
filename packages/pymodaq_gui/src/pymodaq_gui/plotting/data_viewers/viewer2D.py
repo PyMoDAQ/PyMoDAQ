@@ -838,15 +838,6 @@ class Viewer2D(ViewerBase):
 
         self.prepare_connect_ui()
 
-    @property
-    def roi_manager(self):
-        """Convenience method """
-        return self.view.roi_manager
-
-    @property
-    def roi_target(self) -> pgROI:
-        return self.view.roi_target
-
     def move_roi_target(self, pos: Iterable[float] = None, size: Iterable[float] = (1, 1)):
         """move a specific read only ROI at the given position on the viewer"""
         self.view.move_scale_roi_target(pos, size)
