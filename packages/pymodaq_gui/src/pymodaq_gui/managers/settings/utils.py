@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Union, Any
+from typing import Union, Any, TYPE_CHECKING
 
 from qtpy import QtWidgets, QtCore
 
@@ -29,6 +29,10 @@ import copy
 logger = set_logger(get_module_name(__file__))
 ser_factory = SerializableFactory()
 special_entry_factory = SubEntryHandlerFactory()
+
+
+if TYPE_CHECKING:
+    from pymodaq_gui.managers.settings.settings_manager import SettingsManager
 
 
 class EntryActions(StrEnum):
@@ -117,18 +121,6 @@ class ParameterDelegate(QtWidgets.QStyledItemDelegate):
             return hint
         return super().sizeHint(option, index)
 
-def get_module_from_param(param: ParameterWithPath) -> Union[str]:
-    """ should return the module name from data bundled in the ParameterWithPath
-
-    Parameters
-    ----------
-    param: ParameterWithPath
-
-    Returns
-    -------
-
-    """
-    return ''
 
 def settings_manager_subentries_from_path(fname: Path) -> list[SettingsManagerSubEntry]:
     if not fname.exists():
@@ -455,8 +447,9 @@ class SettingsManagerTableView(QtWidgets.QTableView):
 
 
 class SettingsManagerParameterTree(ParameterTree):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, manager:'SettingsManager', *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.manager = manager
 
     def mimeTypes(self):
         types = super().mimeTypes()
@@ -468,7 +461,7 @@ class SettingsManagerParameterTree(ParameterTree):
         data = QMimeData()
         param_with_path = ParameterWithPath(items[0].param)
         try:
-            module = get_module_from_param(param_with_path)
+            module = self.manager.get_module_from_param(param_with_path)
         except KeyError:
             module = ModuleType.NONE.value
         if module is not None:

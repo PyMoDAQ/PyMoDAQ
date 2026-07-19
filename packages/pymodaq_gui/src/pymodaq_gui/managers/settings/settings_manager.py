@@ -22,7 +22,7 @@ from pymodaq_gui.managers.settings.subentries import (
     SubEntryHandlerFactory, SubEntryHandler, SubEntryError, SubEntryHandlerTypes, SettingsManagerSubEntry)
 from pymodaq_gui.managers.settings.utils import (
     SettingsManagerParameterTree, SettingsManagerModel, SettingsManagerTableView,
-    get_module_from_param, settings_manager_subentries_from_path, ParameterDelegate,
+    settings_manager_subentries_from_path, ParameterDelegate,
     EntryActions, ModuleType)
 
 
@@ -68,7 +68,8 @@ class SettingsManager(ManagerBase):
         self.subentry_handler: SubEntryHandler = None
         self.config_model = SettingsManagerModel(save_path=self.get_entry_folder())
 
-        super().__init__(dashboard=dashboard, tree=SettingsManagerParameterTree())
+        super().__init__(dashboard=dashboard,
+                         tree=SettingsManagerParameterTree(manager=self))
 
 
     def get_entry_folder(self, **kwargs_to_entry_folder) -> Path:
@@ -141,7 +142,7 @@ class SettingsManager(ManagerBase):
 
     def add_subentry(self, special_entry_name: str):
         self.subentry_handler = handler_factory.get_subentry_handler(special_entry_name)(
-            self.config_model, self.settings, self.actuators, self.detectors, self.extensions)
+            self.config_model, self.settings)
         self.subentry_handler.show_dialog()
 
     def setup_docks_and_widgets(self):
@@ -167,7 +168,7 @@ class SettingsManager(ManagerBase):
         self.delegate = ParameterDelegate()
         self.table_out.setItemDelegate(self.delegate)
 
-        vlayout = QtWidgets.QVBoxLayout()
+        layout = QtWidgets.QHBoxLayout()
         hwidget = QtWidgets.QWidget()
         hlayout = QtWidgets.QHBoxLayout()
         hwidget.setLayout(hlayout)
@@ -180,7 +181,7 @@ class SettingsManager(ManagerBase):
 
         self.widget_buttons.layout().addStretch()
 
-        vlayout.addWidget(hwidget)
+        layout.addWidget(hwidget)
         hlayout.addLayout(valyout_left)
         hlayout.addWidget(self.widget_buttons)
         hlayout.addLayout(self.vlayout_right)
@@ -188,7 +189,7 @@ class SettingsManager(ManagerBase):
         valyout_left.addWidget(self.settings_tree)
         self.vlayout_right.addWidget(self.table_out)
 
-        self.main_widget.setLayout(vlayout)
+        self.main_widget.setLayout(layout)
 
     def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
         move_toolbar = self.add_toolbar('move', 'Move')
@@ -299,16 +300,28 @@ class SettingsManager(ManagerBase):
         for child in param.children():
             self.set_drag_mode_recursive(child, movable, drop_enabled)
 
+    @staticmethod
+    def get_module_from_param(param: ParameterWithPath) -> Union[str]:
+        """ should return the module name from data bundled in the ParameterWithPath
+
+        To be reimplemented
+
+        Parameters
+        ----------
+        param: ParameterWithPath
+
+        """
+        return ''
+
     def add_setting(self):
         if self.tree.currentItem() is not None:
             current_setting = self.tree.currentItem().param
             try:
-                module, module_type = get_module_from_param(ParameterWithPath(current_setting))
+                module = self.get_module_from_param(ParameterWithPath(current_setting))
             except KeyError:
                 module = ModuleType.NONE.value
-                module_type = ModuleType.NONE
             entry = SettingsManagerSubEntry(SubEntryHandlerTypes.SETTINGS, module,
-                                            module_type, ParameterWithPath(current_setting))
+                                            ParameterWithPath(current_setting))
             entries = self.config_model.split_entry(entry)
             for entry in entries:
                 self.config_model.add_data(self.config_model.rowCount(), entry)
