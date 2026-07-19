@@ -477,10 +477,6 @@ class ManagerBase(CustomExt):
 
         self.update_entry(entry_path)
 
-        if self.dashboard is None:
-            logger.info(f"Cannot Load {self.entry_type.capitalize()} file: {entry_path.stem} as no Dashboard is initialized")
-            return
-
         self.entry_applied = self._execute_entry(entry_path, **kwargs)
 
     def _execute_entry(self, entry_path: Path = None, **kwargs) -> bool:
@@ -594,10 +590,6 @@ class ManagerBase(CustomExt):
                     )
         except AttributeError:  # means self.menu is not yet defined
             pass
-
-    def save_new_history_entry(self):
-        """Save a new history entry in the history file"""
-        raise NotImplementedError
 
 
 class ListView(QtWidgets.QListView):

@@ -5,6 +5,7 @@ from qtpy import QtWidgets, QtCore
 
 from qtpy.QtCore import QMimeData, Qt, QModelIndex
 from qtpy.QtWidgets import QDialogButtonBox, QDialog
+
 from pymodaq_gui.managers.settings.subentries import SubEntryHandlerFactory, SubEntryHandlerTypes, \
     SettingsManagerSubEntry
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -22,7 +23,6 @@ from pymodaq_gui import utils as gutils
 
 from serializall import SerializableFactory
 
-from pymodaq.utils.config import get_set_state_path
 from pymodaq.utils.managers.modules import ModuleType
 import copy
 
@@ -161,8 +161,10 @@ class SettingsManagerModel(TableModel):
 
     def __init__(self, data: list[SettingsManagerSubEntry]=None,
                  header=('Type', 'Module', 'Title', 'Value'),
+                 save_path: Path = None
                  ):
         self._data: list[SettingsManagerSubEntry] = None
+        self.save_path = save_path
         if data is None:
             data = []
         super().__init__(data, header, editable=[False, False, False, True])
@@ -174,7 +176,7 @@ class SettingsManagerModel(TableModel):
     def mimeTypes(self):
         types = super().mimeTypes()
         types.append('pymodaq/parameter_with_path')
-        types.append('pymodaq/state_entry')
+        types.append('pymodaq/settings_entry')
         return types
 
     def mimeData(self, items):
@@ -182,7 +184,7 @@ class SettingsManagerModel(TableModel):
         rows = list(set([item.row() for item in items]))
         if are_elements_contiguous(rows):
             entries = [self._data[raw] for raw in rows]
-            data.setData('pymodaq/state_entry', ser_factory.get_apply_serializer(entries))
+            data.setData('pymodaq/settings_entry', ser_factory.get_apply_serializer(entries))
         return data
 
     def data(self, index: QModelIndex, role: Qt.ItemDataRole):
@@ -217,10 +219,10 @@ class SettingsManagerModel(TableModel):
     def dropMimeData(self, data: QMimeData, action: Qt.DropAction, row: int, column: int, parent: QModelIndex):
         if row == -1:
             row = self.rowCount(parent)
-        if data.hasFormat('pymodaq/state_entry'):
+        if data.hasFormat('pymodaq/settings_entry'):
             entries: list[SettingsManagerSubEntry] = (
                 ser_factory.get_apply_deserializer(
-                    data.data('pymodaq/state_entry').data()))
+                    data.data('pymodaq/settings_entry').data()))
         else:
             entries = [mock_entry]
 
@@ -261,7 +263,7 @@ class SettingsManagerModel(TableModel):
 
     def split_entry(self, entry: SettingsManagerSubEntry,
                     entries: list[SettingsManagerSubEntry] = None) -> list[SettingsManagerSubEntry]:
-        """ Split A StateEntry into multiple entries if its underlying parameter has children"""
+        """ Split A settingsEntry into multiple entries if its underlying parameter has children"""
         if entries is None:
             entries = []
         if not entry.setting.parameter.hasChildren():
@@ -349,8 +351,9 @@ class SettingsManagerModel(TableModel):
 
     def load(self, fname: Union[str, Path] = None):
         if fname is None:
-            fname = gutils.select_file(start_path=get_set_state_path(), save=False, ext='*')
+            fname = gutils.select_file(start_path=self.save_path, save=False, ext='*')
         if fname is not None and fname != '':
+            self.save_path = fname.parent
             while self.rowCount(self.index(-1, -1)) > 0:
                 self.remove_row(0)
             data = settings_manager_subentries_from_path(Path(fname))
@@ -361,8 +364,10 @@ class SettingsManagerModel(TableModel):
 
     def save(self, fname: str = None):
         if fname is None:
-            fname = gutils.select_file(start_path=get_set_state_path(), save=True, ext='config',
+            fname = gutils.select_file(start_path=self.save_path, save=True, ext='config',
                                        force_save_extension=True)
+            if isinstance(fname, Path):
+                self.save_path = fname.parent
         with open(fname, 'wb') as file:
             file.writelines([SettingsManagerSubEntry.serialize(entry) for entry in self._data])
 
@@ -377,8 +382,10 @@ class SettingsManagerTableView(QtWidgets.QTableView):
     load_data_signal = QtCore.Signal()
     save_data_signal = QtCore.Signal()
 
-    def __init__(self, menu=False):
+    def __init__(self, menu=False,
+                 entry_type: str='settings'):
         super().__init__()
+        self.entry_type = entry_type.capitalize()
         self.setmenu(menu)
         #self.doubleClicked.connect(self.edit_row)
 
@@ -401,8 +408,8 @@ class SettingsManagerTableView(QtWidgets.QTableView):
             self.menu.addAction('Remove selected row', self.remove)
             self.menu.addAction('Clear all', self.clear)
             self.menu.addSeparator()
-            self.menu.addAction('Load StateManager file', lambda: self.load_data_signal.emit())
-            self.menu.addAction('Save StateManager file', lambda: self.save_data_signal.emit())
+            self.menu.addAction(f'Load {self.entry_type}Manager file', lambda: self.load_data_signal.emit())
+            self.menu.addAction(f'Save {self.entry_type}Manager file', lambda: self.save_data_signal.emit())
         else:
             self.menu = None
 
@@ -454,7 +461,7 @@ class SettingsManagerParameterTree(ParameterTree):
     def mimeTypes(self):
         types = super().mimeTypes()
         types.append('pymodaq/parameter_with_path')
-        types.append('pymodaq/state_entry')
+        types.append('pymodaq/settings_entry')
         return types
 
     def mimeData(self, items):
@@ -467,6 +474,6 @@ class SettingsManagerParameterTree(ParameterTree):
         if module is not None:
             entry = SettingsManagerSubEntry(SubEntryHandlerTypes.SETTINGS,
                                             module, param_with_path)
-            data.setData('pymodaq/state_entry',
+            data.setData('pymodaq/settings_entry',
                          ser_factory.get_apply_serializer([entry]))
         return data

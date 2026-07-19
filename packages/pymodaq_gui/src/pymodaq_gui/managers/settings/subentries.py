@@ -90,16 +90,11 @@ class SubEntryHandler(QtCore.QObject):
     def __init__(self,
                  model: 'SettingsManagerModel',
                  settings: Parameter,
-                 actuators: list[str] = None,
-                 detectors: list[str] = None,
-                 extensions: list[str] = None,
+                 **kwargs
                  ):
 
         super().__init__()
         self.settings: Parameter = settings
-        self.actuators: list[str] = actuators if actuators is not None else []
-        self.detectors: list[str] = detectors if detectors is not None else []
-        self.extensions: list[str] = extensions if extensions is not None else []
         self.model: SettingsManagerModel = model
 
     @staticmethod

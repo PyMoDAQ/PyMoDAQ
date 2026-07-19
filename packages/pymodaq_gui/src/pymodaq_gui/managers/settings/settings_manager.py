@@ -26,13 +26,8 @@ from pymodaq_gui.managers.settings.utils import (
     EntryActions, ModuleType)
 
 
-
-
 from pymodaq_gui.managers.manager_base import ManagerBase, ManagerActions
-from pymodaq.extensions import ExtensionEnum
-from pymodaq.launcher import HISTORY_FILE_NAME, HISTORY_FILE_PATH
 
-from datetime import datetime
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -71,7 +66,7 @@ class SettingsManager(ManagerBase):
                  dashboard: 'DashBoard' = None):
 
         self.subentry_handler: SubEntryHandler = None
-        self.config_model = SettingsManagerModel()
+        self.config_model = SettingsManagerModel(save_path=self.get_entry_folder())
 
         super().__init__(dashboard=dashboard, tree=SettingsManagerParameterTree())
 
@@ -96,35 +91,28 @@ class SettingsManager(ManagerBase):
         Parameters:
         -----------
         file : Path
-            The path to the state file to be applied.
+            The path to the settings file to be applied.
         """
         if entry_path is None:
             entry_path = self.entry_filepath
         config_subentries = settings_manager_subentries_from_path(entry_path)
 
-        if self.experiment_manager.applied_entry_name != self.experiment_filename:
-            logger.warning(f'The current state is referring to the experiment: {self.experiment_filename} '
-                           f'while the current applied experiment is: {self.experiment_manager.applied_entry_name}')
-            return False
-
         if len(config_subentries) > 0:
-            self.show_subentries(config_subentries, f'Loading State: {self.entry}')
+            self.show_subentries(config_subentries, f'Loading {self.entry_type.capitalize()}: {self.entry}')
 
         for ind, entry in enumerate(config_subentries):
             subentry_handler = handler_factory.get_subentry_handler(entry.entry_type)(
-                self.config_model, self.settings, self.actuators, self.detectors)
+                self.config_model, self.settings)
             try:
-                subentry_handler.execute_subentry(entry, dashboard=self.dashboard)
+                subentry_handler.execute_subentry(entry)
                 self.subentries_model.set_status(ind, True)
                 QtWidgets.QApplication.processEvents()
                 QtCore.QThread.msleep(0)
-            except SubEntryError as e:
+            except (SubEntryError, NotImplementedError) as e:
                 logger.exception(str(e))
                 self.subentries_model.set_status(ind, False)
 
         self.close_subentries_display(1000)
-
-        self.save_new_history_entry()
 
         return True
 
