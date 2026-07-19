@@ -6,52 +6,58 @@ from typing import Callable, TYPE_CHECKING, Union, Tuple
 from qtpy import QtWidgets, QtCore
 from serializall import SerializableFactory
 
+from pymodaq.utils.managers.modules import ModulesManager
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.abstract import abstract_attribute
-
+from pymodaq.utils.scanner.scanner import Scanner
 
 from pymodaq_gui.parameter.utils import Parameter, ParameterWithPath
 from pymodaq_gui.managers.settings.subentries import (SubEntryError,  # noqa
-    SubEntryHandlerTypes, SettingsManagerSubEntry, SubEntryHandlerFactory)
-from pymodaq_utils.enums import StrEnum
+                                                      SubEntryHandlerTypes, SubEntry, SubEntryHandlerFactory,
+                                                      SubEntryHandler)
+
 from pymodaq.utils.managers.modules_manager import ModuleType
 
 ser_factory = SerializableFactory()
 
 
 if TYPE_CHECKING:
-    from pymodaq_gui.managers.settings.utils import SettingsManagerModel
     from pymodaq.dashboard import DashBoard
-
+    from pymodaq_gui.h5modules.saving import H5Saver
+    from pymodaq.extensions.scan.daq_scan import DAQScan
+    from pymodaq.extensions.scan.manager.scan_manager import ScanManager
 
 
 @SerializableFactory.register_decorator()
 @dataclass
-class SettingsManagerSubEntry(SettingsManagerSubEntry):
+class ScanSubEntry(SubEntry):
     """ Depending on the module or modules this manager handles,
     the attributes below should be completed as well as the serialization/deserialization
     """
     pass
 
 
-class SubEntryHandler(QtCore.QObject):
-    new_entry = QtCore.Signal(SettingsManagerSubEntry)
+class SubEntryHandler(SubEntryHandler):
+    new_entry = QtCore.Signal(ScanSubEntry)
 
+    @staticmethod
+    def get_module(entry: ScanSubEntry, *args, **kwargs) -> ParameterManager:
+        """ Get the ParameterManager module on which the settings will be applied
 
-class SubEntryHandlerFactory(SubEntryHandlerFactory):
-    """The factory class to get SubEntry handlers"""
-    pass
+        To be reimplemented
+        """
+        raise NotImplementedError
 
 
 @SubEntryHandlerFactory.register_handler()
-class SettingsEntryHandler(SubEntryHandler):
+class ScanSettingsEntryHandler(SubEntryHandler):
 
-    handler_name = SubEntryHandlerTypes.SETTINGS
+    handler_name = 'ScanSettings'
     use_dialog = False
 
-    def execute_subentry(self, entry: SettingsManagerSubEntry,
-                         *args, **kwargs):
+    def execute_subentry(self, entry: ScanSubEntry,
+                         manager: 'ScanManager', *args, **kwargs):
         """ Execute the given subentry
 
         In general, should get first the module on which the settings will be applied
@@ -62,6 +68,7 @@ class SettingsEntryHandler(SubEntryHandler):
         module = self.get_module(entry, *args, **kwargs)
         module.settings.child(*entry.setting.path).setValue(entry.setting.value())
         """
-        raise NotImplementedError
 
+        module: Union['DAQScan', 'H5Saver'] = getattr(manager, entry.module_name)
+        module.settings.child(*entry.setting.path[2:]).setValue(entry.setting.value())
 

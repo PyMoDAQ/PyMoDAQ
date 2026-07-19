@@ -7,7 +7,7 @@ from qtpy.QtCore import QMimeData, Qt, QModelIndex
 from qtpy.QtWidgets import QDialogButtonBox, QDialog
 
 from pymodaq_gui.managers.settings.subentries import SubEntryHandlerFactory, SubEntryHandlerTypes, \
-    SettingsManagerSubEntry
+    SubEntry
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.array_manipulation import are_elements_contiguous
@@ -122,7 +122,7 @@ class ParameterDelegate(QtWidgets.QStyledItemDelegate):
         return super().sizeHint(option, index)
 
 
-def settings_manager_subentries_from_path(fname: Path) -> list[SettingsManagerSubEntry]:
+def settings_manager_subentries_from_path(fname: Path) -> list[SubEntry]:
     if not fname.exists():
         return []
     with open(fname, 'rb') as file:
@@ -132,15 +132,15 @@ def settings_manager_subentries_from_path(fname: Path) -> list[SettingsManagerSu
         all_lines += line
     data = []
     while len(all_lines) > 0:
-        entry, all_lines = SettingsManagerSubEntry.deserialize(all_lines)
+        entry, all_lines = SubEntry.deserialize(all_lines)
         data.append(entry)
     return data
 
 
 mock_list = ['elt1', 'elt2', 'elt3']
-mock_entry = SettingsManagerSubEntry('settings',
+mock_entry = SubEntry('settings',
                                'Photodiode',
-                                     ParameterWithPath(
+                      ParameterWithPath(
                                    parameter=Parameter.create(title='mytitle', name='myname',
                                                               type='list', value=mock_list[0],
                                                               limits=mock_list)))
@@ -151,11 +151,11 @@ class SettingsManagerModel(TableModel):
 
     update_delegate = QtCore.Signal()
 
-    def __init__(self, data: list[SettingsManagerSubEntry]=None,
+    def __init__(self, data: list[SubEntry]=None,
                  header=('Type', 'Module', 'Title', 'Value'),
                  save_path: Path = None
                  ):
-        self._data: list[SettingsManagerSubEntry] = None
+        self._data: list[SubEntry] = None
         self.save_path = save_path
         if data is None:
             data = []
@@ -182,7 +182,7 @@ class SettingsManagerModel(TableModel):
     def data(self, index: QModelIndex, role: Qt.ItemDataRole):
         if index.isValid():
             if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
-                entry: SettingsManagerSubEntry = self._data[index.row()]
+                entry: SubEntry = self._data[index.row()]
                 if index.column() == 0:
                     dat = entry.entry_type.capitalize()
                 elif index.column() == 1:
@@ -203,7 +203,7 @@ class SettingsManagerModel(TableModel):
                 else:
                     return Qt.CheckState.Unchecked
             elif role == Qt.ItemDataRole.ToolTipRole:
-                entry: SettingsManagerSubEntry = self._data[index.row()]
+                entry: SubEntry = self._data[index.row()]
                 return repr(entry)
         return QVariant()
 
@@ -212,7 +212,7 @@ class SettingsManagerModel(TableModel):
         if row == -1:
             row = self.rowCount(parent)
         if data.hasFormat('pymodaq/settings_entry'):
-            entries: list[SettingsManagerSubEntry] = (
+            entries: list[SubEntry] = (
                 ser_factory.get_apply_deserializer(
                     data.data('pymodaq/settings_entry').data()))
         else:
@@ -253,8 +253,8 @@ class SettingsManagerModel(TableModel):
                 return True
         return False
 
-    def split_entry(self, entry: SettingsManagerSubEntry,
-                    entries: list[SettingsManagerSubEntry] = None) -> list[SettingsManagerSubEntry]:
+    def split_entry(self, entry: SubEntry,
+                    entries: list[SubEntry] = None) -> list[SubEntry]:
         """ Split A settingsEntry into multiple entries if its underlying parameter has children"""
         if entries is None:
             entries = []
@@ -265,7 +265,7 @@ class SettingsManagerModel(TableModel):
             for child in entry.setting.parameter.children():
                 if child.opts.get(VALID_FOR_CONFIGURATION, True) :  # only add the ones specifying they are configurable
                     pwp = ParameterWithPath(parameter=child, path=entry.setting.path + [child.name()])
-                    config_entry = SettingsManagerSubEntry(entry.entry_type, entry.module_name, entry.module_type, pwp)
+                    config_entry = SubEntry(entry.entry_type, entry.module_name, entry.module_type, pwp)
                     self.split_entry(config_entry, entries)
         return entries
 
@@ -330,7 +330,7 @@ class SettingsManagerModel(TableModel):
         if res:
             entry.setting.parameter.setValue(setting.children()[0].value())
 
-    def add_data(self, row, data: SettingsManagerSubEntry):
+    def add_data(self, row, data: SubEntry):
         if data is not None:
             if data in self._data:
                 return
@@ -361,7 +361,7 @@ class SettingsManagerModel(TableModel):
             if isinstance(fname, Path):
                 self.save_path = fname.parent
         with open(fname, 'wb') as file:
-            file.writelines([SettingsManagerSubEntry.serialize(entry) for entry in self._data])
+            file.writelines([SubEntry.serialize(entry) for entry in self._data])
 
 
 class SettingsManagerTableView(QtWidgets.QTableView):
@@ -447,9 +447,15 @@ class SettingsManagerTableView(QtWidgets.QTableView):
 
 
 class SettingsManagerParameterTree(ParameterTree):
-    def __init__(self, manager:'SettingsManager', *args, **kwargs):
+    def __init__(self, manager:'SettingsManager', *args,
+                 subentry_type=SubEntry,
+                 handler_id='Settings',
+                 **kwargs):
+
         super().__init__(*args, **kwargs)
         self.manager = manager
+        self.subentry_type: SubEntry = subentry_type
+        self.handler_id = handler_id
 
     def mimeTypes(self):
         types = super().mimeTypes()
@@ -465,8 +471,8 @@ class SettingsManagerParameterTree(ParameterTree):
         except KeyError:
             module = ModuleType.NONE.value
         if module is not None:
-            entry = SettingsManagerSubEntry(SubEntryHandlerTypes.SETTINGS,
-                                            module, param_with_path)
+            entry = self.subentry_type(self.handler_id,
+                                       module, param_with_path)
             data.setData('pymodaq/settings_entry',
                          ser_factory.get_apply_serializer([entry]))
         return data

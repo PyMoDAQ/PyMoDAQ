@@ -18,7 +18,7 @@ from qtpy.QtWidgets import QDialogButtonBox
 from qtpy.QtCore import QObject, QThread, Signal, QDateTime, QDate, QTime
 
 from pymodaq.utils.custom_ext import CustomExt
-from pymodaq.extensions.scan.scan_manager import ScanManager
+
 from pymodaq_data.plotting.utils import PlotColors
 
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -44,7 +44,7 @@ from pymodaq.extensions.scan.daq_scan_ui import DAQScanUI
 from pymodaq.utils.h5modules import module_saving
 from pymodaq.utils.scanner.scan_selector import ScanSelector, SelectorItem
 from pymodaq.utils.data import DataActuator
-
+from pymodaq.extensions.scan.manager.scan_manager import ScanManager
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -192,7 +192,7 @@ class DAQScan(CustomExt):
         self.live_timer = QtCore.QTimer(self)
         self.live_timer.timeout.connect(self.update_live_plots)
 
-        self.scan_manager = ScanManager(dashboard, self)
+        self.scan_manager = ScanManager(self)
         self.scan_manager.get_external_toolbar_menu(toolbar=self.ui.get_toolbar('scan_manager'),
                                                     menu=self.ui.get_menu('scan_manager'))
 

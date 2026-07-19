@@ -9,18 +9,20 @@ from serializall import SerializableFactory
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.abstract import abstract_attribute
-
+from pymodaq_utils.logger import set_logger, get_module_name
 
 from pymodaq_gui.parameter.utils import Parameter, ParameterWithPath
 
 from pymodaq_utils.enums import StrEnum
-from pymodaq.utils.managers.modules_manager import ModuleType
 
+
+logger = set_logger(get_module_name(__file__))
 ser_factory = SerializableFactory()
 
 
 if TYPE_CHECKING:
     from pymodaq_gui.managers.settings.utils import SettingsManagerModel
+    from pymodaq_gui.managers.settings.settings_manager import SettingsManager
     from pymodaq.dashboard import DashBoard
 
 
@@ -34,24 +36,24 @@ class SubEntryHandlerTypes(StrEnum):
 
 @SerializableFactory.register_decorator()
 @dataclass
-class SettingsManagerSubEntry:
+class SubEntry:
     """ Depending on the module or modules this manager handles,
     the attributes below should be completed as well as the serialization/deserialization
     """
-    entry_type: SubEntryHandlerTypes
+    entry_type: SubEntryHandlerTypes | str
     module_name: str
     setting: ParameterWithPath
 
-    def __eq__(self, other: 'SettingsManagerSubEntry'):
+    def __eq__(self, other: 'SubEntry'):
         return (self.entry_type == other.entry_type and
                 self.setting == other.setting)
 
     def __repr__(self):
-        return f"StateSubEntry({self.entry_type}:"\
-               f" {self.setting.value()}"
+        return f"SubEntry({self.entry_type}:"\
+               f" {self.setting.value()})"
 
     @staticmethod
-    def serialize(entry: 'SettingsManagerSubEntry') -> bytes:
+    def serialize(entry: 'SubEntry') -> bytes:
         """
 
         """
@@ -63,8 +65,8 @@ class SettingsManagerSubEntry:
 
     @classmethod
     def deserialize(cls,
-                    bytes_str: bytes) -> Union['SettingsManagerSubEntry',
-    Tuple['SettingsManagerSubEntry', bytes]]:
+                    bytes_str: bytes) -> Union['SubEntry',
+    Tuple['SubEntry', bytes]]:
         """Convert bytes into a ParameterWithPath object
 
         Returns
@@ -73,16 +75,16 @@ class SettingsManagerSubEntry:
         bytes: the remaining bytes string if any
         """
         entry_type , remaining_bytes = ser_factory.get_apply_deserializer(bytes_str, False)
-        entry_type = SubEntryHandlerTypes(entry_type)
+        entry_type = entry_type
         parameter_with_path, remaining_bytes = ser_factory.get_apply_deserializer(remaining_bytes, False)
         module_name, remaining_bytes = ser_factory.get_apply_deserializer(remaining_bytes, False)
 
-        return SettingsManagerSubEntry(entry_type, module_name,
-                                       parameter_with_path), remaining_bytes
+        return SubEntry(entry_type, module_name,
+                        parameter_with_path), remaining_bytes
 
 
 class SubEntryHandler(QtCore.QObject):
-    new_entry = QtCore.Signal(SettingsManagerSubEntry)
+    new_entry = QtCore.Signal(SubEntry)
 
     handler_name: SubEntryHandlerTypes = abstract_attribute()  # to reimplement in real dialogs
     use_dialog = True
@@ -90,15 +92,17 @@ class SubEntryHandler(QtCore.QObject):
     def __init__(self,
                  model: 'SettingsManagerModel',
                  settings: Parameter,
+                 manager: 'SettingsManager',
                  **kwargs
                  ):
 
         super().__init__()
         self.settings: Parameter = settings
         self.model: SettingsManagerModel = model
+        self.manager = manager
 
     @staticmethod
-    def get_module(entry: SettingsManagerSubEntry, *args, **kwargs) -> ParameterManager:
+    def get_module(entry: SubEntry, *args, **kwargs) -> ParameterManager:
         """ Get the ParameterManager module on which the settings will be applied
 
         To be reimplemented
@@ -142,13 +146,13 @@ class SubEntryHandler(QtCore.QObject):
         """
         pass
 
-    def get_subentry_from_dialog(self) -> SettingsManagerSubEntry:
+    def get_subentry_from_dialog(self) -> SubEntry:
         """ Get a StateSubEntry from the dialog
 
         To be reimplemented """
         raise NotImplementedError
 
-    def execute_subentry(self, entry: SettingsManagerSubEntry,
+    def execute_subentry(self, entry: SubEntry,
                          *args, **kwargs):
         """ Execute the given subentry """
         raise NotImplementedError
@@ -173,6 +177,8 @@ class SubEntryHandlerFactory:
 
             if subentry_name not in cls.handlers_registry:
                 cls.handlers_registry[subentry_name] = wrapped_class
+            else:
+                logger.info(f"Subentry {subentry_name} already registered")
             # Return wrapped_class
             return wrapped_class
 
@@ -202,7 +208,7 @@ class SettingsEntryHandler(SubEntryHandler):
     handler_name = SubEntryHandlerTypes.SETTINGS
     use_dialog = False
 
-    def execute_subentry(self, entry: SettingsManagerSubEntry,
+    def execute_subentry(self, entry: SubEntry,
                          *args, **kwargs):
         """ Execute the given subentry
 

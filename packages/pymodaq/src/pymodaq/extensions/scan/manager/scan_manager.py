@@ -6,7 +6,6 @@ import sys
 import toml
 from qtpy import QtWidgets, QtCore, QtGui
 
-from pymodaq.extensions import DAQScan
 from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config, get_set_config_dir
@@ -21,7 +20,7 @@ from pymodaq_gui.managers.settings.utils import (
 
 from pymodaq.extensions.scan.manager.subentries import (
     SubEntryHandlerFactory, SubEntryHandler, SubEntryError,
-    SubEntryHandlerTypes, SettingsManagerSubEntry, ParameterWithPath)
+    SubEntryHandlerTypes, ScanSubEntry, ParameterWithPath, ScanSettingsEntryHandler)
 
 from pymodaq_gui.managers.settings.settings_manager import SettingsManager
 
@@ -59,10 +58,10 @@ class ScanManager(SettingsManager):
 
         dashboard = daq_scan.dashboard
 
-        self._scanner: Scanner = Scanner(actuators=dashboard.actuators_modules)
+        self.scanner: Scanner = Scanner(actuators=dashboard.actuators_modules)
 
         self.daq_scan = daq_scan
-        self.h5saver = H5Saver()
+        self.h5saver = daq_scan.h5saver
         self.h5saver.settings.child('do_save').hide()
         self.h5saver.settings.child('custom_name').hide()
 
@@ -71,9 +70,18 @@ class ScanManager(SettingsManager):
             {'title': 'Saver', 'name': 'h5saver', 'type': 'group', 'children': self.h5saver.params},
         ]
 
-        super().__init__(dashboard=dashboard)
+        super().__init__(dashboard=dashboard,
+                         subentry_type=ScanSubEntry,
+                         handler_id=ScanSettingsEntryHandler.handler_name)
 
         self.update_settings(self.settings)
+
+    def connect_things(self):
+        super().connect_things()
+        self.modules_manager.actuators_changed.connect(self.update_scanner_actuators)
+
+    def update_scanner_actuators(self):
+        self.scanner.actuators = self.modules_manager.actuators
 
     def get_entry_folder(self, subfolder='', user=True) -> Path:
         """Get the folder path where the managed entries are stored."""
@@ -105,7 +113,7 @@ class ScanManager(SettingsManager):
                 module = self.get_module_from_param(ParameterWithPath(current_setting))
             except KeyError:
                 module = ModuleType.NONE.value
-            entry = SettingsManagerSubEntry(
+            entry = SubEntry(
                 SubEntryHandlerTypes.SETTINGS, module,
                 ParameterWithPath(current_setting))
             entries = self.config_model.split_entry(entry)
@@ -130,9 +138,9 @@ class ScanManager(SettingsManager):
 
         for ind, entry in enumerate(config_subentries):
             subentry_handler = handler_factory.get_subentry_handler(entry.entry_type)(
-                self.config_model, self.settings)
+                self.config_model, self.settings, self)
             try:
-                subentry_handler.execute_subentry(entry)
+                subentry_handler.execute_subentry(entry, manager=self)
                 self.subentries_model.set_status(ind, True)
                 QtWidgets.QApplication.processEvents()
                 QtCore.QThread.msleep(0)
@@ -146,25 +154,24 @@ class ScanManager(SettingsManager):
 
     def setup_docks_and_widgets(self):
         super().setup_docks_and_widgets()
-
-        self.main_widget.layout().insertWidget(0, self._scanner.parent_widget)
+        self.main_widget.layout().insertWidget(0, self.modules_manager.settings_tree)
+        self.main_widget.layout().insertWidget(1, self.scanner.parent_widget)
 
 
 if __name__ == "__main__":
     from pymodaq_gui.qt_utils import mkQApp
     from pymodaq.dashboard import create_load_dashboard
     from pymodaq.utils.gui_utils.loader_utils import create_extension
+    from pymodaq.extensions import DAQScan
 
     app = mkQApp('ScannerManager')
 
     win, dashboard = create_load_dashboard()
     win.mainwindow.setVisible(False)
-
+    scan: DAQScan
     win_ext, scan = create_extension(dashboard, DAQScan)
     win_ext.show()
 
-    prog = ScanManager(daq_scan=scan)
-    prog.mainwindow.show()
-    prog.enable_actions(True)
+    scan.scan_manager.show()
 
     sys.exit(app.exec())

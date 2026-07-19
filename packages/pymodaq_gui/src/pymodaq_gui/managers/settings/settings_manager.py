@@ -19,7 +19,7 @@ from pymodaq_gui.parameter.utils import ParameterWithPath
 from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 
 from pymodaq_gui.managers.settings.subentries import (
-    SubEntryHandlerFactory, SubEntryHandler, SubEntryError, SubEntryHandlerTypes, SettingsManagerSubEntry)
+    SubEntryHandlerFactory, SubEntryHandler, SubEntryError, SubEntryHandlerTypes, SubEntry)
 from pymodaq_gui.managers.settings.utils import (
     SettingsManagerParameterTree, SettingsManagerModel, SettingsManagerTableView,
     settings_manager_subentries_from_path, ParameterDelegate,
@@ -63,14 +63,20 @@ class SettingsManager(ManagerBase):
     icon_name = 'settings'
 
     def __init__(self,
-                 dashboard: 'DashBoard' = None):
+                 dashboard: 'DashBoard' = None,
+                 subentry_type: type[SubEntry]=None,
+                 handler_id='settings'):
 
         self.subentry_handler: SubEntryHandler = None
+        if subentry_type is None:
+            subentry_type = SubEntry
         self.config_model = SettingsManagerModel(save_path=self.get_entry_folder())
 
         super().__init__(dashboard=dashboard,
-                         tree=SettingsManagerParameterTree(manager=self))
-
+                         tree=SettingsManagerParameterTree(
+                             manager=self,
+                             subentry_type=subentry_type,
+                             handler_id=handler_id))
 
     def get_entry_folder(self, **kwargs_to_entry_folder) -> Path:
         """Get the folder path where the managed entries are stored."""
@@ -80,7 +86,7 @@ class SettingsManager(ManagerBase):
         self.config_model.save(entry_path)
 
     @staticmethod
-    def format_subentries(entries: list[SettingsManagerSubEntry]):
+    def format_subentries(entries: list[SubEntry]):
         return [(f'{entry.entry_type.capitalize()} for '
                  f'{entry.module_name} - '
                  f'{entry.setting.parameter.title()} '
@@ -141,8 +147,9 @@ class SettingsManager(ManagerBase):
         self.populate_from_settings(settings)
 
     def add_subentry(self, special_entry_name: str):
+        """ Create an entry in the table from one of the special SubEntryHandlers"""
         self.subentry_handler = handler_factory.get_subentry_handler(special_entry_name)(
-            self.config_model, self.settings)
+            self.config_model, self.settings, self)
         self.subentry_handler.show_dialog()
 
     def setup_docks_and_widgets(self):
@@ -320,8 +327,8 @@ class SettingsManager(ManagerBase):
                 module = self.get_module_from_param(ParameterWithPath(current_setting))
             except KeyError:
                 module = ModuleType.NONE.value
-            entry = SettingsManagerSubEntry(SubEntryHandlerTypes.SETTINGS, module,
-                                            ParameterWithPath(current_setting))
+            entry = SubEntry(SubEntryHandlerTypes.SETTINGS, module,
+                             ParameterWithPath(current_setting))
             entries = self.config_model.split_entry(entry)
             for entry in entries:
                 self.config_model.add_data(self.config_model.rowCount(), entry)
