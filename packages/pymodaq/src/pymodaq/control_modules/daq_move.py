@@ -244,6 +244,7 @@ class DAQ_Move(ParameterControlModule):
         self.update_default_values()
 
     def update_default_values(self):
+        self.ui.set_unit_as_suffix(self.units)
         self.value_changed(self.settings.child('main_settings', 'default_value_green'))
         self.value_changed(self.settings.child('main_settings', 'default_value_red'))
         self.value_changed(self.settings.child('main_settings', 'default_value_relative'))
