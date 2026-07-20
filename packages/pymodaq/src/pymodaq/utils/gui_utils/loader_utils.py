@@ -38,7 +38,7 @@ def create_load_daq_move(title="DAQ_Move") -> tuple[SharedUI, 'DAQ_Move']:
     daq_move = DAQ_Move(widget, title=title,
                         settings_dock=settings_dock,
                         controls_dock=controls_dock,
-                        ui_identifier=ui_identifier)
+                        )
     widget.layout().addWidget(area)
     win.setCentralWidget(widget)
     shared_ui = SharedUI(win)

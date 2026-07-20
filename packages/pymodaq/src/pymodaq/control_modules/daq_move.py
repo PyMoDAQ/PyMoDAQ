@@ -100,7 +100,7 @@ class DAQ_Move(ParameterControlModule):
 
     def __init__(self, parent=None,
                  title="DAQ Move",
-                 ui_identifier: Optional[str] = None,
+                 ui_identifier: str | UiType | None = None,
                  **kwargs) -> None:
         """
 
