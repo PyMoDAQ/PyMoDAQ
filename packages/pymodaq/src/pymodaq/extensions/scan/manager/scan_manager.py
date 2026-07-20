@@ -6,14 +6,13 @@ import sys
 import toml
 from qtpy import QtWidgets, QtCore, QtGui
 
+from pymodaq_data import DataDim
 from pymodaq_gui.utils.widgets.widget_with_label_title import WidgetWithLabelTitle
 from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config, get_set_config_dir
 
-from pymodaq_gui.parameter import Parameter
-from pymodaq_gui.h5modules.saving import H5Saver
-from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
+from pymodaq_gui.parameter import ParameterTree
 from pymodaq_gui.managers.settings.utils import (
     SettingsManagerParameterTree, SettingsManagerModel, SettingsManagerTableView,
     settings_manager_subentries_from_path, ParameterDelegate,
@@ -22,7 +21,7 @@ from pymodaq_gui.managers.settings.utils import (
 from pymodaq.extensions.scan.manager.subentries import (
     SubEntryHandlerFactory, SubEntryHandler, SubEntryError,
     SubEntryHandlerTypes, ScanSubEntry, ParameterWithPath, ScanSettingsEntryHandler,
-    ControlModulesEntryHandler)
+    ControlModulesEntryHandler, ScannnerEntryHandler)
 
 from pymodaq_gui.managers.settings.settings_manager import SettingsManager
 
@@ -79,34 +78,49 @@ class ScanManager(SettingsManager):
         self.update_settings(self.settings)
 
     def _update_entry(self, entry: Union[str, Path] = None, **kwargs):
-        data = settings_manager_subentries_from_path(Path(entry))
-        self.config_model.load(data[1:])
+        # read binary file content and return a list of SubEntry
+        data: list[ScanSubEntry] = settings_manager_subentries_from_path(Path(entry))
 
-        control_modules_entry: ScanSubEntry = data[0]
-        module_from_daq_scan = self.daq_scan.modules_manager
-        module_from_manager = self.modules_manager
-        for child in control_modules_entry.setting.parameter.children():
-            value = deepcopy(module_from_daq_scan.settings[child.name()])
-            value['selected'] = [mod for mod in child.value()['selected'] if
-                                 mod in value['all_items']]
-            module_from_manager.settings[child.name()] = value
+        # update control modules
+        ControlModulesEntryHandler.update(self, data.pop(0))
+
+        # update scanner
+        ScannnerEntryHandler.update(self, data.pop(0))
+
+        #populate the Settings Table
+        self.config_model.load(data)
 
     def save_entries(self, entry_path: Path = None):
-        modules_settings = Parameter.create(name='modules', type='group', children=[
-            self.modules_manager.settings.child('detectors').saveState(),
-            self.modules_manager.settings.child('actuators').saveState(),
-        ])
-        modules_entry = ScanSubEntry(ControlModulesEntryHandler.handler_name,
-                                     'ModuleManager',
-                                     ParameterWithPath(modules_settings))
-
+        # first save an entry corresponding to the selected detectors and actuators
+        modules_entry = ControlModulesEntryHandler.create_subentry(self)
         with open(entry_path, mode='wb') as file:
             file.write(modules_entry.serialize(modules_entry))
+
+        # then save an entry corresponding to the scanner
+        scanner_entry = ScannnerEntryHandler.create_subentry(self)
+        with open(entry_path, mode='ab') as file:
+            file.write(scanner_entry.serialize(scanner_entry))
+
+        # then save the various settings about the scan flow or h5saver
         self.config_model.save(entry_path, mode='ab')
 
     def connect_things(self):
         super().connect_things()
         self.modules_manager.actuators_changed.connect(self.update_scanner_actuators)
+        self.get_data_pb.clicked.connect(self.probe_data)
+
+    def probe_data(self):
+        self.modules_manager.connect_detectors()
+        dte = self.modules_manager.grab_data()
+        self.modules_manager.connect_detectors(False)
+
+        data_0D = dte.get_full_names(DataDim.Data0D)
+        data_1D = dte.get_full_names(DataDim.Data1D)
+
+        self.settings['daq_scan', 'plot_options', 'plot_0d'] = dict(all_items=data_0D,
+                                                        selected=[])
+        self.settings['daq_scan', 'plot_options', 'plot_1d'] = dict(all_items=data_1D,
+                                                        selected=[])
 
     def update_scanner_actuators(self):
         self.scanner.actuators = self.modules_manager.actuators
@@ -183,7 +197,9 @@ class ScanManager(SettingsManager):
     def setup_docks_and_widgets(self):
         super().setup_docks_and_widgets()
         widget = QtWidgets.QWidget()
-        widget_with_title = WidgetWithLabelTitle('Configure a Scan:', widget)
+        widget_with_title = WidgetWithLabelTitle('(1) Configure a Scan:', widget)
+        self.get_data_pb = QtWidgets.QPushButton('ProbeData')
+        widget_with_title = WidgetWithLabelTitle('(2) Get Data To Plot:', self.get_data_pb)
         widget.setLayout(QtWidgets.QVBoxLayout())
         widget.layout().addWidget(self.modules_manager.settings_tree)
         widget.layout().addWidget(self.scanner.parent_widget)
@@ -192,6 +208,8 @@ class ScanManager(SettingsManager):
             self.modules_manager.settings.child(child_name).show(False)
         self.main_widget.layout().setStretch(0, 1)
         self.main_widget.layout().setStretch(1, 3)
+
+        self.settings_to_pick.set_title('(3) Select Settings to Apply:')
 
 
 if __name__ == "__main__":
