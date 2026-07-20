@@ -10,6 +10,7 @@ import numpy as np
 
 import pymodaq_data.plotting.utils
 from pymodaq_data.data import DataRaw, DataFromRoi, Axis, DataToExport, DataCalculated, DataWithAxes
+from pymodaq_gui.utils.widgets.widget_with_label_title import WidgetWithLabelTitle
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_gui.parameter import utils as putils
@@ -290,6 +291,7 @@ class View1D(ActionManager, QObject):
 
         self.plot_widget = PlotWidget()
         self.roi_manager = ROIViewerManager(self.plotitem.vb, ROIDim.ROI1D)
+        self.roi_widget = WidgetWithLabelTitle(self.title, self.roi_manager.roiwidget)
         self.data_displayer = DataDisplayer(self.plotitem, flip_axes=self.flip_axes)
         self.other_data_displayers: Dict[str, DataDisplayer] = {}
         self.setup_widgets()
@@ -403,12 +405,12 @@ class View1D(ActionManager, QObject):
                     self.rois_dock.removeWidgets(close=False)
                     self.rois_dock.setVisible(False)
 
-                self.roi_manager.roiwidget.setWindowTitle(f'{self.title} ROIs')
-                self.roi_manager.roiwidget.setVisible(self.is_action_checked('do_math'))
-                self.roi_manager.roiwidget.closeEvent = lambda event: self.set_action_checked('do_math', False)
+                self.roi_widget.setWindowTitle(f'{self.title} ROIs')
+                self.roi_widget.setVisible(self.is_action_checked('do_math'))
+                self.roi_widget.closeEvent = lambda event: self.set_action_checked('do_math', False)
             else:
                 display_in_dock(self.is_action_checked('do_math'),
-                                self.roi_manager.roiwidget,
+                                self.roi_widget,
                                 self.rois_dock)
 
             self.lineout_widgets.setVisible(self.is_action_checked('do_math'))
@@ -428,7 +430,7 @@ class View1D(ActionManager, QObject):
         self.splitter_ver = QtWidgets.QSplitter(Qt.Vertical)
         self.parent_widget.layout().addWidget(self.splitter_ver)
 
-        self.roi_manager.roiwidget.hide()
+        self.roi_widget.hide()
 
         self.splitter_ver.addWidget(self.toolbar)
 

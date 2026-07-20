@@ -10,8 +10,15 @@ class WidgetWithLabelTitle(QtWidgets.QWidget):
                  **label_kwargs):
         super().__init__(parent)
 
+        font_name = label_kwargs.pop('font_name', 'Tahoma')
+        font_size = label_kwargs.pop('font_size', 14)
+        isbold = label_kwargs.pop('isbold', True)
+        isitalic = label_kwargs.pop('isitalic', True)
+
         self.setLayout(QtWidgets.QVBoxLayout())
-        label = LabelWithFont(f'{title}', **label_kwargs)
+        label = LabelWithFont(f'{title}', font_name=font_name,
+                              font_size=font_size, isbold=isbold,
+                              isitalic=isitalic)
         self.label = label
         self.layout().addWidget(label)
         if subwidget is not None:

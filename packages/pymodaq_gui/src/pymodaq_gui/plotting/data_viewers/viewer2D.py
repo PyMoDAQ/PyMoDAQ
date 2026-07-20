@@ -15,6 +15,7 @@ from pymodaq_gui.plotting.items.roi_sync import roi_format
 from pymodaq_gui.plotting.utils.lineout import Lineouts
 from pymodaq_gui.plotting.utils.plot_utils import ViewBox
 from pymodaq_gui.qt_utils import mkQApp
+from pymodaq_gui.utils.widgets.widget_with_label_title import WidgetWithLabelTitle
 from pymodaq_utils import utils
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -335,7 +336,7 @@ class View2D(ActionManager, QtCore.QObject):
 
         self.image_widget = ImageWidget()
         self.roi_manager = ROIViewerManager(self.image_widget.plotitem.vb, ROIDim.ROI2D)
-
+        self.roi_widget = WidgetWithLabelTitle(self.title, self.roi_manager.roiwidget)
         self.roi_target: Union[pgROI, Crosshair] = None
 
         self.setup_view_box()
@@ -517,7 +518,7 @@ class View2D(ActionManager, QtCore.QObject):
 
         self.image_widget.add_scaled_axis('left')
         self.image_widget.add_scaled_axis('bottom')
-        self.roi_manager.roiwidget.setVisible(False)
+        self.roi_widget.setVisible(False)
 
     def setup_actions(self):
 
@@ -665,12 +666,12 @@ class View2D(ActionManager, QtCore.QObject):
                 self.rois_dock.removeWidgets(close=False)
                 self.rois_dock.setVisible(False)
 
-            self.roi_manager.roiwidget.setWindowTitle(f'{self.title} ROIs')
-            self.roi_manager.roiwidget.setVisible(isroichecked)
-            self.roi_manager.roiwidget.closeEvent = lambda event: self.set_action_checked('roi', False)
+            self.roi_widget.setWindowTitle(f'{self.title} ROIs')
+            self.roi_widget.setVisible(isroichecked)
+            self.roi_widget.closeEvent = lambda event: self.set_action_checked('roi', False)
         else:
             display_in_dock(isroichecked,
-                            self.roi_manager.roiwidget,
+                            self.roi_widget,
                             self.rois_dock)
 
         for roi_meta in self.roi_manager.ROIs:
@@ -1019,7 +1020,7 @@ class Viewer2D(ViewerBase):
         if show == (not self.view.is_action_checked('roi')):
             self.view.get_action('roi').trigger()
 
-        self.view.roi_manager.roiwidget.setVisible(show_roi_widget)
+        self.view.roi_widget.setVisible(show_roi_widget)
 
     def update_crosshair_data(self, crosshair_dte: DataToExport):
         try:
