@@ -397,7 +397,7 @@ class View1D(ActionManager, QObject):
 
     def do_math(self):
         try:
-            if (config('pymodaq', 'viewer', 'rois_as_popup')
+            if (config('gui', 'viewer', 'rois_as_popup')
                     or self.rois_dock is None):
                 if self.rois_dock is not None:
                     self.rois_dock.removeWidgets(close=False)

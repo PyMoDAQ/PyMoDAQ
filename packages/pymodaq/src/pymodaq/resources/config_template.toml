@@ -31,7 +31,6 @@ daq_type = 'DAQ0D' #either "DAQ0D", "DAQ1D", "DAQ2D", "DAQND"
 viewer_in_thread = true
 timeout = 10000  # default duration in ms to wait for data to be acquirred
 allow_settings_edition = false  # during grab
-rois_as_popup = false
 
 [scan]
 scan_in_thread = true

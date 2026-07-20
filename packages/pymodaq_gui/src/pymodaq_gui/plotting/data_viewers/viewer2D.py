@@ -659,7 +659,7 @@ class View2D(ActionManager, QtCore.QObject):
     @Slot(bool)
     def roi_clicked(self, isroichecked=True):
 
-        if (config('pymodaq', 'viewer', 'rois_as_popup')
+        if (config('gui', 'viewer', 'rois_as_popup')
             or self.rois_dock is None):
             if self.rois_dock is not None:
                 self.rois_dock.removeWidgets(close=False)
