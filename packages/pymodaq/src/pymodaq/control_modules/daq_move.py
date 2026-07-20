@@ -131,7 +131,7 @@ class DAQ_Move(ParameterControlModule):
 
         if self.ui is not None:
             self.ui.actuators = ACTUATOR_NAMES
-            self.ui.set_settings_tree(self.settings_tree)
+            self.ui.add_setting_tree(self.settings_tree)
             self.ui.command_sig.connect(self.process_ui_cmds)
 
         self.splash_sc = get_splash_sc()
