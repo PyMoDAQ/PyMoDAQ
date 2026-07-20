@@ -1,27 +1,19 @@
 from copy import deepcopy
 from dataclasses import dataclass
 
-from numba.core.cgutils import if_zero
-
-from pymodaq.control_modules.move_utility_classes import HW_SETTINGS_KEY as ACTUATOR_SETTINGS_KEY
-import time
 from typing import Callable, TYPE_CHECKING, Union, Tuple
 
 from qtpy import QtWidgets, QtCore
 from serializall import SerializableFactory
 
-from pymodaq.utils.managers.modules import ModulesManager
 from pymodaq_gui.managers.parameter_manager import ParameterManager
-from pymodaq_utils.enums import StrEnum
-from pymodaq_utils.abstract import abstract_attribute
-from pymodaq.utils.scanner.scanner import Scanner
+
 
 from pymodaq_gui.parameter.utils import Parameter, ParameterWithPath
 from pymodaq_gui.managers.settings.subentries import (SubEntryError,  # noqa
                                                       SubEntryHandlerTypes, SubEntry, SubEntryHandlerFactory,
                                                       SubEntryHandler)
 
-from pymodaq.utils.managers.modules_manager import ModuleType
 
 ser_factory = SerializableFactory()
 
