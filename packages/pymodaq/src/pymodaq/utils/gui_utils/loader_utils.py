@@ -4,7 +4,8 @@ from qtpy import QtWidgets
 
 from pymodaq_utils.config import GlobalConfig
 
-from pymodaq.utils.custom_ext import CustomExt
+from pymodaq.extensions.custom_ext import CustomExt
+from pymodaq_gui.utils import DockArea, Dock
 from pymodaq_gui.utils.widgets.window import make_window
 
 from pymodaq.utils.shared_ui import SharedUI
@@ -24,28 +25,51 @@ def create_load_daq_move(ui_identifier=config('pymodaq', 'actuator', 'ui'),
 
     win, area = make_window(area=False, title='DAQ_Move')
     widget = QtWidgets.QWidget()
+
+    area = DockArea()
+
+    settings_dock = Dock('Settings')
+    controls_dock = Dock('Controls')
+    area.addDock(settings_dock)
+    area.addDock(controls_dock, 'right', settings_dock)
+    settings_dock.setVisible(False)
+    controls_dock.setVisible(False)
+
     daq_move = DAQ_Move(widget, title=title,
+                        settings_dock=settings_dock,
+                        controls_dock=controls_dock,
                         ui_identifier=ui_identifier)
+    widget.layout().addWidget(area)
     win.setCentralWidget(widget)
     shared_ui = SharedUI(win)
     shared_ui.affect_application(daq_move.ui)
 
     shared_ui.add_toolbar('move_toolbar', 'Move', win, toolbar=daq_move.ui.toolbar,
                           add_break=False)
-    daq_move.settings_tree.setVisible(False)
-    widget.layout().addWidget(daq_move.ui.control_widget)
-    widget.layout().addWidget(daq_move.settings_tree)
-    widget.layout().addWidget(daq_move.ui.graph_widget)
 
     return shared_ui, daq_move
 
 
 def create_load_daq_viewer(title='DAQ_Viewer') -> tuple[SharedUI, 'DAQ_Viewer']:
-    from pymodaq.control_modules.daq_viewer import DAQ_Viewer
+    from pymodaq.control_modules.daq_viewer import DAQ_Viewer, Dock
     win, area = make_window(area=False, title='DAQ_Viewer')
     widget = QtWidgets.QWidget()
     win.setCentralWidget(widget)
-    daq_viewer = DAQ_Viewer(widget, title=title)
+
+    area = DockArea()
+
+    settings_dock = Dock('Settings')
+    rois_dock = Dock('ROIs')
+
+    area.addDock(settings_dock, 'right')
+    area.addDock(rois_dock, 'right', settings_dock)
+    settings_dock.setVisible(False)
+    rois_dock.setVisible(False)
+
+    daq_viewer = DAQ_Viewer(widget, title=title,
+                            area=area,
+                            settings_dock=settings_dock,
+                            rois_dock=rois_dock,)
 
     shared_ui = SharedUI(win)
     shared_ui.affect_application(daq_viewer.ui)

@@ -13,11 +13,17 @@ class Dock(Dock):
         kwargs['fontSize'] = fontSize
         super().__init__(name, *args, **kwargs)
 
-    def removeWidgets(self):
-        for widget in self.widgets:
+    def removeWidget(self, widget, close=True):
+        if widget in self.widgets:
             self.layout.removeWidget(widget)
-            widget.close()
-        self.widgets = []
+            self.widgets.remove(widget)
+            widget.setParent(None)
+            if close:
+                widget.close()
+
+    def removeWidgets(self, close=True):
+        for widget in self.widgets:
+            self.removeWidget(widget, close=close)
 
     def setOrientation(self, o='auto', force=False):
         """

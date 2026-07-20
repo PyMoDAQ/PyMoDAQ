@@ -100,13 +100,14 @@ class DAQ_Move(ParameterControlModule):
     listener_class = MoveActorListener
     ui: Optional[DAQ_Move_UI_Base]
 
-    def __init__(self, parent=None, title="DAQ Move",
-                 ui_identifier: Optional[str] = None, **kwargs) -> None:
+    def __init__(self, parent=None,
+                 title="DAQ Move",
+                 ui_identifier: Optional[str] = None,
+                 **kwargs) -> None:
         """
 
         Parameters
         ----------
-        parent: QWidget or None
         parent: QWidget or None
             if it is a valid QWidget, it will hold the user interface to drive it
         title: str
@@ -116,7 +117,8 @@ class DAQ_Move(ParameterControlModule):
         self.logger = set_logger(f"{logger.name}.{title}")
         self.logger.info(f"Initializing DAQ_Move: {title}")
 
-        super().__init__(listener_class=MoveActorListener, action_list=("save", "update"), **kwargs)
+        super().__init__(listener_class=MoveActorListener,
+                         action_list=("save", "update"), **kwargs)
 
         if not (
             ui_identifier is not None and ui_identifier in ActuatorUIFactory.keys()
@@ -125,17 +127,20 @@ class DAQ_Move(ParameterControlModule):
         self.settings.child("main_settings", "ui_type").setValue(ui_identifier)
         self.settings.child("main_settings", "ui_type").setOpts(readonly=True)
 
+
         DAQ_Move_UI = ActuatorUIFactory.get(ui_identifier)
 
         self.parent = parent
         if parent is not None:
-            self.ui = DAQ_Move_UI(parent, title)
+            self.ui = DAQ_Move_UI(parent, title,
+                                  controls_dock=kwargs.pop('controls_dock', None),
+                                  settings_dock=kwargs.pop('settings_dock', None))
         else:
             self.ui = None
 
         if self.ui is not None:
             self.ui.actuators = ACTUATOR_NAMES
-            self.ui.set_settings_tree(self.settings_tree)
+            self.ui.add_setting_tree(self.settings_tree)
             self.ui.command_sig.connect(self.process_ui_cmds)
 
         self.splash_sc = get_splash_sc()

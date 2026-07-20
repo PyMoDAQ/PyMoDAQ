@@ -12,6 +12,7 @@ from pymodaq_data.data import DataToExport, DataWithAxes, DataDim, DataDistribut
 from pymodaq_gui.plotting.items.roi import RoiInfo
 
 if TYPE_CHECKING:
+    from pymodaq_gui.utils.dock import Dock
     from pymodaq_gui.plotting.data_viewers.viewer0D import View0D
     from pymodaq_gui.plotting.data_viewers.viewer1D import View1D
     from pymodaq_gui.plotting.data_viewers.viewer2D import View2D
