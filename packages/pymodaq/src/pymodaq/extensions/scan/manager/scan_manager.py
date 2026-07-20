@@ -1,4 +1,4 @@
-
+from copy import deepcopy
 from typing import Union, TYPE_CHECKING
 from pathlib import Path
 import sys
@@ -49,7 +49,7 @@ class ScanManager(SettingsManager):
 
     """
 
-    entry_type = 'settings'
+    entry_type = 'scans'
     entry_extension ='.scan'
     icon_name = 'qr_code_scanner'
 
@@ -86,10 +86,9 @@ class ScanManager(SettingsManager):
         module_from_daq_scan = self.daq_scan.modules_manager
         module_from_manager = self.modules_manager
         for child in control_modules_entry.setting.parameter.children():
-            value = module_from_daq_scan.settings[child.name()]
+            value = deepcopy(module_from_daq_scan.settings[child.name()])
             value['selected'] = [mod for mod in child.value()['selected'] if
                                  mod in value['all_items']]
-            module_from_daq_scan.settings[child.name()] = value
             module_from_manager.settings[child.name()] = value
 
     def save_entries(self, entry_path: Path = None):
@@ -211,7 +210,5 @@ if __name__ == "__main__":
     scan: DAQScan
     win_ext, scan = create_extension(dashboard, DAQScan)
     win_ext.show()
-    QtWidgets.QApplication.processEvents()
-    scan.scan_manager.show()
 
     sys.exit(app.exec())

@@ -1,3 +1,4 @@
+from copy import deepcopy
 from dataclasses import dataclass
 
 from numba.core.cgutils import if_zero
@@ -98,13 +99,15 @@ class ControlModulesEntryHandler(SubEntryHandler):
         module = self.get_module(entry, *args, **kwargs)
         module.settings.child(*entry.setting.path).setValue(entry.setting.value())
         """
-
         module_from_daq_scan = self.manager.daq_scan.modules_manager
         module_from_manager = self.manager.modules_manager
         for child in entry.setting.parameter.children():
-            value = module_from_daq_scan.settings[child.name()]
+            value = deepcopy(module_from_daq_scan.settings[child.name()])
             value['selected'] = [mod for mod in child.value()['selected'] if
                                  mod in value['all_items']]
-            module_from_daq_scan.settings[child.name()] = value
+            if 'actuators' in child.name():
+                module_from_daq_scan.selected_actuators_name = value['selected']
+            else:
+                module_from_daq_scan.selected_detectors_name = value['selected']
             module_from_manager.settings[child.name()] = value
 
