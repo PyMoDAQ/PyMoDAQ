@@ -98,10 +98,13 @@ class ControlModulesEntryHandler(SubEntryHandler):
         module = self.get_module(entry, *args, **kwargs)
         module.settings.child(*entry.setting.path).setValue(entry.setting.value())
         """
-        module = self.manager.daq_scan.modules_manager
+
+        module_from_daq_scan = self.manager.daq_scan.modules_manager
+        module_from_manager = self.manager.modules_manager
         for child in entry.setting.parameter.children():
-            value = module.settings[child.name()]
+            value = module_from_daq_scan.settings[child.name()]
             value['selected'] = [mod for mod in child.value()['selected'] if
                                  mod in value['all_items']]
-            module.settings[child.name()] = value
+            module_from_daq_scan.settings[child.name()] = value
+            module_from_manager.settings[child.name()] = value
 

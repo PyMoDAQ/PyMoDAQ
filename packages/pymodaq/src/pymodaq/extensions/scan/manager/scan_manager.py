@@ -78,6 +78,20 @@ class ScanManager(SettingsManager):
 
         self.update_settings(self.settings)
 
+    def _update_entry(self, entry: Union[str, Path] = None, **kwargs):
+        data = settings_manager_subentries_from_path(Path(entry))
+        self.config_model.load(data[1:])
+
+        control_modules_entry: ScanSubEntry = data[0]
+        module_from_daq_scan = self.daq_scan.modules_manager
+        module_from_manager = self.modules_manager
+        for child in control_modules_entry.setting.parameter.children():
+            value = module_from_daq_scan.settings[child.name()]
+            value['selected'] = [mod for mod in child.value()['selected'] if
+                                 mod in value['all_items']]
+            module_from_daq_scan.settings[child.name()] = value
+            module_from_manager.settings[child.name()] = value
+
     def save_entries(self, entry_path: Path = None):
         modules_settings = Parameter.create(name='modules', type='group', children=[
             self.modules_manager.settings.child('detectors').saveState(),

@@ -1,5 +1,6 @@
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Union, Any, TYPE_CHECKING
+from typing import Union, Any, TYPE_CHECKING, Sequence
 
 from qtpy import QtWidgets, QtCore
 
@@ -342,15 +343,19 @@ class SettingsManagerModel(TableModel):
         self.remove_row(row)
         self.update_delegate.emit()
 
-    def load(self, fname: Union[str, Path] = None):
+    def load(self, fname: Union[str, Path, Sequence[bytes]] = None):
         if fname is None:
             fname = gutils.select_file(start_path=self.save_path, save=False, ext='*')
         if fname is not None and fname != '':
-            self.save_path = fname.parent
-            while self.rowCount(self.index(-1, -1)) > 0:
-                self.remove_row(0)
-            data = settings_manager_subentries_from_path(Path(fname))
-
+            if isinstance(fname, (Path, str)):
+                self.save_path = fname.parent
+                while self.rowCount(self.index(-1, -1)) > 0:
+                    self.remove_row(0)
+                data = settings_manager_subentries_from_path(Path(fname))
+            elif isinstance(fname, Iterable):
+                data = fname
+            else:
+                data = []
             for row in data:
                 self.insert_data(self.rowCount(self.index(-1, -1)), row)
         self.update_delegate.emit()
