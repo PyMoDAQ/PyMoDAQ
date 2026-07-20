@@ -9,7 +9,7 @@ from qtpy.QtCore import Qt
 from qtpy.QtGui import QKeySequence
 from qtpy.QtCore import QModelIndex
 
-
+from pymodaq_gui.utils.widgets.widget_with_label_title import WidgetWithLabelTitle
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config, get_set_local_dir, get_set_config_dir
 
@@ -193,8 +193,10 @@ class SettingsManager(ManagerBase):
         hlayout.addWidget(self.widget_buttons)
         hlayout.addLayout(self.vlayout_right)
 
-        valyout_left.addWidget(self.settings_tree)
-        self.vlayout_right.addWidget(self.table_out)
+        valyout_left.addWidget(WidgetWithLabelTitle('Select Settings:',
+                                                    self.settings_tree))
+        self.vlayout_right.addWidget(WidgetWithLabelTitle('Entries to apply:',
+                                                          self.table_out))
 
         self.main_widget.setLayout(layout)
 

@@ -6,6 +6,7 @@ import sys
 import toml
 from qtpy import QtWidgets, QtCore, QtGui
 
+from pymodaq_gui.utils.widgets.widget_with_label_title import WidgetWithLabelTitle
 from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config, get_set_config_dir
@@ -169,15 +170,15 @@ class ScanManager(SettingsManager):
     def setup_docks_and_widgets(self):
         super().setup_docks_and_widgets()
         widget = QtWidgets.QWidget()
+        widget_with_title = WidgetWithLabelTitle('Configure a Scan:', widget)
         widget.setLayout(QtWidgets.QVBoxLayout())
         widget.layout().addWidget(self.modules_manager.settings_tree)
         widget.layout().addWidget(self.scanner.parent_widget)
-        self.main_widget.layout().insertWidget(0, widget)
+        self.main_widget.layout().insertWidget(0, widget_with_title)
         for child_name in ('probe_data', 'test_actuator'):
             self.modules_manager.settings.child(child_name).show(False)
-        widget.setMaximumWidth(300)
-
-
+        self.main_widget.layout().setStretch(0, 1)
+        self.main_widget.layout().setStretch(1, 3)
 
 
 if __name__ == "__main__":
