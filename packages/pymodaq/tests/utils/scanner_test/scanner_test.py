@@ -46,25 +46,3 @@ class TestScanner:
     def test_instantiation(self, scanner):
         scanner = scanner
 
-    def test_repr_ser_deser(self, scanner):
-        scanner = scanner
-
-        repr = scanner.to_scan_repr()
-        assert repr.actuators == [act.title for act in actuators]
-        assert compareValuesParameter(repr.scanner_settings, scanner.settings, with_self=False)
-        assert compareValuesParameter(repr.sub_scanner_settings, scanner.scanner.settings, with_self=False)
-        repr_deser, _ = repr.deserialize(repr.serialize(repr))
-        assert repr == repr_deser
-
-    def test_repr_use(self, scanner: Scanner):
-        scanner = scanner
-
-        repr_ini = scanner.to_scan_repr()
-        scan_types = scanner_factory.keys
-        scanner.set_scan_type_and_subtypes(scan_types[1])
-
-        assert repr_ini != scanner.to_scan_repr()
-
-        scanner.from_scan_repr(repr_ini)
-        assert scanner.to_scan_repr() == repr_ini
-

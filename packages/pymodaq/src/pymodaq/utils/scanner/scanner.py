@@ -16,7 +16,7 @@ from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_gui.parameter import Parameter
 
 from pymodaq.utils.scanner.scan_factory import ScannerFactory, ScannerBase
-from pymodaq.utils.scanner.utils import ScanInfo, ScanRepr
+from pymodaq.utils.scanner.utils import ScanInfo
 from pymodaq.utils.scanner.scan_selector import Selector
 from pymodaq.utils.data import DataToExport, DataActuator
 from pymodaq_utils.utils import find_objects_in_list_from_attr_name_val
@@ -96,20 +96,6 @@ class Scanner(QObject, ParameterManager):
         self.parent_widget.layout().addWidget(self._scanner_settings_widget)
         self.settings_tree.setMinimumHeight(110)
         self.settings_tree.header().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
-
-    def to_scan_repr(self) -> ScanRepr:
-        return ScanRepr(self)
-
-    def from_scan_repr(self, scan_repr:ScanRepr):
-        self.actuators = [find_objects_in_list_from_attr_name_val(
-            self.actuators, 'title', act_name) for act_name in scan_repr.actuators]
-        self.settings['scan_type'] = scan_repr.scanner_settings['scan_type']
-        QtWidgets.QApplication.processEvents()
-        self.settings['scan_sub_type'] = scan_repr.scanner_settings['scan_sub_type']
-        QtWidgets.QApplication.processEvents()
-        self.settings['units_handling', 'display_units'] = scan_repr.scanner_settings['units_handling', 'display_units']
-        QtWidgets.QApplication.processEvents()
-        self.scanner.settings.restoreState(scan_repr.sub_scanner_settings.saveState())
 
     def set_scanner(self):
         try:
