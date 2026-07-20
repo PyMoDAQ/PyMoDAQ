@@ -21,7 +21,7 @@ from pymodaq_gui.managers.settings.utils import (
 from pymodaq.extensions.scan.manager.subentries import (
     SubEntryHandlerFactory, SubEntryHandler, SubEntryError,
     SubEntryHandlerTypes, ScanSubEntry, ParameterWithPath, ScanSettingsEntryHandler,
-    ControlModulesEntryHandler, ScannnerEntryHandler)
+    ControlModulesEntryHandler, ScannnerEntryHandler, StartScanEntryHandler)
 
 from pymodaq_gui.managers.settings.settings_manager import SettingsManager
 
@@ -87,8 +87,14 @@ class ScanManager(SettingsManager):
         # update scanner
         ScannnerEntryHandler.update(self, data.pop(0))
 
+
+
         #populate the Settings Table
-        self.config_model.load(data)
+        self.config_model.load(data[:-1])
+
+        # set the start scan action
+        self.set_action_checked('start_scan', data[-1].setting.value())
+
 
     def save_entries(self, entry_path: Path = None):
         # first save an entry corresponding to the selected detectors and actuators
@@ -103,6 +109,11 @@ class ScanManager(SettingsManager):
 
         # then save the various settings about the scan flow or h5saver
         self.config_model.save(entry_path, mode='ab')
+
+        # then save an entry corresponding to the start scan status
+        start_entry = StartScanEntryHandler.create_subentry(self)
+        with open(entry_path, mode='ab') as file:
+            file.write(start_entry.serialize(start_entry))
 
     def connect_things(self):
         super().connect_things()
@@ -211,6 +222,16 @@ class ScanManager(SettingsManager):
         self.main_widget.layout().setStretch(1, 3)
 
         self.settings_to_pick.set_title('(3) Select Settings to Apply:')
+        self.add_toolbar('after_settings','After Settings Applied')
+        self.add_action('start_scan', 'Start Scan', 'motion_play',
+                        tip="Start the scan after all settings have been applied.",
+                        auto_menu=False, toolbar='after_settings', checkable=True,
+                        icon_color=self.get_theme().red,
+                        icon_checked_color=self.get_theme().green)
+        self.settings_to_apply.set_title('(i) Settings to Apply:')
+        self.settings_to_apply.insert_widget(
+            WidgetWithLabelTitle('(ii) StartScan...or not',
+                                 self.get_toolbar('after_settings')), 2)
 
 
 if __name__ == "__main__":

@@ -195,7 +195,7 @@ class SettingsManager(ManagerBase):
 
         self.settings_to_pick = WidgetWithLabelTitle('Select Settings:',
                                                     self.settings_tree)
-        self.settings_to_apply = WidgetWithLabelTitle('Entries to apply:',
+        self.settings_to_apply = WidgetWithLabelTitle('Settings to apply:',
                                                       self.table_out)
         valyout_left.addWidget(self.settings_to_pick)
         self.vlayout_right.addWidget(self.settings_to_apply)

@@ -199,3 +199,42 @@ class ScannnerEntryHandler(SubEntryHandler):
             entry.setting.parameter.child('scanner_settings').saveState())
 
 
+@SubEntryHandlerFactory.register_handler()
+class StartScanEntryHandler(SubEntryHandler):
+
+    handler_name = 'StartScanSubType'
+    use_dialog = False
+
+    def __init__(self, *args, **kwargs) -> None:
+        self.manager: ScanManager = None
+        super().__init__(*args, **kwargs)
+
+    @classmethod
+    def create_subentry(cls, manager: 'ScanManager') -> ScanSubEntry:
+        start_settings = Parameter.create(name='start', type='bool',
+                                         value=manager.is_action_checked('start_scan'))
+        return ScanSubEntry(cls.handler_name,
+                            'StartScan',
+                            ParameterWithPath(start_settings))
+
+    def update_subentry(self, manager: 'ScanManager', entry: ScanSubEntry):
+        """ update the manager according to the loading of the SubEntry"""
+        manager.set_action_checked('start_scan', entry.setting.value())
+
+    def execute_subentry(self, entry: ScanSubEntry,
+                         manager: 'ScanManager', *args, **kwargs):
+        """ Execute the given subentry
+
+        In general, should get first the module on which the settings will be applied
+        Then apply the Settings subentry to this module
+
+        Examples
+        --------
+        module = self.get_module(entry, *args, **kwargs)
+        module.settings.child(*entry.setting.path).setValue(entry.setting.value())
+        """
+        if entry.setting.value():
+            manager.daq_scan.override_popups(False)
+            manager.daq_scan.start_scan()
+            manager.daq_scan.cancel_override_popups()
+

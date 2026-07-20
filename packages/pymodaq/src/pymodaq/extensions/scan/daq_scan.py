@@ -138,7 +138,7 @@ class DAQScan(CustomExt):
                          add_toolbar_break=False)
 
         self.wait_time = 1000
-
+        self._show_popups: bool = SHOW_POPUPS # wether to show or not the popups
         self.navigator: Navigator = None
         self.scan_selector: ScanSelector = None
 
@@ -401,6 +401,12 @@ class DAQScan(CustomExt):
         self.modules_manager.selected_actuators_name = actuators
         QtWidgets.QApplication.processEvents()
 
+    def override_popups(self, override=True):
+        self._show_popups = override
+
+    def cancel_override_popups(self):
+        self._show_popups = SHOW_POPUPS
+
     def show_file_attributes(self, type_info='dataset'):
         """
             Switch the type_info value.
@@ -424,7 +430,7 @@ class DAQScan(CustomExt):
             --------
             custom_tree.parameter_to_xml_file, create_menu
         """
-        if SHOW_POPUPS:
+        if self._show_popups:
             dialog = QtWidgets.QDialog()
             vlayout = QtWidgets.QVBoxLayout()
             tree = ParameterTree()
