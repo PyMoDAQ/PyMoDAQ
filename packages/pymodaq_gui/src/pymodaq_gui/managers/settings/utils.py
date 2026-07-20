@@ -305,33 +305,6 @@ class SettingsManagerModel(TableModel):
         while self.rowCount() > 0:
             self.remove_row(0)
 
-    def edit_data(self, index):
-        entry = self._data[index.row()]
-        dialog = QDialog()
-
-        vlayout = QtWidgets.QVBoxLayout()
-        dialog.setLayout(vlayout)
-
-        module_index = get_module_index_from_param(entry.setting)
-        vlayout.addWidget(QtWidgets.QLabel(
-            f'Setting from module {entry.module_name} with path:\n {entry.setting.path[module_index+2:]}'))
-        setting = Parameter.create(name='settings', type='group', children=[entry.setting.parameter.saveState()])
-        tree = SettingsManagerParameterTree(parent=dialog)
-        tree.setParameters(setting, showTop=False)
-        buttonBox = QDialogButtonBox(parent=dialog)
-        buttonBox.addButton("Done", QDialogButtonBox.ButtonRole.AcceptRole)
-        buttonBox.accepted.connect(dialog.accept)
-        buttonBox.addButton("Cancel", QDialogButtonBox.ButtonRole.RejectRole)
-        buttonBox.rejected.connect(dialog.reject)
-
-        vlayout.addWidget(tree)
-        vlayout.addWidget(buttonBox)
-        dialog.setWindowTitle("Edit the setting")
-        res = dialog.exec()
-
-        if res:
-            entry.setting.parameter.setValue(setting.children()[0].value())
-
     def add_data(self, row, data: SubEntry):
         if data is not None:
             if data in self._data:
@@ -347,12 +320,16 @@ class SettingsManagerModel(TableModel):
         if fname is None:
             fname = gutils.select_file(start_path=self.save_path, save=False, ext='*')
         if fname is not None and fname != '':
+            #first remove all the table rows
+            while self.rowCount(self.index(-1, -1)) > 0:
+                self.remove_row(0)
+
             if isinstance(fname, (Path, str)):
+                # populate it from full file containning binary list od Subentry
                 self.save_path = fname.parent
-                while self.rowCount(self.index(-1, -1)) > 0:
-                    self.remove_row(0)
                 data = settings_manager_subentries_from_path(Path(fname))
             elif isinstance(fname, Iterable):
+                #populate the table from list of bytes encoding SubEntries
                 data = fname
             else:
                 data = []
