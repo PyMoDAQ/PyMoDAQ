@@ -9,6 +9,7 @@ from typing import Union, List
 
 from pymodaq.utils.shared_ui import SharedUI
 from pymodaq_gui.qt_utils import mkQApp
+from pymodaq_gui.utils.widgets.widget_with_title_in_toolbar import WidgetWithTitleInToolbar
 from pymodaq_gui.utils.widgets.window import make_window
 from pymodaq_gui.utils.widgets.widget_with_label_title import WidgetWithLabelTitle
 from pymodaq_utils.utils import ThreadCommand
@@ -96,7 +97,7 @@ class DAQMoveUI(ControlModuleUI):
         self.stop_pb: PushButtonIcon = None
         self.get_value_pb: PushButtonIcon = None
 
-        self.control_widget: QtWidgets.QWidget = None
+        self.control_widget: WidgetWithTitleInToolbar = None
         self.graph_widget: QtWidgets.QWidget = None
         self.viewer: ViewerDispatcher = None
 
@@ -153,7 +154,7 @@ class DAQMoveUI(ControlModuleUI):
     def setup_docks_and_widgets(self):
         self.parent.setLayout(QtWidgets.QHBoxLayout())
 
-        self.control_widget = WidgetWithLabelTitle(self.title)
+        self.control_widget = WidgetWithTitleInToolbar(self.title)
         self.parent.layout().setContentsMargins(0, 0, 0, 0)
 
         self.actuators_combo = QComboBox()
@@ -206,7 +207,7 @@ class DAQMoveUI(ControlModuleUI):
         self.add_toolbar('move', 'DAQMove')
         self.parent.layout().insertWidget(0, self.get_toolbar('move'))
         
-    def populate_control_ui(self,  widget: WidgetWithLabelTitle):
+    def populate_control_ui(self,  widget: WidgetWithTitleInToolbar):
 
         container_widget = QtWidgets.QWidget()
         widget.insert_widget(container_widget)
@@ -259,6 +260,10 @@ class DAQMoveUI(ControlModuleUI):
                         toolbar=toolbar, icon_checked='repeat_on',
                         icon_checked_color=self.get_theme().green)
         self.add_widget('status', self.statusbar, toolbar=toolbar)
+
+        self.control_widget.add_action('close', 'Close', 'cancel',
+                                       toolbar=self.control_widget.toolbar,
+                                       icon_color=self.get_theme().red)
 
     def setup_absolute_spinbox_actions(self, toolbar: QtWidgets.QToolBar = None):
         if toolbar is None:
@@ -348,6 +353,8 @@ class DAQMoveUI(ControlModuleUI):
     def connect_things(self):
         self._connect_common_actions()
         self.connect_common_move_actions()
+        self.control_widget.connect_action('close',
+                                           self.get_action('show_controls').trigger)
 
     def connect_move_actions(self):
         if 'move_abs_green' in self.actions_names:
