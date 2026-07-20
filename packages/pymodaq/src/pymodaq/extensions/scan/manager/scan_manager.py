@@ -197,13 +197,14 @@ class ScanManager(SettingsManager):
     def setup_docks_and_widgets(self):
         super().setup_docks_and_widgets()
         widget = QtWidgets.QWidget()
-        widget_with_title = WidgetWithLabelTitle('(1) Configure a Scan:', widget)
+        configure_scan_widget = WidgetWithLabelTitle('(1) Configure a Scan:', widget)
         self.get_data_pb = QtWidgets.QPushButton('ProbeData')
-        widget_with_title = WidgetWithLabelTitle('(2) Get Data To Plot:', self.get_data_pb)
+        get_data_widget = WidgetWithLabelTitle('(2) Get Data To Plot:', self.get_data_pb)
         widget.setLayout(QtWidgets.QVBoxLayout())
         widget.layout().addWidget(self.modules_manager.settings_tree)
         widget.layout().addWidget(self.scanner.parent_widget)
-        self.main_widget.layout().insertWidget(0, widget_with_title)
+        self.main_widget.layout().insertWidget(0, configure_scan_widget)
+        configure_scan_widget.insert_widget(get_data_widget, 2)
         for child_name in ('probe_data', 'test_actuator'):
             self.modules_manager.settings.child(child_name).show(False)
         self.main_widget.layout().setStretch(0, 1)
