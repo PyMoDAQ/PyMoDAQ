@@ -100,7 +100,8 @@ class DAQ_Move(ParameterControlModule):
     listener_class = MoveActorListener
     ui: Optional[DAQ_Move_UI_Base]
 
-    def __init__(self, parent=None, title="DAQ Move", ui_identifier: Optional[str] = None, **kwargs) -> None:
+    def __init__(self, parent=None, title="DAQ Move",
+                 ui_identifier: Optional[str] = None, **kwargs) -> None:
         """
 
         Parameters

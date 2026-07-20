@@ -1,4 +1,7 @@
 from dataclasses import dataclass
+
+from numba.core.cgutils import if_zero
+
 from pymodaq.control_modules.move_utility_classes import HW_SETTINGS_KEY as ACTUATOR_SETTINGS_KEY
 import time
 from typing import Callable, TYPE_CHECKING, Union, Tuple
@@ -71,4 +74,34 @@ class ScanSettingsEntryHandler(SubEntryHandler):
 
         module: Union['DAQScan', 'H5Saver'] = getattr(manager, entry.module_name)
         module.settings.child(*entry.setting.path[2:]).setValue(entry.setting.value())
+
+
+@SubEntryHandlerFactory.register_handler()
+class ControlModulesEntryHandler(SubEntryHandler):
+
+    handler_name = 'ControlModulesSettings'
+    use_dialog = False
+
+    def __init__(self, *args, **kwargs) -> None:
+        self.manager: ScanManager = None
+        super().__init__(*args, **kwargs)
+
+    def execute_subentry(self, entry: ScanSubEntry,
+                         manager: 'ScanManager', *args, **kwargs):
+        """ Execute the given subentry
+
+        In general, should get first the module on which the settings will be applied
+        Then apply the Settings subentry to this module
+
+        Examples
+        --------
+        module = self.get_module(entry, *args, **kwargs)
+        module.settings.child(*entry.setting.path).setValue(entry.setting.value())
+        """
+        module = self.manager.daq_scan.modules_manager
+        for child in entry.setting.parameter.children():
+            value = module.settings[child.name()]
+            value['selected'] = [mod for mod in child.value()['selected'] if
+                                 mod in value['all_items']]
+            module.settings[child.name()] = value
 

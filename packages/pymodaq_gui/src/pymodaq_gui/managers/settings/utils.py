@@ -139,11 +139,12 @@ def settings_manager_subentries_from_path(fname: Path) -> list[SubEntry]:
 
 mock_list = ['elt1', 'elt2', 'elt3']
 mock_entry = SubEntry('settings',
-                               'Photodiode',
+                      'Photodiode',
                       ParameterWithPath(
-                                   parameter=Parameter.create(title='mytitle', name='myname',
-                                                              type='list', value=mock_list[0],
-                                                              limits=mock_list)))
+                          parameter=Parameter.create(
+                              title='mytitle', name='myname',
+                              type='list', value=mock_list[0],
+                              limits=mock_list)))
 
 
 
@@ -354,13 +355,13 @@ class SettingsManagerModel(TableModel):
                 self.insert_data(self.rowCount(self.index(-1, -1)), row)
         self.update_delegate.emit()
 
-    def save(self, fname: str = None):
+    def save(self, fname: str = None, mode='wb'):
         if fname is None:
             fname = gutils.select_file(start_path=self.save_path, save=True, ext='config',
                                        force_save_extension=True)
             if isinstance(fname, Path):
                 self.save_path = fname.parent
-        with open(fname, 'wb') as file:
+        with open(fname, mode) as file:
             file.writelines([SubEntry.serialize(entry) for entry in self._data])
 
 
@@ -380,6 +381,7 @@ class SettingsManagerTableView(QtWidgets.QTableView):
         self.entry_type = entry_type.capitalize()
         self.setmenu(menu)
         #self.doubleClicked.connect(self.edit_row)
+        self.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
 
     def edit_row(self):
         index = self.currentIndex()

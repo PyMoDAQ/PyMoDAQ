@@ -10,7 +10,7 @@ from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config, get_set_config_dir
 
-
+from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.h5modules.saving import H5Saver
 from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 from pymodaq_gui.managers.settings.utils import (
@@ -20,7 +20,8 @@ from pymodaq_gui.managers.settings.utils import (
 
 from pymodaq.extensions.scan.manager.subentries import (
     SubEntryHandlerFactory, SubEntryHandler, SubEntryError,
-    SubEntryHandlerTypes, ScanSubEntry, ParameterWithPath, ScanSettingsEntryHandler)
+    SubEntryHandlerTypes, ScanSubEntry, ParameterWithPath, ScanSettingsEntryHandler,
+    ControlModulesEntryHandler)
 
 from pymodaq_gui.managers.settings.settings_manager import SettingsManager
 
@@ -76,6 +77,19 @@ class ScanManager(SettingsManager):
 
         self.update_settings(self.settings)
 
+    def save_entries(self, entry_path: Path = None):
+        modules_settings = Parameter.create(name='modules', type='group', children=[
+            self.modules_manager.settings.child('detectors').saveState(),
+            self.modules_manager.settings.child('actuators').saveState(),
+        ])
+        modules_entry = ScanSubEntry(ControlModulesEntryHandler.handler_name,
+                                     'ModuleManager',
+                                     ParameterWithPath(modules_settings))
+
+        with open(entry_path, mode='wb') as file:
+            file.write(modules_entry.serialize(modules_entry))
+        self.config_model.save(entry_path, mode='ab')
+
     def connect_things(self):
         super().connect_things()
         self.modules_manager.actuators_changed.connect(self.update_scanner_actuators)
@@ -113,7 +127,7 @@ class ScanManager(SettingsManager):
                 module = self.get_module_from_param(ParameterWithPath(current_setting))
             except KeyError:
                 module = ModuleType.NONE.value
-            entry = SubEntry(
+            entry = ScanSubEntry(
                 SubEntryHandlerTypes.SETTINGS, module,
                 ParameterWithPath(current_setting))
             entries = self.config_model.split_entry(entry)
@@ -154,8 +168,16 @@ class ScanManager(SettingsManager):
 
     def setup_docks_and_widgets(self):
         super().setup_docks_and_widgets()
-        self.main_widget.layout().insertWidget(0, self.modules_manager.settings_tree)
-        self.main_widget.layout().insertWidget(1, self.scanner.parent_widget)
+        widget = QtWidgets.QWidget()
+        widget.setLayout(QtWidgets.QVBoxLayout())
+        widget.layout().addWidget(self.modules_manager.settings_tree)
+        widget.layout().addWidget(self.scanner.parent_widget)
+        self.main_widget.layout().insertWidget(0, widget)
+        for child_name in ('probe_data', 'test_actuator'):
+            self.modules_manager.settings.child(child_name).show(False)
+        widget.setMaximumWidth(300)
+
+
 
 
 if __name__ == "__main__":
@@ -168,10 +190,13 @@ if __name__ == "__main__":
 
     win, dashboard = create_load_dashboard()
     win.mainwindow.setVisible(False)
+    dashboard.experiment_manager.execute_entry()
+    QtWidgets.QApplication.processEvents()
+
     scan: DAQScan
     win_ext, scan = create_extension(dashboard, DAQScan)
     win_ext.show()
-
+    QtWidgets.QApplication.processEvents()
     scan.scan_manager.show()
 
     sys.exit(app.exec())
