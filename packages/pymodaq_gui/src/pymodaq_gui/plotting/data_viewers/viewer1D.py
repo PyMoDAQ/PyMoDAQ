@@ -10,6 +10,7 @@ import numpy as np
 
 import pymodaq_data.plotting.utils
 from pymodaq_data.data import DataRaw, DataFromRoi, Axis, DataToExport, DataCalculated, DataWithAxes
+from pymodaq_gui.utils.widgets.widget_with_label_title import WidgetWithLabelTitle
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_gui.parameter import utils as putils
@@ -20,13 +21,16 @@ from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerBase
 from pymodaq_gui.plotting.utils.plot_utils import make_dashed_pens
 from pymodaq_gui.plotting.items.roi import RoiInfo
-from pymodaq_gui.managers.roi_manager import ROIManager, LinearROI, DataDim
+from pymodaq_gui.plotting.items.roi import LinearROI, ROIDim
+from pymodaq_gui.managers.roi_viewer_manager import ROIViewerManager, roi_format
 from pymodaq_gui.plotting.utils.filter import Filter1DFromCrosshair, Filter1DFromRois
 from pymodaq_gui.plotting.widgets import PlotWidget
 from pymodaq_gui.plotting.data_viewers.viewer0D import Viewer0D
+from pymodaq_gui.utils.dock import Dock
+from pymodaq_gui.plotting.utils.plot_utils import display_in_dock
 
 logger = set_logger(get_module_name(__file__))
-
+config = Config()
 PLOT_COLORS = pymodaq_data.plotting.utils.PlotColors()
 
 
@@ -184,6 +188,8 @@ class DataDisplayer(QObject):
         for ind, plot_item in enumerate(self.get_plot_items()):
             if color is None:
                 scatter_color = self._plot_colors[ind]
+            else:
+                scatter_color = color
             if with_scatter:
                 pen = None
                 symbol_type = symbol
@@ -258,10 +264,12 @@ class DataDisplayer(QObject):
 
 class View1D(ActionManager, QObject):
     def __init__(self, parent_widget: QtWidgets.QWidget = None, show_toolbar=True,
-                 no_margins=False, flip_axes=False, title=''):
+                 no_margins=False, flip_axes=False, title='',
+                 rois_dock: Dock = None):
         QObject.__init__(self)
         ActionManager.__init__(self, toolbar=QtWidgets.QToolBar())
-        self.title = title
+        self._title = title
+        self.rois_dock = rois_dock
         self.no_margins = no_margins
         self.flip_axes = flip_axes
 
@@ -282,7 +290,8 @@ class View1D(ActionManager, QObject):
             self.parent_widget.show()
 
         self.plot_widget = PlotWidget()
-        self.roi_manager = ROIManager(DataDim.Data1D)
+        self.roi_manager = ROIViewerManager(self.plotitem.vb, ROIDim.ROI1D)
+        self.roi_widget = WidgetWithLabelTitle(self.title, self.roi_manager.roiwidget)
         self.data_displayer = DataDisplayer(self.plotitem, flip_axes=self.flip_axes)
         self.other_data_displayers: Dict[str, DataDisplayer] = {}
         self.setup_widgets()
@@ -299,6 +308,16 @@ class View1D(ActionManager, QObject):
         if not self.show_toolbar:
             self.splitter_ver.setSizes([0, 1, 0])
 
+    @property
+    def title(self) -> str:
+        return self._title
+
+    @title.setter
+    def title(self, value: str):
+        self._title = value
+        self.roi_manager.title = value
+        self.roi_widget.set_title(value)
+
     def add_data_displayer(self, displayer_name: str, plot_colors=PLOT_COLORS):
         self.other_data_displayers[displayer_name] = DataDisplayer(self.plotitem, self.flip_axes,
                                                                    plot_colors)
@@ -308,15 +327,13 @@ class View1D(ActionManager, QObject):
         if displayer is not None:
             displayer.update_display_items()
 
-    @Slot(str)
-    def add_roi_displayer(self, roi_name=''):
-        color = self.roi_manager.ROIs[roi_name].color
+    def add_roi_displayer(self, roi_index: int):
+        color = self.roi_manager.get_roi_from_index(roi_index).roi.color()
         self.lineout_viewers.view.add_data_displayer(
-            roi_name, make_dashed_pens(color, self.data_displayer.Ndata))
+            roi_format(roi_index), make_dashed_pens(color, self.data_displayer.Ndata))
 
-    @Slot(str)
-    def remove_roi_displayer(self, roi_name=''):
-        self.lineout_viewers.view.remove_data_displayer(roi_name)
+    def remove_roi_displayer(self, roi_index: int):
+        self.lineout_viewers.view.remove_data_displayer(roi_format(roi_index))
 
     def move_roi_target(self, pos: Iterable[float], **kwargs):
         if not self.roi_target.isVisible():
@@ -383,19 +400,28 @@ class View1D(ActionManager, QObject):
 
     def do_math(self):
         try:
-            self.roi_manager.roiwidget.setWindowTitle(f'{self.title} ROIs')
-            self.roi_manager.roiwidget.setVisible(self.is_action_checked('do_math'))
-            self.roi_manager.roiwidget.closeEvent = lambda event: self.set_action_checked('do_math', False)
+            if (config('gui', 'viewer', 'rois_as_popup')
+                    or self.rois_dock is None):
+                if self.rois_dock is not None:
+                    self.rois_dock.removeWidgets(close=False)
+                    self.rois_dock.setVisible(False)
+
+                self.roi_widget.setWindowTitle(f'{self.title} ROIs')
+                self.roi_widget.setVisible(self.is_action_checked('do_math'))
+                self.roi_widget.closeEvent = lambda event: self.set_action_checked('do_math', False)
+            else:
+                display_in_dock(self.is_action_checked('do_math'),
+                                self.roi_widget,
+                                self.rois_dock)
 
             self.lineout_widgets.setVisible(self.is_action_checked('do_math'))
 
         except Exception as e:
             logger.exception(str(e))
 
-    @Slot(str)
-    def update_roi_channels(self, roi_name):
+    def update_roi_channels(self, roi_index):
         """Update the use_channel setting each time a ROI is added"""
-        roi = self.roi_manager.get_roi(roi_name)
+        roi = self.roi_manager.get_roi_from_index(roi_index)
         self.roi_manager.update_use_channel(self.data_displayer.labels.copy(),roi.index)
 
     def setup_widgets(self):
@@ -405,7 +431,7 @@ class View1D(ActionManager, QObject):
         self.splitter_ver = QtWidgets.QSplitter(Qt.Vertical)
         self.parent_widget.layout().addWidget(self.splitter_ver)
 
-        self.roi_manager.roiwidget.hide()
+        self.roi_widget.hide()
 
         self.splitter_ver.addWidget(self.toolbar)
 
@@ -417,7 +443,6 @@ class View1D(ActionManager, QObject):
 
         self.splitter_ver.addWidget(self.plot_widget)
         self.splitter_ver.addWidget(self.lineout_widgets)
-        self.roi_manager.viewer_widget = self.plot_widget
 
         self.crosshair = Crosshair(self.plotitem, orientation='vertical')
         self.show_hide_crosshair()
@@ -451,32 +476,34 @@ class View1D(ActionManager, QObject):
             self.get_action('overlay').trigger()
 
     def update_colors(self, colors: list):
-        for ind, roi_name in enumerate(self.roi_manager.ROIs):
-            self.lineout_viewers.update_colors(make_dashed_pens(colors[ind]), displayer=roi_name)
+        for ind, roi_meta in enumerate(self.roi_manager.ROIs):
+            self.lineout_viewers.update_colors(
+                make_dashed_pens(colors[ind]), displayer=roi_format(roi_meta.index))
 
     def show_ROI_select(self):
         self.ROIselect.setVisible(self.is_action_checked('ROIselect'))
 
     def setup_actions(self):
-        self.add_action('do_math', 'Math', 'Calculator', 'Do Math using ROI', checkable=True)
-        self.add_action('crosshair', 'Crosshair', 'reset', 'Show data cursor', checkable=True)
-        self.add_action('aspect_ratio', 'AspectRatio', 'Zoom_1_1', 'Fix the aspect ratio',
+        self.add_action('roi', 'Math', 'calculate', 'Do Math using ROI', checkable=True)
+        self._actions['do_math'] = self.get_action('roi')  # for backcompatibility
+        self.add_action('crosshair', 'Crosshair', 'add_2', 'Show data cursor', checkable=True)
+        self.add_action('aspect_ratio', 'AspectRatio', 'aspect_ratio', 'Fix the aspect ratio',
                         checkable=True)
-        self.add_action('scatter', 'Scatter', 'Marker', 'Switch between line or scatter plots',
+        self.add_action('scatter', 'Scatter', 'scatter_plot', 'Switch between line or scatter plots',
                         checkable=True)
-        self.add_action('xyplot', 'XYPlotting', '2d',
+        self.add_action('xyplot', 'XYPlotting', 'function',
                         'Switch between normal or XY representation (valid for 2 channels)',
                         checkable=True,
                         visible=False)
-        self.add_action('overlay', 'Overlay', 'overlay', 'Plot overlays of current data',
+        self.add_action('overlay', 'Overlay', 'layers', 'Plot overlays of current data',
                         checkable=True)
-        self.add_action('errors', 'Errors', 'Statistics2', 'Plot boundaries (~error bars) of '
-                                                           'the data',
+        self.add_action('errors', 'Errors', 'contrast_square',
+                        'Plot boundaries (~error bars) of the data',
                         checkable=True)
-        self.add_action('sort', 'Sort Data', 'sort_ascend',
+        self.add_action('sort', 'Sort Data', 'sort',
                         'Display data in a sorted fashion with respect to axis',
                         checkable=True)
-        self.add_action('ROIselect', 'ROI Select', 'Select_24',
+        self.add_action('ROIselect', 'ROI Select', 'select',
                         tip='Show/Hide ROI selection area', checkable=True)
         self.add_action('x_label', 'x:')
         self.add_action('y_label', 'y:')
@@ -523,13 +550,16 @@ class Viewer1D(ViewerBase):
 
     """
 
-    def __init__(self, parent: QtWidgets.QWidget = None, title='', show_toolbar=True, no_margins=False,
-                 flip_axes=False):
+    def __init__(self, parent: QtWidgets.QWidget = None, title='',
+                 show_toolbar=True, no_margins=False,
+                 flip_axes=False,
+                 rois_dock: Dock = None):
         super().__init__(parent=parent, title=title)
 
         self.view = View1D(self.parent, show_toolbar=show_toolbar,
                            no_margins=no_margins, flip_axes=flip_axes,
-                           title=title)
+                           title=title,
+                           rois_dock=rois_dock)
 
         self.filter_from_rois = Filter1DFromRois(self.view.roi_manager)
         self.filter_from_rois.register_activation_signal(self.view.get_action('do_math').triggered)
@@ -548,15 +578,6 @@ class Viewer1D(ViewerBase):
             self.view.data_displayer.update_colors(colors)
         elif displayer in self.view.other_data_displayers:
             self.view.other_data_displayers[displayer].update_colors(colors)
-
-    @property
-    def roi_manager(self):
-        """Convenience method """
-        return self.view.roi_manager
-
-    @property
-    def roi_target(self) -> pg.InfiniteLine:
-        return self.view.roi_target
 
     def move_roi_target(self, pos: Iterable[float] = None):
         """move a specific read only ROI at the given position on the viewer"""
@@ -580,12 +601,7 @@ class Viewer1D(ViewerBase):
 
     def process_roi_lineouts(self, roi_dte: DataToExport):
         self.view.display_roi_lineouts(roi_dte)
-        self.measure_data_dict = dict([])
         try:
-            self.measure_data_dict = roi_dte.merge_as_dwa('Data0D').to_dict()
-            QtWidgets.QApplication.processEvents()
-            self.view.roi_manager.settings.child('measurements').setValue(self.measure_data_dict)
-
             if not self._display_temporary:
                 roi_dte_bis = roi_dte.deepcopy()
                 for dwa in roi_dte_bis:
@@ -595,7 +611,7 @@ class Viewer1D(ViewerBase):
                         dwa.name = f'Integrated'
                 self.data_to_export.append(roi_dte_bis.data)
                 self.data_to_export_signal.emit(self.data_to_export)
-        except AttributeError:
+        except AttributeError as e:
             pass
         self.ROI_changed.emit()
 
@@ -603,7 +619,7 @@ class Viewer1D(ViewerBase):
         self.view.ROIselect.sigRegionChangeFinished.connect(self.selected_region_changed)
         self._data_to_show_signal.connect(self.view.display_data)
         self.roi_manager.roi_changed.connect(self.roi_changed)
-        self.roi_manager.roi_value_changed.connect(self.roi_changed)
+        #self.roi_manager.roi_value_changed.connect(self.roi_changed)
 
         self.view.get_crosshair_signal().connect(self.crosshair_changed)
         self.view.get_double_clicked().connect(self.double_clicked)
@@ -856,7 +872,7 @@ if __name__ == '__main__':  # pragma: no cover
     #main()
     # main_random()
     #main_errors()
-    #main_extra_scatter()
-    main_xy()
+    main_extra_scatter()
+    #main_xy()
     #main_view1D()
     #main_nans()

@@ -147,7 +147,7 @@ class ItemSelect(QtWidgets.QListWidget):
         QtWidgets.QApplication.processEvents()
 
     def sizeHint(self):
-        return QtCore.QSize(super().sizeHint().width(), 25 * self.count())
+        return QtCore.QSize(super().sizeHint().width(), 30 * self.count())
 
 
 class ItemSelectParameterItem(WidgetParameterItem):

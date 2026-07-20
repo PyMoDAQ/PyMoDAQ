@@ -1,14 +1,17 @@
 from abc import abstractmethod
 from typing import TYPE_CHECKING
 
+import numpy as np
 from qtpy.QtWidgets import QComboBox
 from pint import DimensionalityError
-from qtpy import QtWidgets
+from qtpy import QtWidgets, QtCore, QtGui
 from typing import Union, List
 
 from pymodaq.utils.shared_ui import SharedUI
 from pymodaq_gui.qt_utils import mkQApp
 from pymodaq_gui.utils.widgets.window import make_window
+from pymodaq_gui.utils.widgets.widget_with_label_title import WidgetWithLabelTitle
+from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq.control_modules.thread_commands import UiToMainMove
 from pymodaq.control_modules.ui_utils import ControlModuleUI
@@ -16,8 +19,13 @@ from pymodaq.utils.data import DataActuator
 from pymodaq_data import Q_
 from pymodaq_data import DataToExport
 from pymodaq_gui.plotting.data_viewers import ViewerDispatcher
-from pymodaq_gui.utils import DockArea, QSpinBoxWithShortcut, PushButtonIcon, QLED, QSpinBox_ro
+from pymodaq_gui.utils import (DockArea, QSpinBoxWithShortcut,
+                               PushButtonIcon, QLED, QSpinBox_ro,
+                               Dock)
 from pymodaq_gui.utils.widgets import LabelWithFont
+from pymodaq_gui.plotting.utils.plot_utils import display_in_dock
+
+
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq.control_modules.daq_move_ui.utils import UiType
 config = Config()
@@ -60,8 +68,15 @@ class DAQMoveUI(ControlModuleUI):
     is_compact = False
 
     def __init__(self, parent: Union[DockArea, QtWidgets.QWidget],
-                 title="DAQ_Move"):
-        super().__init__(parent)
+                 title="DAQ_Move",
+                 controls_dock: Dock = None,
+                 settings_dock: Dock = None,):
+
+        super().__init__(parent,
+                         title=title,
+                         settings_dock=settings_dock,)
+
+        self.controls_dock = controls_dock
         self.title = title
         self._unit = ''
 
@@ -84,8 +99,6 @@ class DAQMoveUI(ControlModuleUI):
         self.control_widget: QtWidgets.QWidget = None
         self.graph_widget: QtWidgets.QWidget = None
         self.viewer: ViewerDispatcher = None
-
-        self._settings_widget: QtWidgets.QWidget = None
 
         self.setup_ui()
 
@@ -139,8 +152,9 @@ class DAQMoveUI(ControlModuleUI):
 
     def setup_docks_and_widgets(self):
         self.parent.setLayout(QtWidgets.QHBoxLayout())
+
+        self.control_widget = WidgetWithLabelTitle(self.title)
         self.parent.layout().setContentsMargins(0, 0, 0, 0)
-        self.control_widget = QtWidgets.QWidget()
 
         self.actuators_combo = QComboBox()
         self.abs_value_sb = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('pymodaq', 'actuator', 'siprefix'))
@@ -186,24 +200,16 @@ class DAQMoveUI(ControlModuleUI):
         self.viewer = ViewerDispatcher(dockarea)
         self.actuator_init = False
 
-
-
-
         self.populate_control_ui(self.control_widget)
 
     def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
         self.add_toolbar('move', 'DAQMove')
         self.parent.layout().insertWidget(0, self.get_toolbar('move'))
         
-    def populate_control_ui(self,  widget: QtWidgets.QWidget):
-        widget.setLayout(QtWidgets.QVBoxLayout())
-        vwidget = QtWidgets.QWidget()
-        vwidget.setLayout(QtWidgets.QHBoxLayout())
+    def populate_control_ui(self,  widget: WidgetWithLabelTitle):
+
         container_widget = QtWidgets.QWidget()
-        vwidget.layout().addWidget(container_widget)
-        vwidget.layout().addStretch()
-        widget.layout().addWidget(vwidget)
-        widget.layout().addStretch()
+        widget.insert_widget(container_widget)
 
         container_widget.setLayout(QtWidgets.QGridLayout())
         container_widget.layout().addWidget(LabelWithFont('Abs. Value'), 0, 0)
@@ -240,7 +246,9 @@ class DAQMoveUI(ControlModuleUI):
                         toolbar=toolbar, icon_color=self.get_theme().red)
         toolbar.addSeparator()
         self.add_action('show_controls', 'Show Controls',
-                        'discover_tune', "Show more controls", checkable=True,
+                        'discover_tune', "Show more controls",
+                        icon_checked_color=self.get_theme().green,
+                        checkable=True,
                         toolbar=toolbar)
         self.add_action('show_graph', 'Show Graph', 'bid_landscape', 'Show/Hide the Graph Widget',
                         checkable=True, checked=True, icon_checked='bid_landscape_disabled',
@@ -494,9 +502,20 @@ class DAQMoveUI(ControlModuleUI):
     # -------------------------------------------------------------------------
 
     def show_controls(self, show: bool = True):
-        self.control_widget.setWindowTitle(f'{self.title} controls')
-        self.control_widget.setVisible(show)
-        self.control_widget.closeEvent = lambda event: self.set_action_checked('show_controls', False)
+        if (self.config('pymodaq', 'actuator', 'controls_as_popup')
+                or self.controls_dock is None):
+            if self.controls_dock is not None:
+                self.controls_dock.removeWidgets(close=False)
+                self.controls_dock.setVisible(False)
+
+            self.control_widget.setWindowTitle(f'{self.title} controls')
+            self.control_widget.setVisible(show)
+            self.control_widget.closeEvent = lambda event: self.set_action_checked('show_controls', False)
+        else:
+            display_in_dock(show,
+                            self.control_widget,
+                            self.controls_dock,
+                            orientation=QtCore.Qt.Orientation.Vertical)
 
     def show_graph(self, show: bool = True):
         self.graph_widget.setWindowTitle(f'{self.title} graph')

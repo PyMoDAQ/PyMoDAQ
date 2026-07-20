@@ -98,8 +98,10 @@ class DAQ_Move(ParameterControlModule):
     listener_class = MoveActorListener
     ui: Optional[DAQMoveUI]
 
-    def __init__(self, parent=None, title="DAQ Move",
-                 ui_identifier: str | UiType | None = None, **kwargs) -> None:
+    def __init__(self, parent=None,
+                 title="DAQ Move",
+                 ui_identifier: Optional[str] = None,
+                 **kwargs) -> None:
         """
 
         Parameters
@@ -114,12 +116,16 @@ class DAQ_Move(ParameterControlModule):
         self.logger = set_logger(f"{logger.name}.{title}")
         self.logger.info(f"Initializing DAQ_Move: {title}")
 
-        super().__init__(listener_class=MoveActorListener, action_list=("save", "update"), **kwargs)
+        super().__init__(listener_class=MoveActorListener,
+                         action_list=("save", "update"), **kwargs)
 
         self.parent = parent
         self.ui_identifier_default = ui_identifier
         if parent is not None:
-            self.ui = DAQMoveUI(parent, title)
+
+            self.ui = DAQMoveUI(parent, title,
+                                  controls_dock=kwargs.pop('controls_dock', None),
+                                  settings_dock=kwargs.pop('settings_dock', None))
         else:
             self.ui = None
 

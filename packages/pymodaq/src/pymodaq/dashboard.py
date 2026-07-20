@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
+import itertools
 import sys
 import datetime
 import subprocess
@@ -18,6 +18,7 @@ from qtpy.QtWidgets import (
     QMessageBox,
 )
 
+from pymodaq.utils.managers.roi_manager.roi_manager import ROIManager
 from pymodaq.control_modules.instruments import find_actuator_class_from_name
 from pymodaq.control_modules.daq_move_ui.utils import UiType
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -31,7 +32,7 @@ from pymodaq_gui.parameter import ParameterTree, Parameter
 from pymodaq_gui.utils import DockArea, Dock, select_file
 import pymodaq_gui.utils.layout as layout_mod
 from pymodaq_gui.parameter import utils as putils
-from pymodaq_gui.managers.roi_manager import ROISaver
+from pymodaq_gui.managers.roi_viewer_manager import ROISaver
 from pymodaq_gui.utils.custom_app import CustomApp
 from pymodaq_gui.utils.shared_ui import MenuToolbarNames
 from pymodaq_gui.config import get_set_layout_path, get_set_roi_path
@@ -174,7 +175,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.experiment_manager: ExperimentManager = None  # instanciation in do_things_after_ui_setup
         self.state_manager: StateManager = None  # instanciation in do_things_after_ui_setup
         self.overshooter: Overshooter = None  # instanciation in do_things_after_ui_setup
-
+        self.roi_manager: ROIManager = None  # instanciation in do_things_after_ui_setup
         self.dockarea.dock_signal.connect(self.save_layout_state_auto)
 
         self.title = ""
@@ -230,6 +231,9 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.state_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('state'),
                                                      menu=self.get_menu('state'))
         self.state_manager.update_menu(self.get_menu('state'))
+        self.roi_manager = ROIManager(dashboard=self)
+        self.roi_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('rois'),
+                                                   menu=self.get_menu('rois'))
         self.overshooter = Overshooter(dashboard=self)
         self.overshooter.get_external_toolbar_menu(toolbar=self.get_toolbar('overshooter'),
                                                    menu=self.get_menu('overshooter'))
@@ -252,12 +256,16 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.get_menu('state').setEnabled(True)
         self.get_toolbar('state').setEnabled(True)
 
+        self.get_menu('rois').setEnabled(True)
+        self.get_toolbar('rois').setEnabled(True)
+
         self.get_menu('overshooter').setEnabled(True)
         self.get_toolbar('overshooter').setEnabled(True)
 
         self.get_menu('extensions').setEnabled(True)
 
         self.state_manager.enable_actions(True)
+        self.roi_manager.enable_actions(True)
         self.overshooter.enable_actions(True)
         self.state_manager.execute_entry(self.state_manager.entry_filepath)
 
@@ -266,6 +274,10 @@ class DashBoard(CustomApp, LECOComponentMixin):
         if self._scripted_experiment_load:
             self._scripted_experiment_load = False
             self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.APPLIED_EXPERIMENT_DONE, True))
+
+        for device in itertools.chain(self.actuators_modules, self.detector_modules):
+            self._connect_leco_request.connect(device.connect_leco)
+        self._connect_leco_request.emit(self._connected)
 
     def get_leco_name(self) -> str:
         return "dashboard"
@@ -284,10 +296,10 @@ class DashBoard(CustomApp, LECOComponentMixin):
                 'detectors': [ detector.get_leco_name() for detector in self.detector_modules],
             }
             self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.SEND_DEVICES, devices))
-        elif status.command == LECODashboardCommands.GET_CONFIGURATIONS:
+        elif status.command == LECODashboardCommands.GET_STATES:
             entries = self.state_manager.entries if self.state_manager.is_action_enabled(ManagerActions.LIST) else []
-            self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.SEND_CONFIGURATIONS, entries))
-        elif status.command == LECODashboardCommands.APPLY_CONFIGURATION:
+            self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.SEND_STATES, entries))
+        elif status.command == LECODashboardCommands.APPLY_STATE:
             configuration = status.attribute
             loaded = False
             if (configuration in self.state_manager.entries and
@@ -298,7 +310,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
                 self.state_manager.execute_entry(self.state_manager.entry_filepath)
                 loaded = True
 
-            self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.APPLIED_CONFIGURATION_DONE, loaded))
+            self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.APPLIED_STATE_DONE, loaded))
         elif status.command == LECODashboardCommands.GET_EXPERIMENTS:
             self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.SEND_EXPERIMENTS, self.experiment_manager.entries))
         elif status.command == LECODashboardCommands.APPLY_EXPERIMENT:
@@ -480,12 +492,10 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.add_menu('experiment', 'Experiment', MenuToolbarNames.TOOLS, icon_name=ExperimentManager.icon_name)
         self.add_menu('state', 'State', MenuToolbarNames.TOOLS, icon_name=StateManager.icon_name)
         self.get_menu('state').setEnabled(False)
-
+        self.add_menu('rois', 'Rois', MenuToolbarNames.TOOLS, icon_name=ROIManager.icon_name)
+        self.get_menu('rois').setEnabled(False)
         self.add_menu('overshooter', 'Overshooter', MenuToolbarNames.TOOLS, icon_name=Overshooter.icon_name)
         self.get_menu('overshooter').setEnabled(False)
-
-        # self.roi_menu = self.add_menu('roi', 'ROI', auto_menu=False)
-        # self.update_roi_menu()
 
         # self.remote_menu = self.add_menu('remote', "Remote/Shortcuts Control")
         # self.update_remote_menu()
@@ -497,6 +507,8 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.add_toolbar('experiment', 'Experiment', parent=self.mainwindow,
                          add_break=False)
         self.add_toolbar('state', 'State', parent=self.mainwindow,
+                         add_break=False)
+        self.add_toolbar('rois', 'rois', parent=self.mainwindow,
                          add_break=False)
         self.add_toolbar('overshooter', 'Overshoot', parent=self.mainwindow,
                          add_break=False)
@@ -513,32 +525,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.add_action("show_log_widget", "Show/hide log window", "", checkable=True, auto_toolbar=False,
                         menu=MenuToolbarNames.VIEW)
 
-        # self.add_action("save_roi", "Save ROIs as a file", "", auto_toolbar=False,
-        #                 menu='roi')
-        # self.add_action("modify_roi", "Modify ROI file", "", auto_toolbar=False,
-        #                 menu='roi')
-
-        # for file in get_set_roi_path().iterdir():
-        #     if file.suffix == ".xml":
-        #         self.add_action(
-        #             self.get_action_from_file(file, ManagerEnums.roi),
-        #             file.stem,
-        #             "",
-        #             auto_toolbar=False,
-        #         )
-        # self.add_action('show_remote', "Show/Hide Remote", 'visibility',
-        #                 icon_checked='visibility_off', auto_toolbar=False, menu='remote')
-        # self.add_action("new_remote", "Create New Remote", "", auto_toolbar=False, menu='remote')
-        # self.add_action("modify_remote", "Modify Remote file", "", auto_toolbar=False, menu='remote')
-        # for file in get_set_remote_path().iterdir():
-        #     if file.suffix == ".xml":
-        #         self.add_action(
-        #             self.get_action_from_file(file, ManagerEnums.remote),
-        #             file.stem,
-        #             "",
-        #             auto_toolbar=False,
-        #         )
-
         for ext_name in ExtensionEnum.names():
             self.add_action(ExtensionEnum[ext_name], ExtensionEnum[ext_name].value,
                             auto_toolbar=False, menu='extensions',
@@ -552,15 +538,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.connect_action("save_layout", self.save_layout_state)
         self.connect_action("show_log_widget", self.show_log_widget)
 
-        # self.connect_action("save_roi", self.create_roi_file)
-        # self.connect_action("modify_roi", self.modify_roi)
-        #
-        # for file in get_set_roi_path().iterdir():
-        #     if file.suffix == ".xml":
-        #         self.connect_action(
-        #             self.get_action_from_file(file, ManagerEnums.roi),
-        #             self.create_menu_slot_roi(get_set_roi_path().joinpath(file)),
-        #         )
         # self.connect_action('show_remote', self.show_remote)
         # self.connect_action("new_remote", self.create_remote)
         # self.connect_action("modify_remote", self.modify_remote)
@@ -575,16 +552,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
             self.connect_action(ExtensionEnum[ext_name],
                                 self.create_extension_slot(ExtensionEnum[ext_name]))
 
-    # def update_roi_menu(self):
-    #     self.roi_menu.addSeparator()
-    #     load_roi_menu = self.roi_menu.addMenu("Load roi configs")
-    #
-    #     for file in get_set_roi_path().iterdir():
-    #         if file.suffix == ".xml":
-    #             load_roi_menu.addAction(
-    #                 self.get_action(self.get_action_from_file(file, ManagerEnums.roi))
-    #             )
-    #
     # def update_remote_menu(self):
     #     self.remote_menu.addAction(self.get_action("show_remote"))
     #     self.connect_action('show_remote', self.show_remote)
@@ -652,39 +619,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
     def create_extension_slot(self, extenum: ExtensionEnum):
         return lambda: self.load_extension(extenum)
-
-    # def create_roi_file(self):
-    #     try:
-    #         if self.preset_file is not None:
-    #             self.roi_saver.set_new_roi(self.preset_file.stem)
-    #             self.add_action(
-    #                 self.get_action_from_file(self.preset_file, ManagerEnums.roi),
-    #                 self.preset_file.stem,
-    #                 "",
-    #             )
-    #             self.setup_menu(self.menubar)
-    #             self.connect_action(
-    #                 self.get_action_from_file(self.preset_file, ManagerEnums.roi),
-    #                 self.create_menu_slot_roi(get_set_roi_path().joinpath(self.preset_file.name)),
-    #             )
-    #
-    #
-    #     except Exception as e:
-    #         logger.exception(str(e))
-
-
-    # def modify_roi(self):
-    #     try:
-    #         path = select_file(
-    #             start_path=get_set_roi_path(), save=False, ext="xml"
-    #         )
-    #         if path != "":
-    #             self.roi_saver.set_file_roi(path)
-    #
-    #         else:  # cancel
-    #             pass
-    #     except Exception as e:
-    #         logger.exception(str(e))
 
     def quit_fun(self):
         """
@@ -847,7 +781,12 @@ class DashBoard(CustomApp, LECOComponentMixin):
         QtWidgets.QApplication.processEvents()
 
         actuator_widgets.append(QtWidgets.QWidget())
-        mov_mod_tmp = DAQ_Move(actuator_widgets[-1], plug_name, ui_identifier=ui_identifier)
+        mov_mod_tmp = DAQ_Move(actuator_widgets[-1],
+                               plug_name,
+                               ui_identifier=ui_identifier,
+                               settings_dock=self.settings_dock,
+                               controls_dock=self.controls_dock,
+                               )
 
         mov_mod_tmp.actuator = plug_type
         QtWidgets.QApplication.processEvents()
@@ -911,8 +850,11 @@ class DashBoard(CustomApp, LECOComponentMixin):
                                  **kwargs)
         self._finalize_extension_module(actuator, instrument_controller, self.actuators_modules)
 
-    def add_det(self, plug_name, plug_settings, detector_docks_viewer,
-                detector_modules, plug_type: str = None, plug_subtype: str = None) -> DAQ_Viewer:
+    def add_det(self, plug_name, plug_settings,
+                detector_docks_viewer,
+                detector_modules,
+                plug_type: str = None,
+                plug_subtype: str = None) -> DAQ_Viewer:
         """
 
         Parameters
@@ -946,6 +888,12 @@ class DashBoard(CustomApp, LECOComponentMixin):
         detector_docks_viewer.append(Dock(plug_name, size=(350, 350)))
         if len(detector_modules) == 0:
             self.dockarea.addDock(detector_docks_viewer[-1], "bottom")
+            self.dockarea.moveDock(self.settings_dock, 'right', None)
+            self.settings_dock.setVisible(False)
+            self.dockarea.moveDock(self.rois_dock, 'right', None)
+            self.rois_dock.setVisible(False)
+            self.dockarea.moveDock(self.controls_dock, 'right', None)
+            self.controls_dock.setVisible(False)
         else:
             self.dockarea.addDock(detector_docks_viewer[-1], "right", detector_docks_viewer[-2])
         widget = QtWidgets.QWidget()
@@ -954,6 +902,8 @@ class DashBoard(CustomApp, LECOComponentMixin):
             widget,
             title=plug_name,
             daq_type=plug_type,
+            settings_dock=self.settings_dock,
+            rois_dock=self.rois_dock,
         )
 
         self.compact_detector_manager.add_module(det_mod_tmp)
@@ -1020,22 +970,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
             name, None, [], [], plug_type=daq_type, plug_subtype=instrument_name,
         )
         self._finalize_extension_module(detector, instrument_controller, self.detector_modules)
-
-    # def set_roi_configuration(self, filename):
-    #     if not isinstance(filename, Path):
-    #         filename = Path(filename)
-    #     try:
-    #         if filename.suffix == ".xml":
-    #             file = filename.stem
-    #             self.settings.child("loaded_files", "roi_file").setValue(file)
-    #             self.update_status(
-    #                 "ROI configuration ({}) has been loaded".format(file),
-    #                 log_type="log",
-    #             )
-    #             self.roi_saver.set_file_roi(filename, show=False)
-    #
-    #     except Exception as e:
-    #         logger.exception(str(e))
 
     # def set_remote_configuration(self, filename):
     #     if not isinstance(filename, Path):
@@ -1288,6 +1222,20 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.remote_widget.layout().setContentsMargins(0, 0, 0, 0)
         self.remote_widget.setVisible(False)
 
+        self.settings_dock = Dock('Settings', )
+        self.settings_dock.label.setDim(True)
+        self.dockarea.addDock(self.settings_dock, position='right')
+        self.settings_dock.setVisible(False)
+
+        self.rois_dock = Dock('ROIs', )
+        self.rois_dock.label.setDim(True)
+        self.dockarea.addDock(self.rois_dock, position='right')
+        self.rois_dock.setVisible(False)
+
+        self.controls_dock = Dock('Controls', )
+        self.controls_dock.label.setDim(True)
+        self.dockarea.addDock(self.controls_dock, position='right')
+        self.controls_dock.setVisible(False)
 
     def value_changed(self, param: Parameter):
         if param.name() == "log_level":

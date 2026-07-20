@@ -1,6 +1,7 @@
 
 from typing import Union, TYPE_CHECKING, Iterable
 
+from pymodaq_gui.managers.roi_viewer_manager import ROIViewerManager
 from pymodaq_utils.enums import BaseEnum
 from pyqtgraph.graphicsItems import InfiniteLine, ROI
 from qtpy import QtWidgets
@@ -11,6 +12,7 @@ from pymodaq_data.data import DataToExport, DataWithAxes, DataDim, DataDistribut
 from pymodaq_gui.plotting.items.roi import RoiInfo
 
 if TYPE_CHECKING:
+    from pymodaq_gui.utils.dock import Dock
     from pymodaq_gui.plotting.data_viewers.viewer0D import View0D
     from pymodaq_gui.plotting.data_viewers.viewer1D import View1D
     from pymodaq_gui.plotting.data_viewers.viewer2D import View2D
@@ -177,6 +179,19 @@ class ViewerBase(QObject):
         self.data_to_export: DataToExport = DataToExport(name=self.title)
         self._display_temporary = False
 
+    def do_math(self):
+        if self.has_action('roi'):
+            if not self.is_action_checked('roi'):
+                self.get_action('roi').trigger()
+
+    @property
+    def roi_manager(self) -> ROIViewerManager | None:
+        """Convenience method """
+        if hasattr(self.view, 'roi_manager'):
+            return self.view.roi_manager
+        else:
+            return None
+
     @property
     def title(self) -> str:
         return self._title
@@ -289,8 +304,11 @@ class ViewerBase(QObject):
 
     @property
     def roi_target(self) -> Union[InfiniteLine.InfiniteLine, ROI.ROI]:
-        """To be implemented if necessary (Viewer1D and above)"""
-        return None
+        """Convenience method to get the ROI target object"""
+        if hasattr(self.view, 'roi_target'):
+            return self.view.roi_target
+        else:
+            return None
 
     def move_roi_target(self, pos: Iterable[float] = None, **kwargs):
         """move a specific read only ROI at the given position on the viewer"""

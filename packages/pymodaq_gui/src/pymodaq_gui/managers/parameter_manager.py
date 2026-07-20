@@ -180,7 +180,7 @@ class ParameterTreeWidget(ActionManager):
         self.add_action(
             "clear_settings",
             "Clear Settings",
-            "file_open",
+            "ink_eraser",
             "Clear the settings tree",
             visible="clear" in action_list,
         )
@@ -308,6 +308,10 @@ class ParameterManager:
             - A list of dictionaries defining parameter structure
             - A Path to an XML file containing saved parameters
         """
+        self.set_settings(settings)
+
+    def set_settings(self, settings: Union[Parameter, List[Dict[str, str]], Path]):
+        """ similar to the property setter but easier to subclass"""
         settings = self.create_parameter(settings)
         self._settings = settings
         self.tree.setParameters(
@@ -317,7 +321,7 @@ class ParameterManager:
 
     @staticmethod
     def create_parameter(
-        settings: Union[Parameter, List[Dict[str, str]], Path],
+            settings: Union[Parameter, List[Dict[str, str]], Path],
     ) -> Parameter:
         """Create a Parameter object from various input types.
 
@@ -412,6 +416,9 @@ class ParameterManager:
 
             elif change == "limits":
                 self.limits_changed(param, data)
+
+            elif change == 'contextMenu':
+                self.menu_changed(param, data)
 
     def value_changed(self, param: Parameter):
         """Non-mandatory method to be subclassed for actions to perform when a parameter value changes.
@@ -556,6 +563,20 @@ class ParameterManager:
         Notes
         -----
         For this method to be triggered, the Parameter.setLimits() method must be used.
+        """
+        pass
+
+    def menu_changed(self, param: Parameter, data: str):
+        """Non-mandatory method to be subclassed for actions to perform when context menu changed.
+
+        This method is called automatically when the user selects one of the entry of the context menu
+
+        Parameters
+        ----------
+        param : Parameter
+            The parameter whose menu has been changed
+        data: str
+            The selected menu string
         """
         pass
 
