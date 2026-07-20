@@ -10,6 +10,7 @@ from pymodaq_gui.utils import Dock
 from pymodaq_gui.utils.widgets import LabelWithFont
 from pymodaq_gui.utils.styling import create_font, create_icon
 from pymodaq_gui.plotting.utils.plot_utils import display_in_dock
+from pymodaq_gui.utils.widgets.widget_with_label_title import WidgetWithLabelTitle
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import GlobalConfig as Config
 
@@ -41,16 +42,11 @@ class ControlModuleUI(CustomApp):
         self.config = config
         self._ini_state = False
 
-        self._settings_widget = QtWidgets.QWidget()
+        self._settings_widget = WidgetWithLabelTitle(self.title)
         self._settings_widget.setLayout(QtWidgets.QVBoxLayout())
-        label = LabelWithFont(f'{self.title}',
-                              font_name="Tahoma",
-                              font_size=14, isbold=True, isitalic=True)
-        self._settings_widget.label = label
-        self._settings_widget.layout().addWidget(label)
 
     def add_setting_tree(self, tree):
-        self._settings_widget.layout().addWidget(tree)
+        self._settings_widget.insert_widget(tree)
 
     # ---- Common action setup methods ----
 

@@ -4,6 +4,8 @@ from qtpy.QtWidgets import QComboBox
 from pint import DimensionalityError
 from qtpy import QtWidgets, QtCore, QtGui
 from typing import Union, List
+
+from pymodaq_gui.utils.widgets.widget_with_label_title import WidgetWithLabelTitle
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq.control_modules.thread_commands import UiToMainMove
@@ -143,7 +145,7 @@ class DAQ_Move_UI_Base(ControlModuleUI):
     def setup_docks_and_widgets(self):
         self.parent.setLayout(QtWidgets.QHBoxLayout())
 
-        self.control_widget = QtWidgets.QWidget()
+        self.control_widget = WidgetWithLabelTitle(self.title)
 
         self.actuators_combo = QComboBox()
         self.abs_value_sb = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('pymodaq', 'actuator', 'siprefix'))
@@ -188,16 +190,10 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.add_toolbar('move', 'DAQMove')
         self.parent.layout().insertWidget(0, self.get_toolbar('move'))
         
-    def populate_control_ui(self,  widget: QtWidgets.QWidget):
-        widget.setLayout(QtWidgets.QVBoxLayout())
-        label = LabelWithFont(f'{self.title}',
-                              font_name="Tahoma",
-                              font_size=14, isbold=True, isitalic=True)
-        widget.label = label
-        widget.layout().addWidget(label)
+    def populate_control_ui(self,  widget: WidgetWithLabelTitle):
+
         container_widget = QtWidgets.QWidget()
-        widget.layout().addWidget(container_widget)
-        widget.layout().addStretch()
+        widget.insert_widget(container_widget)
 
         container_widget.setLayout(QtWidgets.QGridLayout())
         container_widget.layout().addWidget(LabelWithFont('Abs. Value'), 0, 0)

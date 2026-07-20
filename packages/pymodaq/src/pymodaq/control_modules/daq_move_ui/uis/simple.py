@@ -35,7 +35,6 @@ class DAQ_Move_UI_Simple(DAQ_Move_UI_Base):
         self.current_value_sb.setMinimumHeight(20)
         self.current_value_sb.setMinimumWidth(80)
 
-        self.control_widget = QtWidgets.QWidget()
         self.populate_control_ui(self.control_widget)
 
     def setup_actions(self):
