@@ -193,10 +193,12 @@ class SettingsManager(ManagerBase):
         hlayout.addWidget(self.widget_buttons)
         hlayout.addLayout(self.vlayout_right)
 
-        valyout_left.addWidget(WidgetWithLabelTitle('Select Settings:',
-                                                    self.settings_tree))
-        self.vlayout_right.addWidget(WidgetWithLabelTitle('Entries to apply:',
-                                                          self.table_out))
+        self.settings_to_pick = WidgetWithLabelTitle('Select Settings:',
+                                                    self.settings_tree)
+        self.settings_to_apply = WidgetWithLabelTitle('Entries to apply:',
+                                                      self.table_out)
+        valyout_left.addWidget(self.settings_to_pick)
+        self.vlayout_right.addWidget(self.settings_to_apply)
 
         self.main_widget.setLayout(layout)
 
