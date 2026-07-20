@@ -114,11 +114,13 @@ class DAQ_Viewer(ParameterControlModule):
     ui: Optional[DAQ_Viewer_UI]
 
     def __init__(
-        self,
-        parent: Optional[QtWidgets.QWidget] = None,
-        title: str = "Testing",
-        daq_type=config("pymodaq", "viewer", "daq_type"),
-        **kwargs,
+            self,
+            parent: Optional[QtWidgets.QWidget] = None,
+            title: str = "Testing",
+            daq_type=config("pymodaq", "viewer", "daq_type"),
+            area: DockArea = None,
+            rois_dock: Dock = None,
+            **kwargs,
     ):
 
         self.logger = set_logger(f'{logger.name}.{title}')
@@ -126,6 +128,7 @@ class DAQ_Viewer(ParameterControlModule):
 
         super().__init__(listener_class=ViewerActorListener, **kwargs)
 
+        self.rois_dock: Dock = rois_dock
         self._detector = SelectedModule(daq_type=DAQTypesEnum[daq_type])
 
         self._viewer_types: List[ViewersEnum] = []
@@ -136,7 +139,10 @@ class DAQ_Viewer(ParameterControlModule):
 
         self.parent = parent
         if parent is not None:
-            self.ui = DAQ_Viewer_UI(parent, title)
+            self.ui = DAQ_Viewer_UI(parent, title,
+                                    area = area,
+                                    rois_dock=self.rois_dock,
+                                    settings_dock=kwargs.pop('settings_dock', None),)
         else:
             self.ui = None
 
@@ -790,7 +796,9 @@ class DAQ_Viewer(ParameterControlModule):
                               ('do_plot' in dwa.extra_attributes and dwa.do_plot)]
         if self.ui is not None:
             if self.ui.viewer_types != self._viewer_types:
-                self.ui.update_viewers(self._viewer_types)
+                self.ui.update_viewers(self._viewer_types,
+                                       viewers_name=[f'{self.title} {dwa.name}' for dwa in dte],
+                                       )
 
     def set_data_to_viewers(self, dte: DataToExport, temp=False):
         """Process data dimensionality and send appropriate data to their data viewers
@@ -808,7 +816,8 @@ class DAQ_Viewer(ParameterControlModule):
         for ind, dwa in enumerate(dte):
             if ('do_plot' not in dwa.extra_attributes) or \
                     ('do_plot' in dwa.extra_attributes and dwa.do_plot):
-                self.viewers[ind].title = dwa.name
+
+                self.viewers[ind].title = f'{self._title} {dwa.name}'
                 name = (f'{dwa.name}_Averaged: {dwa.n_averaged}'
                         if dwa.averaged else dwa.name)
                 self.viewer_docks[ind].setTitle(f'{self._title} {name}')

@@ -800,7 +800,10 @@ class DashBoard(CustomApp, LECOComponentMixin):
                     self.dockarea,
                     orientation=Qt.Orientation.Vertical,
                 )
-                self.compact_actuator_manager.show("top")
+                if self.compact_detector_manager is not None:
+                    self.compact_actuator_manager.show('bottom', self.compact_detector_manager.dock)
+                else:
+                    self.compact_actuator_manager.show("top")
             dock = None  # Compact widgets don't have individual docks
 
         else:
@@ -809,12 +812,23 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
             if len(actuator_docks) == 1:
                 self.dockarea.addDock(dock, "top")
+                self.dockarea.moveDock(self.settings_dock, 'right', None)
+                self.settings_dock.setVisible(False)
+                self.dockarea.moveDock(self.rois_dock, 'right', None)
+                self.rois_dock.setVisible(False)
+                self.dockarea.moveDock(self.controls_dock, 'right', None)
+                self.controls_dock.setVisible(False)
             else:
                 self.dockarea.addDock(dock, "above", actuator_docks[-2])
         QtWidgets.QApplication.processEvents()
 
         actuator_widgets.append(QtWidgets.QWidget())
-        mov_mod_tmp = DAQ_Move(actuator_widgets[-1], plug_name, ui_identifier=ui_identifier)
+        mov_mod_tmp = DAQ_Move(actuator_widgets[-1],
+                               plug_name,
+                               ui_identifier=ui_identifier,
+                               settings_dock=self.settings_dock,
+                               controls_dock=self.controls_dock,
+                               )
 
         mov_mod_tmp.actuator = plug_type
         QtWidgets.QApplication.processEvents()
@@ -894,8 +908,12 @@ class DashBoard(CustomApp, LECOComponentMixin):
                                  **kwargs)
         self._finalize_extension_module(actuator, instrument_controller, self.actuators_modules)
 
-    def add_det(self, plug_name, plug_settings, detector_docks_viewer,
-                detector_modules, plug_type: str = None, plug_subtype: str = None) -> DAQ_Viewer:
+    def add_det(self,
+                plug_name, plug_settings,
+                detector_docks_viewer,
+                detector_modules,
+                plug_type: str = None,
+                plug_subtype: str = None) -> DAQ_Viewer:
         if plug_type is None:
             plug_type = plug_settings.child("main_settings", "DAQ_type").value()
         if plug_subtype is None:
@@ -908,12 +926,21 @@ class DashBoard(CustomApp, LECOComponentMixin):
                 self.dockarea,
                 orientation=Qt.Orientation.Vertical,
             )
-            self.compact_detector_manager.show("top")
+            if self.compact_actuator_manager is not None:
+                self.compact_detector_manager.show('bottom', self.compact_actuator_manager.dock)
+            else:
+                self.compact_detector_manager.show("top")
 
         # Create individual detector dock
         detector_docks_viewer.append(Dock(plug_name, size=(350, 350)))
         if len(detector_modules) == 0:
             self.dockarea.addDock(detector_docks_viewer[-1], "bottom")
+            self.dockarea.moveDock(self.settings_dock, 'right', None)
+            self.settings_dock.setVisible(False)
+            self.dockarea.moveDock(self.rois_dock, 'right', None)
+            self.rois_dock.setVisible(False)
+            self.dockarea.moveDock(self.controls_dock, 'right', None)
+            self.controls_dock.setVisible(False)
         else:
             self.dockarea.addDock(detector_docks_viewer[-1], "right", detector_docks_viewer[-2])
         widget = QtWidgets.QWidget()
@@ -922,6 +949,8 @@ class DashBoard(CustomApp, LECOComponentMixin):
             widget,
             title=plug_name,
             daq_type=plug_type,
+            settings_dock=self.settings_dock,
+            rois_dock=self.rois_dock,
         )
 
         self.compact_detector_manager.add_module(det_mod_tmp)
@@ -1256,6 +1285,20 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.remote_widget.layout().setContentsMargins(0, 0, 0, 0)
         self.remote_widget.setVisible(False)
 
+        self.settings_dock = Dock('Settings', )
+        self.settings_dock.label.setDim(True)
+        self.dockarea.addDock(self.settings_dock, position='right')
+        self.settings_dock.setVisible(False)
+
+        self.rois_dock = Dock('ROIs', )
+        self.rois_dock.label.setDim(True)
+        self.dockarea.addDock(self.rois_dock, position='right')
+        self.rois_dock.setVisible(False)
+
+        self.controls_dock = Dock('Controls', )
+        self.controls_dock.label.setDim(True)
+        self.dockarea.addDock(self.controls_dock, position='right')
+        self.controls_dock.setVisible(False)
 
     def value_changed(self, param: Parameter):
         if param.name() == "log_level":
