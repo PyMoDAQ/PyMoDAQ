@@ -365,6 +365,7 @@ class View2D(ActionManager, QtCore.QObject):
     def title(self, value: str):
         self._title = value
         self.roi_manager.title = value
+        self.roi_widget.set_title(value)
 
     @staticmethod
     def get_theme(name: str = None) -> qt_themes.Theme:

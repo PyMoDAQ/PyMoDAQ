@@ -30,3 +30,6 @@ class WidgetWithLabelTitle(QtWidgets.QWidget):
 
     def set_label_visible(self, visible=True):
         self.label.setVisible(visible)
+
+    def set_title(self, title: str):
+        self.label.setText(title)

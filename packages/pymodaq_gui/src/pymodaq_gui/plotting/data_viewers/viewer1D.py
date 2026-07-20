@@ -316,6 +316,7 @@ class View1D(ActionManager, QObject):
     def title(self, value: str):
         self._title = value
         self.roi_manager.title = value
+        self.roi_widget.set_title(value)
 
     def add_data_displayer(self, displayer_name: str, plot_colors=PLOT_COLORS):
         self.other_data_displayers[displayer_name] = DataDisplayer(self.plotitem, self.flip_axes,
