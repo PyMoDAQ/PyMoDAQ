@@ -778,6 +778,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
                 orientation=Qt.Orientation.Vertical,
             )
             self.compact_actuator_manager.show("top")
+            self.move_utils_docks()
         QtWidgets.QApplication.processEvents()
 
         actuator_widgets.append(QtWidgets.QWidget())
@@ -888,12 +889,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         detector_docks_viewer.append(Dock(plug_name, size=(350, 350)))
         if len(detector_modules) == 0:
             self.dockarea.addDock(detector_docks_viewer[-1], "bottom")
-            self.dockarea.moveDock(self.settings_dock, 'right', None)
-            self.settings_dock.setVisible(False)
-            self.dockarea.moveDock(self.rois_dock, 'right', None)
-            self.rois_dock.setVisible(False)
-            self.dockarea.moveDock(self.controls_dock, 'right', None)
-            self.controls_dock.setVisible(False)
+            self.move_utils_docks()
         else:
             self.dockarea.addDock(detector_docks_viewer[-1], "right", detector_docks_viewer[-2])
         widget = QtWidgets.QWidget()
@@ -924,6 +920,14 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
         detector_modules.append(det_mod_tmp)
         return det_mod_tmp
+
+    def move_utils_docks(self, position='right'):
+        self.dockarea.moveDock(self.settings_dock, position, None)
+        self.settings_dock.setVisible(False)
+        self.dockarea.moveDock(self.rois_dock, position, None)
+        self.rois_dock.setVisible(False)
+        self.dockarea.moveDock(self.controls_dock, position, None)
+        self.controls_dock.setVisible(False)
 
     def override_det_from_extension(self, overriden_grabbers: Sequence[str] = None):
         """(Experimental) If an extension adding detectors within the Dashboard need to,
