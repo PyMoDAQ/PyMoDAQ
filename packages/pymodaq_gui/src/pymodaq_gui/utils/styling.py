@@ -120,7 +120,8 @@ def make_shape_icon(
         painter.end()
     return QtGui.QIcon(pixmap)
 
-def create_font(font_name=None, font_size=None, isbold=False, isitalic=False) -> QtGui.QFont:
+def create_font(font_name=None, font_size=None, isbold=False, isitalic=False,
+                ) -> QtGui.QFont:
     font = QtGui.QFont()
     if font_name is not None:
         font.setFamily(font_name)
