@@ -233,12 +233,8 @@ def main():
 
     app = mkQApp('Data Mixer')
 
-    win, dashboard = create_load_dashboard()
-    win.mainwindow.setVisible(False)
-
-    win_ext, data_mixer = create_extension(dashboard, DataMixer)
-    win_ext.show()
-
+    win, dashboard = create_load_dashboard(show_dashboard=False)
+    win_ext, data_mixer = create_extension(dashboard, DataMixer, show_extension=True)
     sys.exit(app.exec())
 
 

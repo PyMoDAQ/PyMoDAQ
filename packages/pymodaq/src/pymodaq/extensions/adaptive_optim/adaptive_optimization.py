@@ -170,11 +170,8 @@ def main():
 
     app = mkQApp('Adaptive Optimizer')
 
-    win, dashboard = create_load_dashboard()
-    win.mainwindow.setVisible(False)
-
-    win_ext, scan = create_extension(dashboard, AdaptiveOptimisation)
-    win_ext.show()
+    win, dashboard = create_load_dashboard(show_dashboard=False)
+    win_ext, scan = create_extension(dashboard, AdaptiveOptimisation, show_extension=True)
 
     sys.exit(app.exec())
 

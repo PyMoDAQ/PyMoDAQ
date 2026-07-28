@@ -1476,14 +1476,10 @@ def main():
 
     app = mkQApp('DAQScan')
 
-    win, dashboard = create_load_dashboard()
-    win.mainwindow.setVisible(False)
+    win, dashboard = create_load_dashboard(show_dashboard=False)
 
-    win_ext, scan = create_extension(dashboard, DAQScan)
-    win_ext.show()
-
-    # preset_file_name = config("pymodaq", "presets", "default_preset_for_scan")
-    # dashboard.preset_manager.execute_entry(preset_file_name)
+    win_ext, scan = create_extension(dashboard, DAQScan,
+                                     show_extension=True)
 
     sys.exit(app.exec())
 

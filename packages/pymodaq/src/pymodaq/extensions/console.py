@@ -110,11 +110,10 @@ def main():
 
     app = mkQApp('Console')
 
-    win, dashboard = create_load_dashboard()
-    win.mainwindow.setVisible(False)
+    win, dashboard = create_load_dashboard(show_dashboard=False)
 
-    win_ext, console = create_extension(dashboard, Console)
-    win_ext.show()
+    win_ext, console = create_extension(dashboard, Console,
+                                        show_extension=True)
 
     sys.exit(app.exec())
 

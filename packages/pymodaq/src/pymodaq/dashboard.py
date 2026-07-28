@@ -1356,12 +1356,12 @@ class DashBoard(CustomApp, LECOComponentMixin):
         logger.info(txt)
 
 
-def create_load_dashboard() -> tuple[SharedUI, DashBoard]:
+def create_load_dashboard(show_dashboard=True) -> tuple[SharedUI, DashBoard]:
 
     win, area = make_window(title='PyMoDAQ Dashboard')
     win.resize(1000, 500)
 
-    shared_ui = SharedUI(win)
+    shared_ui = SharedUI(win, show=show_dashboard)
     dashboard = DashBoard(area)
     shared_ui.affect_application(dashboard)
     return shared_ui, dashboard
