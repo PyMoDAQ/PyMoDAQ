@@ -1453,8 +1453,8 @@ def main():
     else:
         win, dashboard = create_load_dashboard()
 
-    win.show()
-
+    # SharedUI shows the dashboard on creation; preserve visibility changes
+    # made while loading.
     # Run application
     sys.exit(app.exec())
 
