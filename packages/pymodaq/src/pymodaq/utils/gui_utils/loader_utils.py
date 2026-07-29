@@ -84,6 +84,7 @@ def create_extension(dashboard: 'DashBoard',
                      *ext_args,
                      window: QtWidgets.QMainWindow = None,
                      add_toolbarbreak=True,
+                     show_extension=True,
                      **ext_kwargs) -> tuple[SharedUI, CustomExt]:
 
     from pymodaq_gui.utils.dock import DockArea
@@ -95,7 +96,7 @@ def create_extension(dashboard: 'DashBoard',
         dockarea = DockArea()
         window.setCentralWidget(dockarea)
 
-    shared_ui = SharedUI(window)
+    shared_ui = SharedUI(window, show=show_extension)
     extension = extension_class(dockarea, dashboard, *ext_args, **ext_kwargs)
 
     shared_ui.affect_application(extension)
