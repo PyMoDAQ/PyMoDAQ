@@ -210,19 +210,6 @@ class DAQ_Viewer(ParameterControlModule):
         return self.viewer_docks
 
     @property
-    def daq_type(self) -> DAQTypesEnum:
-        """Get/Set the daq_type as a DAQTypesEnum
-
-        Update the detector property with the list of available detectors of a given daq_type
-        """
-        return self.detector.daq_type
-
-    @property
-    def daq_types(self) -> List[str]:
-        """List of available DAQ_TYPES as keys of the DAQTypesEnum"""
-        return DAQTypesEnum.names()
-
-    @property
     def grab_state(self):
         """:obj:`bool`: Get the current grabbing status"""
         return self._grabing
@@ -287,6 +274,24 @@ class DAQ_Viewer(ParameterControlModule):
         if self.ui is not None:
             self.ui.detector = det
         self._reload_plugin_settings()
+
+    @property
+    def daq_type(self) -> DAQTypesEnum:
+        """Get/Set the daq_type as a DAQTypesEnum
+
+        Update the detector property with the list of available detectors of a given daq_type
+        """
+        return self.detector.daq_type
+
+    @daq_type.setter
+    def daq_type(self, daq_type: DAQTypesEnum | str):
+        daq_type = enum_checker(DAQTypesEnum, daq_type)
+        self.detector = SelectedModule(daq_type=daq_type)
+
+    @property
+    def daq_types(self) -> List[str]:
+        """List of available DAQ_TYPES as keys of the DAQTypesEnum"""
+        return DAQTypesEnum.names()
 
     @property
     def current_data(self) -> DataToExport:
