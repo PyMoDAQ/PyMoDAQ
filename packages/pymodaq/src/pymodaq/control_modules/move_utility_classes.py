@@ -688,28 +688,20 @@ class DAQ_Move_base(PluginBase):
           to subclass to transfer parameters to hardware
         """
 
-    def move_done(self, position: Optional[
-        DataActuator] = None):  # the position argument is just there to match some signature of child classes
-        """
-            | Emit a move done signal transmitting the float position to hardware.
-            | The position argument is just there to match some signature of child classes.
+    def move_done(self, position: Optional[DataActuator] = None):  # the position argument is just there to match some signature of child classes
+        """ Emit a move done signal transmitting the actuator's value to the GUI
 
-            =============== ========== =============================================================================
-             **Arguments**   **Type**  **Description**
-             *position*      float     The position argument is just there to match some signature of child classes
-            =============== ========== =============================================================================
-
+        The position argument is just there to match some signature of child classes.
         """
         if position is None:
-            if self.data_actuator_type.name == 'float':
+            if self.data_actuator_type == DataActuatorType.float:
                 position = DataActuator(self._title, data=self.get_actuator_value(),
                                         units=self.axis_unit)
             else:
                 position = self.get_actuator_value()
         if position.name != self._title:  # make sure the emitted DataActuator has the name of the real implementation
             #of the plugin
-            position = DataActuator(self._title, data=position.value(self.axis_unit),
-                                    units=self.axis_unit)
+            position.name = self._title
         self.move_done_signal.emit(position)
         self.move_is_done = True
 
