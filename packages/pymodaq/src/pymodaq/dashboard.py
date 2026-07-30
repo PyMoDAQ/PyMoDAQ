@@ -1356,13 +1356,13 @@ def create_load_dashboard() -> tuple[SharedUI, DashBoard]:
 
 def load_dashboard_with_experiment(experiment_name: str,
                                    extension_name: str = None,
-                                   configuration_name: str = None)  -> tuple[DashBoard, 'CustomExt', SharedUI]:
+                                   state_name: str = None)  -> tuple[DashBoard, 'CustomExt', SharedUI]:
 
     """ Load the Dashboard using a given experiment then load an extension
 
     Parameters
     ----------
-    configuration_name: str
+    state_name: str
     experiment_name: str
         The filename (without extension) defining the experiment to be loaded in the Dashboard
     extension_name: str
@@ -1387,8 +1387,8 @@ def load_dashboard_with_experiment(experiment_name: str,
 
     if experiment_name in dashboard.experiment_manager.entries:
         dashboard.experiment_manager.entry = experiment_name
-        if configuration_name is not None:
-            dashboard.state_manager.entry = configuration_name
+        if state_name is not None:
+            dashboard.state_manager.entry = state_name
         dashboard.experiment_manager.execute_entry(experiment_path)
 
         if extension_name in ExtensionEnum.names():
@@ -1432,7 +1432,7 @@ def main():
         dashboard, extension, win = load_dashboard_with_experiment(
             experiment_name=args.experiment,
             extension_name=args.extension.upper() if args.extension is not None else args.extension,
-            configuration_name=args.config
+            state_name=args.config
         )
 
 
