@@ -117,7 +117,7 @@ class DAQ_Viewer(ParameterControlModule):
         self,
         parent: Optional[QtWidgets.QWidget] = None,
         title: str = "Testing",
-        daq_type=config("pymodaq", "viewer", "daq_type"),
+        daq_type = config("pymodaq", "viewer", "daq_type"),
         **kwargs,
     ):
 
@@ -268,7 +268,9 @@ class DAQ_Viewer(ParameterControlModule):
         return self._detector
 
     @detector.setter
-    def detector(self, det: SelectedModule):
+    def detector(self, det: SelectedModule | str):
+        if isinstance(det, str):
+            det = SelectedModule(self._detector.daq_type, det)
         self._detector = det
         self.update_plugin_config()
         if self.ui is not None:
