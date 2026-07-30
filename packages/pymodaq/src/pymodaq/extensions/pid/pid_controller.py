@@ -907,7 +907,7 @@ class PIDRunner(QObject):
 
                 # # APPLY THE PID OUTPUT TO THE ACTUATORS
                 self.outputs_to_actuators: DataToActuators = (
-                    self.model_class.convert_output(self.outputs, dt=None)
+                    self.model_class.convert_output(self.outputs, dt=self.time_elapsed)
                 )
                 if self.clear_queues:
                     [queue_input.clear() for queue_input in self.queue_inputs]
