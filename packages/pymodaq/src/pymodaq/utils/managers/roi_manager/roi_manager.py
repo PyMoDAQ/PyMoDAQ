@@ -95,11 +95,12 @@ class ROIManager(ManagerBase):
         for subentry in self.saved_rois.settings['rois']['selected']:
             module_name, viewer_name, roi_name, descriptor = subentry.split('/')
             detector = self.modules_manager.get_mod_from_name(module_name)
-            viewer: Viewer1D | Viewer2D = find_objects_in_list_from_attr_name_val(detector.viewers, 'title', viewer_name)[0]
-            if viewer.roi_manager is not None:
-                param = ParameterWithPath(viewer.roi_manager.rois_setting.child(roi_name),
-                                          [module_name, viewer_name, roi_name])
-                objects.append(param)
+            if detector is not None:
+                viewer: Viewer1D | Viewer2D = find_objects_in_list_from_attr_name_val(detector.viewers, 'title', viewer_name)[0]
+                if viewer.roi_manager is not None:
+                    param = ParameterWithPath(viewer.roi_manager.rois_setting.child(roi_name),
+                                              [module_name, viewer_name, roi_name])
+                    objects.append(param)
 
         with open(entry_path, 'wb') as file:
             file.write(ser_factory.get_apply_serializer(objects))
