@@ -655,7 +655,7 @@ class H5Saver(H5SaverBase, QObject):
             self.flush()
             self.analysis_prog = browsing.H5Browser(
                 win, h5file=self.h5file, backend=self.backend)
-        shared_ui = SharedUI(win)
-        shared_ui.affect_application(self.analysis_prog)
+        self.shared_ui = SharedUI(win)
+        self.shared_ui.affect_application(self.analysis_prog)
 
-        shared_ui.show()
+        self.shared_ui.show()
