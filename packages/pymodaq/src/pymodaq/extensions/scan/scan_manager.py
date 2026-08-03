@@ -46,11 +46,10 @@ class ScanManager(ManagerBase):
             self._daq_scan = None
             self.params = []
 
-        self._h5saver = H5Saver()
-        self._h5saver.settings.child('do_save').hide()
-        self._h5saver.settings.child('custom_name').hide()
-
         super().__init__(dashboard=dashboard)
+
+        self.h5saver.settings.child('do_save').hide()
+        self.h5saver.settings.child('custom_name').hide()
 
     @classmethod
     def get_local_folder(cls, user=True) -> Path:
