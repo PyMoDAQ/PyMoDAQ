@@ -88,7 +88,7 @@ class ScanManager(ManagerBase):
         self.main_widget.setLayout(QtWidgets.QHBoxLayout())
         self.main_widget.layout().addWidget(self.modules_manager.settings_tree)
         self.main_widget.layout().addWidget(self.settings_tree)
-        self.main_widget.layout().addWidget(self._h5saver.settings_tree)
+        self.main_widget.layout().addWidget(self.h5saver.settings_tree)
 
     def value_changed(self, param: Parameter):
         if param.name() == 'plot_probe':

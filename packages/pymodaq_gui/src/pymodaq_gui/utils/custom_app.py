@@ -149,7 +149,8 @@ class CustomApp(QObject, ActionManager, ParameterManager):
 
         self._title: str = ''
         self.title = title
-
+        self._h5saver: H5Saver = None  # to use only if you want to save data,
+        # then call self.h5saver property
         self.docks: Dict[str, Dock] = dict([])
 
         self._menubar: QtWidgets.QMenuBar = None
@@ -176,8 +177,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
                           self.__class__.__name__,
                           self.menubar if self.mainwindow is not None else None)
 
-        self._h5saver: H5Saver = None  # to use only if you want to save data,
-        # then call self.h5saver property
+
 
 
     @classmethod
@@ -386,9 +386,6 @@ class CustomApp(QObject, ActionManager, ParameterManager):
                 logger.info(f"Created new h5 file: {self._h5saver.settings['current_h5_file']}")
             except Exception as e:
                 logger.error(f"Could not create new h5 file: {e}")
-
-        if hasattr(self, '_module_and_data_saver'):
-            self.module_and_data_saver.h5saver = self._h5saver  # force it for detectors to update their h5saver
 
     def open_file(self) -> FileStatus:
         """ Try to reopen the current h5 file if it is closed.

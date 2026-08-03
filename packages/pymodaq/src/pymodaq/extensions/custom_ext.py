@@ -169,11 +169,18 @@ class CustomExt(CustomApp):
             self.dashboard.mainwindow.closeEvent = (
                 lambda event: self.set_action_checked(DashBoardToolbarActions.SHOW, False))
 
+    @QtCore.Slot(bool)
+    def create_new_file(self, new_file):
+        """ Slot of the New File button in the H5Saver settings Tree"""
+        super().create_new_file(new_file)
+
+        if hasattr(self, '_module_and_data_saver') and self._module_and_data_saver is not None:
+            self.module_and_data_saver.h5saver = self._h5saver  # force it for detectors to update their h5saver
+
     @property
     def module_and_data_saver(self):
         """ Complex but Standardized way to save data from the CustomExt and
         especially from the ControlModules"""
-
         if (self._module_and_data_saver.h5saver is None
                 or not self._module_and_data_saver.h5saver.isopen()):
             self._module_and_data_saver.h5saver = self.h5saver

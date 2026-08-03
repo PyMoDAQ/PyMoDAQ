@@ -34,6 +34,7 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
 
     """
     command_sig = Signal(ThreadCommand)
+    _show_h5file_widgets = True
 
     def __init__(self, parent, toolbar=None):
         CustomApp.__init__(self, parent, toolbar=toolbar, add_toolbar_break=False)
@@ -198,8 +199,9 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
     def set_modules_settings(self, settings_widget):
         self.module_widget.layout().addWidget(settings_widget)
 
-    def populate_status_bar(self):
-        self._status_message_label = QtWidgets.QLabel('Initializing')
+    def insert_custom_status_widgets(self):
+        self._status_message_label.setText('Initializing')
+
         self._n_scan_steps_sb = QSpinBox_ro()
         self._n_scan_steps_sb.setToolTip('Total number of steps')
         self._indice_scan_sb = QSpinBox_ro()
@@ -212,25 +214,11 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self._scan_done_LED.clickable = False
         self._scan_done_LED.setToolTip('Scan done state')
 
-        self._file_open_LED = QLED()
-        self._file_open_LED.set_as_false()
-        self._file_open_LED.clickable = False
-        self._file_open_LED.setToolTip('H5 file open and accessible')
-
-        self._swmr_label = QtWidgets.QLabel('')
-        self._swmr_label.setToolTip('SWMR mode status')
-        self._swmr_label.setVisible(False)
-
-        self.statusbar.addPermanentWidget(self._status_message_label)
-
         self.statusbar.addPermanentWidget(self._n_scan_steps_sb)
         self.statusbar.addPermanentWidget(self._indice_scan_sb)
         self.statusbar.addPermanentWidget(self._indice_average_sb)
         self._indice_average_sb.setVisible(False)
         self.statusbar.addPermanentWidget(self._scan_done_LED)
-        self.statusbar.addPermanentWidget(QtWidgets.QLabel('File:'))
-        self.statusbar.addPermanentWidget(self._file_open_LED)
-        self.statusbar.addPermanentWidget(self._swmr_label)
 
     @property
     def n_scan_steps(self):
@@ -239,9 +227,6 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
     @n_scan_steps.setter
     def n_scan_steps(self, nsteps: int):
         self._n_scan_steps_sb.setValue(nsteps)
-
-    def set_permanent_status(self, status: str):
-        self._status_message_label.setText(status)
 
     def set_scan_step(self, step_ind: int):
         self._indice_scan_sb.setValue(step_ind)
@@ -254,39 +239,6 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
 
     def set_scan_done(self, done=True):
         self._scan_done_LED.set_as(done)
-
-    def set_file_open(self, is_open: bool):
-        """Update the file-open status LED.
-
-        Parameters
-        ----------
-        is_open:
-            True (green) if the h5 file is open and accessible, False (red) otherwise.
-        """
-        self._file_open_LED.set_as(is_open)
-
-    def set_swmr_status(self, active: bool, compatible: bool = False):
-        """Show or hide the SWMR mode indicator in the status bar.
-
-        Parameters
-        ----------
-        active:
-            True if SWMR mode is currently active on the file.
-        compatible:
-            True if the file was created with SWMR support.
-        """
-        if active:
-            self._swmr_label.setText('SWMR')
-            self._swmr_label.setToolTip('SWMR mode active')
-            self._swmr_label.setVisible(True)
-        elif compatible:
-            self._swmr_label.setText('SWMR file')
-            self._swmr_label.setToolTip('File created with SWMR support')
-            self._swmr_label.setVisible(True)
-        else:
-            self._swmr_label.setText('')
-            self._swmr_label.setToolTip('SWMR mode status')
-            self._swmr_label.setVisible(False)
 
     def update_viewers(self, viewers_type: List[ViewersEnum], viewers_name: List[str] = None, force=False):
         super().update_viewers(viewers_type, viewers_name, force)
