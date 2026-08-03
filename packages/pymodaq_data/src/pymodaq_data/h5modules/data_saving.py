@@ -297,12 +297,17 @@ class DataSaverLoader(DataManagement):
     data_type = DataType['data']
 
     def __init__(self, h5saver: Union[H5SaverLowLevel, Path],
-                 new_file: bool = False, metadata: dict = None, save_type=SaveType.custom):
+                 new_file: bool = False,
+                 metadata: dict = None,
+                 save_type=SaveType.custom,
+                 swmr_mode=False):
         self.data_type = enum_checker(DataType, self.data_type)
 
         if isinstance(h5saver, (Path, str)):
             h5saver = H5SaverLowLevel.from_file(h5saver, save_type,
-                                                new_file=new_file, metadata=metadata)
+                                                new_file=new_file,
+                                                metadata=metadata,
+                                                swmr_mode=swmr_mode)
 
         self._h5saver = h5saver
         self._axis_saver = AxisSaverLoader(self._h5saver)
@@ -1051,12 +1056,15 @@ class DataLoader:
     h5saver: H5SaverLowLevel or Path
     """
 
-    def __init__(self, h5saver: Union[H5SaverLowLevel, Path]):
+    def __init__(self, h5saver: Union[H5SaverLowLevel, Path],
+                 swmr_mode = False):
         self._axis_loader: AxisSaverLoader = None
         self._data_loader: DataSaverLoader = None
 
         if isinstance(h5saver, (Path, str)):
-            h5saver = H5SaverLowLevel.from_file(h5saver)
+            h5saver = H5SaverLowLevel.from_file(h5saver,
+                                                swmr_mode=swmr_mode,
+                                                mode='r')
 
         self.h5saver = h5saver
 
@@ -1075,8 +1083,8 @@ class DataLoader:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close_file()
-    @property
 
+    @property
     def raw_group(self) -> Node:
         """ Get the base RawGroup where raw data should be saved
 

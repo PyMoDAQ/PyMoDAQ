@@ -3762,9 +3762,8 @@ class DataToExport(DataLowLevel, SerializableBase):
                 return ind
         raise ValueError
 
-    def index_from_name_origin(self, name: str, origin: str = '') -> List[DataWithAxes]:
+    def index_from_name_origin(self, name: str, origin: str = '') -> int:
         """Get the index of a given DataWithAxes within the list of data"""
-        """Get the data matching the given name and the given origin"""
         if origin == '':
             _, index = find_objects_in_list_from_attr_name_val(self.data, 'name', name, return_first=True)
         else:
