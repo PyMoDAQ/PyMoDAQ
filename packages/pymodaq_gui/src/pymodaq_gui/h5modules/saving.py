@@ -31,7 +31,7 @@ from pymodaq_gui.parameter import Parameter, ParameterTree
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_gui.utils.file_io import select_file
-from pymodaq_gui.h5modules import browsing
+
 
 config = Config()
 logger = set_logger(get_module_name(__file__))
@@ -646,7 +646,7 @@ class H5Saver(H5SaverBase, QObject):
     def show_file_content(self):
         from pymodaq_gui.utils.widgets.window import make_window
         from pymodaq_gui.utils.shared_ui import SharedUI
-
+        from pymodaq_gui.h5modules import browsing
         win, area = make_window(area=False, title='H5Browser')
 
         if not self.isopen():

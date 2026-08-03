@@ -5,7 +5,7 @@ import numpy as np
 from qtpy import QtCore, QtWidgets
 import qt_themes
 
-from pymodaq_gui.utils import CustomApp
+from pymodaq_gui.utils.custom_app import CustomApp
 from pymodaq_gui.utils import Dock
 from pymodaq_gui.utils.widgets import LabelWithFont
 from pymodaq_gui.utils.styling import create_font, create_icon
