@@ -1,9 +1,12 @@
-
+from pathlib import Path
 from typing import Union, TYPE_CHECKING
 
 from qtpy import QtCore, QtWidgets
 
+from pymodaq.utils.h5modules.module_saving import ModuleSaver
+from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.enums import StrEnum
+
 
 from pymodaq_gui.utils import CustomApp, DockArea
 
@@ -13,6 +16,9 @@ if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
     from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager
     from pymodaq.utils.managers.state.state_manager import StateManager
+
+
+logger = set_logger(get_module_name(__file__))
 
 
 class DashBoardToolbarActions(StrEnum):
@@ -25,6 +31,7 @@ class CustomExt(CustomApp):
     config_changed = QtCore.Signal()  # will be emitted when the user changed anything in the configuration files (emitted from SharedUI)
 
     icon_name = 'extension' # change this icon name if needed
+    _h5_base_group_name = 'AGroupName' #scan for DAQScan, Ramp for ramping...
 
     def __init__(self, parent: Union[DockArea, QtWidgets.QWidget, QtWidgets.QMainWindow],
                  dashboard: 'DashBoard', module_manager_class=ModulesManager, **kwargs):
@@ -33,6 +40,11 @@ class CustomExt(CustomApp):
         self.dashboard = dashboard
 
         self.runner_thread : QtCore.QThread = None
+
+        self._module_and_data_saver: ModuleSaver = None  # to use only if you want to save data with
+        #ordered with groups and with control modules, then call self.module_and_data_saver property
+        # a bit complex to use but properly save things from control modules
+
         if dashboard is not None:
             self._modules_manager = module_manager_class(
                 detectors=self.dashboard.detector_modules,
@@ -154,5 +166,20 @@ class CustomExt(CustomApp):
                 show = self.is_action_checked(DashBoardToolbarActions.SHOW)
             self.dashboard.mainwindow.setVisible(show)
             self.dashboard.mainwindow.setWindowTitle('Dashboard')
-            self.dashboard.mainwindow.closeEvent = lambda event: self.set_action_checked(DashBoardToolbarActions.SHOW,
-                                                                                         False)
+            self.dashboard.mainwindow.closeEvent = (
+                lambda event: self.set_action_checked(DashBoardToolbarActions.SHOW, False))
+
+    @property
+    def module_and_data_saver(self):
+        """ Complex but Standardized way to save data from the CustomExt and
+        especially from the ControlModules"""
+
+        if (self._module_and_data_saver.h5saver is None
+                or not self._module_and_data_saver.h5saver.isopen()):
+            self._module_and_data_saver.h5saver = self.h5saver
+        return self._module_and_data_saver
+
+    @module_and_data_saver.setter
+    def module_and_data_saver(self, mod: ModuleSaver):
+        self._module_and_data_saver = mod
+        self._module_and_data_saver.h5saver = self.h5saver
