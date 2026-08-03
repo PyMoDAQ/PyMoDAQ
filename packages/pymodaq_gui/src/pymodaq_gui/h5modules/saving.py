@@ -244,8 +244,12 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
 
         return swmr_mode, update_h5
 
-    def init_file(self, update_h5=False, custom_naming=False, addhoc_file_path=None,
-                  metadata=dict([])):
+    def init_file(self,
+                  update_h5=False,
+                  custom_naming=False,
+                  addhoc_file_path=None,
+                  metadata=dict([]),
+                  mode: str = 'a'):
         """Initializes a new h5 file.
         Could set the h5_file attributes as:
 
@@ -257,13 +261,17 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
         ----------
         update_h5: bool
                    create a new h5 file with name specified by other parameters
-                   if false try to open an existing file and will append new data to it
+                   if false try to open an existing file and will append new data to it or just read it
         custom_naming: bool
                        if True, a selection file dialog opens to set a new file name
         addhoc_file_path: Path or str
                           supplied name by the user for the new file
         metadata: dict
                     dictionnary with pair of key, value that should be saved as attributes of the root group
+       mode: str
+            valid if update_h5 is False. Then could be 'r' for readonly or 'a' to append data
+
+
         Returns
         -------
         update_h5: bool
@@ -309,7 +317,7 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
 
         swmr_mode, update_h5 = self._check_swmr_compatibility(fullpathname, update_h5)
         super().init_file(fullpathname, new_file=update_h5, metadata=metadata,
-                          swmr_mode=swmr_mode)
+                          swmr_mode=swmr_mode, mode=mode)
 
         if addhoc_file_path is not None:
             # Derive the current scan name from what already exists in the open file
