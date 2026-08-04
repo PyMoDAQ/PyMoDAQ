@@ -1087,9 +1087,11 @@ class DataLoader:
     def close_file(self):
         self._h5saver.close_file()
 
-    def walk_nodes(self, where: Union[str, Node] = '/'):
+    def walk_nodes(self, where: Union[str, Node] = '/', depth: int = None,
+                   only_groups=False) -> Iterable[Node]:
         """Return a Node generator iterating over the h5file content"""
-        return self.h5saver.walk_nodes(where)
+        return self.h5saver.walk_nodes(where, depth=depth,
+                                       only_groups=only_groups)
 
     def get_node(self, where: Union[Node, str], name: str = None) -> Node:
         """ Convenience method to get node"""

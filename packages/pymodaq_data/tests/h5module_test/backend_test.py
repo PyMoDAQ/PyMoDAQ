@@ -1,6 +1,8 @@
 import importlib.metadata
 
 import os
+from typing import Iterable
+
 import numpy as np
 from datetime import datetime
 import pytest
@@ -241,47 +243,46 @@ class TestH5Backend:
         assert len(gps) == len(nodes)
         for gr in gps:
             assert gr in nodes
-        gps = []
-        for node in bck.walk_nodes('/', depth=0):
-            gps.append(node.name)
-        for node_name in gps:
-            assert node_name in ('/',)
 
-        gps = []
-        for node in bck.walk_nodes('/', depth=1):
-            gps.append(node.name)
-        for node_name in gps:
-            assert node_name in ('/', 'g1', 'g2',)
+        self.compare_walk_nodes(bck, where='/',
+                                nodes=['/',],
+                                depth=0,)
 
-        gps = []
-        for node in bck.walk_nodes('/', depth=2):
-            gps.append(node.name)
-        for node_name in gps:
-            assert node_name in ('/', 'g1', 'array_g1', 'g2', 'array_g2', 'g22', 'g21',)
+        self.compare_walk_nodes(bck, where='/',
+                                nodes=['/', 'g1', 'g2',],
+                                depth=1,)
 
-        gps = []
-        for node in bck.walk_nodes('/', depth=3):
-            gps.append(node.name)
-        for node_name in gps:
-            assert node_name in ('/', 'g1', 'g2', 'array_g2', 'g22', 'g21', 'array_g1', 'array_g22')
+        self.compare_walk_nodes(bck, where='/',
+                                nodes=['/', 'g1', 'array_g1', 'g2', 'array_g2', 'g22', 'g21',],
+                                depth=2,)
 
-        gps = []
-        for node in bck.walk_nodes('/g2', depth=1):
-            gps.append(node.name)
-        for node_name in gps:
-            assert node_name in ('g2', 'array_g2', 'g22', 'g21')
+        self.compare_walk_nodes(bck, where='/',
+                                nodes=['/', 'g1', 'g2', 'array_g2', 'g22', 'g21', 'array_g1', 'array_g22'],
+                                depth=3,)
 
-        gps = []
-        for node in bck.walk_nodes('/', depth=2, only_groups=True):
-            gps.append(node.name)
-        for node_name in gps:
-            assert node_name in ('/', 'g1', 'g2', 'g22', 'g21',)
+        self.compare_walk_nodes(bck, where='/g2',
+                                nodes=['g2', 'array_g2', 'g22', 'g21'],
+                                depth=1,)
 
+        self.compare_walk_nodes(bck, where='/',
+                                nodes=['/', 'g1', 'g2', 'g22', 'g21',],
+                                depth=2, only_groups=True)
+
+        self.compare_walk_nodes(bck, where='/g2',
+                                nodes=['g2', 'g22', 'g21',],
+                                depth=1, only_groups=True)
+
+    @staticmethod
+    def compare_walk_nodes(bck:backends.H5Backend,
+                           where,
+                           nodes: list[str], depth: int = None,
+                           only_groups=False):
         gps = []
-        for node in bck.walk_nodes('/g2', depth=1, only_groups=True):
+        nodes.sort()
+        for node in bck.walk_nodes(where, depth=depth, only_groups=only_groups):
             gps.append(node.name)
-        for node_name in gps:
-            assert node_name in ('g2', 'g22', 'g21')
+        gps.sort()
+        assert tuple(gps) == tuple(nodes)
 
     def test_carray(self, get_backend):
         bck = get_backend
