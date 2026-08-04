@@ -1052,7 +1052,10 @@ class H5Backend:
         else:
             for gr in self.walk_groups(where):
                 for child in self.get_children(gr).values():
-                    if depth is not None and child.path[len(where.path):].count('/') == depth:
+                    node_path = child.path[len(where.path):]
+                    if node_path[0] == '/':
+                        node_path = node_path[1:]
+                    if depth is not None and node_path.count('/') == depth:
                         return
                     else:
                         if only_groups and child.attrs['CLASS'] != 'GROUP':
