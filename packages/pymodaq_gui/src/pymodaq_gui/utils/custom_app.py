@@ -146,6 +146,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
             self.dockarea: DockArea = None
             self.mainwindow: QtWidgets.QMainWindow = None
 
+        self.runner_thread: QtCore.QThread = None
 
         self._title: str = ''
         self.title = title
@@ -267,8 +268,17 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     def quit_fun(self):
         """Method to be reimplemented in order to define a custom quit function
         """
+        if self.runner_thread is not None:
+            self.exit_runner_thread()
         if self.mainwindow is not None:
             self.mainwindow.close()
+
+    def exit_runner_thread(self, duration : int = 5000):
+        self.runner_thread.quit()
+        terminated = self.runner_thread.wait(duration)
+        if not terminated:
+            self.runner_thread.terminate()
+            self.runner_thread.wait()
 
     def do_things_after_ui_setup(self):
         """ Method to be reimplemented in order to do things after the UI setup

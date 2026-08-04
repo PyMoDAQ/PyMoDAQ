@@ -39,8 +39,6 @@ class CustomExt(CustomApp):
 
         self.dashboard = dashboard
 
-        self.runner_thread : QtCore.QThread = None
-
         self._module_and_data_saver: ModuleSaver = None  # to use only if you want to save data with
         #ordered with groups and with control modules, then call self.module_and_data_saver property
         # a bit complex to use but properly save things from control modules
@@ -69,8 +67,6 @@ class CustomExt(CustomApp):
         """Method to be subclassed in order to define a custom quit function
         """
         super().quit_fun()
-        if self.runner_thread is not None:
-            self.exit_runner_thread()
         if self.dashboard is not None:
             self.show_dashboard(True)  #make sure to show it if it was hidden
 
@@ -123,13 +119,6 @@ class CustomExt(CustomApp):
         ModulesManager
         """
         return self._modules_manager
-
-    def exit_runner_thread(self, duration : int = 5000):
-        self.runner_thread.quit()
-        terminated = self.runner_thread.wait(duration)
-        if not terminated:
-            self.runner_thread.terminate()
-            self.runner_thread.wait()
 
     def create_dashboard_toolbar(self,
                                  add_dashboard: bool = True,
