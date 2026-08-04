@@ -241,6 +241,47 @@ class TestH5Backend:
         assert len(gps) == len(nodes)
         for gr in gps:
             assert gr in nodes
+        gps = []
+        for node in bck.walk_nodes('/', depth=0):
+            gps.append(node.name)
+        for node_name in gps:
+            assert node_name in ('/',)
+
+        gps = []
+        for node in bck.walk_nodes('/', depth=1):
+            gps.append(node.name)
+        for node_name in gps:
+            assert node_name in ('/', 'g1', 'g2',)
+
+        gps = []
+        for node in bck.walk_nodes('/', depth=2):
+            gps.append(node.name)
+        for node_name in gps:
+            assert node_name in ('/', 'g1', 'array_g1', 'g2', 'array_g2', 'g22', 'g21',)
+
+        gps = []
+        for node in bck.walk_nodes('/', depth=3):
+            gps.append(node.name)
+        for node_name in gps:
+            assert node_name in ('/', 'g1', 'g2', 'array_g2', 'g22', 'g21', 'array_g1', 'array_g22')
+
+        gps = []
+        for node in bck.walk_nodes('/g2', depth=1):
+            gps.append(node.name)
+        for node_name in gps:
+            assert node_name in ('g2', 'array_g2', 'g22', 'g21')
+
+        gps = []
+        for node in bck.walk_nodes('/', depth=2, only_groups=True):
+            gps.append(node.name)
+        for node_name in gps:
+            assert node_name in ('/', 'g1', 'g2', 'g22', 'g21',)
+
+        gps = []
+        for node in bck.walk_nodes('/g2', depth=1, only_groups=True):
+            gps.append(node.name)
+        for node_name in gps:
+            assert node_name in ('g2', 'g22', 'g21')
 
     def test_carray(self, get_backend):
         bck = get_backend
