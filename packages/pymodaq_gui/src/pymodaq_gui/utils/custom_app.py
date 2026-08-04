@@ -406,6 +406,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
                 return self._try_open_existing_file(current_file)
             else:
                 return FileStatus.NO_FILE
+        return FileStatus.REOPENED
 
     def close_file(self):
         self._h5saver.close_file()
