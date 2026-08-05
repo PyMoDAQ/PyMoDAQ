@@ -117,7 +117,6 @@ def make_shape_icon(
         else:
             raise ValueError(f"Unsupported shape: {shape}")
 
-        painter.end()
     return QtGui.QIcon(pixmap)
 
 def create_font(font_name=None, font_size=None, isbold=False, isitalic=False,
@@ -328,3 +327,44 @@ def create_icon(icon_name: Union[QtGui.QIcon, str, Path],
 
 def resource_path_exists(path: str) -> bool:
     return QtCore.QFile(path).exists()
+
+
+def animate_icon(
+    target: Union[QtWidgets.QAbstractButton, QtWidgets.QAction],
+    animation,
+    base_icon: QtGui.QIcon = None,
+    size: QtCore.QSize = None,
+) -> None:
+    """Attach an animation to the icon of a ``QAbstractButton`` or ``QAction``.
+
+    Each tick renders a fresh frame via :meth:`~BaseAnimation.render_frame` and
+    calls ``target.setIcon()``, so every animation is fully independent.
+    The timer is stored as ``target._animation_timer`` for start/stop control.
+
+    Parameters
+    ----------
+    target:
+        A ``QAbstractButton`` (``QToolButton``, ``QPushButton``, …) or a
+        ``QAction``.
+    animation:
+        A ``BaseAnimation`` instance (``Spin``, ``Fade``, ``Breathe``, …).
+    base_icon:
+        Icon to animate.  Defaults to ``target.icon()``.
+    size:
+        Render size for each frame.  For buttons, defaults to
+        ``target.iconSize()``.  For actions (no icon size), defaults to
+        32 × 32.
+    """
+    if base_icon is None:
+        base_icon = target.icon()
+    if size is None:
+        size = target.iconSize() if hasattr(target, 'iconSize') else QtCore.QSize(32, 32)
+        if size.isEmpty():
+            size = QtCore.QSize(32, 32)
+
+    animation.parent_widget = target
+    animation._update_callback = lambda: target.setIcon(animation.render_frame(base_icon, size))
+    animation.init()
+
+    target.setIcon(animation.render_frame(base_icon, size))
+    target._animation_timer = animation.info[target][0]
