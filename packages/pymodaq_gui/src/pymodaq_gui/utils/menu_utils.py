@@ -5,7 +5,7 @@ ownership and PySide6 does not garbage-collect them prematurely.
 """
 from typing import Callable, Optional
 
-from qtpy import QtWidgets, QtGui
+from qtpy import QtWidgets, QtGui, QtCore
 
 
 class StickyMenu(QtWidgets.QMenu):
@@ -114,3 +114,40 @@ def _add_leaf(menu, name, path, leaf_callback):
     action.triggered.connect(
         lambda checked=False, n=name, p=path: leaf_callback(n, p),
     )
+
+
+class MenuButton(QtWidgets.QPushButton):
+    """
+    Create A PushButton displaying a menu (eventually nested)
+    """
+
+    triggered = QtCore.Signal(tuple)
+
+    def __init__(self, text: str,
+                 add_menu_entries: list[str] = None,
+                 parent = None):
+        super().__init__(text, parent=parent)
+        if add_menu_entries is None:
+            add_menu_entries = []
+        self.add_menu_entries = add_menu_entries
+
+        # Create the nested menu
+        self.add_menu = QtWidgets.QMenu(self)
+        self.setMenu(self.add_menu)
+        # Populate the nested menu structure
+        self.update_add_menu()
+
+    def update_add_menu(self):
+        self.blockSignals(True)
+        try:
+            self.add_menu.clear()
+            build_menu_from_iterable(self.add_menu, self.add_menu_entries,
+                                     self._add_menu_item_selected)
+        finally:
+            self.blockSignals(False)
+
+    def _add_menu_item_selected(self, name, path_tuple):
+        """Called when a menu item is selected from the nested add menu."""
+        self.setText('/'.join(path_tuple))
+        self.adjustSize()
+        self.triggered.emit(path_tuple)
