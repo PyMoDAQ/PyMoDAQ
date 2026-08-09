@@ -17,6 +17,9 @@ class ComboModel(QtCore.QAbstractListModel):
     def set_data(self, data: list[str]):
         self._data = data
 
+    def get_data(self) -> list[str]:
+        return self._data
+
     def set_highlighted_index(self, index: int):
         self.highlighted_index = index
 
@@ -51,6 +54,10 @@ class HighlightedComboBox(ComboBox):
 
         self._activated_color = get_theme().green
 
+    def setCurrentText(self, text: str):
+        super().setCurrentText(text)
+        self.set_style(self.get_items().index(text))
+
     @property
     def activated_color(self):
         return self._activated_color
@@ -72,6 +79,13 @@ class HighlightedComboBox(ComboBox):
     def set_highlighted_index(self, index: int):
         self.combo_model().set_highlighted_index(index)
         self.currentIndexChanged.emit(self.currentIndex())
+        self.set_style(self.currentIndex())
+
+    def set_highlighted_item(self, item: str):
+        try:
+            self.set_highlighted_index(self.get_items().index(item))
+        except ValueError:
+            pass
 
     @property
     def highlighted_index(self) -> int:
