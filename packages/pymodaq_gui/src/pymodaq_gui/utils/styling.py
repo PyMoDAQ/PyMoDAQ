@@ -342,9 +342,12 @@ class Font:
 
     def apply_to_widget(self, widget: QtWidgets.QWidget):
         if hasattr(widget, 'setFont'):
-            font = create_font(self.font_name, self.font_size, self.isbold, self.isitalic)
+            font = self.get_font()
             widget.setFont(font)
 
             if self.color is not None:
                 color = mkColor(self.color)
                 widget.setStyleSheet(f'color: #{hex(color.rgb())[2:]}')
+
+    def get_font(self) -> QtGui.QFont:
+        return create_font(self.font_name, self.font_size, self.isbold, self.isitalic)

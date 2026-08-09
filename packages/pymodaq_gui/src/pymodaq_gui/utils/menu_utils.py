@@ -116,6 +116,25 @@ def _add_leaf(menu, name, path, leaf_callback):
     )
 
 
+class IterableMenu(QtWidgets.QMenu):
+
+    def __init__(self, title: str, iterables,
+                 callable: Callable = None,
+                 parent=None):
+        super().__init__(title, parent=parent)
+        self.callable = callable
+
+        self.blockSignals(True)
+        try:
+            self.clear()
+            build_menu_from_iterable(self,
+                                     iterables,
+                                     leaf_callback=callable
+                                     )
+        finally:
+            self.blockSignals(False)
+
+
 class MenuButton(QtWidgets.QPushButton):
     """
     Create A PushButton displaying a menu (eventually nested)
@@ -125,29 +144,21 @@ class MenuButton(QtWidgets.QPushButton):
 
     def __init__(self, text: str,
                  add_menu_entries: list[str] = None,
-                 parent = None):
+                 parent = None,
+                 update_button_text: bool = True,):
+
         super().__init__(text, parent=parent)
         if add_menu_entries is None:
             add_menu_entries = []
-        self.add_menu_entries = add_menu_entries
+        self._update_button_text = update_button_text
 
         # Create the nested menu
-        self.add_menu = QtWidgets.QMenu(self)
-        self.setMenu(self.add_menu)
-        # Populate the nested menu structure
-        self.update_add_menu()
-
-    def update_add_menu(self):
-        self.blockSignals(True)
-        try:
-            self.add_menu.clear()
-            build_menu_from_iterable(self.add_menu, self.add_menu_entries,
-                                     self._add_menu_item_selected)
-        finally:
-            self.blockSignals(False)
+        self.menu = IterableMenu('iterable', add_menu_entries, callable=self._add_menu_item_selected)
+        self.setMenu(self.menu)
 
     def _add_menu_item_selected(self, name, path_tuple):
         """Called when a menu item is selected from the nested add menu."""
-        self.setText('/'.join(path_tuple))
-        self.adjustSize()
+        if self._update_button_text:
+            self.setText('/'.join(path_tuple))
+            self.adjustSize()
         self.triggered.emit(path_tuple)
