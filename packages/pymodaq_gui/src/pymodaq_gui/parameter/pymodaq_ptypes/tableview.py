@@ -127,7 +127,7 @@ class TableViewParameterItem(WidgetParameterItem):
             self.widget.setItemDelegate(styledItemDelegate)
 
         if 'menu' in opts:
-            self.widget.setmenu(opts['menu'])
+            self.widget.setup_menu(opts['menu'])
 
 
 class TableViewParameter(Parameter):

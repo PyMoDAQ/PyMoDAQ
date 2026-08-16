@@ -1,7 +1,6 @@
 from typing import List, Sequence
 
 import numpy as np
-from PyQt5.QtCore import QThread
 
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject
