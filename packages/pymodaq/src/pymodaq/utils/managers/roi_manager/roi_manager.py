@@ -1,5 +1,5 @@
 import dataclasses
-from hatch.cli import self
+
 from typing import Union, TYPE_CHECKING, Callable
 from pathlib import Path
 import sys
