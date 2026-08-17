@@ -274,7 +274,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
         if self._scripted_experiment_load:
             self._scripted_experiment_load = False
             self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.APPLIED_EXPERIMENT_DONE, True))
-
         for device in itertools.chain(self.actuators_modules, self.detector_modules):
             self._connect_leco_request.connect(device.connect_leco)
         self._connect_leco_request.emit(self._connected)
@@ -283,11 +282,10 @@ class DashBoard(CustomApp, LECOComponentMixin):
         return "dashboard"
 
     def get_leco_host_port(self) -> tuple[str, int]:
-        host = config.get(("main_settings", "leco", "host"), 'localhost')
-        port = config.get(("main_settings", "leco", "port"), '12300')
+        host = config("utils", "network", "leco-server", "host")
+        port = config("utils", "network", "leco-server", "port")
 
         return host, port
-
 
     def process_leco_commands(self, status: ThreadCommand) -> None:
         if status.command == LECODashboardCommands.GET_DEVICES:
