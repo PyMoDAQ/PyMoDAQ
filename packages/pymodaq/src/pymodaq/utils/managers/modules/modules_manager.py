@@ -585,7 +585,7 @@ class ModulesManager(QObject, ParameterManager):
         self.move_done_flag = True
         self.det_done_flag = True
 
-    def poll_init(self, module):
+    def poll_init(self, module: Union['DAQ_Move', 'DAQ_Viewer']):
         tstart = time.perf_counter()
         while not module.initialized_state:
             QThread.msleep(1000)
