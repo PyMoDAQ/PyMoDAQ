@@ -1356,7 +1356,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         logger.info(txt)
 
 
-def load_dashboard_with_arguments(show_dashboard=True):
+def load_dashboard_with_arguments(show_dashboard=True, load_extension=True):
 
     extensions_names = ExtensionEnum.values()
     # Command-line argument parsing
@@ -1371,16 +1371,23 @@ def load_dashboard_with_arguments(show_dashboard=True):
                         help="config name to execute (ignored if no experiment provided), deprecated, use -s for state")
     parser.add_argument("-s", "--state", metavar="STATE_NAME",
                         help="State name to execute (ignored if no experiment provided)")
-    parser.add_argument("-e", "--extension", metavar="EXTENSION_NAME",
-                        help="extension name to execute (ignored if no experiment provided), valid "
-                             'values are within: "' + '\" \"'.join(extensions_names) +'"')
-    args = parser.parse_args()
+    if load_extension:
+        parser.add_argument("-e", "--extension", metavar="EXTENSION_NAME",
+                            help="extension name to execute (ignored if no experiment provided), valid "
+                                 'values are within: "' + '\" \"'.join(extensions_names) +'"')
+
+    args, unknown_args = parser.parse_known_args()
+
+    if load_extension:
+        extension_name = args.extension.upper() if args.extension is not None else args.extension
+    else:
+        extension_name = None
 
     # If experiment name is supplied, load dashboard with this experiment
     if args.experiment:
         dashboard, extension, win = load_dashboard_with_experiment(
             experiment_name=args.experiment,
-            extension_name=args.extension.upper() if args.extension is not None else args.extension,
+            extension_name=extension_name,
             state_name=args.state if args.state is not None else args.config,
             show_dashboard=show_dashboard
         )

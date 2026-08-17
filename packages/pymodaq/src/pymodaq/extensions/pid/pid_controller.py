@@ -977,7 +977,9 @@ if __name__ == "__main__":
 
     app = mkQApp("DAQ_PID")
 
-    win, dashboard, _ = load_dashboard_with_arguments(show_dashboard=False)
+    win, dashboard, _ = load_dashboard_with_arguments(show_dashboard=False,
+                                                      load_extension=False,
+                                                      )
     win.mainwindow.setVisible(False)
 
     win_ext, scan = create_extension(dashboard, DAQ_PID,

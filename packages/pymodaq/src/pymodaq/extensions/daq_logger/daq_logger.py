@@ -501,7 +501,9 @@ def main():
 
     app = mkQApp('DAQ Logger')
 
-    win, dashboard, _ = load_dashboard_with_arguments(show_dashboard=False)
+    win, dashboard, _ = load_dashboard_with_arguments(show_dashboard=False,
+                                                      load_extension=False,
+                                                      )
     win.mainwindow.setVisible(False)
     win_ext, logger = create_extension(dashboard, DAQ_Logger, show_extension=True)
     sys.exit(app.exec())
