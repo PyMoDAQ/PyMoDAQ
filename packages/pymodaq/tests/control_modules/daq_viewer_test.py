@@ -89,7 +89,26 @@ class TestWithUI:
     def test_daq_type_changed(self, ini_daq_viewer_ui, daq_type):
         prog, qtbot, dockarea = ini_daq_viewer_ui
         with qtbot.waitSignal(prog.ui.command_sig) as blocker:
+            prog.daq_type = daq_type
+        assert len(prog.viewers) == 1
+        assert prog.viewers[0].viewer_type == f'Data{daq_type[3:]}'
+
+
+    @pytest.mark.parametrize("daq_type", DAQTypesEnum.names())
+    def test_detector_changed(self, ini_daq_viewer_ui, daq_type):
+        prog, qtbot, dockarea = ini_daq_viewer_ui
+        with qtbot.waitSignal(prog.ui.command_sig) as blocker:
             prog.detector = SelectedModule(DAQTypesEnum[daq_type], 'Mock')
         assert len(prog.viewers) == 1
         assert prog.viewers[0].viewer_type == f'Data{daq_type[3:]}'
 
+
+    @pytest.mark.parametrize("daq_type", DAQTypesEnum.names())
+    def test_detector_name_changed(self, ini_daq_viewer_ui, daq_type):
+        prog, qtbot, dockarea = ini_daq_viewer_ui
+        with qtbot.waitSignal(prog.ui.command_sig) as blocker:
+            prog.daq_type = daq_type
+        with qtbot.waitSignal(prog.ui.command_sig) as blocker:
+            prog.detector = 'Mock'
+        assert len(prog.viewers) == 1
+        assert prog.viewers[0].viewer_type == f'Data{daq_type[3:]}'
