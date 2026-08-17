@@ -759,13 +759,9 @@ class DashBoard(CustomApp, LECOComponentMixin):
             plug_name: str = None,
             plug_settings: Parameter = None,
             plug_type: str = None,
-            actuators_modules: list[DAQ_Move] = None,
             ui_identifier: str = None,
             **kwargs,
     ) -> DAQ_Move:        
-
-        if actuators_modules is None:
-            actuators_modules = []
 
         actuator_class = find_actuator_class_from_name(plug_type)
         forced_ui = actuator_class.ui_type
@@ -821,8 +817,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
         mov_mod_tmp.bounds_signal[bool].connect(self.do_stuff_from_out_bounds)
 
         self.compact_actuator_manager.add_module(mov_mod_tmp)
-
-        actuators_modules.append(mov_mod_tmp)
         return mov_mod_tmp
 
     def init_module(self, module, controller=None):

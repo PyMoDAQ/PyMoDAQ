@@ -59,6 +59,8 @@ class ExperimentManager(ManagerBase):
                  dashboard: 'DashBoard' = None):
 
         super().__init__(dashboard=dashboard)
+        self.actuators_modules: list[DAQ_Move] = []
+        self.detector_modules: list[DAQ_Viewer] = []
 
     ### Reimplemented Methods ####################################################
     def list_managed_entries_path(self, **kwargs_to_entry_folder) -> list[Path]:
@@ -134,8 +136,7 @@ class ExperimentManager(ManagerBase):
                     actuators_modules, detector_modules = (
                         self.create_control_modules_using_machine(plugins_sorted))
                 else:
-                    actuators_modules, detector_modules = (
-                        self.create_control_modules_from_preset(plugins_sorted))
+                    self.create_control_modules_from_preset(plugins_sorted)
             except (ActuatorError, DetectorError, MasterSlaveError) as error:
 
                 self.dashboard.mainwindow.setVisible(True)
@@ -153,30 +154,30 @@ class ExperimentManager(ManagerBase):
                 )
                 logger.exception(str(error))
                 return False
-
-            if not (not actuators_modules and not detector_modules):
-                self.dashboard.update_status(
-                    f"{self.entry_type.capitalize()} ({entry.name}) has been loaded",
-                    log_type="log",
-                )
-                self.dashboard.actuators_modules = actuators_modules
-                self.dashboard.detector_modules = detector_modules
-
-                for module in actuators_modules + detector_modules:
-                    module.init_signal.connect(self.dashboard.update_init_tree)
-
-                self.dashboard.mainwindow.setVisible(True)
-                for area in self.dashboard.dockarea.tempAreas:
-                    area.window().setVisible(True)
-
-                self.dashboard.update_init_tree()
-
-            logger.info(f"{self.entry_type.capitalize()} file: {entry} has been loaded")
-            return True
-
         except Exception as e:
             logger.exception(str(e))
             return False
+
+        if not (not self.actuators_modules and not self.detector_modules):
+            self.dashboard.update_status(
+                f"{self.entry_type.capitalize()} ({entry.name}) has been loaded",
+                log_type="log",
+            )
+            self.dashboard.actuators_modules = list(self.actuators_modules)
+            self.dashboard.detector_modules = list(self.detector_modules)
+
+            for module in self.actuators_modules + self.detector_modules:
+                module.init_signal.connect(self.dashboard.update_init_tree)
+
+            self.dashboard.mainwindow.setVisible(True)
+            for area in self.dashboard.dockarea.tempAreas:
+                area.window().setVisible(True)
+
+            self.dashboard.update_init_tree()
+
+        logger.info(f"{self.entry_type.capitalize()} file: {entry} has been loaded")
+        return True
+
 
     def _update_entry(self, entry: Union[str, Path] = None, **kwargs):
         """ Update the Manager UI after a given entry as been selected/updated """
@@ -250,12 +251,10 @@ class ExperimentManager(ManagerBase):
         Load a experiment file and create corresponding Control Modules in the Dashboard
 
         """
-        actuators_modules: list[DAQ_Move] = []
-        detector_modules: list[DAQ_Viewer] = []
+        self.actuators_modules: list[DAQ_Move] = []
+        self.detector_modules: list[DAQ_Viewer] = []
 
-        actuator_docks: list[Dock] = []
         detector_docks_viewer: list[Dock] = []
-        actuator_widgets: list[QtWidgets.QWidget] = []
 
         # Add Control Modules to the Dashboard
         ind_module = -1
@@ -268,22 +267,21 @@ class ExperimentManager(ManagerBase):
 
                 if plugin["type"] == ModuleType.Actuator or plugin["type"] == 'move':
 
-                    self.dashboard.add_move(plug_name, None, plug_type,
-                                            actuators_modules,
-                                            ui_identifier=plugin["settings"].child("info", "ui").value())
 
+                    self.actuators_modules.append(self.dashboard.add_move(plug_name, None, plug_type,
+                                            ui_identifier=plugin["settings"].child("info", "ui").value()))
                     if ind_plugin == 0:  # should be a master type plugin
                         if plugin["status"] != ControllerStatus.MASTER:
                             raise MasterSlaveError(f"The instrument {plug_name} should"
                                                    f" be defined as Master")
                         if plug_init:
-                            actuators_modules[-1].apply_controller_parameters(plugin["settings"].child("controller"))
-                            actuators_modules[-1].init_hardware_ui()
-                            actuators_modules[-1].master = True
+                            self.actuators_modules[-1].apply_controller_parameters(plugin["settings"].child("controller"))
+                            self.actuators_modules[-1].init_hardware_ui()
+                            self.actuators_modules[-1].master = True
                             QtWidgets.QApplication.processEvents()
-                            self.dashboard.modules_manager.poll_init(actuators_modules[-1])
+                            self.dashboard.modules_manager.poll_init(self.actuators_modules[-1])
                             QtWidgets.QApplication.processEvents()
-                            master_controller = actuators_modules[-1].controller
+                            master_controller = self.actuators_modules[-1].controller
 
                         elif plugin["status"] == ControllerStatus.MASTER and len(plug_IDs) > 1:
                             raise MasterSlaveError(
@@ -296,11 +294,11 @@ class ExperimentManager(ManagerBase):
                             raise MasterSlaveError(f"The instrument {plug_name} should"
                                                    f" be defined as slave")
                         if plug_init:
-                            actuators_modules[-1].apply_controller_parameters(plugin["settings"].child("controller"))
-                            actuators_modules[-1].controller = master_controller
-                            actuators_modules[-1].init_hardware_ui()
+                            self.actuators_modules[-1].apply_controller_parameters(plugin["settings"].child("controller"))
+                            self.actuators_modules[-1].controller = master_controller
+                            self.actuators_modules[-1].init_hardware_ui()
                             QtWidgets.QApplication.processEvents()
-                            self.dashboard.modules_manager.poll_init(actuators_modules[-1])
+                            self.dashboard.modules_manager.poll_init(self.actuators_modules[-1])
                             QtWidgets.QApplication.processEvents()
 
                     self.subentries_model.set_status(ind_module, True)
@@ -308,7 +306,7 @@ class ExperimentManager(ManagerBase):
                 else:
                     plug_dim = plugin["settings"].child("info", "dim").value()
                     self.dashboard.add_det(plug_name, None,
-                                           detector_docks_viewer, detector_modules,
+                                           detector_docks_viewer, self.detector_modules,
                                            plug_dim, plug_type)
                     QtWidgets.QApplication.processEvents()
 
@@ -319,12 +317,12 @@ class ExperimentManager(ManagerBase):
                                 f" be defined as Master",
                             )
                         if plug_init:
-                            detector_modules[-1].apply_controller_parameters(plugin["settings"].child("controller"))
-                            detector_modules[-1].init_hardware_ui()
+                            self.detector_modules[-1].apply_controller_parameters(plugin["settings"].child("controller"))
+                            self.detector_modules[-1].init_hardware_ui()
                             QtWidgets.QApplication.processEvents()
-                            self.dashboard.modules_manager.poll_init(detector_modules[-1])
+                            self.dashboard.modules_manager.poll_init(self.detector_modules[-1])
                             QtWidgets.QApplication.processEvents()
-                            master_controller = detector_modules[-1].controller
+                            master_controller = self.detector_modules[-1].controller
                         elif plugin["status"] == ControllerStatus.MASTER and len(plug_IDs) > 1:
                             raise MasterSlaveError(
                                 f"The instrument {plug_name} defined as Master has to be "
@@ -338,11 +336,11 @@ class ExperimentManager(ManagerBase):
                                 f" be defined as Slave",
                             )
                         if plug_init:
-                            detector_modules[-1].controller = master_controller
-                            detector_modules[-1].apply_controller_parameters(plugin["settings"].child("controller"))
-                            detector_modules[-1].init_hardware_ui()
+                            self.detector_modules[-1].controller = master_controller
+                            self.detector_modules[-1].apply_controller_parameters(plugin["settings"].child("controller"))
+                            self.detector_modules[-1].init_hardware_ui()
                             QtWidgets.QApplication.processEvents()
-                            self.dashboard.modules_manager.poll_init(detector_modules[-1])
+                            self.dashboard.modules_manager.poll_init(self.detector_modules[-1])
                             QtWidgets.QApplication.processEvents()
 
                 self.subentries_model.set_status(ind_module, True)
@@ -355,11 +353,15 @@ class ExperimentManager(ManagerBase):
 
         self.dashboard.mainwindow.setWindowTitle(f"PyMoDAQ Dashboard: {self.dashboard.title}")
 
-        return actuators_modules, detector_modules
+        return self.actuators_modules, self.detector_modules
 
     def create_control_modules_using_machine(self, plugins_sorted):
-        actuators_modules: list[DAQ_Move] = []
-        detector_modules: list[DAQ_Viewer] = []
+        self.actuators_modules: list[DAQ_Move] = []
+        self.detector_modules: list[DAQ_Viewer] = []
+
+        self.machine = CreateAddModules(self, plugins_sorted)
+
+
 
         actuator_docks: list[Dock] = []
         detector_docks_viewer: list[Dock] = []
@@ -370,10 +372,6 @@ class ExperimentManager(ManagerBase):
         for plug_IDs in plugins_sorted:
             for ind_plugin, plugin in enumerate(plug_IDs):
                 ind_module += 1
-                self.machine = CreateAddModules(self, plugin)
-
-        return actuators_modules, detector_modules
-
 
 
 
@@ -405,8 +403,7 @@ class CreateAddModules(QtCore.QObject):
 
     def add_module(self):
         if self.plugin["type"] == ModuleType.Actuator:
-            self.manager.dashboard.add_move(
-                self.plug_name, None, self.plug_type, actuator_docks, actuator_widgets,
+            self.manager.dashboard.add_move(self.plug_name, None, self.plug_type,
                                     actuators_modules,
                                     ui_identifier=plugin["settings"].child("info", "ui").value())
 

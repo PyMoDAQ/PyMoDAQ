@@ -466,6 +466,10 @@ class ManagerBase(CustomExt):
             self._applied_entry_name = self.entry
             self.applied_entry.emit(self._applied_entry_name)
 
+    @QtCore.Slot(bool)
+    def set_entry_applied(self, value: bool):
+        self.entry_applied = value
+
     @property
     def applied_entry_name(self) -> str | None:
         """ Get the name of the last entry that has been successfully applied/executed """
