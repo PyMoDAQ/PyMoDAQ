@@ -105,12 +105,15 @@ class Console(CustomExt):
 def main():
     import sys
     from pymodaq_gui.qt_utils import mkQApp
-    from pymodaq.dashboard import create_load_dashboard
+    from pymodaq.dashboard import load_dashboard_with_arguments
     from pymodaq.utils.gui_utils.loader_utils import create_extension
 
     app = mkQApp('Console')
 
-    win, dashboard = create_load_dashboard(show_dashboard=False)
+    win, dashboard, _ = load_dashboard_with_arguments(show_dashboard=False,
+                                                      load_extension=False,
+                                                      )
+    win.mainwindow.setVisible(False)
 
     win_ext, console = create_extension(dashboard, Console,
                                         show_extension=True)
