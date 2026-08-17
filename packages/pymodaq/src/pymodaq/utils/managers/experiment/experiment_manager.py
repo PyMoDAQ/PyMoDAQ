@@ -1,11 +1,18 @@
 import warnings
 from typing import Union, TYPE_CHECKING
+
+try:
+    from qtpy.QtStateMachine import QStateMachine, QState, QFinalState, QSignalTransition
+    state_machine_available = True
+except ImportError:
+    state_machine_available = False
+
 from pymodaq.control_modules.move_utility_classes import HW_SETTINGS_KEY as ACTUATOR_SETTINGS_KEY
 from pymodaq.control_modules.viewer_utility_classes import HW_SETTINGS_KEY as DETECTOR_SETTINGS_KEY
 from pathlib import Path
 import sys
 
-from qtpy import QtWidgets
+from qtpy import QtWidgets, QtCore
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_gui.messenger import dialog, messagebox
@@ -111,11 +118,7 @@ class ExperimentManager(ManagerBase):
                 else:
                     return False
 
-            if ('Moves' in [child.name() for child in self.settings.children()] or
-                    'Detectors' in [child.name() for child in self.settings.children()]):
-                plugins_sorted, plugin_list_message = self.list_control_modules_from_old_preset()
-            else:
-                plugins_sorted, plugin_list_message = self.list_control_modules_from_preset()
+            plugins_sorted, plugin_list_message = self.list_control_modules_from_preset()
 
             self.show_subentries(plugin_list_message, title=f'Loading Experiment: {self.entry}')
 
@@ -127,9 +130,9 @@ class ExperimentManager(ManagerBase):
             logger.info(f"Loading {self.entry_type.capitalize()} file: {entry}")
 
             try:
-                if ('Moves' in [child.name() for child in self.settings.children()] or
-                        'Detectors' in [child.name() for child in self.settings.children()]):
-                    actuators_modules, detector_modules = self.create_control_modules_from_old_preset(plugins_sorted)
+                if False:#state_machine_available:
+                    actuators_modules, detector_modules = (
+                        self.create_control_modules_using_machine(plugins_sorted))
                 else:
                     actuators_modules, detector_modules = (
                         self.create_control_modules_from_preset(plugins_sorted))
@@ -204,7 +207,7 @@ class ExperimentManager(ManagerBase):
 
 
     @staticmethod
-    def _group_plugins_by_id(plugins) -> list:
+    def _group_plugins_by_id(plugins: list[dict]) -> list[list[dict]]:
         """Group a flat list of plugin dicts by their 'ID' key, sorted by 'status' within each group."""
         IDs = list(set(plug["ID"] for plug in plugins))
         plugins_sorted = []
@@ -214,7 +217,7 @@ class ExperimentManager(ManagerBase):
             plugins_sorted.append(plug_ids)
         return plugins_sorted
 
-    def list_control_modules_from_preset(self):
+    def list_control_modules_from_preset(self) -> tuple[list[list[dict]], list[str]]:
         # ################################################################
         # ##### sort plugins by IDs and within the same IDs by Master and Slave status
         plugins = []
@@ -242,7 +245,7 @@ class ExperimentManager(ManagerBase):
 
         return plugins_sorted, plugin_list_message
 
-    def create_control_modules_from_preset(self, plugins_sorted) -> tuple[list['DAQ_Move'], list['DAQ_Viewer']]:
+    def create_control_modules_from_preset(self, plugins_sorted: list[list[dict]]) -> tuple[list['DAQ_Move'], list['DAQ_Viewer']]:
         """
         Load a experiment file and create corresponding Control Modules in the Dashboard
 
@@ -265,7 +268,7 @@ class ExperimentManager(ManagerBase):
 
                 if plugin["type"] == ModuleType.Actuator or plugin["type"] == 'move':
 
-                    self.dashboard.add_move(plug_name, None, plug_type, actuator_docks, actuator_widgets,
+                    self.dashboard.add_move(plug_name, None, plug_type,
                                             actuators_modules,
                                             ui_identifier=plugin["settings"].child("info", "ui").value())
 
@@ -354,86 +357,7 @@ class ExperimentManager(ManagerBase):
 
         return actuators_modules, detector_modules
 
-    def _init_module_master_slave(self, module, ind_plugin, plug_name, plug_init,
-                                   plug_IDs, plugin_status, master_controller=None):
-        """Validate master/slave status and initialize a module (old-preset format).
-
-        Returns the (possibly updated) master_controller.
-        """
-        if ind_plugin == 0:
-            if plugin_status != "Master":
-                raise MasterSlaveError(f"The instrument {plug_name} should be defined as Master")
-            if plug_init:
-                module.master = True
-                self.dashboard.init_module(module)
-                master_controller = module.controller
-            elif plugin_status == "Master" and len(plug_IDs) > 1:
-                raise MasterSlaveError(
-                    f"The instrument {plug_name} defined as Master has to be "
-                    f"initialized (init checked in the preset) in order to init "
-                    f"its associated slave instrument"
-                )
-        else:
-            if plugin_status != "Slave":
-                raise MasterSlaveError(f"The instrument {plug_name} should be defined as slave")
-            if plug_init:
-                self.dashboard.init_module(module, controller=master_controller)
-        return master_controller
-
-    ##### BACKCOMPATIBILITY ###########
-    def list_control_modules_from_old_preset(self):
-        plugins = []
-        plugins += [
-            {"type": "move", "value": child}
-            for child in self.settings.child("Moves").children()
-        ]
-        plugins += [
-            {"type": "det", "value": child}
-            for child in self.settings.child("Detectors").children()
-        ]
-        for plug in plugins:
-            if plug["type"] == "det":
-                try:
-                    plug["ID"] = plug["value"][
-                        "params", "detector_settings", "controller_ID",
-                    ]
-                    plug["status"] = plug["value"][
-                        "params", "detector_settings", "controller_status",
-                    ]
-                except KeyError as e:
-                    raise DetectorError
-            else:
-                try:
-                    plug["ID"] = plug["value"][
-                        "params", "move_settings", "multiaxes", "controller_ID",
-                    ]
-                    plug["status"] = plug["value"][
-                        "params", "move_settings", "multiaxes", "multi_status",
-                    ]
-                except KeyError as e:
-                    raise ActuatorError
-
-        plugins_sorted = self._group_plugins_by_id(plugins)
-
-        plugin_list_message = []
-        for plug_id in plugins_sorted:
-            for plugin in plug_id:
-                module_type = ModuleType.Actuator if plugin['type'] == 'move' else ModuleType.Detector
-                inst_plugin = (plugin['value']['params', 'main_settings', 'move_type'].capitalize()
-                               if plugin['type'] == 'move'
-                               else plugin['value']['params', 'main_settings', 'DAQ_type'] +
-                                    '/' +
-                                    plugin['value']['params', 'main_settings', 'detector_type'].capitalize())
-                plugin_list_message.append(
-                    f"Initializing {module_type} "
-                    f"{inst_plugin}:"
-                    f" {plugin['value']['name']}")
-
-        return plugins_sorted, plugin_list_message
-
-    def create_control_modules_from_old_preset(self, plugins_sorted) -> tuple[list['DAQ_Move'], list['DAQ_Viewer']]:
-        """ allows to use old style presets to create control modules """
-
+    def create_control_modules_using_machine(self, plugins_sorted):
         actuators_modules: list[DAQ_Move] = []
         detector_modules: list[DAQ_Viewer] = []
 
@@ -441,110 +365,50 @@ class ExperimentManager(ManagerBase):
         detector_docks_viewer: list[Dock] = []
         actuator_widgets: list[QtWidgets.QWidget] = []
 
-        master_controller = None
+        # Add Control Modules to the Dashboard
         ind_module = -1
         for plug_IDs in plugins_sorted:
             for ind_plugin, plugin in enumerate(plug_IDs):
                 ind_module += 1
-                plug_name = plugin["value"].child("name").value()
-                plug_init = plugin["value"].child("init").value()
-                plug_settings = plugin["value"].child("params")
-
-                if plugin["type"] == "move":
-                    plug_type = plug_settings.child(
-                        "main_settings", "move_type",
-                    ).value()
-                    self.dashboard.add_move(
-                        plug_name, None, plug_type,
-                        actuator_docks, actuator_widgets, actuators_modules,
-                    )
-
-                    if ind_plugin == 0:  # should be a master type plugin
-                        if plugin["status"] != "Master":
-                            raise MasterSlaveError(
-                                f"The instrument {plug_name} should"
-                                f" be defined as Master",
-                            )
-                        if plug_init:
-                            actuators_modules[-1].init_hardware_ui()
-                            QtWidgets.QApplication.processEvents()
-                            self.dashboard.modules_manager.poll_init(actuators_modules[-1])
-                            QtWidgets.QApplication.processEvents()
-                            master_controller = actuators_modules[-1].controller
-                        elif plugin["status"] == "Master" and len(plug_IDs) > 1:
-                            raise MasterSlaveError(
-                                f"The instrument {plug_name} defined as Master has to be "
-                                f"initialized (init checked in the experiment) in order to init "
-                                f"its associated slave instrument",
-                            )
-                    else:
-                        if plugin["status"] != "Slave":
-                            raise MasterSlaveError(
-                                f"The instrument {plug_name} should"
-                                f" be defined as slave",
-                            )
-                        if plug_init:
-                            actuators_modules[-1].controller = master_controller
-                            actuators_modules[-1].init_hardware_ui()
-                            QtWidgets.QApplication.processEvents()
-                            self.dashboard.modules_manager.poll_init(actuators_modules[-1])
-                            QtWidgets.QApplication.processEvents()
-
-                    self.subentries_model.set_status(ind_module, True)
-
-                else:
-                    plug_subtype = plug_settings["main_settings", "detector_type"]
-                    plug_type = plug_settings['main_settings', 'DAQ_type']
-                    self.dashboard.add_det(
-                        plug_name, None, detector_docks_viewer, detector_modules,
-                        plug_type=plug_type, plug_subtype=plug_subtype,
-                    )
-                    QtWidgets.QApplication.processEvents()
-                    module = detector_modules[-1]
-
-                    if ind_plugin == 0:  # should be a master type plugin
-                        if plugin["status"] != "Master":
-                            raise MasterSlaveError(
-                                f"The instrument {plug_name} should"
-                                f" be defined as Master",
-                            )
-                        if plug_init:
-                            detector_modules[-1].init_hardware_ui()
-                            QtWidgets.QApplication.processEvents()
-                            self.dashboard.modules_manager.poll_init(detector_modules[-1])
-                            QtWidgets.QApplication.processEvents()
-                            master_controller = detector_modules[-1].controller
-                        elif plugin["status"] == "Master" and len(plug_IDs) > 1:
-                            raise MasterSlaveError(
-                                f"The instrument {plug_name} defined as Master has to be "
-                                f"initialized (init checked in the experiment) in order to init "
-                                f"its associated slave instrument",
-                            )
-                    else:
-                        if plugin["status"] != "Slave":
-                            raise MasterSlaveError(
-                                f"The instrument {plug_name} should"
-                                f" be defined as Slave",
-                            )
-                        if plug_init:
-                            detector_modules[-1].controller = master_controller
-                            detector_modules[-1].init_hardware_ui()
-                            QtWidgets.QApplication.processEvents()
-                            self.dashboard.modules_manager.poll_init(detector_modules[-1])
-                            QtWidgets.QApplication.processEvents()
-
-                    self.subentries_model.set_status(ind_module, True)
-
-        QtWidgets.QApplication.processEvents()
-        self.close_subentries_display()
-        # restore dock state if saved
-
-        self.dashboard.title = self.entry
-
-        self.dashboard.mainwindow.setWindowTitle(f"PyMoDAQ Dashboard: {self.dashboard.title}")
+                self.machine = CreateAddModules(self, plugin)
 
         return actuators_modules, detector_modules
-    ###################################
+
+
+
+
+class CreateAddModules(QtCore.QObject):
+    def __init__(self, manager: ExperimentManager, plugin: dict, parent=None):
+        super().__init__(parent)
+        self.manager = manager
+        self.plugin = plugin
+
+        self.plug_name = plugin["settings"].child("name").value()
+        self.plug_type = plugin["settings"].child("info", "type").value()
+        self.plug_init = plugin["settings"].child("info", "init").value()
+
+        self.machine = QStateMachine()
+        self.create_module_state = QState()
+        self.init_module_state = QState()
+        self.done_module_state = QFinalState()
+
+        self.setup_machine()
+
+    def setup_machine(self):
+
+        self.machine.addState(self.create_module_state)
+        self.machine.addState(self.init_module_state)
+        self.machine.addState(self.done_module_state)
+        self.machine.setInitialState(self.create_module_state)
+
+        self.create_module_state.entered.connect(self.add_module)
+
+    def add_module(self):
+        if self.plugin["type"] == ModuleType.Actuator:
+            self.manager.dashboard.add_move(
+                self.plug_name, None, self.plug_type, actuator_docks, actuator_widgets,
+                                    actuators_modules,
+                                    ui_identifier=plugin["settings"].child("info", "ui").value())
 
 
 if __name__ == '__main__':
