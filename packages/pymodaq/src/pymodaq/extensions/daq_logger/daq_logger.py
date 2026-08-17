@@ -140,7 +140,7 @@ class DAQ_Logger(CustomExt):
     def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
         """
         """
-        self.create_dashboard_toolbar()
+        self.create_dashboard_toolbar(add_break=False)
 
     def value_changed(self, param):
         if param.name() == 'log_type':
@@ -501,12 +501,8 @@ def main():
 
     app = mkQApp('DAQ Logger')
 
-    win, dashboard = create_load_dashboard()
-    win.mainwindow.setVisible(False)
-
-    win_ext, logger = create_extension(dashboard, DAQ_Logger)
-    win_ext.show()
-
+    win, dashboard = create_load_dashboard(show_dashboard=False)
+    win_ext, logger = create_extension(dashboard, DAQ_Logger, show_extension=True)
     sys.exit(app.exec())
 
 

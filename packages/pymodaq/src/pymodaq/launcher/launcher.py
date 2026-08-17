@@ -543,14 +543,11 @@ def main():
     win = QtWidgets.QMainWindow()
     win.setWindowTitle('Launcher')
 
-    shared_ui = SharedUI(win)
+    shared_ui = SharedUI(win, show=True)
     prog = Launcher(win)
     shared_ui.affect_application(prog)
 
     win.resize(850, 450)
-
-    win.show()
-
     sys.exit(app.exec())
 
 

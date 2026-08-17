@@ -9,13 +9,13 @@ Created the 05/09/2022
 from typing import List, Union
 import sys
 
-from qtpy import QtWidgets, QtCore
+from qtpy import QtWidgets, QtCore, QtGui
 from qtpy.QtWidgets import QVBoxLayout,  QWidget
 
 from pymodaq.utils.daq_utils import ThreadCommand
 from pymodaq.control_modules.ui_utils import ControlModuleUI
 
-from pymodaq_gui.utils import DockArea
+from pymodaq_gui.utils import DockArea, Dock
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.enums import StrEnum
 from pymodaq.control_modules.instruments import DET_TYPES
@@ -44,6 +44,7 @@ class ActionIconNames(StrEnum):
     GRAB = 'repeat'
     GRAB_STOP = 'repeat_on'
     INI = 'cable'
+    RESET = 'replay'
 
 
 class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
@@ -75,14 +76,22 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     pymodaq.utils.daq_utils.ThreadCommand
     """
 
-    def __init__(self, parent: QtWidgets.QWidget, title="DAQ_Viewer", **kwargs):
-        ControlModuleUI.__init__(self, parent)
+    def __init__(self, parent: QtWidgets.QWidget, title="DAQ_Viewer",
+                 rois_dock: Dock = None,
+                 settings_dock: Dock = None,
+                 area: DockArea = None,
+                 **kwargs):
 
-        self.dockarea = DockArea()
+        ControlModuleUI.__init__(self, parent,
+                                 title=title,
+                                 settings_dock=settings_dock,)
+        if area is not None:
+            self.dockarea = area
+        else:
+            self.dockarea = DockArea()
 
-        ViewerDispatcher.__init__(self, self.dockarea, title=title)
-
-        self.title = title
+        ViewerDispatcher.__init__(self, self.dockarea, title=title,
+                                  rois_dock=rois_dock)
 
         self._data_ready = False
         self._detector_widget = None
@@ -149,16 +158,12 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         layout = QVBoxLayout()
         widget.setLayout(layout)
         layout.setContentsMargins(2, 2, 2, 2)
-        self._settings_widget = QWidget()
-        self._settings_widget.setLayout(QtWidgets.QVBoxLayout())
+
 
         layout.addWidget(self.dockarea)
 
     def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
         self.add_toolbar('viewer', 'DAQViewer')
-
-    def add_setting_tree(self, tree):
-        self._settings_widget.layout().addWidget(tree)
 
     def setup_actions(self):
         # Common actions from ControlModuleUI
@@ -174,6 +179,9 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.add_action('grab', 'Grab', ActionIconNames.GRAB, "Grab data from the detector", checkable=True,
                         icon_checked=ActionIconNames.GRAB_STOP,
                         icon_checked_color=self.get_theme().green)
+        self.add_action('reset_live', 'ResetLive', ActionIconNames.RESET,
+                        "Reset The current live averaging",
+                        visible=False)
         self.add_action('show_graphs', 'ShowGraphs', 'bid_landscape', 'Show/Hide the Graphs Area',
                         checkable=True, icon_checked='bid_landscape_disabled',
                         icon_color=self.get_theme().green, icon_checked_color=self.get_theme().red)
@@ -190,6 +198,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
         self.connect_action('grab', self._grab)
         self.connect_action('snap', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SNAP, )))
+        self.connect_action('reset_live', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.RESET_LIVE)))
         self.connect_action('save_current', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SAVE_CURRENT, )))
 
         self.selector.module_changed.connect(self._detector_changed)
@@ -240,7 +249,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
     def update_viewers(self, viewers_type: List[Union[str, ViewersEnum]],
                        viewers_name: List[str] = None, force=False):
-        super().update_viewers(viewers_type)
+        super().update_viewers(viewers_type, viewers_name=viewers_name)
         self.command_sig.emit(ThreadCommand(UiToMainViewer.VIEWERS_CHANGED,
                                             attribute=dict(viewer_types=self.viewer_types,
                                                            viewers=self.viewers)))
@@ -273,7 +282,8 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         """Slot from the *grab* action"""
         self.command_sig.emit(ThreadCommand(UiToMainViewer.GRAB, attribute=self.is_action_checked('grab')))
         self.enable_actions(not self.is_action_checked('grab'),
-                            all_except=('grab', 'selector', 'show_settings', 'show_graphs'))
+                            all_except=('grab', 'selector', 'show_settings', 'show_graphs',
+                                        'reset_live'))
 
         if not self.config('pymodaq', 'viewer', 'allow_settings_edition'):
             self._settings_widget.setEnabled(not self.is_action_checked('grab'))

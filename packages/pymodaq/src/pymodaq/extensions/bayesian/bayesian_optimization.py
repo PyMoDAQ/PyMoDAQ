@@ -129,11 +129,8 @@ def main():
 
     app = mkQApp('Bayesian Optimizer')
 
-    win, dashboard = create_load_dashboard()
-    win.mainwindow.setVisible(False)
-
-    win_ext, scan = create_extension(dashboard, BayesianOptimization)
-    win_ext.show()
+    win, dashboard = create_load_dashboard(show_dashboard=False)
+    win_ext, scan = create_extension(dashboard, BayesianOptimization, show_extension=True)
 
     sys.exit(app.exec())
 

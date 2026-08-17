@@ -92,7 +92,7 @@ class Console(CustomExt):
              'np': np})
 
     def setup_docks_and_widgets(self):
-        self.create_dashboard_toolbar()
+        self.create_dashboard_toolbar(add_break=False)
         self.mainwindow.setCentralWidget(self.console)
 
     def setup_actions(self):
@@ -110,11 +110,10 @@ def main():
 
     app = mkQApp('Console')
 
-    win, dashboard = create_load_dashboard()
-    win.mainwindow.setVisible(False)
+    win, dashboard = create_load_dashboard(show_dashboard=False)
 
-    win_ext, console = create_extension(dashboard, Console)
-    win_ext.show()
+    win_ext, console = create_extension(dashboard, Console,
+                                        show_extension=True)
 
     sys.exit(app.exec())
 

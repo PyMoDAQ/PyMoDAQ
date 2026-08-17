@@ -7,6 +7,7 @@ import sys
 import pyqtgraph as pg
 
 from pymodaq_utils import utils
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_data import data as data_mod
 from pymodaq_data.plotting.utils import PlotColors
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -14,6 +15,7 @@ from pymodaq_gui.plotting.data_viewers.viewer import ViewerBase
 from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_gui.plotting.widgets import PlotWidget
 from pymodaq_gui.plotting.utils.plot_utils import Data0DWithHistory
+from pymodaq_gui.utils.dock import Dock
 
 import numpy as np
 from collections import OrderedDict
@@ -238,10 +240,10 @@ class DataDisplayer(QObject):
 
 class View0D(ActionManager, QObject):
     def __init__(self, parent_widget: QtWidgets.QWidget = None, show_toolbar=True,
-                 no_margins=False):
+                 no_margins=False, title=''):
         QObject.__init__(self)
         ActionManager.__init__(self, toolbar=QtWidgets.QToolBar())
-
+        self._title = title
         self.no_margins = no_margins
         self.data_displayer: DataDisplayer = None
         self.other_data_displayers: Dict[str, DataDisplayer] = {}
@@ -263,15 +265,21 @@ class View0D(ActionManager, QObject):
         if not show_toolbar:
             self.splitter.setSizes([0,1])
 
-        self.get_action('Nhistory').setValue(200)  #default history length
+    @property
+    def title(self) -> str:
+        return self._title
+
+    @title.setter
+    def title(self, value: str):
+        self._title = value
 
     def setup_actions(self):
-        self.add_action('clear', 'Clear plot', 'clear2', 'Clear the current plots')
-        self.add_widget('Nhistory', pg.SpinBox, tip='Set the history length of the plot',
+        self.add_action('clear', 'Clear plot', 'ink_eraser', 'Clear the current plots')
+        self.add_widget('Nhistory', pyqtgraph.SpinBox, tip='Set the history length of the plot',
                         setters=dict(setMaximumWidth=100))
-        self.add_action('show_data_as_list', 'Show numbers', 'ChnNum', 'If triggered, will display last data as numbers'
+        self.add_action('show_data_as_list', 'Show numbers', 'pin', 'If triggered, will display last data as numbers'
                                                                        'in a side panel', checkable=True)
-        self.add_action('show_min_max', 'Show Min/Max lines', 'Statistics',
+        self.add_action('show_min_max', 'Show Min/Max lines', 'contrast_square',
                         'If triggered, will display horizontal dashed lines for min/max of data', checkable=True)
         self.add_action('use_timestamps', 'Use Timestamps', 'timer_off',
                         'Use timestamps as axis', checkable=True,
@@ -284,7 +292,8 @@ class View0D(ActionManager, QObject):
                         visible=False)
         self.add_action('sync_x_axis', 'Sync X axis', 'sync_disabled',
                         'If checked, adding a new channel resets all histories so curves '
-                        'share the same x-axis origin', checkable=True, checked=True, icon_checked='sync_lock',
+                        'share the same x-axis origin', checkable=True, checked=True,
+                        icon_checked='sync_lock',
                         icon_color='#F9A825', icon_checked_color='#607D8B')
 
     def _setup_widgets(self):
@@ -329,7 +338,13 @@ class View0D(ActionManager, QObject):
     def _prepare_ui(self):
         """add here everything needed at startup"""
         self.values_list.setVisible(False)
-        self.get_action('sync_x_axis').setChecked(True)
+        config = Config()
+        self.get_action('Nhistory').setValue(config('gui', 'viewer', 'viewer0D', 'Nhistory'))
+        for action_name in ('show_data_as_list', 'show_min_max'):
+            if config('gui', 'viewer', 'viewer0D', action_name):
+                self.get_action(action_name).trigger()
+        if not config('gui', 'viewer', 'viewer0D', 'sync_x_axis'):
+            self.get_action('sync_x_axis').trigger()
 
     def get_double_clicked(self):
         return self.plot_widget.view.sig_double_clicked
@@ -370,9 +385,12 @@ class Viewer0D(ViewerBase):
     Datas and measurements are then exported with the signal data_to_export_signal
     """
 
-    def __init__(self, parent=None, title='', show_toolbar=True, no_margins=False):
+    def __init__(self, parent=None, title='', show_toolbar=True,
+                 no_margins=False,
+                 rois_dock: Dock = None):
         super().__init__(parent, title)
-        self.view = View0D(self.parent, show_toolbar=show_toolbar, no_margins=no_margins)
+        self.view = View0D(self.parent, show_toolbar=show_toolbar,
+                           no_margins=no_margins, title=title)
         self._labels = []
 
     def update_colors(self, colors: list, displayer=None):

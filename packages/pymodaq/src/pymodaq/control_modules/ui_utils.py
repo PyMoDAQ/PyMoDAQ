@@ -1,14 +1,16 @@
 from importlib import import_module
 from pathlib import Path
 from typing import Union
-
+import numpy as np
 from qtpy import QtCore, QtWidgets
 import qt_themes
 
 from pymodaq_gui.utils import CustomApp
+from pymodaq_gui.utils import Dock
 from pymodaq_gui.utils.widgets import LabelWithFont
 from pymodaq_gui.utils.styling import create_font, create_icon
-
+from pymodaq_gui.plotting.utils.plot_utils import display_in_dock
+from pymodaq_gui.utils.widgets.widget_with_label_title import WidgetWithLabelTitle
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import GlobalConfig as Config
 
@@ -34,11 +36,17 @@ class ControlModuleUI(CustomApp):
     # Common icon name for initialization action
     INIT_ICON = 'cable'
 
-    def __init__(self, parent):
-        super().__init__(parent)
+    def __init__(self, parent, title, settings_dock: Dock = None,):
+        super().__init__(parent, title=title)
+        self.settings_dock: Dock = settings_dock
         self.config = config
         self._ini_state = False
-        self._settings_widget = None
+
+        self._settings_widget = WidgetWithLabelTitle(self.title)
+        self._settings_widget.setLayout(QtWidgets.QVBoxLayout())
+
+    def add_setting_tree(self, tree):
+        self._settings_widget.insert_widget(tree)
 
     # ---- Common action setup methods ----
 
@@ -120,8 +128,19 @@ class ControlModuleUI(CustomApp):
 
     def _show_settings(self, show: bool = True):
         """Slot connected to the show_settings action."""
-        self._settings_widget.setVisible(show)
-        self._settings_widget.closeEvent = lambda event: self.set_action_checked('show_settings', False)
+        if (self.config('pymodaq', 'control_modules', 'settings_as_popup')
+            or self.settings_dock is None):
+            if self.settings_dock is not None:
+                self.settings_dock.removeWidgets(close=False)
+                self.settings_dock.setVisible(False)
+
+            self._settings_widget.setWindowTitle(f'{self.title} settings')
+            self._settings_widget.setVisible(show)
+            self._settings_widget.closeEvent = lambda event: self.set_action_checked('show_settings', False)
+        else:
+            display_in_dock(show,
+                            self._settings_widget,
+                            self.settings_dock)
 
     def show_settings(self, show=True):
         """Programmatically show/hide the settings widget. API entry."""

@@ -369,7 +369,7 @@ class DAQ_PID(CustomExt):
         file_menu.addSeparator()
         self.actions_manager.affect_to('quit', file_menu)
         """
-        self.create_dashboard_toolbar()
+        self.create_dashboard_toolbar(add_break=False)
 
     def value_changed(self, param):
         """to be subclassed for actions to perform when one of the param's value in self.settings is changed
@@ -907,7 +907,7 @@ class PIDRunner(QObject):
 
                 # # APPLY THE PID OUTPUT TO THE ACTUATORS
                 self.outputs_to_actuators: DataToActuators = (
-                    self.model_class.convert_output(self.outputs, dt=None)
+                    self.model_class.convert_output(self.outputs, dt=self.time_elapsed)
                 )
                 if self.clear_queues:
                     [queue_input.clear() for queue_input in self.queue_inputs]
@@ -977,10 +977,9 @@ if __name__ == "__main__":
 
     app = mkQApp("DAQ_PID")
 
-    win, dashboard = create_load_dashboard()
-    win.mainwindow.setVisible(False)
+    win, dashboard = create_load_dashboard(show_dashboard=False)
 
-    win_ext, scan = create_extension(dashboard, DAQ_PID)
-    win_ext.show()
+    win_ext, scan = create_extension(dashboard, DAQ_PID,
+                                     show_extension=True)
 
     sys.exit(app.exec())

@@ -4,6 +4,7 @@ from qtpy import QtWidgets, QtCore, QtGui
 from pyqtgraph.parametertree.Parameter import ParameterItem
 from pyqtgraph.parametertree.parameterTypes.basetypes import WidgetParameterItem
 from pymodaq_gui.parameter import Parameter
+from pymodaq_gui.qt_utils import mkQApp
 
 
 class ItemSelect_pb(QtWidgets.QWidget):
@@ -43,8 +44,8 @@ class ItemSelect_pb(QtWidgets.QWidget):
 
 
 class ItemSelect(QtWidgets.QListWidget):
-    def __init__(self, hasCheckbox=True):
-        QtWidgets.QListWidget.__init__(self)
+    def __init__(self, hasCheckbox=True, parent=None):
+        super().__init__(parent)
         self.hasCheckbox = hasCheckbox  # Boolean indicating if listwidget item uses checkbox ot not
         self.selItems = []  # Dummy variable to keep track of click order
         self.itemDoubleClicked.connect(self.doubleClickSelection)
@@ -147,8 +148,9 @@ class ItemSelect(QtWidgets.QListWidget):
         QtWidgets.QApplication.processEvents()
 
     def sizeHint(self):
-        return QtCore.QSize(super().sizeHint().width(), 25 * self.count())
-
+        if self.count() > 0:
+            return QtCore.QSize(super().sizeHint().width(), 30 * self.count())
+        return QtCore.QSize(super().sizeHint().width(), 10)
 
 class ItemSelectParameterItem(WidgetParameterItem):
     
@@ -269,4 +271,12 @@ class ItemSelectParameter(Parameter):
         self.emitStateChanged('activated', None)
 
 
+if __name__ == '__main__':
+    import sys
+    app = mkQApp('itemselect')
 
+    itemselect = ItemSelect(hasCheckbox=True)
+    itemselect.setResizeMode(QtWidgets.QListWidget.ResizeMode.Adjust)
+    itemselect.show()
+
+    sys.exit(app.exec())

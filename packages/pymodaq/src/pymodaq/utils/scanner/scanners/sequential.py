@@ -9,7 +9,8 @@ from typing import List, Tuple, TYPE_CHECKING, Iterable
 import numpy as np
 
 from qtpy import QtCore, QtWidgets
-from pymodaq_data.data import Axis, DataDistribution
+
+from pymodaq_data.data import Axis, DataDistribution, parse_quantity
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import math_utils as mutils
 from pymodaq_data import Q_
@@ -21,6 +22,7 @@ from pymodaq_gui.parameter.pymodaq_ptypes import TableViewCustom
 from pymodaq.utils.scanner.scan_selector import Selector
 
 logger = set_logger(get_module_name(__file__))
+
 
 
 
@@ -92,11 +94,11 @@ class SequentialScanner(ScannerBase):
     distribution = DataDistribution['uniform']
     n_axes = 1
 
-    def __init__(self, actuators: List['DAQ_Move'], display_units=True, **_ignored):
+    def __init__(self, actuators: List['DAQ_Move'], settings=None, **_ignored):
 
         self.table_model: TableModelSequential = None
         self.table_view: TableViewCustom = None
-        super().__init__(actuators, display_units=display_units)
+        super().__init__(actuators, settings=settings)
         self.delegates: Iterable[gutils.SpinBoxDelegate] = []
         self.update_model()
 
@@ -140,11 +142,11 @@ class SequentialScanner(ScannerBase):
         self.update_table_view()
 
     def get_pos(self):
-        starts = [Q_(self.table_model.get_data(ind, 1))
+        starts = [parse_quantity(self.table_model.get_data(ind, 1))
                            for ind in range(self.table_model.rowCount(None))]
-        stops = [Q_(self.table_model.get_data(ind, 2))
+        stops = [parse_quantity(self.table_model.get_data(ind, 2))
                           for ind in range(self.table_model.rowCount(None))]
-        steps = [Q_(self.table_model.get_data(ind, 3))
+        steps = [parse_quantity(self.table_model.get_data(ind, 3))
                           for ind in range(self.table_model.rowCount(None))]
         return starts, stops, steps
 
@@ -152,17 +154,20 @@ class SequentialScanner(ScannerBase):
         starts, stops, steps = self.get_pos()
         n_steps = 1
         for ind in range(len(starts)):
-            n_steps *= (np.abs((stops[ind] - starts[ind]) / steps[ind]) + 1).magnitude
+            # When using temperatures (in °C) substraction give delta °C,
+            # To ensure everything is correct. The magnitude is taken with the unit
+            # of one of the elements
+            stop = stops[ind].magnitude
+            start = starts[ind].to(stops[ind].units).magnitude #be sure everything is in the same unit
+            step = steps[ind].to(stops[ind].units).magnitude
+            n_steps *= (np.abs((stop - start) / step) + 1)
         return int(n_steps)
 
     @staticmethod
     def pos_above_stops(positions, steps, stops):
         state = []
         for pos, step, stop in zip(positions, steps, stops):
-            if step >= 0:
-                state.append(pos > stop)
-            else:
-                state.append(pos < stop)
+            state.append(pos > stop if step >= 0 else pos < stop)
         return state
 
     def update_table_view(self):
@@ -188,24 +193,32 @@ class SequentialScanner(ScannerBase):
 
     def set_scan(self):
         starts, stops, steps = self.get_pos()
-        all_positions = [starts.copy()]
-        positions = starts.copy()
-        state = self.pos_above_stops(positions, steps, stops)
+
+        # Normalize everything to the same unit per axis, work in magnitudes
+        ref_units = [stop.units for stop in stops]
+        starts_mag = [s.to(u).magnitude for s, u in zip(starts, ref_units)]
+        stops_mag = [s.to(u).magnitude for s, u in zip(stops, ref_units)]
+        steps_mag = [s.to(u).magnitude for s, u in zip(steps, ref_units)]
+
+        all_positions = [starts_mag.copy()]
+        positions = starts_mag.copy()
+        state = self.pos_above_stops(positions, steps_mag, stops_mag)
         if len(state) != 0:
             while not state[0]:
                 if not np.any(np.array(state)):
-                    positions[-1] += steps[-1]
-
+                    positions[-1] += steps_mag[-1]
                 else:
                     indexes_true = np.where(np.array(state))
-                    positions[indexes_true[-1][0]] = starts[indexes_true[-1][0]]
-                    positions[indexes_true[-1][0] - 1] += steps[indexes_true[-1][0] - 1]
+                    positions[indexes_true[-1][0]] = starts_mag[indexes_true[-1][0]]
+                    positions[indexes_true[-1][0] - 1] += steps_mag[indexes_true[-1][0] - 1]
 
-                state = self.pos_above_stops(positions, steps, stops)
+                state = self.pos_above_stops(positions, steps_mag, stops_mag)
                 if not np.any(np.array(state)):
                     all_positions.append(positions.copy())
-        all_positions = np.array([[elt.magnitude for elt in positions] for positions in all_positions])
+
+        all_positions = np.array(all_positions)
         self.get_info_from_positions(all_positions)
+
 
     def get_nav_axes(self) -> List[Axis]:
         return [Axis(label=f'{act.title}', units=act.units, data=self.axes_unique[ind], index=ind)

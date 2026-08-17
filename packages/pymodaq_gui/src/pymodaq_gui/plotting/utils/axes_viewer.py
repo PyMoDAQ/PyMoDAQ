@@ -16,8 +16,9 @@ from pymodaq_utils.math_utils import find_index
 class AxesViewer(QtCore.QObject):
     navigation_changed = QtCore.Signal()
 
-    def __init__(self, parent_widget: QtWidgets.QWidget):
+    def __init__(self, parent_widget: QtWidgets.QWidget, title=''):
         super().__init__()
+        self.title = title
         self._axes: List[Axis]
         self.parent = parent_widget
         self.parent.setLayout(QtWidgets.QVBoxLayout())

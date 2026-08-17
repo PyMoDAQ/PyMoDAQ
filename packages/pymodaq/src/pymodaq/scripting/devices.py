@@ -93,11 +93,11 @@ class Dashboard(Device[LECODashboardWrapper]):
             'detectors': {name: Detector(name) for name in devices['detectors']},
         }
 
-    def get_configurations(self) -> Future[list[str]]:
-        return self._wrapper.get_configurations()
+    def get_states(self) -> Future[list[str]]:
+        return self._wrapper.get_states()
 
-    def apply_configuration(self, configuration: str) -> Future[bool]:
-        return self._wrapper.apply_configuration(configuration)
+    def apply_state(self, state: str) -> Future[bool]:
+        return self._wrapper.apply_state(state)
 
     def get_experiments(self) -> Future[list[str]]:
         return self._wrapper.get_experiments()

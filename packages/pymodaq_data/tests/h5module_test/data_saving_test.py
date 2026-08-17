@@ -14,7 +14,7 @@ from pymodaq_data.h5modules.data_saving import (
     DataEnlargeableSaver, DataToExportTimedSaver, SPECIAL_GROUP_NAMES, DataToExportExtendedSaver,
     DataToExportEnlargeableSaver, DataExtendedSaver, DataLoader, BkgSaver, squeeze)
 from pymodaq_data.data import (Axis, DataWithAxes, DataSource, DataToExport, DataRaw,
-                               DataDim, DataDistribution)
+                               DataDim, DataDistribution, Averaging)
 
 
 LABEL = 'A Label'
@@ -325,6 +325,42 @@ class TestDataSaverLoader:
         assert 'another_other_attribute' in node.attrs
         assert loaded_data.another_other_attribute == 123
         assert loaded_data.timestamp == data.timestamp
+
+    def test_averaging(self, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
+        data_saver = DataSaverLoader(h5saver)
+        Ndata = 2
+        WEIGHT = 3
+
+        data = DataWithAxes(name='mydata', data=[DATA2D for _ in range(Ndata)],
+                            labels=['mylabel1', 'mylabel2'],
+                            source='raw',
+                            dim='Data2D', distribution='uniform',
+                            axes=[Axis(data=create_axis_array(DATA2D.shape[0]),
+                                       label='myaxis0', units='s',
+                                       index=0),
+                                  Axis(data=create_axis_array(DATA2D.shape[1]),
+                                       label='myaxis1', units='ms',
+                                       index=1)],
+                            another_attribute='another_attribute',
+                            another_other_attribute=123)
+        data = data.average(data, WEIGHT)
+
+        data_saver.add_data(h5saver.raw_group, data)
+        node = h5saver.get_node('/RawData/Data01')
+        assert Averaging.AVERAGED in node.attrs
+        assert Averaging.N_AVERAGED in node.attrs
+
+        assert node.attrs[Averaging.N_AVERAGED] == WEIGHT + 1
+        assert node.attrs[Averaging.AVERAGED]
+
+        loaded_data = data_saver.load_data(h5saver.get_node('/RawData/Data01'), load_all=True, with_bkg=True)
+
+        assert Averaging.AVERAGED in loaded_data.extra_attributes
+        assert Averaging.N_AVERAGED in loaded_data.extra_attributes
+
+        assert getattr(loaded_data, Averaging.N_AVERAGED) == WEIGHT + 1
+        assert getattr(loaded_data, Averaging.AVERAGED)
 
 
 class TestBkgSaver:

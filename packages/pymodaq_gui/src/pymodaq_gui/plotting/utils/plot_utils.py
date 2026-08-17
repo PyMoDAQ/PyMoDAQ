@@ -10,7 +10,8 @@ from typing import Iterable as IterableType
 from multipledispatch import dispatch
 import numpy as np
 import pyqtgraph as pg
-from qtpy import QtGui, QtCore
+from qtpy import QtGui, QtCore, QtWidgets
+from pymodaq_gui.utils.dock import Dock
 from scipy.spatial import Delaunay as Triangulation
 
 from pymodaq_data import data as data_mod
@@ -527,7 +528,7 @@ class Data0DWithHistory:
         self._timestamps = np.array([])
 
 
-class View_cust(pg.ViewBox):
+class ViewBox(pg.ViewBox):
     """Custom ViewBox used to enable other properties compared to parent class: pg.ViewBox
 
     """
@@ -546,3 +547,17 @@ class View_cust(pg.ViewBox):
             self.sig_double_clicked.emit(pos.x(), pos.y())
 
 
+def display_in_dock(show: bool, widget: QtWidgets.QWidget,
+                    dock: Dock,
+                    orientation=QtCore.Qt.Orientation.Horizontal):
+    if widget not in dock.widgets:
+        if orientation == QtCore.Qt.Orientation.Horizontal:
+            dock.addWidget(widget,
+                           row=0,
+                           col=dock.layout.count())
+        else:
+            dock.addWidget(widget)
+    widget.setVisible(show)
+    dock.setVisible(True)
+    dock.setVisible(
+        bool(np.any([widget.isVisible() for widget in dock.widgets])))
