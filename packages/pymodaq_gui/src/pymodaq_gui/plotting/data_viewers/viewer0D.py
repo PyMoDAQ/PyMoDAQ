@@ -6,6 +6,7 @@ from qtpy.QtCore import QObject, Slot, Signal, Qt
 import sys
 import pyqtgraph as pg
 
+from pymodaq_gui.utils.widgets import SpinBox
 from pymodaq_utils import utils
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_data import data as data_mod
@@ -275,7 +276,7 @@ class View0D(ActionManager, QObject):
 
     def setup_actions(self):
         self.add_action('clear', 'Clear plot', 'ink_eraser', 'Clear the current plots')
-        self.add_widget('Nhistory', pyqtgraph.SpinBox, tip='Set the history length of the plot',
+        self.add_widget('Nhistory', SpinBox, tip='Set the history length of the plot',
                         setters=dict(setMaximumWidth=100))
         self.add_action('show_data_as_list', 'Show numbers', 'pin', 'If triggered, will display last data as numbers'
                                                                        'in a side panel', checkable=True)
