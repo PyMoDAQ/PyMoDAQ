@@ -71,7 +71,12 @@ class TableViewCustom(QtWidgets.QTableView):
 
 
 class TableViewParameterItem(WidgetParameterItem):
-    def makeWidget(self):
+
+    def __init__(self, *args, **kwargs):
+        self.widget: TableViewCustom = None
+        super().__init__(*args, **kwargs)
+
+    def makeWidget(self) -> TableViewCustom:
         """
             Make and initialize an instance of Table_custom.
 
@@ -127,7 +132,7 @@ class TableViewParameterItem(WidgetParameterItem):
             self.widget.setItemDelegate(styledItemDelegate)
 
         if 'menu' in opts:
-            self.widget.setup_menu(opts['menu'])
+            self.widget.setmenu(opts['menu'])
 
 
 class TableViewParameter(Parameter):
