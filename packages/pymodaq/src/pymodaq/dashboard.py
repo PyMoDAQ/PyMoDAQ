@@ -753,7 +753,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
             path = get_set_layout_path().joinpath(self.experiment_file.stem + ".dock")
             self.save_layout_state(path)
 
-
     def add_move(
             self,
             plug_name: str = None,
@@ -766,7 +765,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
         self.set_actuator_type(actuator, plug_type)
 
-        self._add_actuator(actuator)
+        self.add_actuator(actuator)
         return  actuator
 
     def create_actuator(self, name: str, class_name: str, ui_identifier: str) -> DAQ_Move:
@@ -790,7 +789,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
     def set_actuator_type(self, actuator: DAQ_Move, class_name: str):
         actuator.actuator = class_name  # will fire instrument_changed when done
 
-    def _add_actuator(self, actuator: DAQ_Move):
+    def add_actuator(self, actuator: DAQ_Move):
         # Create compact manager if needed
         if self.compact_actuator_manager is None:
             self.compact_actuator_manager = ActuatorCompactDock(
@@ -868,8 +867,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
     def n_docks_viewer(self) -> int:
         return len(self._docks_viewer)
 
-
-
     def add_det(self,
                 plug_name,
                 plug_type: DAQTypesEnum | str = DAQTypesEnum.DAQ0D,
@@ -882,7 +879,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self._add_det(det_mod_tmp)
         return  det_mod_tmp
 
-    def _add_det(self, detector: DAQ_Viewer):
+    def add_detector(self, detector: DAQ_Viewer):
 
         # Create compact manager if needed
         if self.compact_detector_manager is None:
