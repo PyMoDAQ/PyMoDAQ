@@ -49,6 +49,19 @@ overshoot_path = get_set_overshoot_path()
 layout_path = get_set_layout_path()
 
 
+@dataclass()
+class PluginInfo:
+    id: int
+    name: str
+    class_name: str
+    type: ModuleType
+    settings: Parameter
+    is_master: bool
+    do_init: bool
+    ui: str = None
+    dim: DAQTypesEnum = None
+
+
 class ExperimentManager(ManagerBase):
 
     params_act = [{'title': 'Actuators:', 'name': ModuleType.Actuator.value, 'type': 'groupmove'}]
@@ -214,27 +227,19 @@ class ExperimentManager(ManagerBase):
 
 
     @staticmethod
-    def _group_plugins_by_id(plugins: list[dict]) -> list[list[dict]]:
+    def _group_plugins_by_id(plugins: list[PluginInfo]) -> list[list[PluginInfo]]:
         """Group a flat list of plugin dicts by their 'ID' key, sorted by 'status' within each group."""
-        IDs = list(set(plug["ID"] for plug in plugins))
+        IDs = list(set(plug.id for plug in plugins))
+
         plugins_sorted = []
         for id in IDs:
-            plug_ids = [plug for plug in plugins if plug["ID"] == id]
-            plug_ids.sort(key=lambda p: p["status"])
+            plug_ids: list[PluginInfo] = [plug for plug in plugins if plug.id == id]  # group plugins having the same id
+            plug_ids.sort(key=lambda p: p.is_master, reverse=True)  # sort them with the fist being Master (
             plugins_sorted.append(plug_ids)
         return plugins_sorted
 
-    def list_control_modules_from_preset(self) -> tuple[list[list[dict]], list[str]]:
+    def list_control_modules_from_preset(self) -> tuple[list[list[PluginInfo]], list[str]]:
         # ################################################################
-        @dataclass()
-        class PluginInfo:
-            id: int
-            name: str
-            type: ModuleType
-            settings: Parameter
-            is_master: bool
-            ui: str = None
-            dim: DAQTypesEnum = None
 
         # ##### sort plugins by IDs and within the same IDs by Master and Slave status
         plugins: list[PluginInfo] = []
@@ -245,26 +250,15 @@ class ExperimentManager(ManagerBase):
                 PluginInfo(
                     id = child['controller', 'controller_ID'],
                     name = child['name'],
-                    type = ModuleType.Actuator if ModuleType.Actuator.value == child.parent().name else ModuleType.Detector,
+                    class_name=child['info', 'type'],
+                    type = ModuleType.Actuator if ModuleType.Actuator.value.lower() == child.parent().name().lower() else ModuleType.Detector,
                     settings=child,
-                    is_master=child("controller", "controller_status").value() == ControllerStatus.MASTER.value,
+                    is_master=child["controller", "controller_status"] == ControllerStatus.MASTER.value,
+                    do_init=child['info', 'init'],
                     ui = child['info', 'ui'] if 'ui' in [ch.name() for ch in child.child('info').children()] else None,
                     dim=DAQTypesEnum[child['info', 'dim']] if 'dim' in [ch.name() for ch in child.child('info').children()] else None,
                 )
             )
-
-        plugins += [
-            {"type": ModuleType.Actuator,
-             "settings": child}
-            for child in self.settings.child(ModuleType.Actuator.value).children()
-        ]
-        plugins += [
-            {"type": ModuleType.Detector, "settings": child}
-            for child in self.settings.child(ModuleType.Detector.value).children()
-        ]
-        for plug in plugins:
-            plug["ID"] = plug["settings"].child("controller", "controller_ID").value()
-            plug["status"] = plug["settings"].child("controller", "controller_status").value()
 
         plugins_sorted = self._group_plugins_by_id(plugins)
 
@@ -272,12 +266,12 @@ class ExperimentManager(ManagerBase):
         for plug_id in plugins_sorted:
             for plugin in plug_id:
                 plugin_list_message.append(
-                    f"Initializing {plugin['settings']['info', 'type']} {plugin['type'].value.capitalize()}:"
-                    f" {plugin['settings']['name']}")
+                    f"Initializing {plugin.class_name} {plugin.type.value.capitalize()}:"
+                    f" {plugin.name}")
 
         return plugins_sorted, plugin_list_message
 
-    def create_control_modules_from_preset(self, plugins_sorted: list[list[dict]]) -> tuple[list['DAQ_Move'], list['DAQ_Viewer']]:
+    def create_control_modules_from_preset(self, plugins_sorted: list[list[PluginInfo]]) -> tuple[list['DAQ_Move'], list['DAQ_Viewer']]:
         """
         Load a experiment file and create corresponding Control Modules in the Dashboard
 
@@ -292,21 +286,21 @@ class ExperimentManager(ManagerBase):
         for plug_IDs in plugins_sorted:
             for ind_plugin, plugin in enumerate(plug_IDs):
                 ind_module += 1
-                plug_name = plugin["settings"].child("name").value()
-                plug_type = plugin["settings"].child("info", "type").value()
-                plug_init = plugin["settings"].child("info", "init").value()
+                plug_name = plugin.name
+                plug_type = plugin.class_name
+                plug_init = plugin.do_init
 
-                if plugin["type"] == ModuleType.Actuator or plugin["type"] == 'move':
-
+                if plugin.type == ModuleType.Actuator:
 
                     self.actuators_modules.append(self.dashboard.add_move(plug_name, None, plug_type,
-                                            ui_identifier=plugin["settings"].child("info", "ui").value()))
+                                                                          ui_identifier=plugin.ui))
+
                     if ind_plugin == 0:  # should be a master type plugin
-                        if plugin["status"] != ControllerStatus.MASTER:
+                        if not plugin.is_master:
                             raise MasterSlaveError(f"The instrument {plug_name} should"
                                                    f" be defined as Master")
                         if plug_init:
-                            self.actuators_modules[-1].apply_controller_parameters(plugin["settings"].child("controller"))
+                            self.actuators_modules[-1].apply_controller_parameters(plugin.settings.child("controller"))
                             self.actuators_modules[-1].init_hardware_ui()
                             self.actuators_modules[-1].master = True
                             QtWidgets.QApplication.processEvents()
@@ -314,18 +308,18 @@ class ExperimentManager(ManagerBase):
                             QtWidgets.QApplication.processEvents()
                             master_controller = self.actuators_modules[-1].controller
 
-                        elif plugin["status"] == ControllerStatus.MASTER and len(plug_IDs) > 1:
+                        elif plugin.is_master and len(plug_IDs) > 1:
                             raise MasterSlaveError(
                                 f"The instrument {plug_name} defined as Master has to be "
                                 f"initialized (init checked in the experiment) in order to init "
                                 f"its associated slave instrument",
                             )
                     else:
-                        if plugin["status"] != ControllerStatus.SLAVE:
+                        if plugin.is_master:
                             raise MasterSlaveError(f"The instrument {plug_name} should"
                                                    f" be defined as slave")
                         if plug_init:
-                            self.actuators_modules[-1].apply_controller_parameters(plugin["settings"].child("controller"))
+                            self.actuators_modules[-1].apply_controller_parameters(plugin.settings.child("controller"))
                             self.actuators_modules[-1].controller = master_controller
                             self.actuators_modules[-1].init_hardware_ui()
                             QtWidgets.QApplication.processEvents()
@@ -335,40 +329,40 @@ class ExperimentManager(ManagerBase):
                     self.subentries_model.set_status(ind_module, True)
 
                 else:
-                    plug_dim = plugin["settings"].child("info", "dim").value()
+                    plug_dim = plugin.dim.name
                     self.dashboard.add_det(plug_name, None,
                                            self.detector_docks_viewer, self.detector_modules,
                                            plug_dim, plug_type)
                     QtWidgets.QApplication.processEvents()
 
                     if ind_plugin == 0:  # should be a master type plugin
-                        if plugin["status"] != ControllerStatus.MASTER:
+                        if not plugin.is_master:
                             raise MasterSlaveError(
                                 f"The instrument {plug_name} should"
                                 f" be defined as Master",
                             )
                         if plug_init:
-                            self.detector_modules[-1].apply_controller_parameters(plugin["settings"].child("controller"))
+                            self.detector_modules[-1].apply_controller_parameters(plugin.settings.child("controller"))
                             self.detector_modules[-1].init_hardware_ui()
                             QtWidgets.QApplication.processEvents()
                             self.dashboard.modules_manager.poll_init(self.detector_modules[-1])
                             QtWidgets.QApplication.processEvents()
                             master_controller = self.detector_modules[-1].controller
-                        elif plugin["status"] == ControllerStatus.MASTER and len(plug_IDs) > 1:
+                        elif plugin.is_master and len(plug_IDs) > 1:
                             raise MasterSlaveError(
                                 f"The instrument {plug_name} defined as Master has to be "
                                 f"initialized (init checked in the experiment) in order to init "
                                 f"its associated slave instrument",
                             )
                     else:
-                        if plugin["status"] != ControllerStatus.SLAVE:
+                        if plugin.is_master:
                             raise MasterSlaveError(
                                 f"The instrument {plug_name} should"
                                 f" be defined as Slave",
                             )
                         if plug_init:
                             self.detector_modules[-1].controller = master_controller
-                            self.detector_modules[-1].apply_controller_parameters(plugin["settings"].child("controller"))
+                            self.detector_modules[-1].apply_controller_parameters(plugin.settings.child("controller"))
                             self.detector_modules[-1].init_hardware_ui()
                             QtWidgets.QApplication.processEvents()
                             self.dashboard.modules_manager.poll_init(self.detector_modules[-1])
