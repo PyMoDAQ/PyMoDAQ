@@ -1,10 +1,10 @@
 from typing import List, Sequence
 
 import numpy as np
-from PyQt5.QtCore import QThread
+
 
 from qtpy import QtWidgets
-from qtpy.QtCore import QObject
+from qtpy.QtCore import QObject, QThread
 from pymodaq_gui.plotting.data_viewers.viewer0D import Viewer0D
 from pymodaq_data.data import DataRaw
 import sys
