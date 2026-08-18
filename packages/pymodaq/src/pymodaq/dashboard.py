@@ -807,7 +807,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.compact_actuator_manager.add_module(actuator)
         return actuator
 
-    def init_module(self, module, controller=None):
+    def init_module(self, module: DAQ_Move  | DAQ_Viewer, controller=None):
         """Initialize a control module, optionally wiring it to an existing controller.
 
         Parameters
@@ -823,7 +823,9 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.modules_manager.poll_init(module)
         QtWidgets.QApplication.processEvents()
 
-    def _finalize_extension_module(self, module, instrument_controller, module_list):
+    def _finalize_extension_module(self, module: DAQ_Move  | DAQ_Viewer,
+                                   instrument_controller,
+                                   module_list):
         """Finalize a module added from an extension: wire controller, init, append to list."""
         module.master = False
         self.init_module(module, controller=instrument_controller)
@@ -854,7 +856,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
             One of the possible registered UI
         kwargs: named arguments to be passed to add_move
         """
-        actuator = self.add_move(name, None, instrument_name, [], [], [],
+        actuator = self.add_move(name, instrument_name,
                                  ui_identifier=ui_identifier,
                                  **kwargs)
         self._finalize_extension_module(actuator, instrument_controller, self.actuators_modules)
