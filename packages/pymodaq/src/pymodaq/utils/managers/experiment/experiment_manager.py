@@ -7,11 +7,11 @@ from pymodaq.control_modules.instruments import DAQTypesEnum
 
 try:
     state_machine_available = True
-    if qtpy.API_NAME.lower() == 'pyqt6':
+    if qtpy.PYQT6:
         from PyQt6.QtStateMachine import QStateMachine, QState, QFinalState, QSignalTransition
-    elif qtpy.API_NAME.lower() == 'pyside6':
+    elif qtpy.PYSIDE6:
         from qtpy.QtStateMachine import QStateMachine, QState, QFinalState, QSignalTransition
-    elif qtpy.API_NAME.lower() == 'pyqt5':
+    elif qtpy.PYQT5:
         from PyQt5.QtCore.QtStateMachine import QStateMachine, QState, QFinalState, QSignalTransition
 except ImportError:
     state_machine_available = False
