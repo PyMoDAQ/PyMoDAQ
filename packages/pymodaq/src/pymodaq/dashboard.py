@@ -917,9 +917,9 @@ class DashBoard(CustomApp, LECOComponentMixin):
         )
 
         self.compact_detector_manager.add_module(det_mod_tmp)
-        QtWidgets.QApplication.processEvents()
+
         det_mod_tmp.detector = SelectedModule(plug_type, plug_subtype)
-        QtWidgets.QApplication.processEvents()
+
 
         if plug_settings is not None:
             try:

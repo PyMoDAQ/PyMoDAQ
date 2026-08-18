@@ -61,6 +61,7 @@ class ExperimentManager(ManagerBase):
         super().__init__(dashboard=dashboard)
         self.actuators_modules: list[DAQ_Move] = []
         self.detector_modules: list[DAQ_Viewer] = []
+        self.detector_docks_viewer: list[Dock] = []
 
     ### Reimplemented Methods ####################################################
     def list_managed_entries_path(self, **kwargs_to_entry_folder) -> list[Path]:
@@ -254,7 +255,7 @@ class ExperimentManager(ManagerBase):
         self.actuators_modules: list[DAQ_Move] = []
         self.detector_modules: list[DAQ_Viewer] = []
 
-        detector_docks_viewer: list[Dock] = []
+        self.detector_docks_viewer: list[Dock] = []
 
         # Add Control Modules to the Dashboard
         ind_module = -1
@@ -306,7 +307,7 @@ class ExperimentManager(ManagerBase):
                 else:
                     plug_dim = plugin["settings"].child("info", "dim").value()
                     self.dashboard.add_det(plug_name, None,
-                                           detector_docks_viewer, self.detector_modules,
+                                           self.detector_docks_viewer, self.detector_modules,
                                            plug_dim, plug_type)
                     QtWidgets.QApplication.processEvents()
 
@@ -358,32 +359,18 @@ class ExperimentManager(ManagerBase):
     def create_control_modules_using_machine(self, plugins_sorted):
         self.actuators_modules: list[DAQ_Move] = []
         self.detector_modules: list[DAQ_Viewer] = []
+        self.detector_docks_viewer: list[Dock] = []
 
         self.machine = CreateAddModules(self, plugins_sorted)
 
 
 
-        actuator_docks: list[Dock] = []
-        detector_docks_viewer: list[Dock] = []
-        actuator_widgets: list[QtWidgets.QWidget] = []
-
-        # Add Control Modules to the Dashboard
-        ind_module = -1
-        for plug_IDs in plugins_sorted:
-            for ind_plugin, plugin in enumerate(plug_IDs):
-                ind_module += 1
-
-
-
 class CreateAddModules(QtCore.QObject):
-    def __init__(self, manager: ExperimentManager, plugin: dict, parent=None):
+    instrument_added = QtCore.Signal()
+
+    def __init__(self, manager: ExperimentManager, plugins: list[dict], parent=None):
         super().__init__(parent)
         self.manager = manager
-        self.plugin = plugin
-
-        self.plug_name = plugin["settings"].child("name").value()
-        self.plug_type = plugin["settings"].child("info", "type").value()
-        self.plug_init = plugin["settings"].child("info", "init").value()
 
         self.machine = QStateMachine()
         self.create_module_state = QState()
@@ -391,6 +378,8 @@ class CreateAddModules(QtCore.QObject):
         self.done_module_state = QFinalState()
 
         self.setup_machine()
+        self.plugins = plugins
+        self.ind_plugin = -1
 
     def setup_machine(self):
 
@@ -400,13 +389,43 @@ class CreateAddModules(QtCore.QObject):
         self.machine.setInitialState(self.create_module_state)
 
         self.create_module_state.entered.connect(self.add_module)
+        self.init_module_state.entered.connect(self.init_module)
+
+
+        self.create_module_state.addTransition(self.instrument_added,
+                                               self.init_module_state)
 
     def add_module(self):
-        if self.plugin["type"] == ModuleType.Actuator:
-            self.manager.dashboard.add_move(self.plug_name, None, self.plug_type,
-                                    actuators_modules,
-                                    ui_identifier=plugin["settings"].child("info", "ui").value())
+        self.ind_plugin += 1
+        plugin = self.plugins[self.ind_plugin]
+        plug_name = plugin["settings"].child("name").value()
+        plug_type = plugin["settings"].child("info", "type").value()
+        plug_init = plugin["settings"].child("info", "init").value()
+        plug_dim = plugin["settings"].child("info", "dim").value()
 
+        if plugin["type"] == ModuleType.Actuator:
+            self.manager.actuators_modules.append(
+                self.manager.dashboard.add_move(
+                    plug_name, None, plug_type,
+                    ui_identifier=plugin["settings"].child("info", "ui").value()))
+        elif plugin["type"] == ModuleType.Detector:
+            self.manager.detector_modules.append(
+                self.manager.dashboard.add_det(plug_name, None,
+                                       self.manager.detector_docks_viewer,
+                                       self.manager.detector_modules,
+                                       plug_dim, plug_type)
+            )
+        self.instrument_added.emit()
+
+    def init_module(self):
+        plugin = self.plugins[self.ind_plugin]
+        plug_name = plugin["settings"].child("name").value()
+        plug_type = plugin["settings"].child("info", "type").value()
+        plug_init = plugin["settings"].child("info", "init").value()
+        plug_dim = plugin["settings"].child("info", "dim").value()
+
+        if plugin["type"] == ModuleType.Actuator:
+            self.manager.actuators_modules[-1].init_hardware_ui(plug_init)
 
 if __name__ == '__main__':
     from pymodaq_gui.qt_utils import mkQApp

@@ -258,6 +258,7 @@ class DAQ_Viewer(ParameterControlModule):
 
 
         self._viewers = viewers
+        self.instrument_changed.emit()
 
     @property
     def Naverage(self):

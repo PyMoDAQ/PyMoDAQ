@@ -199,9 +199,10 @@ class DAQ_Move(ParameterControlModule):
                 self.ui.actuator = act_type
             self._reload_plugin_settings()
         else:
-            raise ActuatorError(
+            logger.error(
                 f"{act_type} is an invalid actuator, should be within {ACTUATOR_NAMES}"
             )
+        self.instrument_changed.emit()
 
     @property
     def actuators(self) -> List[str]:

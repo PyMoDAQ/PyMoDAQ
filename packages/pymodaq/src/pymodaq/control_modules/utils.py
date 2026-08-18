@@ -96,6 +96,7 @@ class ControlModule(QObject):
     _update_settings_signal = Signal(edict)
     status_sig = Signal(str)
     custom_sig = Signal(ThreadCommand)
+    instrument_changed = Signal() # emitted when an instrument change finished doing things on the ui
     ui = None
 
     def __init__(self):
