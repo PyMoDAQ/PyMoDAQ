@@ -190,7 +190,6 @@ class DAQ_Viewer(ParameterControlModule):
         self.detector = self._detector
 
         self.grab_done_signal.connect(self._save_export_data)
-        self.update_plugin_config()
 
     def __repr__(self):
         return f'{self.__class__.__name__}: {self.title} {self.detector}'
@@ -281,10 +280,10 @@ class DAQ_Viewer(ParameterControlModule):
             det = SelectedModule(self._detector.daq_type, det)
         if self._detector != det:
             self._detector = det
-            self.update_plugin_config()
+            self._reload_plugin_settings()
             if self.ui is not None:
                 self.ui.detector = det
-            self._reload_plugin_settings()
+
         else:
             self.instrument_changed.emit()
 
@@ -358,7 +357,6 @@ class DAQ_Viewer(ParameterControlModule):
     def detector_changed_from_ui(self, detector: SelectedModule):
         self._detector = detector
         self.settings.child('main_settings', 'DAQ_type').setValue(detector.daq_type.name)
-        self.update_plugin_config()
         self._reload_plugin_settings()
 
     # -------------------------------------------------------------------------
@@ -861,10 +859,6 @@ class DAQ_Viewer(ParameterControlModule):
             DET_TYPES[detector.daq_type.name],
             'name', detector.module_name)['module']
         return detector_module
-
-    def update_plugin_config(self):
-        parent_module = self.get_detector_module(self.detector)
-        mod = import_module(parent_module.__package__.split('.')[0])
 
     def _load_plugin_params(self):
         det_params, _class = get_viewer_plugins(self.detector.daq_type.name,
