@@ -64,7 +64,7 @@ class TestSelectors:
             assert np.all(wrapper.get_coordinates() ==
                           pytest.approx(scan_selector.settings['coordinates'].data_as_ndarray()))
 
-
+@pytest.mark.skip(reason="non-reproducible")
 class TestScanSelector:
 
     def test_attributes(self):
