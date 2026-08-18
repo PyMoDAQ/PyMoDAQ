@@ -129,7 +129,8 @@ class DAQ_Viewer(ParameterControlModule):
         super().__init__(listener_class=ViewerActorListener, **kwargs)
 
         self.rois_dock: Dock = rois_dock
-        self._detector = SelectedModule(daq_type=DAQTypesEnum[daq_type])
+        daq_type = enum_checker(DAQTypesEnum, daq_type)
+        self._detector = SelectedModule(daq_type=daq_type)
 
         self._viewer_types: List[ViewersEnum] = []
         self._viewers: List[ViewerBase] = []
@@ -278,11 +279,14 @@ class DAQ_Viewer(ParameterControlModule):
     def detector(self, det: SelectedModule | str):
         if isinstance(det, str):
             det = SelectedModule(self._detector.daq_type, det)
-        self._detector = det
-        self.update_plugin_config()
-        if self.ui is not None:
-            self.ui.detector = det
-        self._reload_plugin_settings()
+        if self._detector != det:
+            self._detector = det
+            self.update_plugin_config()
+            if self.ui is not None:
+                self.ui.detector = det
+            self._reload_plugin_settings()
+        else:
+            self.instrument_changed.emit()
 
     @property
     def daq_type(self) -> DAQTypesEnum:

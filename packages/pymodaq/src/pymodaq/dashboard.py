@@ -918,7 +918,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         det_mod_tmp = DAQ_Viewer(
             widget,
             title=name,
-            daq_type=daq_type,
+            daq_type=daq_type.name,
             settings_dock=self.settings_dock,
             rois_dock=self.rois_dock,
         )

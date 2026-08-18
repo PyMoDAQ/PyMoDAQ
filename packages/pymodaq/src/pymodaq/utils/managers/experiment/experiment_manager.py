@@ -1,10 +1,9 @@
 from dataclasses import dataclass
 
 import warnings
-from typing import Union, TYPE_CHECKING
+from typing import Union, TYPE_CHECKING, Any
 
 from pymodaq.control_modules.instruments import DAQTypesEnum
-from pymodaq_data import DataDim
 
 try:
     from qtpy.QtStateMachine import QStateMachine, QState, QFinalState, QSignalTransition
@@ -59,7 +58,7 @@ class PluginInfo:
     is_master: bool
     do_init: bool
     ui: str = None
-    dim: DAQTypesEnum = None
+    daq_type: DAQTypesEnum = None
 
 
 class ExperimentManager(ManagerBase):
@@ -149,36 +148,24 @@ class ExperimentManager(ManagerBase):
             QtWidgets.QApplication.processEvents()
             logger.info(f"Loading {self.entry_type.capitalize()} file: {entry}")
 
-            try:
-                if False:#state_machine_available:
-                    actuators_modules, detector_modules = (
-                        self.create_control_modules_using_machine(plugins_sorted))
-                else:
-                    self.create_control_modules_from_preset(plugins_sorted)
-            except (ActuatorError, DetectorError, MasterSlaveError) as error:
 
-                self.dashboard.mainwindow.setVisible(True)
-                for area in self.dashboard.dockarea.tempAreas:
-                    area.window().setVisible(True)
-                messagebox(
-                    severity="critical",
-                    title=f"{self.entry_type.capitalize()} loading error",
-                    text=f"""
-                                <p>{error}</p>
-                                <p>This error may be related to:</p>
-                                <p>Saved {self.entry_type.capitalize()} file is not compatible anymore.</p>
-                                <p>Please recreate the {self.entry_type.capitalize()} at <b>{entry}</b>.</p>
-                     """,
-                )
-                logger.exception(str(error))
-                return False
+            if state_machine_available:
+                self.create_control_modules_using_machine(plugins_sorted)
+            else:
+                self.create_control_modules_from_preset(plugins_sorted)
+                self.finalize_execute()
+
         except Exception as e:
+            self.dashboard.mainwindow.setVisible(True)
+            for area in self.dashboard.dockarea.tempAreas:
+                area.window().setVisible(True)
             logger.exception(str(e))
             return False
 
+    def finalize_execute(self):
         if not (not self.actuators_modules and not self.detector_modules):
             self.dashboard.update_status(
-                f"{self.entry_type.capitalize()} ({entry.name}) has been loaded",
+                f"{self.entry_type.capitalize()} ({self.entry_filepath.name}) has been loaded",
                 log_type="log",
             )
             self.dashboard.actuators_modules = list(self.actuators_modules)
@@ -193,8 +180,8 @@ class ExperimentManager(ManagerBase):
 
             self.dashboard.update_init_tree()
 
-        logger.info(f"{self.entry_type.capitalize()} file: {entry} has been loaded")
-        return True
+        logger.info(f"{self.entry_type.capitalize()} file: {self.entry_filepath} has been loaded")
+        self.set_entry_applied(True)
 
 
     def _update_entry(self, entry: Union[str, Path] = None, **kwargs):
@@ -255,7 +242,7 @@ class ExperimentManager(ManagerBase):
                     is_master=child["controller", "controller_status"] == ControllerStatus.MASTER.value,
                     do_init=child['info', 'init'],
                     ui = child['info', 'ui'] if 'ui' in [ch.name() for ch in child.child('info').children()] else None,
-                    dim=DAQTypesEnum[child['info', 'dim']] if 'dim' in [ch.name() for ch in child.child('info').children()] else None,
+                    daq_type=DAQTypesEnum[child['info', 'dim']] if 'dim' in [ch.name() for ch in child.child('info').children()] else None,
                 )
             )
 
@@ -326,9 +313,9 @@ class ExperimentManager(ManagerBase):
                     self.subentries_model.set_status(ind_module, True)
 
                 else:
-                    plug_dim = plugin.dim.name
+                    plug_daq_type = plugin.daq_type.name
                     self.detector_modules.append(self.dashboard.add_det(plug_name,
-                                                                        plug_dim,
+                                                                        plug_daq_type,
                                                                         plug_type))
                     QtWidgets.QApplication.processEvents()
 
@@ -382,21 +369,31 @@ class ExperimentManager(ManagerBase):
         self.detector_modules: list[DAQ_Viewer] = []
 
         self.machine = CreateAddModules(self, plugins_sorted)
+        self.machine.all_instruments_added.connect(self.finalize_execute)
         self.machine.start()
 
 
-
 class CreateAddModules(QtCore.QObject):
-    instrument_added = QtCore.Signal()
+
+    instrument_created = QtCore.Signal()
     all_instruments_added = QtCore.Signal()
+    module_added = QtCore.Signal()
+    controller_obtained = QtCore.Signal()
 
     def __init__(self, manager: ExperimentManager, plugins: list[list[PluginInfo]], parent=None):
         super().__init__(parent)
         self.manager = manager
 
+        self._current_module: DAQ_Move | DAQ_Viewer = None
+        self._current_plugin: PluginInfo = None
+        self._current_controller: Any = None
+
         self.machine = QStateMachine()
         self.create_module_state = QState()
+        self.set_module_type_state = QState()
+        self.add_module_state = QState()
         self.init_module_state = QState()
+        self.get_controller_state = QState()
         self.done_module_state = QFinalState()
 
         self.setup_machine()
@@ -410,52 +407,116 @@ class CreateAddModules(QtCore.QObject):
     def setup_machine(self):
 
         self.machine.addState(self.create_module_state)
+        self.machine.addState(self.set_module_type_state)
+        self.machine.addState(self.add_module_state)
         self.machine.addState(self.init_module_state)
+        self.machine.addState(self.get_controller_state)
         self.machine.addState(self.done_module_state)
         self.machine.setInitialState(self.create_module_state)
 
-        self.create_module_state.entered.connect(self.add_module)
+        self.create_module_state.entered.connect(self.create_module)
+        self.set_module_type_state.entered.connect(self.set_module_type)
+        self.add_module_state.entered.connect(self.add_module)
         self.init_module_state.entered.connect(self.init_module)
+        self.get_controller_state.entered.connect(self.get_controller)
 
 
-        self.create_module_state.addTransition(self.instrument_added,
-                                               self.init_module_state)
+        self.create_module_state.addTransition(self.instrument_created,
+                                               self.set_module_type_state)
+        self.add_module_state.addTransition(self.module_added, self.init_module_state)
+        self.get_controller_state.addTransition(self.controller_obtained, self.create_module_state)
+        self.done_module_state.entered.connect(self.all_instruments_added.emit)
 
-    def add_module(self):
+    def create_module(self):
 
-        plugin: PluginInfo = self.plugins[self.ind_master_plugin][self.ind_id_plugin]
+        self._current_plugin: PluginInfo = self.plugins[self.ind_master_plugin][self.ind_id_plugin]
+        plugin_info = self._current_plugin
 
+        if self._current_plugin.is_master and not self._current_plugin.do_init:
+            self.machine.stop()
+            raise MasterSlaveError(
+                                f"The instrument {plugin_info.name} defined as Master has to be "
+                                f"initialized (init checked in the experiment) in order to init "
+                                f"its associated slave instrument",
+                            )
+        elif self._current_plugin.is_master and self.ind_id_plugin > 0:
+            self.machine.stop()
+            raise MasterSlaveError(
+                f"The instrument {plugin_info.name} should be defined as Slave",
+            )
+        elif not self._current_plugin.is_master and self.ind_id_plugin == 0:
+            self.machine.stop()
+            raise MasterSlaveError(
+                f"The instrument {plugin_info.name} should be defined as Master",
+            )
+
+        # loop through all the plugin info (first by common id, then...)
         if self.ind_id_plugin == len(self.plugins[self.ind_master_plugin]) - 1:
             self.ind_master_plugin += 1
             self.ind_id_plugin = 0
         else:
             self.ind_id_plugin += 1
 
+        if self.ind_master_plugin == len(self.plugins):
+            self.create_module_state.addTransition(self.done_module_state)
+            return
 
-        if plugin.type == ModuleType.Actuator:
-            self.manager.actuators_modules.append(
-                self.manager.dashboard.add_move(
-                    plugin.name, None, plugin.class_name,
-                    ui_identifier=plugin.ui))
+        # clear previous transitions dependent on created module if any before changing the reference of self._current_module
+        for transition in self.set_module_type_state.transitions():
+            self.set_module_type_state.removeTransition(transition)
+        for transition in self.init_module_state.transitions():
+            self.init_module_state.removeTransition(transition)
 
-        elif plugin.type == ModuleType.Detector:
-            self.manager.detector_modules.append(
-                self.manager.dashboard.add_det(plugin.name,
-                                               plugin.dim.name,
-                                               plugin.class_name)
-            )
-        self.instrument_added.emit()
+        # create module
+        if plugin_info.type == ModuleType.Actuator:
+            self._current_module = self.manager.dashboard.create_actuator(
+                plugin_info.name, plugin_info.class_name,
+                ui_identifier=plugin_info.ui)
+            self.manager.actuators_modules.append(self._current_module)
 
+        elif plugin_info.type == ModuleType.Detector:
+            self._current_module = self.manager.dashboard.create_detector(plugin_info.name,
+                                                                          plugin_info.daq_type)
+            self.manager.detector_modules.append(self._current_module)
+
+        # create next transitions if module dependent
+        self.set_module_type_state.addTransition(self._current_module.instrument_changed, self.add_module_state)
+        self.init_module_state.addTransition(self._current_module.init_signal, self.get_controller_state)
+
+        # fire signal to move on to the set_type state
+        self.instrument_created.emit()
+
+    def set_module_type(self):
+        if self._current_plugin.type == ModuleType.Actuator:
+            self.manager.dashboard.set_actuator_type(self._current_module, self._current_plugin.class_name)
+        else:
+            self.manager.dashboard.set_detector_type(self._current_module,
+                                                     self._current_plugin.daq_type,
+                                                     self._current_plugin.class_name)
+
+        # signal to transition to next state is done within each module through its instrument_changed signal
+
+    def add_module(self):
+        if self._current_plugin.type == ModuleType.Actuator:
+            self.manager.dashboard.add_actuator(self._current_module)
+        else:
+            self.manager.dashboard.add_detector(self._current_module)
+
+        #manually fire the signal to transition
+        self.module_added.emit()
 
     def init_module(self):
-        plugin = self.plugins[self.ind_plugin]
-        plug_name = plugin["settings"].child("name").value()
-        plug_type = plugin["settings"].child("info", "type").value()
-        plug_init = plugin["settings"].child("info", "init").value()
-        plug_dim = plugin["settings"].child("info", "dim").value()
+        self._current_module.apply_controller_parameters(self._current_plugin.settings.child("controller"))
 
-        if plugin["type"] == ModuleType.Actuator:
-            self.manager.actuators_modules[-1].init_hardware_ui(plug_init)
+        if not self._current_plugin.is_master:
+            self._current_module.controller = self._current_controller
+        self._current_module.init_hardware_ui()
+
+    def get_controller(self):
+        if self._current_plugin.is_master:
+            self._current_controller = self._current_module.controller
+        self.controller_obtained.emit()
+
 
 if __name__ == '__main__':
     from pymodaq_gui.qt_utils import mkQApp
