@@ -762,7 +762,15 @@ class DashBoard(CustomApp, LECOComponentMixin):
             **kwargs,
     ) -> DAQ_Move:        
 
-        actuator_class = find_actuator_class_from_name(plug_type)
+        actuator = self.create_actuator(plug_name, plug_type, ui_identifier)
+
+        self.set_actuator_type(actuator, plug_type)
+
+        self._add_actuator(actuator)
+        return  actuator
+
+    def create_actuator(self, name: str, class_name: str, ui_identifier: str) -> DAQ_Move:
+        actuator_class = find_actuator_class_from_name(class_name)
         forced_ui = actuator_class.ui_type
         ui_identifier = forced_ui if forced_ui != UiType.NONE else ui_identifier
 
@@ -770,8 +778,19 @@ class DashBoard(CustomApp, LECOComponentMixin):
             pass
         else:
             ui_identifier = config("pymodaq", "actuator", "ui")
+        mov_mod_tmp = DAQ_Move(QtWidgets.QWidget(),
+                               name,
+                               ui_identifier=ui_identifier,
+                               settings_dock=self.settings_dock,
+                               controls_dock=self.controls_dock,
+                               )
+        mov_mod_tmp.bounds_signal[bool].connect(self.do_stuff_from_out_bounds)
+        return mov_mod_tmp
 
+    def set_actuator_type(self, actuator: DAQ_Move, class_name: str):
+        actuator.actuator = class_name  # will fire instrument_changed when done
 
+    def _add_actuator(self, actuator: DAQ_Move):
         # Create compact manager if needed
         if self.compact_actuator_manager is None:
             self.compact_actuator_manager = ActuatorCompactDock(
@@ -786,18 +805,8 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
         QtWidgets.QApplication.processEvents()
 
-        mov_mod_tmp = DAQ_Move(QtWidgets.QWidget(),
-                               plug_name,
-                               ui_identifier=ui_identifier,
-                               settings_dock=self.settings_dock,
-                               controls_dock=self.controls_dock,
-                               )
-
-        mov_mod_tmp.actuator = plug_type  #  will fire instrument_changed when done
-        mov_mod_tmp.bounds_signal[bool].connect(self.do_stuff_from_out_bounds)
-
-        self.compact_actuator_manager.add_module(mov_mod_tmp)
-        return mov_mod_tmp
+        self.compact_actuator_manager.add_module(actuator)
+        return actuator
 
     def init_module(self, module, controller=None):
         """Initialize a control module, optionally wiring it to an existing controller.
