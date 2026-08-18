@@ -139,7 +139,7 @@ class ExperimentManager(ManagerBase):
 
             plugins_sorted, plugin_list_message = self.list_control_modules_from_preset()
 
-            self.show_subentries(plugin_list_message, title=f'Loading Experiment: {self.entry}')
+            #self.show_subentries(plugin_list_message, title=f'Loading Experiment: {self.entry}')
 
             self.dashboard.mainwindow.setVisible(False)
             for area in self.dashboard.dockarea.tempAreas:
@@ -400,6 +400,7 @@ class CreateAddModules(QtCore.QObject):
         self.plugins = plugins
         self.ind_master_plugin = 0
         self.ind_id_plugin = 0
+        self._ind_module = -1
 
     def start(self):
         self.machine.start()
@@ -428,6 +429,10 @@ class CreateAddModules(QtCore.QObject):
         self.done_module_state.entered.connect(self.all_instruments_added.emit)
 
     def create_module(self):
+        if self.ind_master_plugin == len(self.plugins):
+            self.manager.close_subentries_display()
+            self.create_module_state.addTransition(self.done_module_state)
+            return
 
         self._current_plugin: PluginInfo = self.plugins[self.ind_master_plugin][self.ind_id_plugin]
         plugin_info = self._current_plugin
@@ -456,10 +461,9 @@ class CreateAddModules(QtCore.QObject):
             self.ind_id_plugin = 0
         else:
             self.ind_id_plugin += 1
+        self._ind_module += 1
+        print(self._ind_module)
 
-        if self.ind_master_plugin == len(self.plugins):
-            self.create_module_state.addTransition(self.done_module_state)
-            return
 
         # clear previous transitions dependent on created module if any before changing the reference of self._current_module
         for transition in self.set_module_type_state.transitions():
@@ -515,6 +519,7 @@ class CreateAddModules(QtCore.QObject):
     def get_controller(self):
         if self._current_plugin.is_master:
             self._current_controller = self._current_module.controller
+        #self.manager.subentries_model.set_status(self._ind_module, True)
         self.controller_obtained.emit()
 
 
