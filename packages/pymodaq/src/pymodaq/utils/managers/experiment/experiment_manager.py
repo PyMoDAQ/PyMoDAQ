@@ -139,7 +139,7 @@ class ExperimentManager(ManagerBase):
 
             plugins_sorted, plugin_list_message = self.list_control_modules_from_preset()
 
-            #self.show_subentries(plugin_list_message, title=f'Loading Experiment: {self.entry}')
+            self.show_subentries(plugin_list_message, title=f'Loading Experiment: {self.entry}')
 
             self.dashboard.mainwindow.setVisible(False)
             for area in self.dashboard.dockarea.tempAreas:
@@ -163,6 +163,10 @@ class ExperimentManager(ManagerBase):
             return False
 
     def finalize_execute(self):
+        self.close_subentries_display()
+        self.dashboard.title = self.entry
+        self.dashboard.mainwindow.setWindowTitle(f"PyMoDAQ Dashboard: {self.dashboard.title}")
+
         if not (not self.actuators_modules and not self.detector_modules):
             self.dashboard.update_status(
                 f"{self.entry_type.capitalize()} ({self.entry_filepath.name}) has been loaded",
@@ -355,12 +359,6 @@ class ExperimentManager(ManagerBase):
                 self.subentries_model.set_status(ind_module, True)
 
         QtWidgets.QApplication.processEvents()
-        self.close_subentries_display()
-        # restore dock state if saved
-
-        self.dashboard.title = self.entry
-
-        self.dashboard.mainwindow.setWindowTitle(f"PyMoDAQ Dashboard: {self.dashboard.title}")
 
         return self.actuators_modules, self.detector_modules
 
@@ -462,8 +460,6 @@ class CreateAddModules(QtCore.QObject):
         else:
             self.ind_id_plugin += 1
         self._ind_module += 1
-        print(self._ind_module)
-
 
         # clear previous transitions dependent on created module if any before changing the reference of self._current_module
         for transition in self.set_module_type_state.transitions():
@@ -519,7 +515,7 @@ class CreateAddModules(QtCore.QObject):
     def get_controller(self):
         if self._current_plugin.is_master:
             self._current_controller = self._current_module.controller
-        #self.manager.subentries_model.set_status(self._ind_module, True)
+        self.manager.subentries_model.set_status(self._ind_module, True)
         self.controller_obtained.emit()
 
 

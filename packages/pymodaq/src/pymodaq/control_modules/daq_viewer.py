@@ -278,14 +278,10 @@ class DAQ_Viewer(ParameterControlModule):
     def detector(self, det: SelectedModule | str):
         if isinstance(det, str):
             det = SelectedModule(self._detector.daq_type, det)
-        if self._detector != det:
-            self._detector = det
-            self._reload_plugin_settings()
-            if self.ui is not None:
-                self.ui.detector = det
-
-        else:
-            self.instrument_changed.emit()
+        self._detector = det
+        self._reload_plugin_settings()
+        if self.ui is not None:
+            self.ui.detector = det
 
     @property
     def daq_type(self) -> DAQTypesEnum:
