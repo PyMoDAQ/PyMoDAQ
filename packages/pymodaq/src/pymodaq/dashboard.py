@@ -879,7 +879,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
         self.set_detector_type(det_mod_tmp, plug_type, plug_subtype)
 
-        self._add_det(det_mod_tmp)
+        self.add_detector(det_mod_tmp)
         return  det_mod_tmp
 
     def add_detector(self, detector: DAQ_Viewer):

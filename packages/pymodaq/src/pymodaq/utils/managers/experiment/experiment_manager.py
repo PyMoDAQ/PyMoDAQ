@@ -1,13 +1,18 @@
 from dataclasses import dataclass
-
+import qtpy
 import warnings
 from typing import Union, TYPE_CHECKING, Any
 
 from pymodaq.control_modules.instruments import DAQTypesEnum
 
 try:
-    from qtpy.QtStateMachine import QStateMachine, QState, QFinalState, QSignalTransition
     state_machine_available = True
+    if qtpy.API_NAME.lower() == 'pyqt6':
+        from PyQt6.QtStateMachine import QStateMachine, QState, QFinalState, QSignalTransition
+    elif qtpy.API_NAME.lower() == 'pyside6':
+        from qtpy.QtStateMachine import QStateMachine, QState, QFinalState, QSignalTransition
+    elif qtpy.API_NAME.lower() == 'pyqt5':
+        from PyQt5.QtCore.QtStateMachine import QStateMachine, QState, QFinalState, QSignalTransition
 except ImportError:
     state_machine_available = False
 
@@ -317,7 +322,7 @@ class ExperimentManager(ManagerBase):
                     self.subentries_model.set_status(ind_module, True)
 
                 else:
-                    plug_daq_type = plugin.daq_type.name
+                    plug_daq_type = plugin.daq_type
                     self.detector_modules.append(self.dashboard.add_det(plug_name,
                                                                         plug_daq_type,
                                                                         plug_type))
