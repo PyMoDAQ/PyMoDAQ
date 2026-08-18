@@ -1,5 +1,10 @@
+from dataclasses import dataclass
+
 import warnings
 from typing import Union, TYPE_CHECKING
+
+from pymodaq.control_modules.instruments import DAQTypesEnum
+from pymodaq_data import DataDim
 
 try:
     from qtpy.QtStateMachine import QStateMachine, QState, QFinalState, QSignalTransition
@@ -29,7 +34,7 @@ from pymodaq.utils.managers.modules.utils import ModuleType
 from pymodaq.utils.exceptions import DetectorError, ActuatorError, MasterSlaveError
 from pymodaq.control_modules.utils import ControllerStatus
 from pymodaq.utils.daq_utils import copy_experiment
-from pymodaq.utils.managers.experiment import utils  # to register groupemove and groupdet Parameters
+from pymodaq.utils.managers.experiment import utils  # noqa , to register groupemove and groupdet Parameters
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -221,8 +226,33 @@ class ExperimentManager(ManagerBase):
 
     def list_control_modules_from_preset(self) -> tuple[list[list[dict]], list[str]]:
         # ################################################################
+        @dataclass()
+        class PluginInfo:
+            id: int
+            name: str
+            type: ModuleType
+            settings: Parameter
+            is_master: bool
+            ui: str = None
+            dim: DAQTypesEnum = None
+
         # ##### sort plugins by IDs and within the same IDs by Master and Slave status
-        plugins = []
+        plugins: list[PluginInfo] = []
+
+        for child in (self.settings.child(ModuleType.Actuator.value).children() +
+            self.settings.child(ModuleType.Detector.value).children()):
+            plugins.append(
+                PluginInfo(
+                    id = child['controller', 'controller_ID'],
+                    name = child['name'],
+                    type = ModuleType.Actuator if ModuleType.Actuator.value == child.parent().name else ModuleType.Detector,
+                    settings=child,
+                    is_master=child("controller", "controller_status").value() == ControllerStatus.MASTER.value,
+                    ui = child['info', 'ui'] if 'ui' in [ch.name() for ch in child.child('info').children()] else None,
+                    dim=DAQTypesEnum[child['info', 'dim']] if 'dim' in [ch.name() for ch in child.child('info').children()] else None,
+                )
+            )
+
         plugins += [
             {"type": ModuleType.Actuator,
              "settings": child}
