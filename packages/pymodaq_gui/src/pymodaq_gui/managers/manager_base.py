@@ -490,7 +490,11 @@ class ManagerBase(CustomExt):
             logger.info(f"Cannot Load {self.entry_type.capitalize()} file: {entry_path.stem} as no Dashboard is initialized")
             return
 
-        self.entry_applied = self._execute_entry(entry_path, **kwargs)
+        res = self._execute_entry(entry_path, **kwargs)
+        if isinstance(res, bool):
+            # covers the cases where _execute_entry is async and return None, while the async
+            # execution will trigger set_entry_applied method (qt slot or manual call)
+            self.entry_applied = res
 
     def _execute_entry(self, entry_path: Path = None, **kwargs) -> bool:
         """Particular implementation of the entry execution for this manager

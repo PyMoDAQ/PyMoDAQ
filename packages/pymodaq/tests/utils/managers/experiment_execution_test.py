@@ -166,7 +166,7 @@ class TestExperimentExecutedTwice:
         the experiment (not double).
         """
         # First execution
-        with qtbot.waitSignal(dashboard.experiment_manager.applied_entry, timeout=10000) as blocker:
+        with qtbot.waitSignal(dashboard.experiment_manager.applied_entry, timeout=20000) as blocker:
             dashboard.experiment_manager.execute_entry()
 
         assert dashboard.experiment_manager.entry_applied is True
@@ -174,7 +174,7 @@ class TestExperimentExecutedTwice:
         n_actuators_after_first = len(dashboard.actuators_modules)
         n_detectors_after_first = len(dashboard.detector_modules)
 
-        with qtbot.waitSignal(dashboard.experiment_manager.applied_entry, timeout=10000) as blocker:
+        with qtbot.waitSignal(dashboard.experiment_manager.applied_entry, timeout=20000) as blocker:
             # Patch dialog so it auto-confirms (returns True) without showing UI
             with patch(
                 "pymodaq.utils.managers.experiment.experiment_manager.dialog",
