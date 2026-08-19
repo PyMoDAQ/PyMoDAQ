@@ -18,7 +18,7 @@ if qtpy.PYQT6:
 elif qtpy.PYSIDE6:
     from qtpy.QtStateMachine import QStateMachine, QState, QFinalState, QSignalTransition
 elif qtpy.PYQT5:
-    from PyQt5.QtCore.QtStateMachine import QStateMachine, QState, QFinalState, QSignalTransition
+    from PyQt5.QtCore import QStateMachine, QState, QFinalState, QSignalTransition
 
 
 logger = set_logger(get_module_name(__file__))
