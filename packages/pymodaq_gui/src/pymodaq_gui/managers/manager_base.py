@@ -368,6 +368,10 @@ class ManagerBase(CustomExt):
             },
         )
 
+    def quit_fun(self):
+        self.entries_sync.unbind_all()
+        super().quit_fun()
+
     def create_entry(self, entry: str = None, bypass_dialog=False):
         if entry is not None:
             ok = True

@@ -434,8 +434,8 @@ class DAQ_Move_base(PluginBase):
 
         The property controller_units is deprecated please use the axis_unit property
         """
-        deprecation_msg('The property controller_units is deprecated please use the'
-                        'axis_unit property.')
+        deprecation_msg(f'The property controller_units is deprecated please use the'
+                        f'axis_unit property.')
         return self.axis_unit
 
     @controller_units.setter

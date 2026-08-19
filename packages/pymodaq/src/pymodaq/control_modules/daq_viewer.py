@@ -240,7 +240,7 @@ class DAQ_Viewer(ParameterControlModule):
         for viewer in self._viewers:
             try:
                 viewer.data_to_export_signal.disconnect()
-            except:
+            except TypeError as e:
                 pass
         for ind_viewer, viewer in enumerate(viewers):
             viewer.data_to_export_signal.connect(self._get_data_from_viewer)

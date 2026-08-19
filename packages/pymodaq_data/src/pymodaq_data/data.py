@@ -86,8 +86,11 @@ def dimensionless_aware_reduce_units(q: Type[Q_]) -> Type[Q_]:
     -------
     The reduced quantity
     """
-
-    return q.to_compact() if q.dimensionless else q.to_reduced_units()
+    try:
+        q_comp = q.to_compact() if q.dimensionless else q.to_reduced_units()
+    except pint.errors.UndefinedBehavior as e:
+        logger.error(f"While applying to_compact to {q} got error: \n{e}")
+    return q_comp
 
 def check_units(units: str):
     try:
