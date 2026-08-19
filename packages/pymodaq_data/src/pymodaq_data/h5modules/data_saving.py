@@ -1046,7 +1046,7 @@ class DataToExportExtendedSaver(DataToExportSaver):
 
 
 class DataLoader:
-    """Specialized Object to load DataWithAxes object from a h5file
+    """Specialized Object to load DataWithAxes / DataToExport objects from a h5file
 
     On the contrary to DataSaverLoader, does include navigation axes stored elsewhere in the h5file
     (for instance if saved from the DAQ_Scan)
@@ -1164,7 +1164,10 @@ class DataLoader:
         if data is None:
             data = DataToExport('Loaded data')
         where = self._h5saver.get_node(where)
-        children_dict = where.children()
+        try:
+            children_dict = where.children()
+        except AttributeError:
+            children_dict = {where.name: where}
         data_list = []
         for child in children_dict:
             if isinstance(children_dict[child], GROUP):
