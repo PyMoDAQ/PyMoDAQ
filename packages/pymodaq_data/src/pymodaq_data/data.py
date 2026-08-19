@@ -949,8 +949,12 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
         if isinstance(epsilon, numbers.Number):
             epsilon = Q_(epsilon, self.units)
         try:
+            # using below epsilon - Q_(0, self.units) to handle units with offset/scaling like
+            # °C and °F where the diff produce a derived unit (delta_degree_Celsius) that do
+            # not compare well to epsilon itself. While epsilon - Q_(0, self.units) is not changing
+            # the value but produce similar delta units!
             return bool(np.all([np.abs(self.quantities[ind] - other.quantities[ind])
-                                <= epsilon for ind in range(len(self))]))
+                                <= (epsilon - Q_(0, self.units)) for ind in range(len(self))]))
         except pint.errors.DimensionalityError as e:
             return False
 
