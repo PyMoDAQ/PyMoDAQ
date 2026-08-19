@@ -48,6 +48,7 @@ dev = [
     "hatch",
     "flake8",
     "h5py",
+    "tables",
     "pytest",
     "pytest-cov",
     "pytest-xdist",
