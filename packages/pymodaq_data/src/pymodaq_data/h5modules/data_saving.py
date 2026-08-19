@@ -1154,6 +1154,11 @@ class DataLoader:
             if nav_group is not None:
                 nav_axes = self._axis_loader.get_axes(nav_group)
                 axes = data.axes[:]
+                # in swmr mode, if at the time where the axis is read, a writer added stuff
+                # then the axis and the data may not be consistent. Below is an attempt to correct this
+                for ind_nav, nav_axe in enumerate(nav_axes):
+                    if nav_axe.size > data.shape[data.nav_indexes[ind_nav]]:
+                        nav_axe.data = nav_axe.get_data()[:data.shape[data.nav_indexes[ind_nav]]]
                 axes.extend(nav_axes)
                 data.axes = axes
                 data.get_dim_from_data_axes()
