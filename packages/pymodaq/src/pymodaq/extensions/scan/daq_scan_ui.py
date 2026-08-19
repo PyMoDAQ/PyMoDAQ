@@ -34,7 +34,7 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
 
     """
     command_sig = Signal(ThreadCommand)
-    _show_h5file_widgets = True
+    _show_h5file_statusbar_widgets = True
 
     def __init__(self, parent, toolbar=None):
         CustomApp.__init__(self, parent, toolbar=toolbar, add_toolbar_break=False)

@@ -117,7 +117,8 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     """
 
     log_signal = QtCore.Signal(str)
-    _show_h5file_widgets = False
+    _show_h5file_statusbar_widgets = False
+    _h5_base_group_name = 'AppData'  # rename that in your app/extension to give a meaningful name to your base group
     params = []
 
     def __init__(self, parent: Union[DockArea, QtWidgets.QMainWindow, QtWidgets.QWidget] = None,
@@ -178,9 +179,6 @@ class CustomApp(QObject, ActionManager, ParameterManager):
                           self.__class__.__name__,
                           self.menubar if self.mainwindow is not None else None)
 
-
-
-
     @classmethod
     def get_local_folder(cls, user=False) -> Path:
         """ Create a local User or system wide folder to store things about this extension"""
@@ -204,7 +202,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
 
         self.insert_custom_status_widgets()
 
-        if self._show_h5file_widgets:
+        if self._show_h5file_statusbar_widgets:
             self.insert_h5stuff_status()
 
     def set_permanent_status(self, status: str):
@@ -279,6 +277,8 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         if not terminated:
             self.runner_thread.terminate()
             self.runner_thread.wait()
+        self.runner_thread.deleteLater()
+        self.runner_thread = None
 
     def do_things_after_ui_setup(self):
         """ Method to be reimplemented in order to do things after the UI setup
@@ -489,7 +489,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         is_open:
             True (green) if the h5 file is open and accessible, False (red) otherwise.
         """
-        if self._show_h5file_widgets:
+        if self._show_h5file_statusbar_widgets:
             self._file_open_LED.set_as(is_open)
 
     def show_file_content(self):
@@ -506,7 +506,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         compatible:
             True if the file was created with SWMR support.
         """
-        if self._show_h5file_widgets:
+        if self._show_h5file_statusbar_widgets:
             if active:
                 self._swmr_label.setText('SWMR')
                 self._swmr_label.setToolTip('SWMR mode active')

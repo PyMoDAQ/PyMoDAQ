@@ -28,6 +28,7 @@ config = GlobalConfig()
 
 class DataGenerator(QtCore.QObject):
     data_signal = QtCore.Signal(DataToExport)
+    stopped = QtCore.Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -43,6 +44,7 @@ class DataGenerator(QtCore.QObject):
 
     def stop(self):
         self.timer.stop()
+        self.stopped.emit()
 
     @property
     def refresh_time(self) -> int:
@@ -51,9 +53,11 @@ class DataGenerator(QtCore.QObject):
     @refresh_time.setter
     def refresh_time(self, value: int):
         self._refresh_time = value
+        is_active = self.timer.isActive()
         self.timer.stop()
         self.timer.setInterval(value)
-        self.timer.start()
+        if is_active:
+            self.timer.start()
 
     def generate_data(self) -> DataToExport:
         dte = DataToExport('data', data=[
@@ -63,10 +67,12 @@ class DataGenerator(QtCore.QObject):
         self.data_signal.emit(dte)
         return dte
 
+
 class SaverWorker(QtCore.QObject):
-    """ Worker in separated thread receiving the data from the control modules
-    and adding them into the enlargeable arrays with the H5file. All this through the
-    RampSaver ModuleSaver """
+    """ Worker in separated thread receiving the data from a DataGenerator
+    and adding them into the enlargeable arrays with the H5file using the
+     DataToExportTimedSaver """
+
     n_saved = QtCore.Signal(int)
 
     def __init__(self, saver: DataToExportTimedSaver,
@@ -89,12 +95,12 @@ class MySaverLoader(CustomApp):
     send_data_signal = QtCore.Signal(DataToExport)
     _worker_done = QtCore.Signal()
 
-    _h5_base_group_name = 'Ramp'
-    _show_h5file_widgets = True
+    _h5_base_group_name = 'SaverExample'
+    _show_h5file_statusbar_widgets = True
     params = [
-        {'title': 'Refresh Grab:', 'name': 'refresh_grab', 'type': 'float', 'value': 50, 'suffix': 'ms',
+        {'title': 'Refresh Grab:', 'name': 'refresh_grab', 'type': 'int', 'value': 50, 'suffix': 'ms',
          'siPrefix': False},
-        {'title': 'Refresh Plot:', 'name': 'refresh_plot', 'type': 'float', 'value': 500, 'suffix': 'ms',
+        {'title': 'Refresh Plot:', 'name': 'refresh_plot', 'type': 'int', 'value': 500, 'suffix': 'ms',
          'siPrefix': False},
         {'title': 'Worker:', 'name': 'worker', 'type': 'group', 'children': [
             {'title': 'Worker Running:', 'name': 'worker_running', 'type': 'led', 'value': False, 'readonly': True},
@@ -116,7 +122,8 @@ class MySaverLoader(CustomApp):
         self.plotter_timer.timeout.connect(self.update_plotter)
 
         self._saver = DataToExportTimedSaver(self.h5saver)
-        self.current_node: GROUP | str = self.h5saver.get_set_group('/RawData', 'mydata')
+
+        self.current_node: GROUP | str = None
         self.setup_ui()
 
         self.enable_runflow_actions(True)
@@ -190,7 +197,7 @@ class MySaverLoader(CustomApp):
 
         self.connect_action('show_file', self.show_file_content)
 
-        self.connect_action('show_saving', self.saving_dock.setVisible)
+        self.connect_action('show_saving', lambda show: self.saving_dock.setVisible(show))
 
     def update_plotter(self):
         pass
@@ -214,6 +221,8 @@ class MySaverLoader(CustomApp):
             self.exit_runner_thread()
 
         if self.is_action_checked('save'):
+            self.open_file()
+            self.current_node: GROUP | str = self.h5saver.get_set_group('/RawData', 'mydata')
             self.runner_thread = QtCore.QThread()
             self.worker = SaverWorker(saver=self._saver, where=self.current_node)
             self.worker.n_saved.connect(self.update_worker_ntask)
@@ -239,9 +248,11 @@ class MySaverLoader(CustomApp):
                 self.set_action_enabled(action, enable)
 
     def stop(self):
+        """ Stop the timers and the data generation,
+        stops/deletes also the saver worker when it saved all the data
+        (_worker_done signal connect to terminate_worker)
 
-        #self.histogramer_timer.stop()
-
+        """
         self.data_generator.stop()
 
         if self.settings['worker', 'worker_tasks'] == 0:
@@ -250,22 +261,32 @@ class MySaverLoader(CustomApp):
             self._worker_done.connect(self.terminate_worker)
 
     def terminate_worker(self):
-        self.exit_runner_thread()
+        """ Will terminete/close/stops a few things when the worker is done working"""
+        # stopping the plotting before flushing/closing the file
+        self.plotter_timer.stop()
+
+        # delete the worker and quit/delete the thread
+        self.worker.deleteLater()
+        self.exit_runner_thread() # stopping deleting the thread
+
+        # flushing/closing the file to be able to create new groups...
         self.h5saver.flush()
         self.h5saver.close_file()
         self.update_file_status_led()
+
+        # updating GUI info
         self.enable_runflow_actions(True)
         self.settings['worker', 'worker_running'] = False
-        self.update_plotter()
 
     def pause(self, do_pause=True):
         if do_pause:
             self.data_generator.stop()
+            self.plotter_timer.stop()
 
         else:
             self.data_generator.start()
             if self.is_action_checked('save'):
-                #self.histogramer_timer.start()
+                self.plotter_timer.start()
                 pass
 
     def value_changed(self, param):
@@ -302,6 +323,8 @@ class MySaverLoader(CustomApp):
     def quit_fun(self):
         self.h5saver.flush()
         self.h5saver.close()
+        self.plotter_timer.stop()
+
         super().quit_fun()
 
     def get_app_toolbars(self) -> list[QtWidgets.QToolBar]:
