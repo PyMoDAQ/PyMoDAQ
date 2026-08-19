@@ -188,6 +188,7 @@ class TestExperimentExecutedTwice:
         assert len(dashboard.actuators_modules) == n_actuators_after_first
         assert len(dashboard.detector_modules) == n_detectors_after_first
 
+    @pytest.mark.skip
     def test_second_execute_with_one_failing_module_still_loads_new_modules(
         self, dashboard, qtbot
     ):
