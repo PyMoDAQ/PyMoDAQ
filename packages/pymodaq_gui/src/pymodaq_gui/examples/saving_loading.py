@@ -6,7 +6,7 @@ from typing import Iterable, TYPE_CHECKING, Union, Mapping
 from PyQt6.QtCore import QObject
 from qtpy import QtWidgets, QtCore
 
-from pymodaq_gui.plotting.data_viewers import ViewerDispatcher
+from pymodaq_gui.plotting.data_viewers import ViewerDispatcher, ViewersEnum
 from pymodaq_gui.utils.widgets.window import make_window
 from pymodaq_utils.config import GlobalConfig
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -104,6 +104,7 @@ class Plotter(QObject):
         self.data_loader.h5saver = h5saver
 
     def plot_data(self, where: str):
+        #QtCore.QThread.msleep(500)  # simulate some heavy work/computation
         dte = self.data_loader.load_all(where)
         self.viewer.show_data(dte)
 
@@ -138,12 +139,11 @@ class MySaverLoader(CustomApp):
         self.plotter_timer = QtCore.QTimer()
         self.plotter_timer.timeout.connect(self.update_plotter)
 
-        self.area_plotter = DockArea()
-        self.viewer = ViewerDispatcher(self.area_plotter)
 
         self._saver = DataToExportTimedSaver(self.h5saver)
-        self.plotter = Plotter(self.h5saver, self.viewer)
 
+        self.viewer: ViewerDispatcher = None
+        self.plotter: Plotter = None
         self.worker: SaverWorker = None
 
         self.current_node: GROUP | str = None
@@ -162,13 +162,19 @@ class MySaverLoader(CustomApp):
         self.saving_dock = Dock('Saving')
         self.saving_dock.addWidget(self.h5saver.settings_tree)
         self.plotting_dock = Dock('Plots')
+        self.rois_dock = Dock('Rois')
         self.area_plotter = DockArea()
         self.plotting_dock.addWidget(self.area_plotter)
 
+        self.viewer = ViewerDispatcher(self.area_plotter, 'Plotter', rois_dock=self.rois_dock)
+        self.viewer.update_viewers([ViewersEnum.Viewer1D for _ in range(2)],
+                                   ['Dwa1', 'Dwa2'])
+        self.plotter = Plotter(self.h5saver, self.viewer)
 
         self.dockarea.addDock(self.settings_dock, 'left')
         self.dockarea.addDock(self.saving_dock, 'right', self.settings_dock)
         self.dockarea.addDock(self.plotting_dock, 'right')
+        self.dockarea.addDock(self.rois_dock, 'right')
         self.saving_dock.setVisible(False)
         self.populate_status_bar()
 
@@ -206,9 +212,6 @@ class MySaverLoader(CustomApp):
         self.add_action('new_file', 'New file', 'add_circle', menu=MenuToolbarNames.FILE, auto_toolbar=False)
         self.add_action('load', 'Open file to append...', 'file_open', menu=MenuToolbarNames.FILE, auto_toolbar=False)
         self.get_menu(MenuToolbarNames.FILE).addSeparator()
-        self.add_action('save', 'Save', 'save', toolbar=self.toolbar, checkable=True,
-                        tip='Save data', checked=True, icon_checked_color=self.get_theme().green,
-                        icon_color=self.get_theme().red)
 
         self.add_action('show_saving', 'Show Saving Options', 'settings',
                         menu=MenuToolbarNames.TOOLS, checkable=True,
@@ -228,8 +231,7 @@ class MySaverLoader(CustomApp):
         self.connect_action('show_saving', lambda show: self.saving_dock.setVisible(show))
 
     def update_plotter(self):
-        pass
-        #self.plotter.compute_plot()
+        self.plotter.plot_data(self.current_node)
 
     def start(self):
 
@@ -238,24 +240,22 @@ class MySaverLoader(CustomApp):
         except TypeError:
             pass
 
-        if self.is_action_checked('save'):
-            self.setup_saving()
-
-            self.plotter_timer.setInterval(int(self.settings['refresh_plot']))
-
+        self.setup_saving()
+        self.plotter_timer.setInterval(int(self.settings['refresh_plot']))
         self._n_emitted = 0
 
         if self.runner_thread is not None and self.runner_thread.isRunning():
             self.exit_runner_thread()
 
-        if self.is_action_checked('save'):
-            self.open_file()
-            self.current_node: GROUP | str = self.h5saver.get_set_group('/RawData', 'mydata')
-            self.runner_thread = QtCore.QThread()
-            self.worker = SaverWorker(saver=self._saver, where=self.current_node)
-            self.worker.n_saved.connect(self.update_worker_ntask)
-            self.send_data_signal.connect(self.worker.save_data)
-            self.worker.moveToThread(self.runner_thread)
+        self.open_file()
+        self.current_node: GROUP | str = self.h5saver.get_set_group('/RawData', 'mydata')
+        self.plotter.update_file(self.h5saver)
+
+        self.runner_thread = QtCore.QThread()
+        self.worker = SaverWorker(saver=self._saver, where=self.current_node)
+        self.worker.n_saved.connect(self.update_worker_ntask)
+        self.send_data_signal.connect(self.worker.save_data)
+        self.worker.moveToThread(self.runner_thread)
 
         self.runner_thread.start()
         self.settings['worker', 'worker_running'] = True
@@ -264,14 +264,12 @@ class MySaverLoader(CustomApp):
         self.data_generator.data_signal.connect(self.send_data)
 
         self.data_generator.start()
+        self.plotter_timer.start()
 
-        if self.is_action_checked('save'):
-            pass
-            #self.histogramer_timer.start()
         self.enable_runflow_actions(False, excepted=('pause', 'stop'))
 
     def enable_runflow_actions(self, enable=True, excepted: Iterable[str] = ()):
-        for action in ('start', 'pause', 'stop', 'save'):
+        for action in ('start', 'pause', 'stop'):
             if action not in excepted:
                 self.set_action_enabled(action, enable)
 
@@ -315,9 +313,8 @@ class MySaverLoader(CustomApp):
 
         else:
             self.data_generator.start()
-            if self.is_action_checked('save'):
-                self.plotter_timer.start()
-                pass
+            self.plotter_timer.start()
+
 
     def value_changed(self, param):
         """ Actions to perform when one of the param's value in self.settings is changed from the
@@ -335,12 +332,14 @@ class MySaverLoader(CustomApp):
         """
         if param.name() == 'refresh_grab':
             self.data_generator.refresh_time = param.value()
+        elif param.name() == 'refresh_plot':
+            self.plotter_timer.stop()
+            self.plotter_timer.setInterval(int(self.settings['refresh_plot']))
+            self.plotter_timer.start()
 
     def send_data(self, dte: DataToExport):
-        if self.is_action_checked('save'):
-
-            self.send_data_signal.emit(dte)
-            self._n_emitted += 1
+        self.send_data_signal.emit(dte)
+        self._n_emitted += 1
 
     @QtCore.Slot(int)
     def update_worker_ntask(self, n_saved: int):
