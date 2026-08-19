@@ -714,17 +714,7 @@ class DAQ_PID(CustomExt):
     def quit_fun(self):
         """ """
         try:
-            try:
-                self.exit_runner_thread()
-            except Exception as e:
-                print(e)
 
-            areas = self.dock_area.tempAreas[:]
-            for area in areas:
-                area.win.close()
-                QtWidgets.QApplication.processEvents()
-                QThread.msleep(1000)
-                QtWidgets.QApplication.processEvents()
 
             self.dashboard.remove_modules([setp for setp in self.model_class.setpoints_names])
             super().quit_fun()

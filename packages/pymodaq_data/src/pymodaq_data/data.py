@@ -86,11 +86,10 @@ def dimensionless_aware_reduce_units(q: Type[Q_]) -> Type[Q_]:
     -------
     The reduced quantity
     """
-    try:
-        q_comp = q.to_compact() if q.dimensionless else q.to_reduced_units()
-    except pint.errors.UndefinedBehavior as e:
-        logger.error(f"While applying to_compact to {q} got error: \n{e}")
-    return q_comp
+    # this may fire a pint.errors.UndefinedBehavior warning when the magnitude is a numpy array
+    # but pint https://github.com/hgrecco/pint/issues/2274 fixed this in July 2026
+    # at the moment, it just returns the same quantity layout
+    return q.to_compact() if q.dimensionless else q.to_reduced_units()
 
 def check_units(units: str):
     try:
