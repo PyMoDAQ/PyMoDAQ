@@ -875,7 +875,7 @@ class H5Backend:
 
         return name.lower() in [name.lower() for name in self.get_children(where)]
 
-    def get_node(self, where, name=None) -> Node:
+    def get_node(self, where, name=None) -> Node | GROUP:
         if isinstance(where, Node):
             where = where.node
         try:
