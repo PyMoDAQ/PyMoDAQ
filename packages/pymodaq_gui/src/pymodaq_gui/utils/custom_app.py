@@ -272,13 +272,14 @@ class CustomApp(QObject, ActionManager, ParameterManager):
             self.mainwindow.close()
 
     def exit_runner_thread(self, duration : int = 5000):
-        self.runner_thread.quit()
-        terminated = self.runner_thread.wait(duration)
-        if not terminated:
-            self.runner_thread.terminate()
-            self.runner_thread.wait()
-        self.runner_thread.deleteLater()
-        self.runner_thread = None
+        if self.runner_thread is not None:
+            self.runner_thread.quit()
+            terminated = self.runner_thread.wait(duration)
+            if not terminated:
+                self.runner_thread.terminate()
+                self.runner_thread.wait()
+            self.runner_thread.deleteLater()
+            self.runner_thread = None
 
     def do_things_after_ui_setup(self):
         """ Method to be reimplemented in order to do things after the UI setup
