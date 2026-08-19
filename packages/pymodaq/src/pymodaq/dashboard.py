@@ -18,6 +18,7 @@ from qtpy.QtWidgets import (
     QMessageBox,
 )
 
+from pymodaq.control_modules.utils import ControlModule
 from pymodaq.utils.managers.roi_manager.roi_manager import ROIManager
 from pymodaq.control_modules.instruments import find_actuator_class_from_name, DAQTypesEnum
 from pymodaq.control_modules.move_utility_classes import UiType
@@ -342,7 +343,9 @@ class DashBoard(CustomApp, LECOComponentMixin):
         except Exception as e:
             logger.exception(str(e))
 
-    def _remove_module_list(self, modules, module_list, compact_manager_attr,
+    def _remove_module_list(self, modules: list[DAQ_Move | DAQ_Viewer],
+                            module_list:list[DAQ_Move | DAQ_Viewer],
+                            compact_manager_attr,
                             remove_dock_widgets=False):
         """Remove a list of control modules, clean up compact manager and docks.
 

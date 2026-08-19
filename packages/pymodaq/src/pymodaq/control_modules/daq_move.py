@@ -735,6 +735,8 @@ class DAQ_Move(ParameterControlModule):
                 self._initialized_state = True
             else:
                 self._initialized_state = False
+                if self.ui is not None:
+                    self.ui.actuator_init = False
             if self._initialized_state:
                 self.get_actuator_value()
             self.init_signal.emit(self._initialized_state)
