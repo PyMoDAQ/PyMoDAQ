@@ -3,6 +3,7 @@ from pathlib import Path
 from time import perf_counter
 from typing import Iterable, TYPE_CHECKING, Union, Mapping
 
+from PyQt6.QtCore import QObject
 from qtpy import QtWidgets, QtCore
 
 from pymodaq_gui.plotting.data_viewers import ViewerDispatcher
@@ -13,7 +14,7 @@ from pymodaq_utils.utils import ThreadCommand
 
 from pymodaq_data import Q_, DataDim, DataSource, DataRaw
 from pymodaq_data import DataToExport, DataWithAxes
-from pymodaq_data.h5modules.data_saving import DataToExportTimedSaver, Node, GROUP
+from pymodaq_data.h5modules.data_saving import DataToExportTimedSaver, Node, GROUP, DataLoader
 
 from pymodaq_gui import utils as gutils
 from pymodaq_gui.h5modules.saving import H5Saver
@@ -91,6 +92,23 @@ class SaverWorker(QtCore.QObject):
         self.n_saved.emit(self._n_saved)
 
 
+class Plotter(QObject):
+    def __init__(self, h5saver: H5Saver, viewer: ViewerDispatcher, parent=None):
+        super().__init__(parent)
+        self.h5saver = h5saver
+        self.viewer = viewer
+        self.data_loader = DataLoader(self.h5saver, swmr_mode=True)
+
+    def update_file(self, h5saver: H5Saver):
+        """ To be called after the H5file has been closed/reopened"""
+        self.data_loader.h5saver = h5saver
+
+    def plot_data(self, where: str):
+        dte = self.data_loader.load_all(where)
+        self.viewer.show_data(dte)
+
+
+
 class MySaverLoader(CustomApp):
     send_data_signal = QtCore.Signal(DataToExport)
     _worker_done = QtCore.Signal()
@@ -109,7 +127,6 @@ class MySaverLoader(CustomApp):
     ]
 
     def __init__(self, parent: gutils.DockArea):
-        self.plotter = ViewerDispatcher(dockarea=parent)
 
         super().__init__(parent, add_toolbar_break=False)
 
@@ -121,7 +138,13 @@ class MySaverLoader(CustomApp):
         self.plotter_timer = QtCore.QTimer()
         self.plotter_timer.timeout.connect(self.update_plotter)
 
+        self.area_plotter = DockArea()
+        self.viewer = ViewerDispatcher(self.area_plotter)
+
         self._saver = DataToExportTimedSaver(self.h5saver)
+        self.plotter = Plotter(self.h5saver, self.viewer)
+
+        self.worker: SaverWorker = None
 
         self.current_node: GROUP | str = None
         self.setup_ui()
@@ -138,9 +161,14 @@ class MySaverLoader(CustomApp):
         self.settings_dock.addWidget(self.settings_tree)
         self.saving_dock = Dock('Saving')
         self.saving_dock.addWidget(self.h5saver.settings_tree)
+        self.plotting_dock = Dock('Plots')
+        self.area_plotter = DockArea()
+        self.plotting_dock.addWidget(self.area_plotter)
+
 
         self.dockarea.addDock(self.settings_dock, 'left')
         self.dockarea.addDock(self.saving_dock, 'right', self.settings_dock)
+        self.dockarea.addDock(self.plotting_dock, 'right')
         self.saving_dock.setVisible(False)
         self.populate_status_bar()
 
@@ -266,7 +294,9 @@ class MySaverLoader(CustomApp):
         self.plotter_timer.stop()
 
         # delete the worker and quit/delete the thread
-        self.worker.deleteLater()
+        if self.worker is not None:
+            self.worker.deleteLater()
+            self.worker = None
         self.exit_runner_thread() # stopping deleting the thread
 
         # flushing/closing the file to be able to create new groups...
