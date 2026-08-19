@@ -372,8 +372,8 @@ class DashBoard(CustomApp, LECOComponentMixin):
                         setattr(self, compact_manager_attr, None)
                 module.quit_fun()
                 dock = self.dockarea.docks.get(module.title, None)
-                self.docks_viewer.remove(dock)
                 if dock:
+                    self.docks_viewer.remove(dock) #dereference the dock
                     if remove_dock_widgets:
                         dock.removeWidgets()
                     dock.close()
