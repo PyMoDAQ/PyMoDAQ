@@ -319,8 +319,15 @@ class ParameterManager:
             self._settings, showTop=False,
         )  # load the tree with this parameter object
         self._settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
-        self._settings_tree.tree.itemExpanded.connect(lambda: self._settings_tree.tree.resizeColumnToContents(0))
-        self._settings_tree.tree.itemCollapsed.connect(lambda: self._settings_tree.tree.resizeColumnToContents(0))
+        # Close over the tree widget directly, not `self`: every ParameterManager
+        # subclass (DashBoard, ModulesManager, per-module settings, ...) goes through
+        # here, and a `self`-closing lambda connected to a Qt signal is not reliably
+        # released by disconnect() alone (PySide/PyQt keep an internal reference to a
+        # connected Python callable that outlives disconnect()), which would keep
+        # every such instance alive indefinitely.
+        tree = self._settings_tree.tree
+        tree.itemExpanded.connect(lambda: tree.resizeColumnToContents(0))
+        tree.itemCollapsed.connect(lambda: tree.resizeColumnToContents(0))
 
     @staticmethod
     def create_parameter(
