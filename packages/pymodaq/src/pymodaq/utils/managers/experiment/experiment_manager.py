@@ -1,20 +1,8 @@
 from dataclasses import dataclass
-import qtpy
 from typing import Union, TYPE_CHECKING
 
 from pymodaq.control_modules.instruments import DAQTypesEnum
-from pymodaq.utils.managers.experiment.state_machine import CreateAddModulesMachine
-
-try:
-    state_machine_available = True
-    if qtpy.PYQT6:
-        from PyQt6.QtStateMachine import QStateMachine, QState, QFinalState, QSignalTransition
-    elif qtpy.PYSIDE6:
-        from qtpy.QtStateMachine import QStateMachine, QState, QFinalState, QSignalTransition
-    elif qtpy.PYQT5:
-        from PyQt5.QtCore.QtStateMachine import QStateMachine, QState, QFinalState, QSignalTransition
-except ImportError:
-    state_machine_available = False
+from pymodaq.utils.managers.experiment.module_loader import ModuleLoader
 
 from pathlib import Path
 import sys
@@ -32,7 +20,6 @@ from pymodaq_gui.config import get_set_layout_path, get_set_roi_path
 from pymodaq_gui.managers.manager_base import ManagerBase
 from pymodaq.utils.managers.modules.utils import ModuleType
 
-from pymodaq.utils.exceptions import MasterSlaveError
 from pymodaq.control_modules.utils import ControllerStatus
 from pymodaq.utils.daq_utils import copy_experiment
 from pymodaq.utils.managers.experiment import utils  # noqa , to register groupemove and groupdet Parameters
@@ -80,7 +67,7 @@ class ExperimentManager(ManagerBase):
         super().__init__(dashboard=dashboard)
         self.actuators_modules: list[DAQ_Move] = []
         self.detector_modules: list[DAQ_Viewer] = []
-        self.machine: CreateAddModulesMachine = None
+        self.loader: ModuleLoader = None
 
     ### Reimplemented Methods ####################################################
     def list_managed_entries_path(self, **kwargs_to_entry_folder) -> list[Path]:
@@ -151,18 +138,10 @@ class ExperimentManager(ManagerBase):
             QtWidgets.QApplication.processEvents()
             logger.info(f"Loading {self.entry_type.capitalize()} file: {entry}")
 
-
-            if state_machine_available:
-                self.create_control_modules_using_machine(plugins_sorted)
-            else:
-                self.create_control_modules_from_preset(plugins_sorted)
-                self.finalize_execute()
+            self.load_control_modules(plugins_sorted)
 
         except Exception as e:
-            self.dashboard.mainwindow.setVisible(True)
-            for area in self.dashboard.dockarea.tempAreas:
-                area.window().setVisible(True)
-            logger.exception(str(e))
+            self._on_load_failed(e)
             return False
 
     def finalize_execute(self):
@@ -190,6 +169,11 @@ class ExperimentManager(ManagerBase):
         logger.info(f"{self.entry_type.capitalize()} file: {self.entry_filepath} has been loaded")
         self.set_entry_applied(True)
 
+    def _on_load_failed(self, error: Exception):
+        self.dashboard.mainwindow.setVisible(True)
+        for area in self.dashboard.dockarea.tempAreas:
+            area.window().setVisible(True)
+        logger.exception(str(error))
 
     def _update_entry(self, entry: Union[str, Path] = None, **kwargs):
         """ Update the Manager UI after a given entry as been selected/updated """
@@ -264,114 +248,21 @@ class ExperimentManager(ManagerBase):
 
         return plugins_sorted, plugin_list_message
 
-    def create_control_modules_from_preset(self, plugins_sorted: list[list[PluginInfo]]) -> tuple[list['DAQ_Move'], list['DAQ_Viewer']]:
+    def load_control_modules(self, plugins_sorted: list[list[PluginInfo]]):
         """
-        Load a experiment file and create corresponding Control Modules in the Dashboard
+        Load an experiment file and create the corresponding Control Modules in the Dashboard.
 
+        Modules are created/configured/initialized one at a time by :class:`ModuleLoader`,
+        which waits on each module's own signals (rather than polling) since hardware
+        initialization runs asynchronously on the module's own thread.
         """
         self.actuators_modules: list[DAQ_Move] = []
         self.detector_modules: list[DAQ_Viewer] = []
 
-        # Add Control Modules to the Dashboard
-        ind_module = -1
-        for plug_IDs in plugins_sorted:
-            for ind_plugin, plugin in enumerate(plug_IDs):
-                ind_module += 1
-                plug_name = plugin.name
-                plug_type = plugin.class_name
-                plug_init = plugin.do_init
-
-                if plugin.type == ModuleType.Actuator:
-
-                    self.actuators_modules.append(self.dashboard.add_move(plug_name, plug_type,
-                                                                          ui_identifier=plugin.ui))
-
-                    if ind_plugin == 0:  # should be a master type plugin
-                        if not plugin.is_master:
-                            raise MasterSlaveError(f"The instrument {plug_name} should"
-                                                   f" be defined as Master")
-                        if plug_init:
-                            self.actuators_modules[-1].apply_controller_parameters(plugin.settings.child("controller"))
-                            self.actuators_modules[-1].init_hardware_ui()
-                            self.actuators_modules[-1].master = True
-                            QtWidgets.QApplication.processEvents()
-                            self.dashboard.modules_manager.poll_init(self.actuators_modules[-1])
-                            QtWidgets.QApplication.processEvents()
-                            master_controller = self.actuators_modules[-1].controller
-
-                        elif plugin.is_master and len(plug_IDs) > 1:
-                            raise MasterSlaveError(
-                                f"The instrument {plug_name} defined as Master has to be "
-                                f"initialized (init checked in the experiment) in order to init "
-                                f"its associated slave instrument",
-                            )
-                    else:
-                        if plugin.is_master:
-                            raise MasterSlaveError(f"The instrument {plug_name} should"
-                                                   f" be defined as slave")
-                        if plug_init:
-                            self.actuators_modules[-1].apply_controller_parameters(plugin.settings.child("controller"))
-                            self.actuators_modules[-1].controller = master_controller
-                            self.actuators_modules[-1].init_hardware_ui()
-                            QtWidgets.QApplication.processEvents()
-                            self.dashboard.modules_manager.poll_init(self.actuators_modules[-1])
-                            QtWidgets.QApplication.processEvents()
-
-                    self.subentries_model.set_status(ind_module, True)
-
-                else:
-                    plug_daq_type = plugin.daq_type
-                    self.detector_modules.append(self.dashboard.add_det(plug_name,
-                                                                        plug_daq_type,
-                                                                        plug_type))
-                    QtWidgets.QApplication.processEvents()
-
-                    if ind_plugin == 0:  # should be a master type plugin
-                        if not plugin.is_master:
-                            raise MasterSlaveError(
-                                f"The instrument {plug_name} should"
-                                f" be defined as Master",
-                            )
-                        if plug_init:
-                            self.detector_modules[-1].apply_controller_parameters(plugin.settings.child("controller"))
-                            self.detector_modules[-1].init_hardware_ui()
-                            QtWidgets.QApplication.processEvents()
-                            self.dashboard.modules_manager.poll_init(self.detector_modules[-1])
-                            QtWidgets.QApplication.processEvents()
-                            master_controller = self.detector_modules[-1].controller
-                        elif plugin.is_master and len(plug_IDs) > 1:
-                            raise MasterSlaveError(
-                                f"The instrument {plug_name} defined as Master has to be "
-                                f"initialized (init checked in the experiment) in order to init "
-                                f"its associated slave instrument",
-                            )
-                    else:
-                        if plugin.is_master:
-                            raise MasterSlaveError(
-                                f"The instrument {plug_name} should"
-                                f" be defined as Slave",
-                            )
-                        if plug_init:
-                            self.detector_modules[-1].controller = master_controller
-                            self.detector_modules[-1].apply_controller_parameters(plugin.settings.child("controller"))
-                            self.detector_modules[-1].init_hardware_ui()
-                            QtWidgets.QApplication.processEvents()
-                            self.dashboard.modules_manager.poll_init(self.detector_modules[-1])
-                            QtWidgets.QApplication.processEvents()
-
-                self.subentries_model.set_status(ind_module, True)
-
-        QtWidgets.QApplication.processEvents()
-
-        return self.actuators_modules, self.detector_modules
-
-    def create_control_modules_using_machine(self, plugins_sorted):
-        self.actuators_modules: list[DAQ_Move] = []
-        self.detector_modules: list[DAQ_Viewer] = []
-
-        self.machine = CreateAddModulesMachine(self, plugins_sorted)
-        self.machine.all_instruments_added.connect(self.finalize_execute)
-        self.machine.start()
+        self.loader = ModuleLoader(self, plugins_sorted)
+        self.loader.all_instruments_added.connect(self.finalize_execute)
+        self.loader.load_failed.connect(self._on_load_failed)
+        self.loader.start()
 
 
 if __name__ == '__main__':
