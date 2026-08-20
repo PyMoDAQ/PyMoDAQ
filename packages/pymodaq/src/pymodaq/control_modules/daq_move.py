@@ -930,6 +930,7 @@ class ActuatorWorker(HardwareWorkerBase):
 
             return status
         except Exception as e:
+            status.initialized = False
             self.logger.exception(str(e))
             return status
 
@@ -1006,7 +1007,7 @@ class ActuatorWorker(HardwareWorkerBase):
         if super().queue_command(command):
             return
         try:
-            logger.debug(f"Threadcommand {command.command} sent to {self.title}")
+            logger.debug(f"Threadcommand {command.command}/{command.attribute} sent to {self.title}")
             if command.command == ControlToHardwareMove.INI_STAGE:
                 # Legacy alias → emit the canonical INI_HARDWARE status
                 status: edict = self.ini_hardware(*command.attribute)
