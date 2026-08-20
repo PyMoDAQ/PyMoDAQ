@@ -29,12 +29,14 @@ from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.parameter import ioxml
 from pymodaq_gui.qt_utils import mkQApp
 
-from pymodaq.utils.messenger import deprecation_msg
+from pymodaq_utils.warnings import deprecation_msg
+
 from pymodaq.utils.data import DataActuator
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusMove
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 from pymodaq.control_modules.utils import (create_controller_param, create_remote_connection_params,
-                                            ControllerStatus, PluginBase)
+                                           ControllerStatus)
+from pymodaq.control_modules.plugin_base import PluginBase
 from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 
 
