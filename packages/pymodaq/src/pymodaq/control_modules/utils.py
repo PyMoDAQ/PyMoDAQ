@@ -11,7 +11,7 @@ from easydict import EasyDict as edict
 from qtpy import QtWidgets
 
 from qtpy import QtWidgets
-from qtpy.QtCore import Signal, QObject, Qt, Slot, QThread
+from qtpy.QtCore import Signal, QObject, Qt, Slot, QThread, QEvent
 
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import GlobalConfig as Config
@@ -481,6 +481,22 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
         try:
             if self.ui is not None:
                 self.ui.close()
+                # `close()` alone does not destroy the UI's actions/settings-tree
+                # widgets, and their `self`-closing lambda slots (e.g. grab/snap/stop
+                # buttons) are not released by disconnect() alone (PySide/PyQt keep an
+                # internal reference to a connected Python callable that outlives
+                # disconnect()), which would keep this whole module — and its
+                # `_hardware_thread`/hardware-worker `QTimer`s — alive indefinitely.
+                self.ui.clear_actions()
+                self.ui.clear_settings_tree()
+                # The UI also wires up plain widget signals (grab/snap/stop buttons,
+                # spin boxes, shortcuts, ...) directly with `self`-closing lambdas,
+                # not through clear_actions()'s `_actions` dict. Destroying the UI
+                # itself (not just close()-ing it) is what actually releases those
+                # phantom-cached closures, cascading to every child widget in one go.
+                self.ui.deleteLater()
+                QtWidgets.QApplication.sendPostedEvents(self.ui, QEvent.DeferredDelete)
+            self.clear_settings_tree()
         except Exception as e:
             self.logger.exception(str(e))
 
