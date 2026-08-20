@@ -15,6 +15,7 @@ binding never releases the wrapper closure, the closure itself cannot keep
 the receiver reachable.
 """
 import functools
+import inspect
 import weakref
 from typing import Callable
 
@@ -56,11 +57,33 @@ def weak_slot(callback: Callable) -> Callable:
 
     receiver_ref = weakref.ref(receiver)
 
+    # A real Qt slot may declare fewer parameters than the signal it's connected
+    # to provides (e.g. a plain `def _grab(self):` connected to a checkable
+    # QAction's `triggered(bool)`) -- Qt introspects the slot and only passes as
+    # many arguments as it declares. That introspection needs a concrete
+    # parameter list; it can't be done for `wrapper`'s own generic `*call_args`,
+    # so Qt falls back to passing everything the signal provides, regardless of
+    # what `unbound_func` actually accepts. Work out the true accepted arity
+    # from `callback` itself (a bound method or `functools.partial` already
+    # correctly excludes `self`/pre-bound args from its own signature) and
+    # truncate `call_args` to match, replicating Qt's own truncation.
+    max_extra_args = None  # None == unlimited (unknown, or callback itself takes *args)
+    try:
+        sig = inspect.signature(callback)
+        if not any(p.kind is inspect.Parameter.VAR_POSITIONAL for p in sig.parameters.values()):
+            max_extra_args = sum(
+                1 for p in sig.parameters.values()
+                if p.kind in (inspect.Parameter.POSITIONAL_ONLY,
+                              inspect.Parameter.POSITIONAL_OR_KEYWORD))
+    except (TypeError, ValueError):
+        pass
+
     def wrapper(*call_args, **call_kwargs):
         obj = receiver_ref()
         if obj is None:
             return None
-        return unbound_func(obj, *bound_args, *call_args, **bound_kwargs, **call_kwargs)
+        args = call_args if max_extra_args is None else call_args[:max_extra_args]
+        return unbound_func(obj, *bound_args, *args, **bound_kwargs, **call_kwargs)
 
     # Copy __name__/__doc__ for readability (tracebacks, repr) without using
     # functools.wraps(unbound_func): that would set __wrapped__ to the
