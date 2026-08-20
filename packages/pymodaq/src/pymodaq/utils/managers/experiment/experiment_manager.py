@@ -169,11 +169,12 @@ class ExperimentManager(ManagerBase):
         logger.info(f"{self.entry_type.capitalize()} file: {self.entry_filepath} has been loaded")
         self.set_entry_applied(True)
 
-    def _on_load_failed(self, error: Exception):
+    def _on_load_failed(self, message: str):
+        self.close_subentries_display()
         self.dashboard.mainwindow.setVisible(True)
         for area in self.dashboard.dockarea.tempAreas:
             area.window().setVisible(True)
-        logger.exception(str(error))
+        logger.info(message)
 
     def _update_entry(self, entry: Union[str, Path] = None, **kwargs):
         """ Update the Manager UI after a given entry as been selected/updated """

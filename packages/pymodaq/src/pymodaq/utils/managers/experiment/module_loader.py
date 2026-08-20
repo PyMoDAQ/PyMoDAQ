@@ -85,7 +85,7 @@ class ModuleLoader(QtCore.QObject):
             self._process_current()
         except Exception as e:
             logger.exception(str(e))
-            self.load_failed.emit(e)
+            self.load_failed.emit(f"Failure while creating the module: {self._current_plugin.name}")
 
     def _process_current(self):
         plugin_info, ind_in_group, group_size = self._queue[self._ind]
@@ -103,7 +103,14 @@ class ModuleLoader(QtCore.QObject):
             self.manager.detector_modules.append(self._current_module)
 
         self._current_module.instrument_changed.connect(self._on_type_set)
-        self._set_module_type()
+
+        try:
+            self._set_module_type()
+        except Exception as e:
+            logger.exception(str(e))
+            self.load_failed.emit(f"Failure while setting the module type: "
+                                  f"{self._current_plugin.name} / {self._current_plugin.class_name}")
+
 
     def _on_type_set(self):
         self._current_module.instrument_changed.disconnect(self._on_type_set)
@@ -123,7 +130,9 @@ class ModuleLoader(QtCore.QObject):
         self._current_module.apply_controller_parameters(self._current_plugin.settings.child("controller"))
         if not self._current_plugin.is_master:
             self._current_module.controller = self._current_controller
+
         self._current_module.init_hardware_ui()
+
 
     def _on_init_done(self, initialized: bool):
         self._current_module.init_signal.disconnect(self._on_init_done)
