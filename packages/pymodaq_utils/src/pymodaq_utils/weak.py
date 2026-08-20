@@ -56,11 +56,17 @@ def weak_slot(callback: Callable) -> Callable:
 
     receiver_ref = weakref.ref(receiver)
 
-    @functools.wraps(unbound_func)
     def wrapper(*call_args, **call_kwargs):
         obj = receiver_ref()
         if obj is None:
             return None
         return unbound_func(obj, *bound_args, *call_args, **bound_kwargs, **call_kwargs)
+
+    # Copy __name__/__doc__ for readability (tracebacks, repr) without using
+    # functools.wraps(unbound_func): that would set __wrapped__ to the
+    # *unbound* function, which some introspection consumers resolve back to
+    # (a signature still including `self`) instead of `wrapper`'s own.
+    wrapper.__name__ = getattr(unbound_func, '__name__', wrapper.__name__)
+    wrapper.__doc__ = unbound_func.__doc__
 
     return wrapper
