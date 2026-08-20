@@ -715,44 +715,6 @@ class ActionManager:
         """
         self.get_action(action_name).setText(text)
 
-    def clear_actions(self):
-        """Disconnect and destroy every managed action, dropping all references to them.
-
-        Actions connected via :meth:`connect_action` typically hold a slot (often a
-        lambda) that closes over ``self``. Disconnecting the signal alone is *not*
-        enough to release that closure: PySide/PyQt keep an internal reference to a
-        connected Python callable that outlives ``disconnect()`` (and even a plain
-        ``deleteLater()`` + ``processEvents()``) until the underlying C++ QAction
-        object is actually destroyed. Without this, that closure keeps ``self`` (and
-        everything reachable from it) alive for as long as the action exists, even
-        after the owning widget/window has been closed, since ``QWidget.close()``
-        does not destroy child widgets/actions by itself.
-        """
-        for entry in self._actions.values():
-            # A WidgetActionProxy forwards unknown attributes to the wrapped widget
-            # (which has no `triggered`); disconnect/destroy its real QAction instead.
-            action = entry.action if isinstance(entry, WidgetActionProxy) else entry
-            try:
-                action.triggered.disconnect()
-            except (TypeError, RuntimeError):
-                pass  # not connected, or already deleted C++-side
-            try:
-                action.deleteLater()
-                # deleteLater() alone only *schedules* destruction; force it now, for
-                # this object only, so the Python closure it held is released
-                # synchronously. Flushing with a `None` receiver would process
-                # *every* pending deferred-delete in the whole application, which can
-                # race with other teardown code still in progress elsewhere and crash.
-                QtWidgets.QApplication.sendPostedEvents(action, QtCore.QEvent.DeferredDelete)
-                if isinstance(entry, WidgetActionProxy):
-                    entry.deleteLater()
-                    QtWidgets.QApplication.sendPostedEvents(entry, QtCore.QEvent.DeferredDelete)
-            except RuntimeError:
-                pass  # underlying C++ widget already deleted (e.g. parent cascaded)
-        self._actions.clear()
-        self._menus.clear()
-        self._toolbars.clear()
-
     @property
     def actions(self) -> list[QAction]:
         return list(self._actions.values())

@@ -282,39 +282,6 @@ class ParameterManager:
         )
         self._settings_tree.tree.resizeColumnToContents(0)
 
-    def clear_settings_tree(self):
-        """Disconnect and destroy the settings tree widget, dropping references to it.
-
-        :meth:`set_settings` connects lambdas (closing over ``self``) to the tree's
-        ``itemExpanded``/``itemCollapsed`` signals, and ``self._settings_tree`` is
-        itself an :class:`~pymodaq_gui.managers.action_manager.ActionManager` with its
-        own toolbar actions connected to bound methods of ``self``. As with
-        :meth:`~pymodaq_gui.managers.action_manager.ActionManager.clear_actions`,
-        disconnecting alone is not enough to release those closures: PySide/PyQt keep
-        an internal reference to a connected Python callable that outlives
-        ``disconnect()`` until the underlying C++ widget is actually destroyed.
-        """
-        try:
-            self._settings_tree.tree.itemExpanded.disconnect()
-            self._settings_tree.tree.itemCollapsed.disconnect()
-        except (TypeError, RuntimeError):
-            pass
-        if isinstance(self._settings_tree, ActionManager):
-            self._settings_tree.clear_actions()
-        # deleteLater() the tree widget itself, not just its container: a parent's
-        # deleteLater() only *schedules* its own destruction, and does not
-        # necessarily cascade to children within a single DeferredDelete flush.
-        for widget in (self._settings_tree.tree, self._settings_tree.widget):
-            try:
-                widget.deleteLater()
-                # Scoped to this widget only: flushing with a `None` receiver would
-                # process every pending deferred-delete in the whole application,
-                # which can race with other teardown code still in progress
-                # elsewhere and crash.
-                QtWidgets.QApplication.sendPostedEvents(widget, QtCore.QEvent.DeferredDelete)
-            except RuntimeError:
-                pass  # underlying C++ widget already deleted (e.g. parent cascaded)
-
     @property
     def settings_tree(self) -> QtWidgets.QWidget:
         """QWidget: The main widget containing the parameter tree and toolbar."""
