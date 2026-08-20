@@ -4,9 +4,7 @@ from typing import Any, TYPE_CHECKING
 from pymodaq_gui.parameter import Parameter
 from qtpy import QtCore
 
-
-
-from pymodaq.control_modules.instruments import DAQTypesEnum
+from pymodaq.control_modules.enums import DAQTypesEnum
 
 from pymodaq.utils.exceptions import MasterSlaveError
 from pymodaq.utils.managers.modules import ModuleType
@@ -29,11 +27,11 @@ class PluginInfo:
     name: str
     class_name: str
     type: ModuleType
-    settings: Parameter
-    is_master: bool
-    do_init: bool
-    ui: str = None
-    daq_type: DAQTypesEnum = None
+    settings: Parameter | None = None
+    is_master: bool = True
+    do_init: bool = True
+    ui: str | None = None
+    daq_type: DAQTypesEnum | None = None
     controller: Any = None
 
 
@@ -55,7 +53,7 @@ class ModuleLoader(QtCore.QObject):
     """
 
     all_instruments_added = QtCore.Signal(list)  # list of created Modules
-    load_failed = QtCore.Signal(Exception)
+    load_failed = QtCore.Signal(str)
     module_index_init = QtCore.Signal(int, bool)
 
     def __init__(self, dashboard: 'DashBoard',
@@ -105,6 +103,8 @@ class ModuleLoader(QtCore.QObject):
     def _process_current(self):
         plugin_info, ind_in_group, group_size = self._queue[self._ind]
         self._current_plugin = plugin_info
+        if plugin_info.controller is not None:  #  else get one from its parent Master
+            self._current_controller = plugin_info.controller
 
         validate_master_slave_order(plugin_info, ind_in_group, group_size)
 
@@ -136,7 +136,8 @@ class ModuleLoader(QtCore.QObject):
             return
 
         self._current_module.init_signal.connect(self._on_init_done)
-        self._current_module.apply_controller_parameters(self._current_plugin.settings.child("controller"))
+        if self._current_plugin.settings is not None:
+            self._current_module.apply_controller_parameters(self._current_plugin.settings.child("controller"))
         if not self._current_plugin.is_master:
             self._current_module.controller = self._current_controller
 
@@ -155,6 +156,7 @@ class ModuleLoader(QtCore.QObject):
 
         if self._current_plugin.is_master and initialized:
             self._current_controller = self._current_module.controller
+            self._current_plugin.controller = self._current_controller
 
         self.module_index_init.emit(self._ind, initialized)
 
@@ -175,7 +177,7 @@ class ModuleLoader(QtCore.QObject):
         # transition to _on_type_set happens through the module's own instrument_changed signal
 
 
-def validate_master_slave_order(plugin_info: 'PluginInfo', ind_in_group: int, group_size: int) -> None:
+def validate_master_slave_order(plugin_info: 'PluginInfo', ind_in_group: int, group_size: int) -> Any:
     """Check that a plugin's Master/Slave status matches its position within its controller group.
 
     Raises
@@ -185,9 +187,10 @@ def validate_master_slave_order(plugin_info: 'PluginInfo', ind_in_group: int, gr
         or if a Master with no init has slaves depending on its controller.
     """
     if ind_in_group == 0:
-        if not plugin_info.is_master:
-            raise MasterSlaveError(f"The instrument {plugin_info.name} should be defined as Master")
-        if not plugin_info.do_init and group_size > 1:
+        if not plugin_info.is_master and plugin_info.controller is None:
+            raise MasterSlaveError(f"The instrument {plugin_info.name} without affected controller "
+                                   f"should be defined as Master")
+        if not plugin_info.do_init and group_size > 1 and plugin_info.is_master:
             raise MasterSlaveError(
                 f"The instrument {plugin_info.name} defined as Master has to be "
                 f"initialized (init checked in the experiment) in order to init "

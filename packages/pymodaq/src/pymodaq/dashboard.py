@@ -6,7 +6,7 @@ import datetime
 import subprocess
 from pathlib import Path
 
-from typing import Union, List, Any, TYPE_CHECKING, Sequence
+from typing import Union, List, Any, TYPE_CHECKING, Sequence, Callable
 import argparse
 
 from qtpy import QtGui, QtWidgets, QtCore
@@ -18,8 +18,12 @@ from qtpy.QtWidgets import (
     QMessageBox,
 )
 
+from pymodaq.control_modules.thread_commands import ControllerStatus
+from pymodaq.utils.managers.modules import ModuleType
+from pymodaq.utils.managers.modules.loader import ModuleLoader, PluginInfo
 from pymodaq.utils.managers.roi_manager.roi_manager import ROIManager
-from pymodaq.control_modules.instruments import find_actuator_class_from_name, DAQTypesEnum
+from pymodaq.control_modules.instruments import find_actuator_class_from_name
+from pymodaq.control_modules.enums import DAQTypesEnum
 from pymodaq.control_modules.move_utility_classes import UiType
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
@@ -180,7 +184,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
         self.title = ""
 
-
+        self.module_loader: ModuleLoader = None
         self.roi_saver: ROISaver = None
 
         self.remote_timer = QtCore.QTimer(self)
@@ -806,36 +810,11 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.compact_actuator_manager.add_module(actuator)
         return actuator
 
-    def init_module(self, module: DAQ_Move  | DAQ_Viewer, controller=None):
-        """Initialize a control module, optionally wiring it to an existing controller.
-
-        Parameters
-        ----------
-        module: DAQ_Move or DAQ_Viewer
-        controller: object, optional
-            If given, assigned to module.controller before init (slave mode).
-        """
-        if controller is not None:
-            module.controller = controller
-        module.init_hardware_ui()
-        QtWidgets.QApplication.processEvents()
-        self.modules_manager.poll_init(module)
-        QtWidgets.QApplication.processEvents()
-
-    def _finalize_extension_module(self, module: DAQ_Move  | DAQ_Viewer,
-                                   instrument_controller,
-                                   module_list):
-        """Finalize a module added from an extension: wire controller, init, append to list."""
-        module.master = False
-        self.init_module(module, controller=instrument_controller)
-        module_list.append(module)
-
     def add_move_from_extension(
-        self, name: str, instrument_name: str, instrument_controller: Any,
-            ui_identifier=None,
-            **kwargs,
+        self, *args, modules: list[PluginInfo] = None,
+        **kwargs,
     ):
-        """Specific method to add a DAQ_Move within the Dashboard. This Particular actuator
+        """Specific method to add DAQ_Moves within the Dashboard. This Particular actuator
         should be defined in the plugin of the extension and is used to mimic an actuator while
         move_abs is actually triggering an action on the extension which loaded it
 
@@ -843,6 +822,10 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
         Parameters
         ----------
+        modules: list[PluginInfo]
+
+
+        Deprecated:
         name: str
             The name to print on the UI title
         instrument_name: str
@@ -855,10 +838,25 @@ class DashBoard(CustomApp, LECOComponentMixin):
             One of the possible registered UI
         kwargs: named arguments to be passed to add_move
         """
-        actuator = self.add_move(name, instrument_name,
-                                 ui_identifier=ui_identifier,
-                                 **kwargs)
-        self._finalize_extension_module(actuator, instrument_controller, self.actuators_modules)
+        if modules is None:
+            modules = [
+                PluginInfo(
+                    id=0,
+                    name=args[0],
+                    class_name=args[1],
+                    type=ModuleType.Actuator,
+                    settings=None,
+                    is_master=False,
+                    do_init=True,
+                    ui=None,
+                    daq_type=None,
+                    controller=args[2]
+                ),
+            ]
+        self.module_loader = ModuleLoader(self, [[mod] for mod in modules])
+        self.module_loader.all_instruments_added.connect(self.modules_manager.add_modules)
+        self.module_loader.start()
+
 
     @property
     def docks_viewer(self):
@@ -945,7 +943,10 @@ class DashBoard(CustomApp, LECOComponentMixin):
                     mod.override_grab_from_extension = True
 
     def add_det_from_extension(
-        self, name: str, daq_type: str, instrument_name: str, instrument_controller: Any,
+            self, *args,
+            modules: list[PluginInfo] = None,
+            callback: Callable = None,
+            **kwargs,
     ):
         """Specific method to add a DAQ_Viewer within the Dashboard. This Particular detector
         should be defined in the plugin of the extension and is used to mimic a grab while data
@@ -956,6 +957,11 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
         Parameters
         ----------
+        modules: list[PluginInfo]
+        callback: a callable method (slot like) that will receive the *list of added modules* when done
+
+        Deprecated:
+        -----------
         name: str
             The name to print on the UI title
         daq_type: str
@@ -967,10 +973,27 @@ class DashBoard(CustomApp, LECOComponentMixin):
             whatever object is used to communicate between the instrument module and the extension
             which created it
         """
-        detector = self.add_det(
-            name, plug_type=daq_type, plug_subtype=instrument_name,
-        )
-        self._finalize_extension_module(detector, instrument_controller, self.detector_modules)
+        if modules is None:
+            modules = [
+                PluginInfo(
+                    id=0,
+                    name=args[0],
+                    class_name=args[2],
+                    type=ModuleType.Detector,
+                    settings=None,
+                    is_master=False,
+                    do_init=True,
+                    ui=None,
+                    daq_type=DAQTypesEnum[args[1]] ,
+                    controller=args[3]
+                ),
+            ]
+        self.module_loader = ModuleLoader(self, [[mod] for mod in modules])
+        self.module_loader.all_instruments_added.connect(self.modules_manager.add_modules)
+        if callback is not None:
+            self.module_loader.all_instruments_added.connect(callback)
+        self.module_loader.start()
+
 
     # def set_remote_configuration(self, filename):
     #     if not isinstance(filename, Path):

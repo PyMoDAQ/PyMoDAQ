@@ -1,4 +1,5 @@
 from typing import List, Union, TYPE_CHECKING, Optional, Sequence
+
 from pymodaq.control_modules.viewer_utility_classes import HW_SETTINGS_KEY as DETECTOR_SETTINGS_KEY
 
 from qtpy.QtCore import QObject, Signal, Slot
@@ -171,12 +172,22 @@ class ModulesManager(QObject, ParameterManager):
             logger.warning(f'No detector with this name: {name}')
             return None
 
+    def add_modules(self, modules: list[Union['DAQ_Move', 'DAQ_Viewer']]):
+        """ Add new modules to the manager keeping the initial set of selected actuators or detectors"""
+        actuators = [act for act in modules if act.__class__.__name__ == 'DAQ_Move']
+        detectors = [det for det in modules if det.__class__.__name__ == 'DAQ_Viewer']
+
+        self.set_actuators(self.actuators_all + actuators, self.actuators)
+        self.set_detectors(self.detectors_all + detectors, self.detectors)
+        logger.debug(f"New modules added to the ModulesManager: {modules}"
+                     f"Total list is: {self.modules_name}")
+
+
     def set_actuators(self, actuators: list['DAQ_Move'], selected_actuators: list['DAQ_Move']):
         """Populates actuators and the subset to be selected in the UI"""
         self._actuators = actuators
         self.settings.child('actuators').setValue(dict(all_items=self.get_names(actuators),
                                                        selected=self.get_names(selected_actuators)))
-
     def set_actuators_from_names(self, actuators: list[str], selected_actuators: list[str]):
         """Populates actuators and the subset to be selected in the UI from their names"""
         for act in actuators:
@@ -240,6 +251,10 @@ class ModulesManager(QObject, ParameterManager):
         return self.detectors_all + self.actuators_all
 
     @property
+    def modules_name(self) -> list[str]:
+        return [mod.title for mod in self.modules_all]
+
+    @property
     def Ndetectors(self):
         """Get the number of selected detectors"""
         return len(self.detectors)
@@ -280,6 +295,7 @@ class ModulesManager(QObject, ParameterManager):
         if set(actuators).issubset(self.actuators_name):
             self.settings.child('actuators').setValue(dict(all_items=self.actuators_name,
                                                            selected=actuators))
+
 
     def value_changed(self, param):
         if param.name() == 'detectors':
