@@ -249,8 +249,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.experiment_manager.enable_actions(True)
 
 
-
-
     def do_things_after_experiment_set(self, experiment_name: str):
 
         self.state_manager.update_menu(self.get_menu('state'))
