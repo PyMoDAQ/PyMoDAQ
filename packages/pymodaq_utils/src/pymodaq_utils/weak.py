@@ -78,12 +78,45 @@ def weak_slot(callback: Callable) -> Callable:
     except (TypeError, ValueError):
         pass
 
-    def wrapper(*call_args, **call_kwargs):
-        obj = receiver_ref()
-        if obj is None:
-            return None
-        args = call_args if max_extra_args is None else call_args[:max_extra_args]
-        return unbound_func(obj, *bound_args, *args, **bound_kwargs, **call_kwargs)
+    if max_extra_args is None:
+        # Unknown/unbounded arity (the target itself declares *args) -- nothing
+        # to pin down, fall back to forwarding everything.
+        def wrapper(*call_args, **call_kwargs):
+            obj = receiver_ref()
+            if obj is None:
+                return None
+            return unbound_func(obj, *bound_args, *call_args, **bound_kwargs, **call_kwargs)
+    else:
+        # Qt determines how many signal arguments to deliver to a connected
+        # Python callable by introspecting it -- and does so *reliably* only
+        # for a callable with a concrete, fixed parameter list. A generic
+        # `def wrapper(*call_args)` has no such list: its true arity is
+        # ambiguous to that introspection, and in practice different Qt/
+        # pytest-qt code paths resolve that ambiguity inconsistently (observed
+        # directly: identical connections deliver the full signal argument in
+        # one case and none of it in another, depending only on whether a
+        # pytest-qt `qtbot` fixture is active in the process -- not on
+        # anything specific to the target method). Rather than depend on
+        # guessing that resolution, generate a wrapper with exactly
+        # `max_extra_args` named positional parameters, so its arity is
+        # concrete and unambiguous to any introspector.
+        param_names = [f'_a{i}' for i in range(max_extra_args)]
+        extra_call_args = ''.join(f', {name}' for name in param_names)
+        source = (
+            f"def wrapper({', '.join(param_names)}):\n"
+            f"    obj = receiver_ref()\n"
+            f"    if obj is None:\n"
+            f"        return None\n"
+            f"    return unbound_func(obj, *bound_args{extra_call_args}, **bound_kwargs)\n"
+        )
+        namespace: dict = {}
+        exec(source, {
+            'receiver_ref': receiver_ref,
+            'unbound_func': unbound_func,
+            'bound_args': bound_args,
+            'bound_kwargs': bound_kwargs,
+        }, namespace)
+        wrapper = namespace['wrapper']
 
     # Copy __name__/__doc__ for readability (tracebacks, repr) without using
     # functools.wraps(unbound_func): that would set __wrapped__ to the
