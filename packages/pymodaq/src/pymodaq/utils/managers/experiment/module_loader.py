@@ -6,13 +6,14 @@ from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 from pymodaq.utils.exceptions import MasterSlaveError
 from pymodaq.utils.managers.modules.utils import ModuleType
-
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.logger import set_logger, get_module_name
 
 if TYPE_CHECKING:
     from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager, PluginInfo
 
 logger = set_logger(get_module_name(__file__))
+config = Config()
 
 
 def validate_master_slave_order(plugin_info: 'PluginInfo', ind_in_group: int, group_size: int) -> None:
@@ -71,10 +72,23 @@ class ModuleLoader(QtCore.QObject):
         self._current_plugin: 'PluginInfo' = None
         self._current_controller: Any = None
 
+        self._init_timeout_timer = QtCore.QTimer()
+        self._init_timeout_timer.setInterval(config('pymodaq', 'control_modules', 'control_module_ini_polling') * 1000)
+        self._init_timeout_timer.setSingleShot(True)
+        self._init_timeout_timer.timeout.connect(self._on_init_timeout)
+
+        self._set_type_timeout_timer = QtCore.QTimer()
+        self._set_type_timeout_timer.setInterval(5000)  # wait at most 5 seconds for the ui to update
+        self._set_type_timeout_timer.setSingleShot(True)
+        self._set_type_timeout_timer.timeout.connect(self._on_set_type_timeout)
+
     def start(self):
         self._advance()
 
     def _advance(self):
+        self._init_timeout_timer.stop()
+        self._set_type_timeout_timer.stop()
+
         self._ind += 1
         if self._ind == len(self._queue):
             self.manager.close_subentries_display()
@@ -104,15 +118,10 @@ class ModuleLoader(QtCore.QObject):
 
         self._current_module.instrument_changed.connect(self._on_type_set)
 
-        try:
-            self._set_module_type()
-        except Exception as e:
-            logger.exception(str(e))
-            self.load_failed.emit(f"Failure while setting the module type: "
-                                  f"{self._current_plugin.name} / {self._current_plugin.class_name}")
-
+        self._set_module_type()
 
     def _on_type_set(self):
+        self._set_type_timeout_timer.stop()
         self._current_module.instrument_changed.disconnect(self._on_type_set)
 
         if self._current_plugin.type == ModuleType.Actuator:
@@ -131,10 +140,17 @@ class ModuleLoader(QtCore.QObject):
         if not self._current_plugin.is_master:
             self._current_module.controller = self._current_controller
 
+        self._init_timeout_timer.start()
         self._current_module.init_hardware_ui()
+
+    def _on_set_type_timeout(self):
+        logger.info(f"Timeout reached when attempting setting the type of module: "
+                    f"{self._current_plugin.name}/{self._current_plugin.class_name} ")
+        self._on_init_done(False)
 
 
     def _on_init_done(self, initialized: bool):
+        self._init_timeout_timer.stop()
         self._current_module.init_signal.disconnect(self._on_init_done)
 
         if self._current_plugin.is_master and initialized:
@@ -143,7 +159,12 @@ class ModuleLoader(QtCore.QObject):
 
         self._advance()
 
+    def _on_init_timeout(self):
+        logger.info(f"Timeout reached when attempting initialization of module: {self._current_plugin.name}")
+        self._on_init_done(False)
+
     def _set_module_type(self):
+        self._set_type_timeout_timer.start()
         if self._current_plugin.type == ModuleType.Actuator:
             self.manager.dashboard.set_actuator_type(self._current_module, self._current_plugin.class_name)
         else:
@@ -151,3 +172,5 @@ class ModuleLoader(QtCore.QObject):
                                                      self._current_plugin.daq_type,
                                                      self._current_plugin.class_name)
         # transition to _on_type_set happens through the module's own instrument_changed signal
+
+
