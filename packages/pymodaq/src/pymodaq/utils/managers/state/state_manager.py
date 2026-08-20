@@ -2,6 +2,7 @@
 from typing import Union, TYPE_CHECKING
 from pathlib import Path
 import sys
+import weakref
 
 import toml
 from qtpy import QtWidgets, QtCore, QtGui
@@ -308,7 +309,16 @@ class StateManager(ManagerBase):
             self.experiment_manager.get_action(ManagerActions.LIST_EXTERNAL).widget.setEnabled(False)
             self.experiment_manager.applied_entry.connect(self.set_experiment_filename)  #action slot from experiment menu need this to update the list onf state entries
 
-        self.experiment_manager.entries_sync.value_changed.connect(lambda value: self.set_experiment_filename(value['current']))
+        # Close over a weakref, not `self`: see the note in
+        # pymodaq_gui.managers.manager_base.ManagerBase.connect_things_base for why a
+        # `self`-closing slot here would keep this manager alive indefinitely.
+        self_ref = weakref.ref(self)
+
+        def _on_experiment_entry_changed(value):
+            obj = self_ref()
+            if obj is not None:
+                obj.set_experiment_filename(value['current'])
+        self.experiment_manager.entries_sync.value_changed.connect(_on_experiment_entry_changed)
     def _update_entry(self, entry: Path):
         self.config_model.load(self.entry_filepath)
 
