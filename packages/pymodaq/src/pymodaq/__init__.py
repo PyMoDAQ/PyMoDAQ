@@ -6,14 +6,14 @@ from pathlib import Path
 
 import warnings
 
-import pymodaq_utils  # to init stuff related to pymodaq_utils  # necessary, leave it there
-import pymodaq_data  # to init stuff related to pymodaq_data  # necessary, leave it there
-import pymodaq_gui  # to init stuff related to pymodaq_gui  # necessary, leave it there
+import pymodaq_utils  # noqa to init stuff related to pymodaq_utils  # necessary, leave it there
+import pymodaq_data  # noqa to init stuff related to pymodaq_data  # necessary, leave it there
+import pymodaq_gui  # noqa to init stuff related to pymodaq_gui  # necessary, leave it there
 
-from pymodaq_data import Q_, Unit, ureg  # necessary, leave it there
+from pymodaq_data import Q_, Unit, ureg  # noqa necessary, leave it there
 
-from pymodaq.utils.config import Config  # Necessary for registration
-from pymodaq_utils.config import GlobalConfig as Config
+from pymodaq.utils.config import Config  #  noqa Necessary for registration
+from pymodaq_utils.config import GlobalConfig
 try:
     # with open(str(Path(__file__).parent.joinpath('resources/VERSION')), 'r') as fvers:
     #     __version__ = fvers.read().strip()
@@ -45,7 +45,7 @@ try:
         except ValueError:
             pass
 
-        config = Config()  # to ckeck for config file existence, otherwise create one
+        config = GlobalConfig()  # to ckeck for config file existence, otherwise create one
         copy_experiment()
 
 
@@ -63,8 +63,7 @@ try:
 
         # check the registered UI wrt the configuration
         from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
-        from pymodaq.utils.config import Config
-        
+
         uis_registered = ActuatorUIFactory().keys()
         
         uis_config = config('pymodaq', 'actuator', 'ui')
