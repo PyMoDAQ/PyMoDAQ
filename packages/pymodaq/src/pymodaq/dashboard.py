@@ -4,6 +4,7 @@ import itertools
 import sys
 import datetime
 import subprocess
+import weakref
 from pathlib import Path
 
 from typing import Union, List, Any, TYPE_CHECKING, Sequence
@@ -616,7 +617,19 @@ class DashBoard(CustomApp, LECOComponentMixin):
     #     return lambda: self.set_remote_configuration(filename)
 
     def create_extension_slot(self, extenum: ExtensionEnum):
-        return lambda: self.load_extension(extenum)
+        # Close over a weakref, not `self`: PySide/PyQt keep an internal reference to
+        # a connected Python callable that outlives disconnect()/deleteLater() (this
+        # appears to survive even destroying the underlying QAction entirely), so a
+        # `self`-closing slot here keeps the DashBoard alive indefinitely regardless
+        # of any teardown code. Closing over a weakref means that even if PySide
+        # leaks this closure forever, it no longer keeps the DashBoard reachable.
+        self_ref = weakref.ref(self)
+
+        def slot():
+            dashboard = self_ref()
+            if dashboard is not None:
+                dashboard.load_extension(extenum)
+        return slot
 
     # def create_roi_file(self):
     #     try:
