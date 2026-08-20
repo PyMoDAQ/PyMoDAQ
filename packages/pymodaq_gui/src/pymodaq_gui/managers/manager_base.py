@@ -1,5 +1,5 @@
+import functools
 import sys
-import weakref
 from pathlib import Path
 from typing import Any, Union, TYPE_CHECKING, Optional
 
@@ -10,6 +10,7 @@ from qtpy.QtGui import QKeySequence
 from pymodaq_gui.utils.styling import create_icon
 
 from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_utils.weak import weak_slot
 from pymodaq.extensions.custom_ext import CustomExt
 
 from pymodaq_utils.enums import StrEnum
@@ -329,36 +330,27 @@ class ManagerBase(CustomExt):
         return combo
 
     def connect_things_base(self):
-        # Close over a weakref, not `self`: PySide/PyQt keep an internal reference to
-        # a connected Python callable that outlives disconnect()/deleteLater() (this
-        # can survive even destroying the underlying QAction entirely), so a
-        # `self`-closing slot here would keep this manager alive indefinitely
-        # regardless of any teardown code. Closing over a weakref means that even if
-        # PySide leaks these closures forever, they no longer keep it reachable.
-        self_ref = weakref.ref(self)
+        # connect_action() auto-wraps bound-method slots in a weakref (see
+        # ActionManager.connect_action / pymodaq_utils.weak.weak_slot): PySide/PyQt
+        # keep an internal reference to a connected Python callable that outlives
+        # disconnect()/deleteLater(), so a plain bound method here would otherwise
+        # keep this manager alive indefinitely regardless of any teardown code.
+        self.connect_action(ManagerActions.COPY, self.copy_entry)
+        self.connect_action(ManagerActions.NEW, self.create_entry)
+        self.connect_action(ManagerActions.DELETE, self.delete_entry)
+        self.connect_action(ManagerActions.SAVE, self.save_check)
+        self.connect_action(ManagerActions.RELOAD, self.update_entry)
+        self.connect_action(ManagerActions.EXECUTE, self.execute_current_entry)
 
-        def _bind(method_name: str):
-            def slot():
-                obj = self_ref()
-                if obj is not None:
-                    getattr(obj, method_name)()
-            return slot
+        self.connect_action(ManagerActions.OPEN, self.show)
 
-        self.connect_action(ManagerActions.COPY, _bind('copy_entry'))
-        self.connect_action(ManagerActions.NEW, _bind('create_entry'))
-        self.connect_action(ManagerActions.DELETE, _bind('delete_entry'))
-        self.connect_action(ManagerActions.SAVE, _bind('save_check'))
-        self.connect_action(ManagerActions.RELOAD, _bind('update_entry'))
-        self.connect_action(ManagerActions.EXECUTE, _bind('execute_current_entry'))
-
-        self.connect_action(ManagerActions.OPEN, _bind('show'))
-
-        def _update_entry_from_sync(value):
-            obj = self_ref()
-            if obj is not None:
-                obj.update_entry(value['current'])
-        self.entries_sync.value_changed.connect(_update_entry_from_sync)
+        # entries_sync.value_changed is not routed through connect_action(), so it
+        # needs the same weak-wrapping applied explicitly.
+        self.entries_sync.value_changed.connect(weak_slot(self._on_entries_sync_changed))
         self.sync_entries_with(self.get_action_list())
+
+    def _on_entries_sync_changed(self, value):
+        self.update_entry(value['current'])
 
     def execute_current_entry(self):
         self.execute_entry(self.entry)
@@ -597,16 +589,10 @@ class ManagerBase(CustomExt):
             f'Execute the selected {self.entry_type} entry: {entry} ("Ctrl+A")')
 
     def create_slot_from_file(self, filename: Path):
-        # See the weakref note in connect_things_base(): a `self`-closing slot
-        # connected to a per-file QAction would keep this manager (and everything it
-        # owns) alive indefinitely, even after the action is destroyed.
-        self_ref = weakref.ref(self)
-
-        def slot():
-            obj = self_ref()
-            if obj is not None:
-                obj.execute_entry(filename)
-        return slot
+        # A functools.partial of a bound method: connect_action() auto-weakifies
+        # this (see the note in connect_things_base()), so it's safe to connect to
+        # a per-file QAction without keeping this manager alive indefinitely.
+        return functools.partial(self.execute_entry, filename)
 
     def update_menu(self, menu: QtWidgets.QMenu = None):
         try:

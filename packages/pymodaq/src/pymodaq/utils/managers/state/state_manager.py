@@ -2,7 +2,6 @@
 from typing import Union, TYPE_CHECKING
 from pathlib import Path
 import sys
-import weakref
 
 import toml
 from qtpy import QtWidgets, QtCore, QtGui
@@ -14,6 +13,7 @@ from pymodaq.utils.managers.modules.module_settings_manager import SettingsManag
 from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config, get_set_local_dir
+from pymodaq_utils.weak import weak_slot
 
 from pymodaq_gui.parameter import Parameter, ioxml
 from pymodaq_gui.parameter.utils import ParameterWithPath
@@ -307,18 +307,19 @@ class StateManager(ManagerBase):
 
         else:
             self.experiment_manager.get_action(ManagerActions.LIST_EXTERNAL).widget.setEnabled(False)
-            self.experiment_manager.applied_entry.connect(self.set_experiment_filename)  #action slot from experiment menu need this to update the list onf state entries
+            #action slot from experiment menu need this to update the list onf state entries
+            self.experiment_manager.applied_entry.connect(weak_slot(self.set_experiment_filename))
 
-        # Close over a weakref, not `self`: see the note in
+        # These connect directly to a signal, not through connect_action(), so they
+        # need weak_slot() applied explicitly (see the note in
         # pymodaq_gui.managers.manager_base.ManagerBase.connect_things_base for why a
-        # `self`-closing slot here would keep this manager alive indefinitely.
-        self_ref = weakref.ref(self)
+        # `self`-closing slot here would keep this manager alive indefinitely).
+        self.experiment_manager.entries_sync.value_changed.connect(
+            weak_slot(self._on_experiment_entry_changed))
 
-        def _on_experiment_entry_changed(value):
-            obj = self_ref()
-            if obj is not None:
-                obj.set_experiment_filename(value['current'])
-        self.experiment_manager.entries_sync.value_changed.connect(_on_experiment_entry_changed)
+    def _on_experiment_entry_changed(self, value):
+        self.set_experiment_filename(value['current'])
+
     def _update_entry(self, entry: Path):
         self.config_model.load(self.entry_filepath)
 

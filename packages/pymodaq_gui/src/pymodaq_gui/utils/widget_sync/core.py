@@ -870,12 +870,20 @@ class BaseWidgetSync(QObject):
         property_key: str | None,
     ) -> Callable:
         """Create callback for widget → sync updates."""
+        # Weak-reference `self` (not just the widget): PySide/PyQt keep an internal
+        # reference to a connected Python callable that outlives disconnect(), so a
+        # `self`-closing callback connected to the widget's signal would otherwise
+        # keep this sync instance alive indefinitely regardless of unbind()/
+        # unbind_all().
+        sync_ref = ref(self)
+
         def on_widget_change(*args):
+            sync = sync_ref()
             widget_obj = widget_ref()
-            if widget_obj is None:
+            if sync is None or widget_obj is None:
                 return
 
-            conn = self._connections.get(connection_key)
+            conn = sync._connections.get(connection_key)
             if conn is None or not conn.get('enabled', True):
                 return
 
@@ -887,24 +895,24 @@ class BaseWidgetSync(QObject):
                 # Track this widget as the sender to prevent feedback loop
                 # Store only widget_id to block ALL property updates on this widget
                 widget_id = connection_key[0]
-                self._sender_widget_id = widget_id
+                sync._sender_widget_id = widget_id
                 try:
                     # Property connection: update dict key
                     if property_key is not None:
                         # In single-value mode, set_value expects unwrapped value
                         if property_key == "__value__":
-                            self.set_value(value, emit=True)
+                            sync.set_value(value, emit=True)
                         # In dict mode, set_value expects the full dict
-                        elif isinstance(self._value, dict):
-                            new_dict = self._value.copy()
+                        elif isinstance(sync._value, dict):
+                            new_dict = sync._value.copy()
                             new_dict[property_key] = value
-                            self.set_value(new_dict, emit=True)
+                            sync.set_value(new_dict, emit=True)
                     # Regular connection: update entire value
                     else:
-                        self.set_value(value, emit=True)
+                        sync.set_value(value, emit=True)
                 finally:
                     # Always clear sender after update
-                    self._sender_widget_id = None
+                    sync._sender_widget_id = None
             except Exception as e:
                 logger.error(
                     f"Error syncing from widget {type(widget_obj).__name__}: {e}",
@@ -922,19 +930,27 @@ class BaseWidgetSync(QObject):
         property_key: str | None,
     ) -> Callable:
         """Create callback for sync → widget updates."""
+        # Weak-reference `self`: this callback is connected to self.value_changed
+        # (the sync's own signal), and PySide/PyQt keep an internal reference to a
+        # connected Python callable that outlives disconnect() — connecting a
+        # `self`-closing callback to its own signal would otherwise keep this sync
+        # instance alive indefinitely regardless of unbind()/unbind_all().
+        sync_ref = ref(self)
+
         def on_sync_change(value):
+            sync = sync_ref()
             widget_obj = widget_ref()
-            if widget_obj is None:
+            if sync is None or widget_obj is None:
                 return
 
-            conn = self._connections.get(connection_key)
+            conn = sync._connections.get(connection_key)
             if conn is None or not conn.get('enabled', True):
                 return
 
             # Skip updating the widget that triggered this change (prevent feedback loop)
             # Check widget_id only, so ALL properties on the sender widget are skipped
             widget_id = connection_key[0]
-            if self._sender_widget_id == widget_id:
+            if sync._sender_widget_id == widget_id:
                 return
 
             try:
@@ -944,8 +960,8 @@ class BaseWidgetSync(QObject):
                     if property_key == "__value__":
                         # Value is already unwrapped, use it directly
                         # Check if it actually changed
-                        if self._previous_value and isinstance(self._previous_value, dict):
-                            old_prop_value = self._previous_value.get("__value__")
+                        if sync._previous_value and isinstance(sync._previous_value, dict):
+                            old_prop_value = sync._previous_value.get("__value__")
                             if old_prop_value == value:
                                 return  # Value didn't change, skip update
                     # In dict mode, extract the specific property from the dict
@@ -954,8 +970,8 @@ class BaseWidgetSync(QObject):
 
                         # Optimization: Only update if this specific property changed
                         # Compare old and new dict values for this property
-                        if self._previous_value and isinstance(self._previous_value, dict):
-                            old_prop_value = self._previous_value.get(property_key)
+                        if sync._previous_value and isinstance(sync._previous_value, dict):
+                            old_prop_value = sync._previous_value.get(property_key)
                             if old_prop_value == new_prop_value:
                                 return  # Property didn't change, skip update
 
@@ -965,7 +981,7 @@ class BaseWidgetSync(QObject):
 
                 if from_sync_transform:
                     value = from_sync_transform(value)
-                with self._block_signals(widget_obj):
+                with sync._block_signals(widget_obj):
                     setter(value)
             except Exception as e:
                 logger.error(
@@ -1731,25 +1747,33 @@ class DictSync(BaseWidgetSync):
 
             # Parameter → Sync (TO_SYNC or BIDIRECTIONAL)
             if mode in (SyncMode.TO_SYNC, SyncMode.BIDIRECTIONAL) and signal and getter:
-                def make_param_to_sync_callback(key, get_fn, callbacks_ref):
+                def make_param_to_sync_callback(key, get_fn, callbacks_ref, sync_ref):
+                    # Weak-reference the sync instance: this callback is connected to
+                    # the Parameter's signal, and PySide/PyQt keep an internal
+                    # reference to a connected Python callable that outlives
+                    # disconnect(), so closing over `self` here would otherwise keep
+                    # this sync instance alive indefinitely.
                     def on_param_change(param, value):
+                        sync = sync_ref()
+                        if sync is None:
+                            return
                         # Get actual value using getter
                         actual_value = get_fn()
-                        if actual_value != self.value.get(key):
-                            new_dict = self.value.copy()
+                        if actual_value != sync.value.get(key):
+                            new_dict = sync.value.copy()
                             new_dict[key] = actual_value
                             # Get the reverse callback to disconnect it
                             reverse_cb = callbacks_ref.get((key, 'sync_to_param'))
                             if reverse_cb:
-                                self.value_changed.disconnect(reverse_cb)
+                                sync.value_changed.disconnect(reverse_cb)
                             try:
-                                self.value = new_dict
+                                sync.value = new_dict
                             finally:
                                 if reverse_cb:
-                                    self.value_changed.connect(reverse_cb)
+                                    sync.value_changed.connect(reverse_cb)
                     return on_param_change
 
-                callback = make_param_to_sync_callback(property_key, getter, all_param_callbacks)
+                callback = make_param_to_sync_callback(property_key, getter, all_param_callbacks, ref(self))
                 signal.connect(callback)
                 all_param_callbacks[(property_key, 'param_to_sync')] = (signal, callback)
                 # Note: Don't add to connection_info['callbacks'] - Qt auto-disconnects

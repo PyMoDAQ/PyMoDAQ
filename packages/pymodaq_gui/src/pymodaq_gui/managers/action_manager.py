@@ -11,6 +11,7 @@ from qtpy.QtWidgets import QAction as QtQAction
 from pymodaq_gui.utils.styling import create_icon
 from pymodaq_utils.warnings import deprecation_msg
 from pymodaq_utils.config import GlobalConfig as Config
+from pymodaq_utils.weak import weak_slot
 
 try:
     from pymodaq_gui.resources.material_icons import MaterialIcon
@@ -926,13 +927,25 @@ class ActionManager:
             if True connect the trigger signal of the action to the defined slot else disconnect it
         signal_name: str
             try to use it as a signal (for widgets added...) otherwise use the *triggered* signal
+
+        Notes
+        -----
+        A bound method (``self.some_method``) or a ``functools.partial`` of one is
+        automatically wrapped to hold a weakref to its owner instead of a strong
+        reference (see :func:`pymodaq_utils.weak.weak_slot`): PySide/PyQt keep an
+        internal reference to a connected Python callable that outlives
+        ``disconnect()``, so an unwrapped self-referencing slot would keep the owner
+        alive for as long as the action exists, regardless of any teardown code. A
+        raw lambda/closure cannot be safely rewritten this way and is connected
+        unchanged — prefer a bound method or ``functools.partial`` over a lambda here
+        when the slot needs to close over ``self``.
         """
         signal = 'triggered'
         if name in self._actions:
             if hasattr(self._actions[name], signal_name):
                 signal = signal_name
             if connect:
-                getattr(self._actions[name], signal).connect(slot)
+                getattr(self._actions[name], signal).connect(weak_slot(slot))
             else:
                 try:
                     if slot is not None:

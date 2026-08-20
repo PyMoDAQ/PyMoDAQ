@@ -1,5 +1,5 @@
+import functools
 import sys
-import weakref
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -131,18 +131,14 @@ class ExtensionManager(ManagerBase):
 
     def connect_things(self):
         """Connect extension actions to load methods."""
-        # Close over a weakref, not `self`: PySide/PyQt keep an internal reference to
-        # a connected Python callable that outlives disconnect()/deleteLater() (this
-        # can survive even destroying the underlying QAction entirely), so a
-        # `self`-closing slot here would keep this manager alive indefinitely
-        # regardless of any teardown code.
-        self_ref = weakref.ref(self)
+        # connect_action() auto-wraps bound-method slots in a weakref (see
+        # ActionManager.connect_action / pymodaq_utils.weak.weak_slot): PySide/PyQt
+        # keep an internal reference to a connected Python callable that outlives
+        # disconnect()/deleteLater(), so a plain functools.partial of a bound method
+        # here would otherwise keep this manager alive indefinitely.
         for ext_name in ExtensionEnum.names():
-            def slot(e=ExtensionEnum[ext_name]):
-                obj = self_ref()
-                if obj is not None:
-                    obj.load_extension(e)
-            self.connect_action(ExtensionEnum[ext_name], slot)
+            self.connect_action(ExtensionEnum[ext_name],
+                               functools.partial(self.load_extension, ExtensionEnum[ext_name]))
 
     def quit_fun(self):
         """Clean up extensions and internal dashboard."""
