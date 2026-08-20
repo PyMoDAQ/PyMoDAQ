@@ -694,31 +694,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
             if self.pid_window is not None:
                 self.pid_window.close()
 
-            # Break reference cycles created by lambda slots (e.g. extension menu
-            # actions, settings-tree expand/collapse) that close over `self`: closing
-            # the widgets above does not destroy them, so those connections would
-            # otherwise keep this DashBoard (and everything it owns, including
-            # per-module QThreads/QTimers) alive for the rest of the process. Each of
-            # these sub-managers is itself an ActionManager with its own `_actions`
-            # dict of lambda-connected QActions closing over itself, and holds a
-            # `.parent` back-reference to this DashBoard, so they need the same
-            # treatment or they keep the DashBoard alive transitively.
-            for manager in (self, self.experiment_manager, self.state_manager,
-                            self.overshooter, self.roi_manager, self.extension_manager):
-                manager.clear_actions()
-                manager.clear_settings_tree()
-                # ManagerBase subclasses (experiment/state/overshoot managers) also
-                # stash per-file lambda slots (closing over `self`) directly in a
-                # plain dict, and connect a `self`-closing lambda to entries_sync
-                # independently of the QAction machinery clear_actions() handles.
-                if hasattr(manager, '_entry_slots'):
-                    manager._entry_slots.clear()
-                if hasattr(manager, 'entries_sync'):
-                    try:
-                        manager.entries_sync.value_changed.disconnect()
-                    except (TypeError, RuntimeError):
-                        pass
-
         except Exception as e:
             logger.exception(str(e))
         finally:
