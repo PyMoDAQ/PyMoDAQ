@@ -47,8 +47,8 @@ from pymodaq_gui.utils import DockArea, Dock
 
 from pymodaq.utils.gui_utils import get_splash_sc
 from pymodaq.control_modules.daq_viewer_ui.ui_base import DAQ_Viewer_UI
-from pymodaq.control_modules.instruments import (DET_TYPES, DAQTypesEnum,
-                                           DetectorError, get_viewer_plugins)
+from pymodaq.control_modules.instruments import (DET_TYPES, DetectorError, get_viewer_plugins)
+from pymodaq.control_modules.enums import DAQTypesEnum
 from pymodaq.control_modules.thread_commands import (ThreadStatus, ThreadStatusViewer, ControlToHardware,
                                                      ControlToHardwareViewer, UiToMainViewer)
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerBase

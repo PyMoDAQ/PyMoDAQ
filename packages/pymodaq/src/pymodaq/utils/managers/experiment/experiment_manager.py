@@ -1,6 +1,6 @@
 from typing import Union, TYPE_CHECKING
 
-from pymodaq.control_modules.instruments import DAQTypesEnum
+from pymodaq.control_modules.enums import DAQTypesEnum
 
 from pathlib import Path
 import sys

@@ -10,7 +10,7 @@ from pytest import fixture
 from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
 from pymodaq.utils.conftests import qtbotskip, main_modules_skip
 from pymodaq.control_modules.daq_viewer_ui.ui_base import DAQ_Viewer_UI, options
-from pymodaq.control_modules.instruments import DAQTypesEnum
+from pymodaq.control_modules.enums import DAQTypesEnum
 from pymodaq_gui.utils.dock import Dock
 from qtpy import QtWidgets
 from pymodaq.control_modules.thread_commands import UiToMainViewer
