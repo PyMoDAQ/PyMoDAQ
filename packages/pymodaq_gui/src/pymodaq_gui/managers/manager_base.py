@@ -1,4 +1,5 @@
 import sys
+import weakref
 from pathlib import Path
 from typing import Any, Union, TYPE_CHECKING, Optional
 
@@ -328,16 +329,35 @@ class ManagerBase(CustomExt):
         return combo
 
     def connect_things_base(self):
-        self.connect_action(ManagerActions.COPY, lambda: self.copy_entry())
-        self.connect_action(ManagerActions.NEW, lambda: self.create_entry())
-        self.connect_action(ManagerActions.DELETE, lambda: self.delete_entry())
-        self.connect_action(ManagerActions.SAVE, lambda: self.save_check())
-        self.connect_action(ManagerActions.RELOAD, lambda: self.update_entry())
-        self.connect_action(ManagerActions.EXECUTE, lambda: self.execute_current_entry())
+        # Close over a weakref, not `self`: PySide/PyQt keep an internal reference to
+        # a connected Python callable that outlives disconnect()/deleteLater() (this
+        # can survive even destroying the underlying QAction entirely), so a
+        # `self`-closing slot here would keep this manager alive indefinitely
+        # regardless of any teardown code. Closing over a weakref means that even if
+        # PySide leaks these closures forever, they no longer keep it reachable.
+        self_ref = weakref.ref(self)
 
-        self.connect_action(ManagerActions.OPEN, lambda: self.show())
+        def _bind(method_name: str):
+            def slot():
+                obj = self_ref()
+                if obj is not None:
+                    getattr(obj, method_name)()
+            return slot
 
-        self.entries_sync.value_changed.connect(lambda value: self.update_entry(value['current']))
+        self.connect_action(ManagerActions.COPY, _bind('copy_entry'))
+        self.connect_action(ManagerActions.NEW, _bind('create_entry'))
+        self.connect_action(ManagerActions.DELETE, _bind('delete_entry'))
+        self.connect_action(ManagerActions.SAVE, _bind('save_check'))
+        self.connect_action(ManagerActions.RELOAD, _bind('update_entry'))
+        self.connect_action(ManagerActions.EXECUTE, _bind('execute_current_entry'))
+
+        self.connect_action(ManagerActions.OPEN, _bind('show'))
+
+        def _update_entry_from_sync(value):
+            obj = self_ref()
+            if obj is not None:
+                obj.update_entry(value['current'])
+        self.entries_sync.value_changed.connect(_update_entry_from_sync)
         self.sync_entries_with(self.get_action_list())
 
     def execute_current_entry(self):
@@ -577,7 +597,16 @@ class ManagerBase(CustomExt):
             f'Execute the selected {self.entry_type} entry: {entry} ("Ctrl+A")')
 
     def create_slot_from_file(self, filename: Path):
-        return lambda: self.execute_entry(filename)
+        # See the weakref note in connect_things_base(): a `self`-closing slot
+        # connected to a per-file QAction would keep this manager (and everything it
+        # owns) alive indefinitely, even after the action is destroyed.
+        self_ref = weakref.ref(self)
+
+        def slot():
+            obj = self_ref()
+            if obj is not None:
+                obj.execute_entry(filename)
+        return slot
 
     def update_menu(self, menu: QtWidgets.QMenu = None):
         try:
