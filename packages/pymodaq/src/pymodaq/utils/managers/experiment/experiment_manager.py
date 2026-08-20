@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Union, TYPE_CHECKING
+from typing import Union, TYPE_CHECKING, Any
 
 from pymodaq.control_modules.instruments import DAQTypesEnum
 from pymodaq.utils.managers.experiment.module_loader import ModuleLoader
@@ -23,11 +23,11 @@ from pymodaq.utils.managers.modules.utils import ModuleType
 from pymodaq.control_modules.utils import ControllerStatus
 from pymodaq.utils.daq_utils import copy_experiment
 from pymodaq.utils.managers.experiment import utils  # noqa , to register groupemove and groupdet Parameters
-
+from pymodaq.control_modules.daq_move import DAQ_Move
+from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
-    from pymodaq.control_modules.daq_move import DAQ_Move
-    from pymodaq.control_modules.daq_viewer import DAQ_Viewer
+
 
 logger = set_logger(get_module_name(__file__))
 
@@ -48,6 +48,7 @@ class PluginInfo:
     do_init: bool
     ui: str = None
     daq_type: DAQTypesEnum = None
+    controller: Any = None
 
 
 class ExperimentManager(ManagerBase):
@@ -144,27 +145,24 @@ class ExperimentManager(ManagerBase):
             self._on_load_failed(e)
             return False
 
-    def finalize_execute(self):
+    def finalize_execute(self, modules: list[DAQ_Viewer | DAQ_Move] = None):
         self.close_subentries_display()
         self.dashboard.title = self.entry
         self.dashboard.mainwindow.setWindowTitle(f"PyMoDAQ Dashboard: {self.dashboard.title}")
 
-        if not (not self.actuators_modules and not self.detector_modules):
-            self.dashboard.update_status(
-                f"{self.entry_type.capitalize()} ({self.entry_filepath.name}) has been loaded",
-                log_type="log",
-            )
-            self.dashboard.actuators_modules = list(self.actuators_modules)
-            self.dashboard.detector_modules = list(self.detector_modules)
 
-            for module in self.actuators_modules + self.detector_modules:
-                module.init_signal.connect(self.dashboard.update_init_tree)
+        self.dashboard.update_status(
+            f"{self.entry_type.capitalize()} ({self.entry_filepath.name}) has been loaded",
+            log_type="log",
+        )
+        self.dashboard.actuators_modules = [mod for mod in modules if isinstance(mod, DAQ_Move)]
+        self.dashboard.detector_modules = [mod for mod in modules if isinstance(mod, DAQ_Viewer)]
 
-            self.dashboard.mainwindow.setVisible(True)
-            for area in self.dashboard.dockarea.tempAreas:
-                area.window().setVisible(True)
+        self.dashboard.mainwindow.setVisible(True)
+        for area in self.dashboard.dockarea.tempAreas:
+            area.window().setVisible(True)
 
-            self.dashboard.update_init_tree()
+        self.dashboard.update_init_tree()
 
         logger.info(f"{self.entry_type.capitalize()} file: {self.entry_filepath} has been loaded")
         self.set_entry_applied(True)
@@ -260,9 +258,10 @@ class ExperimentManager(ManagerBase):
         self.actuators_modules: list[DAQ_Move] = []
         self.detector_modules: list[DAQ_Viewer] = []
 
-        self.loader = ModuleLoader(self, plugins_sorted)
+        self.loader = ModuleLoader(self.dashboard, plugins_sorted)
         self.loader.all_instruments_added.connect(self.finalize_execute)
         self.loader.load_failed.connect(self._on_load_failed)
+        self.loader.module_index_init.connect(self.subentries_model.set_status)
         self.loader.start()
 
 
