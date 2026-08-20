@@ -1,42 +1,40 @@
+from dataclasses import dataclass
 from typing import Any, TYPE_CHECKING
 
+from pymodaq_gui.parameter import Parameter
 from qtpy import QtCore
 
-from pymodaq.control_modules.daq_move import DAQ_Move
-from pymodaq.control_modules.daq_viewer import DAQ_Viewer
+
+
+from pymodaq.control_modules.instruments import DAQTypesEnum
+
 from pymodaq.utils.exceptions import MasterSlaveError
-from pymodaq.utils.managers.modules.utils import ModuleType
-from pymodaq_utils.config import GlobalConfig as Config
+from pymodaq.utils.managers.modules import ModuleType
+
+from pymodaq_utils.config import GlobalConfig
 from pymodaq_utils.logger import set_logger, get_module_name
 
 if TYPE_CHECKING:
-    from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager, PluginInfo
+    from pymodaq.control_modules.daq_move import DAQ_Move
+    from pymodaq.control_modules.daq_viewer import DAQ_Viewer
     from pymodaq.dashboard import DashBoard
 
+config = GlobalConfig()
 logger = set_logger(get_module_name(__file__))
-config = Config()
 
 
-def validate_master_slave_order(plugin_info: 'PluginInfo', ind_in_group: int, group_size: int) -> None:
-    """Check that a plugin's Master/Slave status matches its position within its controller group.
-
-    Raises
-    ------
-    MasterSlaveError
-        if the first plugin of a group isn't Master, if a later one is,
-        or if a Master with no init has slaves depending on its controller.
-    """
-    if ind_in_group == 0:
-        if not plugin_info.is_master:
-            raise MasterSlaveError(f"The instrument {plugin_info.name} should be defined as Master")
-        if not plugin_info.do_init and group_size > 1:
-            raise MasterSlaveError(
-                f"The instrument {plugin_info.name} defined as Master has to be "
-                f"initialized (init checked in the experiment) in order to init "
-                f"its associated slave instrument")
-    else:
-        if plugin_info.is_master:
-            raise MasterSlaveError(f"The instrument {plugin_info.name} should be defined as Slave")
+@dataclass()
+class PluginInfo:
+    id: int
+    name: str
+    class_name: str
+    type: ModuleType
+    settings: Parameter
+    is_master: bool
+    do_init: bool
+    ui: str = None
+    daq_type: DAQTypesEnum = None
+    controller: Any = None
 
 
 class ModuleLoader(QtCore.QObject):
@@ -177,3 +175,23 @@ class ModuleLoader(QtCore.QObject):
         # transition to _on_type_set happens through the module's own instrument_changed signal
 
 
+def validate_master_slave_order(plugin_info: 'PluginInfo', ind_in_group: int, group_size: int) -> None:
+    """Check that a plugin's Master/Slave status matches its position within its controller group.
+
+    Raises
+    ------
+    MasterSlaveError
+        if the first plugin of a group isn't Master, if a later one is,
+        or if a Master with no init has slaves depending on its controller.
+    """
+    if ind_in_group == 0:
+        if not plugin_info.is_master:
+            raise MasterSlaveError(f"The instrument {plugin_info.name} should be defined as Master")
+        if not plugin_info.do_init and group_size > 1:
+            raise MasterSlaveError(
+                f"The instrument {plugin_info.name} defined as Master has to be "
+                f"initialized (init checked in the experiment) in order to init "
+                f"its associated slave instrument")
+    else:
+        if plugin_info.is_master:
+            raise MasterSlaveError(f"The instrument {plugin_info.name} should be defined as Slave")

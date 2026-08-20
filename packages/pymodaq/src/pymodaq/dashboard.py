@@ -18,7 +18,6 @@ from qtpy.QtWidgets import (
     QMessageBox,
 )
 
-from pymodaq.control_modules.utils import ControlModule
 from pymodaq.utils.managers.roi_manager.roi_manager import ROIManager
 from pymodaq.control_modules.instruments import find_actuator_class_from_name, DAQTypesEnum
 from pymodaq.control_modules.move_utility_classes import UiType

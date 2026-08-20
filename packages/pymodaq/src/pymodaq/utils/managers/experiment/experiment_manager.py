@@ -1,8 +1,6 @@
-from dataclasses import dataclass
-from typing import Union, TYPE_CHECKING, Any
+from typing import Union, TYPE_CHECKING
 
 from pymodaq.control_modules.instruments import DAQTypesEnum
-from pymodaq.utils.managers.experiment.module_loader import ModuleLoader
 
 from pathlib import Path
 import sys
@@ -19,6 +17,7 @@ from pymodaq.utils.config import get_set_experiment_path, get_set_overshoot_path
 from pymodaq_gui.config import get_set_layout_path, get_set_roi_path
 from pymodaq_gui.managers.manager_base import ManagerBase
 from pymodaq.utils.managers.modules.utils import ModuleType
+from pymodaq.utils.managers.modules.loader import PluginInfo, ModuleLoader
 
 from pymodaq.control_modules.utils import ControllerStatus
 from pymodaq.utils.daq_utils import copy_experiment
@@ -35,20 +34,6 @@ logger = set_logger(get_module_name(__file__))
 experiment_path = get_set_experiment_path()
 overshoot_path = get_set_overshoot_path()
 layout_path = get_set_layout_path()
-
-
-@dataclass()
-class PluginInfo:
-    id: int
-    name: str
-    class_name: str
-    type: ModuleType
-    settings: Parameter
-    is_master: bool
-    do_init: bool
-    ui: str = None
-    daq_type: DAQTypesEnum = None
-    controller: Any = None
 
 
 class ExperimentManager(ManagerBase):
