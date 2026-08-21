@@ -547,6 +547,24 @@ class ViewBox(pg.ViewBox):
             self.sig_double_clicked.emit(pos.x(), pos.y())
 
 
+def _next_free_col(dock: Dock, row: int = 0) -> int:
+    """ Find the first unoccupied column in the given row of the dock's grid layout
+
+    `layout.count()` isn't reliable for this: removing a widget from the middle of the
+    grid drops the item count without freeing up its column index, so appending at
+    `count()` can land on top of a widget that kept its original position.
+    """
+    occupied = set()
+    for ind in range(dock.layout.count()):
+        item_row, item_col, _, _ = dock.layout.getItemPosition(ind)
+        if item_row == row:
+            occupied.add(item_col)
+    col = 0
+    while col in occupied:
+        col += 1
+    return col
+
+
 def display_in_dock(show: bool, widget: QtWidgets.QWidget,
                     dock: Dock,
                     orientation=QtCore.Qt.Orientation.Horizontal):
@@ -554,7 +572,7 @@ def display_in_dock(show: bool, widget: QtWidgets.QWidget,
         if orientation == QtCore.Qt.Orientation.Horizontal:
             dock.addWidget(widget,
                            row=0,
-                           col=dock.layout.count())
+                           col=_next_free_col(dock, row=0))
         else:
             dock.addWidget(widget)
     widget.setVisible(show)
