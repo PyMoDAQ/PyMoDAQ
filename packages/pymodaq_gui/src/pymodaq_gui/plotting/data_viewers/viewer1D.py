@@ -31,7 +31,7 @@ from pymodaq_gui.utils.dock import Dock
 from pymodaq_gui.plotting.utils.plot_utils import display_in_dock
 
 logger = set_logger(get_module_name(__file__))
-config = Config()
+
 PLOT_COLORS = pymodaq_data.plotting.utils.PlotColors()
 config = GlobalConfig()
 
