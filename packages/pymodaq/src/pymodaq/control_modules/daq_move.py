@@ -206,8 +206,10 @@ class DAQ_Move(ParameterControlModule):
         act_name: str
             The actuator class name
         """
-        self.ui.actuator = act_name
         self.ui.cleanup_ui()
+        self.ui.actuator = act_name
+
+
 
         actuator_class = find_actuator_class_from_name(act_name)
         if actuator_class.ui_type != UiType.NONE:

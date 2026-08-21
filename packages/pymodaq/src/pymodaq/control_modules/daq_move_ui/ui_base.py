@@ -127,7 +127,7 @@ class DAQMoveUI(ControlModuleUI):
 
     @actuator.setter
     def actuator(self, act_name: str):
-        self.actuators_combo.setCurrentText(act_name)
+       self.actuators_combo.setCurrentText(act_name)
 
     @property
     def actuators(self):
@@ -333,6 +333,10 @@ class DAQMoveUI(ControlModuleUI):
         custom_ui.setup_action_visibility()
 
     def cleanup_ui(self):
+        try:
+            self.actuators_combo.currentTextChanged.disconnect()
+        except TypeError:
+            pass
         self.remove_absolute_spinbox_actions(self.toolbar)
         self.remove_absolute_actions(self.toolbar)
         self.remove_relative_actions(self.toolbar)
