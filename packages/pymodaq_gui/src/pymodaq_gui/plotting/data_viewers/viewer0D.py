@@ -303,9 +303,9 @@ class View0D(ActionManager, QObject):
         self.add_action('use_timestamps', 'Use Timestamps', 'timer_off',
                         'Use timestamps as axis', checkable=True,
                         icon_checked='timer')
-        self.add_action('scatter', 'Scatter', 'Marker', 'Switch between line or scatter plots',
+        self.add_action('scatter', 'Scatter', 'scatter_plot', 'Switch between line or scatter plots',
                         checkable=True)
-        self.add_action('xyplot', 'XYPlotting', '2d',
+        self.add_action('xyplot', 'XYPlotting', 'function',
                         'Switch between normal or XY representation (valid for 2 channels)',
                         checkable=True,
                         visible=False)
