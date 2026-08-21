@@ -441,7 +441,8 @@ class DataSaverLoader(DataManagement):
             parent_node = data_node.parent_node
             data_nodes = self._get_nodes_from_data_type(parent_node)
             data_node = data_nodes[0]
-            error_node = data_node
+            error_nodes = self._error_saver._get_nodes_from_data_type(parent_node)
+            error_node = error_nodes[0]
         else:
             parent_node = data_node.parent_node
             if not isinstance(data_node, CARRAY):
@@ -463,7 +464,7 @@ class DataSaverLoader(DataManagement):
         else:
             ndarrays = self.get_data_arrays(data_node, with_bkg=with_bkg, load_all=load_all)
             axes = self.get_axes(parent_node)
-            if error_node is not None:
+            if error_node is not None and self.data_type != DataType.error:
                 error_arrays = self._error_saver.get_data_arrays(error_node, load_all=load_all)
                 if len(error_arrays) == 0:
                     error_arrays = None
