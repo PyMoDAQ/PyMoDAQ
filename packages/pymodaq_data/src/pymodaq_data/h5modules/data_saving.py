@@ -442,7 +442,10 @@ class DataSaverLoader(DataManagement):
             data_nodes = self._get_nodes_from_data_type(parent_node)
             data_node = data_nodes[0]
             error_nodes = self._error_saver._get_nodes_from_data_type(parent_node)
-            error_node = error_nodes[0]
+            if len(error_nodes) > 0:
+                error_node = error_nodes[0]
+            else:
+                error_node = None
         else:
             parent_node = data_node.parent_node
             if not isinstance(data_node, CARRAY):
