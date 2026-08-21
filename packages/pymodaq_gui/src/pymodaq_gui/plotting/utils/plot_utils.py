@@ -482,41 +482,32 @@ class Data0DWithHistory:
                     self._data.pop(gone)
                 # Pad new channels with NaN so they share the current xaxis
                 for new in set(datas.keys()) - set(self._data.keys()):
-                    self._data[new] = np.full(self._data_length, np.nan)
+                    self._data[new] = np.full(len(self._xaxis), np.nan)
 
         self._data_length += 1
 
-        if self._data_length > self._Nsamples:
-            self._xaxis += 1
-        else:
-            self._xaxis = np.linspace(0, self._data_length, self._data_length, endpoint=False)
+        # xaxis is always rebuilt from the total sample counter and the *current*
+        # Nsamples, rather than incrementally shifted. This keeps it correct even if
+        # Nsamples is changed mid-acquisition (via the Nhistory spinbox), since it
+        # doesn't rely on the buffer's previous size to derive the next one.
+        buffer_length = min(self._data_length, self._Nsamples)
+        self._xaxis = np.linspace(max(0, self._data_length - self._Nsamples), self._data_length,
+                                   buffer_length, endpoint=False)
 
         for data_key, data in datas.items():
             if not isinstance(data, np.ndarray):
                 data = np.array([data])
 
-            if self._data_length == 1:
+            if data_key not in self._data:
                 self._data[data_key] = data
             else:
                 self._data[data_key] = np.concatenate((self._data[data_key], data))
-            if self._data_length > self._Nsamples:
-                self._data[data_key] = self._data[data_key][1:]
+            if len(self._data[data_key]) > self._Nsamples:
+                self._data[data_key] = self._data[data_key][-self._Nsamples:]
 
-        if self._data_length == 1:
-            self._timestamps = np.atleast_1d(timestamp)
-        else:
-            self._timestamps = np.concatenate((self._timestamps, np.atleast_1d(timestamp)))
-        if self._data_length > self._Nsamples:
-            self._timestamps = self._timestamps[1:]
-
-        # Re-sync the counter to the true buffer length instead of letting it grow
-        # unbounded. Otherwise, changing Nsamples mid-acquisition (via the Nhistory
-        # spinbox) could leave self._data_length far from the actual array lengths:
-        # e.g. raising Nsamples above a stale, much larger counter value flips the
-        # xaxis branch above back to np.linspace(0, self._data_length, ...), rebuilding
-        # xaxis at the old counter's length while the already-trimmed data arrays stay
-        # short, so the next plot_item.setData(...) gets mismatched x/y shapes.
-        self._data_length = len(self._xaxis)
+        self._timestamps = np.concatenate((self._timestamps, np.atleast_1d(timestamp)))
+        if len(self._timestamps) > self._Nsamples:
+            self._timestamps = self._timestamps[-self._Nsamples:]
 
     @property
     def data(self):
