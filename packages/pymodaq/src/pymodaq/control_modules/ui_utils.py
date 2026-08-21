@@ -41,9 +41,14 @@ class ControlModuleUI(CustomApp):
         self.settings_dock: Dock = settings_dock
         self.config = config
         self._ini_state = False
+        self._settings_detached = self.config('pymodaq', 'control_modules', 'settings_as_popup')
 
-        self._settings_widget = WidgetWithLabelTitle(self.title)
-        self._settings_widget.setLayout(QtWidgets.QVBoxLayout())
+        self._settings_widget = WidgetWithLabelTitle(self.title, closable=True, attachable=True)
+        self._settings_widget.sig_close.connect(lambda: self.show_settings(False))
+        self._settings_widget.sig_attach_detach.connect(self._attach_detach_settings)
+        self._settings_widget.set_attached(not self._settings_detached)
+        if self.settings_dock is None:
+            self._settings_widget.attach_pb.setVisible(False)
 
     def add_setting_tree(self, tree):
         self._settings_widget.insert_widget(tree)
@@ -128,11 +133,11 @@ class ControlModuleUI(CustomApp):
 
     def _show_settings(self, show: bool = True):
         """Slot connected to the show_settings action."""
-        if (self.config('pymodaq', 'control_modules', 'settings_as_popup')
-            or self.settings_dock is None):
+        if self._settings_detached or self.settings_dock is None:
             if self.settings_dock is not None:
-                self.settings_dock.removeWidgets(close=False)
-                self.settings_dock.setVisible(False)
+                self.settings_dock.removeWidget(self._settings_widget, close=False)
+                self.settings_dock.setVisible(
+                    bool(np.any([w.isVisible() for w in self.settings_dock.widgets])))
 
             self._settings_widget.setWindowTitle(f'{self.title} settings')
             self._settings_widget.setVisible(show)
@@ -146,6 +151,18 @@ class ControlModuleUI(CustomApp):
         """Programmatically show/hide the settings widget. API entry."""
         if self.is_action_checked('show_settings') != show:
             self.get_action('show_settings').trigger()
+
+    def _attach_detach_settings(self, detach: bool):
+        """Slot connected to the settings widget's attach/detach button.
+
+        Live-toggles whether the settings widget is docked or floating,
+        overriding the settings_as_popup config for this instance.
+        """
+        if self.settings_dock is None:
+            return
+        self._settings_detached = detach
+        if self.is_action_checked('show_settings'):
+            self._show_settings(True)
 
     def _connect_common_actions(self):
         """Connect actions that are common to all control module UIs.

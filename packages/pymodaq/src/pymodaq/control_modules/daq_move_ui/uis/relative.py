@@ -23,7 +23,6 @@ class DAQ_Move_UI_Relative(DAQ_Move_UI_Base):
     def setup_docks_and_widgets(self):
         super().setup_docks_and_widgets()
 
-        self.parent.setLayout(QtWidgets.QHBoxLayout())
         self.parent.layout().setContentsMargins(0, 0, 0, 0)
 
         self.current_value_sb.set_font_size(10)
