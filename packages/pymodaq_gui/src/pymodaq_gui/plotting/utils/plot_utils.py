@@ -509,6 +509,15 @@ class Data0DWithHistory:
         if self._data_length > self._Nsamples:
             self._timestamps = self._timestamps[1:]
 
+        # Re-sync the counter to the true buffer length instead of letting it grow
+        # unbounded. Otherwise, changing Nsamples mid-acquisition (via the Nhistory
+        # spinbox) could leave self._data_length far from the actual array lengths:
+        # e.g. raising Nsamples above a stale, much larger counter value flips the
+        # xaxis branch above back to np.linspace(0, self._data_length, ...), rebuilding
+        # xaxis at the old counter's length while the already-trimmed data arrays stay
+        # short, so the next plot_item.setData(...) gets mismatched x/y shapes.
+        self._data_length = len(self._xaxis)
+
     @property
     def data(self):
         return self._data
