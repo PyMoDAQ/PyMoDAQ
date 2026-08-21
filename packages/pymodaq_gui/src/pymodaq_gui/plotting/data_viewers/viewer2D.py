@@ -664,8 +664,9 @@ class View2D(ActionManager, QtCore.QObject):
         if (config('gui', 'viewer', 'rois_as_popup')
             or self.rois_dock is None):
             if self.rois_dock is not None:
-                self.rois_dock.removeWidgets(close=False)
-                self.rois_dock.setVisible(False)
+                self.rois_dock.removeWidget(self.roi_widget, close=False)
+                self.rois_dock.setVisible(
+                    bool(np.any([w.isVisible() for w in self.rois_dock.widgets])))
 
             self.roi_widget.setWindowTitle(f'{self.title} ROIs')
             self.roi_widget.setVisible(isroichecked)
