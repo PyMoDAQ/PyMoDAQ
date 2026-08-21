@@ -19,14 +19,11 @@ from qtpy.QtWidgets import (
 )
 
 
-
-
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.enums import BaseEnum, StrEnum
-
 
 from pymodaq_gui.parameter import ParameterTree, Parameter
 from pymodaq_gui.utils import DockArea, Dock, select_file
