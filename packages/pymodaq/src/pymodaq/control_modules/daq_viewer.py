@@ -365,8 +365,8 @@ class DAQ_Viewer(ParameterControlModule):
 
     def _setup_hardware_thread(self, hardware):
         if self.config('pymodaq', 'viewer', 'viewer_in_thread'):
-            hardware.moveToThread(self._hardware_thread)
-            self._hardware_thread.start()
+            hardware.moveToThread(self.controller_thread.thread)
+            self.controller_thread.thread.start()
 
     def _connect_hardware_signals(self, hardware):
         hardware.data_detector_sig[DataToExport].connect(self.show_data)
@@ -972,12 +972,10 @@ class DAQ_Viewer(ParameterControlModule):
             if self.ui is not None:
                 self.ui.detector_init = status.attribute['initialized']
             if status.attribute['initialized']:
-                self.controller = status.attribute['controller']
-                self._initialized_state = True
-            else:
-                self._initialized_state = False
+                self._controller_and_thread.controller = status.attribute["controller"]
 
-            self.init_signal.emit(self._initialized_state)
+            self._controller_and_thread.initialized = status.attribute["initialized"]
+            self.init_signal.emit(self._controller_and_thread.initialized)
 
         elif status.command == ThreadStatusViewer.GRAB:
             self.grab_status.emit(True)

@@ -745,15 +745,15 @@ class DAQ_Move(ParameterControlModule):
                 f"info: {status.attribute['info']}",
             )
             if status.attribute["initialized"]:
-                self.controller = status.attribute["controller"]
+                self._controller_and_thread.controller = status.attribute["controller"]
+                self._controller_and_thread.initialized = True
                 if self.ui is not None:
                     self.ui.actuator_init = True
-                self._initialized_state = True
             else:
-                self._initialized_state = False
-            if self._initialized_state:
+                self._controller_and_thread.initialized = False
+            if self._controller_and_thread.initialized:
                 self.get_actuator_value()
-            self.init_signal.emit(self._initialized_state)
+            self.init_signal.emit(self._controller_and_thread.initialized)
 
         elif (
             status.command == ThreadStatusMove.GET_ACTUATOR_VALUE
@@ -1022,6 +1022,7 @@ class ActuatorWorker(HardwareWorkerBase):
             return
         try:
             logger.debug(f"Threadcommand {command.command} sent to {self.title}")
+
             if command.command == ControlToHardwareMove.INI_STAGE:
                 # Legacy alias → emit the canonical INI_HARDWARE status
                 status: edict = self.ini_hardware(*command.attribute)
