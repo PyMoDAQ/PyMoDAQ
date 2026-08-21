@@ -359,7 +359,7 @@ def elt_as_first_element_dicts(elt_list, match_word='Mock', key='name'):
     return plugins
 
 
-def find_keys_from_val(dict_tmp: dict, val: object):
+def find_keys_from_val(dict_tmp: dict, val: object) -> list:
     """Returns the keys from a dict if its value is matching val"""
     return [k for k, v in dict_tmp.items() if v == val]
 

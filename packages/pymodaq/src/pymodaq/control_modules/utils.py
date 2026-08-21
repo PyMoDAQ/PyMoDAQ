@@ -29,7 +29,7 @@ from pymodaq.control_modules.thread_commands import (ThreadStatus, ControlToHard
                                                      ControleModuleType, ControllerStatus)  # noqa: F401
 
 if TYPE_CHECKING:
-    from .daq_move_ui.ui_base import DAQ_Move_UI_Base
+    from .daq_move_ui.ui_base import DAQMoveUI
     from .daq_viewer_ui.ui_base import DAQ_Viewer_UI
 
 
@@ -95,12 +95,13 @@ class ControlModule(QObject):
     _update_settings_signal = Signal(edict)
     status_sig = Signal(str)
     custom_sig = Signal(ThreadCommand)
+    timeout_signal = Signal(str)
     ui = None
 
     def __init__(self):
         QObject.__init__(self)
 
-        self.ui: Union['DAQ_Move_UI_Base', 'DAQ_Viewer_UI'] = None
+        self.ui: Union['DAQMoveUI', 'DAQ_Viewer_UI'] = None
 
         self._title = ""
         self.config = config
@@ -162,6 +163,7 @@ class ControlModule(QObject):
     def raise_timeout(self):
         """Handle a timeout event: display a status message."""
         self.update_status("Timeout occurred")
+        self.timeout_signal.emit(self.title)
 
     def thread_status(self, status: ThreadCommand):
         """Get back info (using the ThreadCommand object) from the hardware

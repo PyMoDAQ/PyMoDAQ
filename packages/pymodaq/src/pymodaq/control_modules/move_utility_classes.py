@@ -1,5 +1,6 @@
 import numbers
 
+from pymodaq.control_modules.daq_move_ui.utils import UiType
 
 HW_KIND = 'actuator'
 HW_SETTINGS_KEY = f'{HW_KIND}_settings'
@@ -10,23 +11,18 @@ from typing import Union, List, Dict, TYPE_CHECKING, Optional, TypeVar
 
 from easydict import EasyDict as edict
 import numpy as np
-from qtpy import QtWidgets
-from qtpy.QtCore import QObject, Slot, Signal, QTimer
+from qtpy.QtCore import Slot, Signal, QTimer
 from pint.errors import OffsetUnitCalculusError
 
 
 from pymodaq_utils.utils import ThreadCommand, find_keys_from_val
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_utils.enums import BaseEnum, enum_checker, StrEnum
-from pymodaq_utils.serialize.mysocket import Socket
-from pymodaq_utils.serialize.serializer_legacy import DeSerializer, Serializer
+from pymodaq_utils.enums import BaseEnum
 
 from pymodaq_data.data import DataUnitError, Q_, Unit
 
-import pymodaq_gui.parameter.utils as putils
 from pymodaq_gui.parameter import Parameter
-from pymodaq_gui.parameter import ioxml
 from pymodaq_gui.qt_utils import mkQApp
 
 from pymodaq_utils.warnings import deprecation_msg
@@ -78,12 +74,6 @@ class DataActuatorType(BaseEnum):
     """Enum for new or old style holding the value of the actuator"""
     float = 0
     DataActuator = 1
-
-class UiType(StrEnum):
-    NONE = 'None'
-    SIMPLE = 'Simple'
-    BINARY = 'Binary'
-    RELATIVE = 'Relative'
 
 
 def comon_parameters(epsilon=config('pymodaq', 'actuator', 'epsilon_default'),
@@ -279,8 +269,12 @@ class DAQ_Move_base(PluginBase):
     params = []
 
     data_actuator_type = DataActuatorType.float  # for backcompatibility, but new plugins should have DataActuatorType.DataActuator
-    ui_type = UiType.NONE  # should precise/force what should be the ui type to be used with this actuator
-    has_encoder = True
+    ui_type = UiType.NONE  # should precise (force if possible) what should be the ui type to be used with this
+    # actuator. If NONE, PyMoDAQ will use the default ui type (see preferences).
+    has_encoder = True  # tell PyMoDAQ if this actuator is able to set an absolute position and read the controller
+    # value. If False, you should consider having ui_type = UiType.RELATIVE
+
+
     data_shape = (1,)  # expected shape of the underlying actuator's value (in general a float so shape = (1, ))
 
     def __init__(self, parent: Optional['ActuatorWorker'] = None,
@@ -312,7 +306,6 @@ class DAQ_Move_base(PluginBase):
 
         self.poll_timer = QTimer(self)
         self.poll_timer.setInterval(config('pymodaq', 'actuator', 'polling_interval_ms'))
-        self._poll_timeout = config('pymodaq', 'actuator', 'polling_timeout_s')
         self.poll_timer.timeout.connect(self.check_target_reached)
 
         self.ini_attributes()
