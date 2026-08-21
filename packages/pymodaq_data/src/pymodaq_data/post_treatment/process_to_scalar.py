@@ -84,7 +84,11 @@ class StdProcessor(DataProcessorBase):
 
     def operate(self, sub_data: DataWithAxes):
         data_arrays = [np.atleast_1d(np.std(data, axis=sub_data.sig_indexes)) for data in sub_data]
-        return sub_data.deepcopy_with_new_data(data_arrays, sub_data.sig_indexes)
+        if sub_data.errors is not None:
+            error_arrays = [np.atleast_1d(np.std(data, axis=sub_data.sig_indexes)) for data in sub_data.errors]
+        else:
+            error_arrays = None
+        return sub_data.deepcopy_with_new_data(data_arrays, sub_data.sig_indexes, errors=error_arrays)
 
 
 @DataProcessorFactory.register('sum')
@@ -93,7 +97,11 @@ class SumProcessor(DataProcessorBase):
 
     def operate(self, sub_data: DataWithAxes):
         data_arrays = [np.atleast_1d(np.sum(data, axis=sub_data.sig_indexes)) for data in sub_data]
-        return sub_data.deepcopy_with_new_data(data_arrays, sub_data.sig_indexes)
+        if sub_data.errors is not None:
+            error_arrays = [np.atleast_1d(np.sum(data, axis=sub_data.sig_indexes)) for data in sub_data.errors]
+        else:
+            error_arrays = None
+        return sub_data.deepcopy_with_new_data(data_arrays, sub_data.sig_indexes, errors=error_arrays)
 
 
 @DataProcessorFactory.register('max')
@@ -102,7 +110,11 @@ class MaxProcessor(DataProcessorBase):
 
     def operate(self, sub_data: DataWithAxes):
         data_arrays = [np.atleast_1d(np.max(data, axis=sub_data.sig_indexes)) for data in sub_data]
-        return sub_data.deepcopy_with_new_data(data_arrays, sub_data.sig_indexes)
+        if sub_data.errors is not None:
+            error_arrays = [np.atleast_1d(np.max(data, axis=sub_data.sig_indexes)) for data in sub_data.errors]
+        else:
+            error_arrays = None
+        return sub_data.deepcopy_with_new_data(data_arrays, sub_data.sig_indexes, errors=error_arrays)
 
 
 @DataProcessorFactory.register('min')
@@ -111,7 +123,11 @@ class MinProcessor(DataProcessorBase):
 
     def operate(self, sub_data: DataWithAxes):
         data_arrays = [np.atleast_1d(np.min(data, axis=sub_data.sig_indexes)) for data in sub_data]
-        return sub_data.deepcopy_with_new_data(data_arrays, sub_data.sig_indexes)
+        if sub_data.errors is not None:
+            error_arrays = [np.atleast_1d(np.min(data, axis=sub_data.sig_indexes)) for data in sub_data.errors]
+        else:
+            error_arrays = None
+        return sub_data.deepcopy_with_new_data(data_arrays, sub_data.sig_indexes, errors=error_arrays)
 
 
 @DataProcessorFactory.register('argmax')
