@@ -57,6 +57,8 @@ class CustomExt(CustomApp):
         """Method to be subclassed in order to define a custom quit function
         """
         super().quit_fun()
+        if self.runner_thread is not None:
+            self.exit_runner_thread()
         if self.dashboard is not None:
             self.show_dashboard(True)  #make sure to show it if it was hidden
 
@@ -72,7 +74,7 @@ class CustomExt(CustomApp):
         if self.dashboard is not None:
             return self.dashboard.experiment_manager
 
-    def do_things_after_experiment_set(self, experiment_name: str):
+    def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: bool = None):
         """ This method is called whenever an experiment entry has been set.
 
         Its main purpose is to update the list of control modules in the manager and
@@ -86,7 +88,7 @@ class CustomExt(CustomApp):
             self.modules_manager.detectors_all = self.dashboard.modules_manager.detectors_all
 
             # show/hide dashboard
-            self.show_dashboard()
+            self.show_dashboard(show_dashboard)
 
     @property
     def state_manager(self) -> 'StateManager':

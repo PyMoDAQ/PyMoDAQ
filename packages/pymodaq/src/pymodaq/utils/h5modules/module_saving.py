@@ -183,7 +183,7 @@ class DetectorSaver(ModuleSaver):
 
         if self._module.ui is not None:
             for ind, viewer in enumerate(self._module.viewers):
-                if hasattr(viewer, 'roi_manager'):
+                if hasattr(viewer, 'roi_manager') and viewer.roi_manager is not None:
                     roi_xml = ET.SubElement(settings_xml, f'ROI_Viewer_{ind:02d}', type='group')
                     roi_xml.append(ioxml.walk_parameters_to_xml(param=viewer.roi_manager.settings))
 

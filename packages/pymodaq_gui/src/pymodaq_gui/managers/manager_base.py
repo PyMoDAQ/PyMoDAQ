@@ -110,6 +110,7 @@ class ManagerBase(CustomExt):
 
     execute_action_checkable = False
     icon_name = 'build_circle'  # the default icon to represent the manager in Toolbar and Menus
+    default_entry_name = 'default'
 
     def __init__(self,
                  dashboard: 'DashBoard' = None,
@@ -140,7 +141,7 @@ class ManagerBase(CustomExt):
         self.enable_actions(False)
         # then update it using a call to self.entries (itself needing entries_sync)
         self.entries_sync.update_key('items', self.entries)
-        self.entries_sync.update_key('current', 'default')
+        self.entries_sync.update_key('current', self.default_entry_name)
 
         self.update_action_list()
         self.update_execute_action_tooltip(self.entry)
@@ -214,10 +215,13 @@ class ManagerBase(CustomExt):
         return self.list_managed_entries_path()
 
     def list_managed_entries(self, **kwargs_to_entry_folder) -> list[str]:
-        """Returns a list of names of managed entries with 'default' as first """
+        """Returns a list of names of managed entries with the default one as first
+
+        See default_entry_name class attribute
+        """
         entries = [path.stem for path in self.list_managed_entries_path(**kwargs_to_entry_folder)]
-        entries.remove('default')
-        entries = ['default'] + entries  # always shows default as first
+        entries.remove(self.default_entry_name)
+        entries = [self.default_entry_name] + entries  # always shows default as first
         return entries
 
     def list_managed_entries_path(self, **kwargs_to_entry_folder) -> list[Path]:
@@ -230,8 +234,8 @@ class ManagerBase(CustomExt):
         entry_path = self.get_entry_folder(**kwargs_to_entry_folder)
         if not entry_path.exists():
             entry_path.mkdir(parents=True)
-        if not entry_path.joinpath(f'default{self.entry_extension}').exists():
-            self.create_entry('default', bypass_dialog=True)
+        if not entry_path.joinpath(f'{self.default_entry_name}{self.entry_extension}').exists():
+            self.create_entry(self.default_entry_name, bypass_dialog=True)
         return [path for path in entry_path.iterdir() if path.suffix == self.entry_extension]
 
     def setup_docks_and_widgets(self):
@@ -318,18 +322,26 @@ class ManagerBase(CustomExt):
         self.affect_to(ManagerActions.EXECUTE, toolbar)
         return toolbar, menu
 
+    def get_sync_combo_entry(self) -> ComboBox:
+        combo = ComboBox()
+        self.sync_entries_with(combo)
+        return combo
+
     def connect_things_base(self):
         self.connect_action(ManagerActions.COPY, lambda: self.copy_entry())
         self.connect_action(ManagerActions.NEW, lambda: self.create_entry())
         self.connect_action(ManagerActions.DELETE, lambda: self.delete_entry())
         self.connect_action(ManagerActions.SAVE, lambda: self.save_check())
         self.connect_action(ManagerActions.RELOAD, lambda: self.update_entry())
-        self.connect_action(ManagerActions.EXECUTE, lambda: self.execute_entry())
+        self.connect_action(ManagerActions.EXECUTE, lambda: self.execute_current_entry())
 
         self.connect_action(ManagerActions.OPEN, lambda: self.show())
 
         self.entries_sync.value_changed.connect(lambda value: self.update_entry(value['current']))
         self.sync_entries_with(self.get_action_list())
+
+    def execute_current_entry(self):
+        self.execute_entry(self.entry)
 
     def sync_entries_with(self, combo: ComboBox):
         self.entries_sync.bind_properties(
@@ -531,6 +543,10 @@ class ManagerBase(CustomExt):
         else:
             self.mainwindow.hide()
 
+    def force_show(self, show: bool = True):
+        self.set_action_checked(ManagerActions.OPEN, show)
+        self.show()
+
     def update_action_list(self):
         with QtCore.QSignalBlocker(self.get_action_list()) as blocker:
             try:
@@ -575,7 +591,7 @@ class ManagerBase(CustomExt):
 
             entries_path = self.list_managed_entries_path()
             entries_path.sort(key=lambda x: x.stem)
-            default_index = [entry.stem for entry in entries_path].index('default')
+            default_index = [entry.stem for entry in entries_path].index(self.default_entry_name)
             default_path = entries_path.pop(default_index)
             entries_path = [default_path] + entries_path
 

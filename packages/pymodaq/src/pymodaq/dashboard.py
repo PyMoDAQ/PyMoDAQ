@@ -18,6 +18,7 @@ from qtpy.QtWidgets import (
     QMessageBox,
 )
 
+from pymodaq.utils.managers.roi_manager.roi_manager import ROIManager
 from pymodaq.control_modules.instruments import find_actuator_class_from_name
 from pymodaq.control_modules.move_utility_classes import UiType
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -25,7 +26,6 @@ from pymodaq_utils import utils
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.enums import BaseEnum, StrEnum
-
 
 from pymodaq_gui.parameter import ParameterTree, Parameter
 from pymodaq_gui.utils import DockArea, Dock, select_file
@@ -174,7 +174,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.experiment_manager: ExperimentManager = None  # instanciation in do_things_after_ui_setup
         self.state_manager: StateManager = None  # instanciation in do_things_after_ui_setup
         self.overshooter: Overshooter = None  # instanciation in do_things_after_ui_setup
-
+        self.roi_manager: ROIManager = None  # instanciation in do_things_after_ui_setup
         self.dockarea.dock_signal.connect(self.save_layout_state_auto)
 
         self.title = ""
@@ -230,6 +230,9 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.state_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('state'),
                                                      menu=self.get_menu('state'))
         self.state_manager.update_menu(self.get_menu('state'))
+        self.roi_manager = ROIManager(dashboard=self)
+        self.roi_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('rois'),
+                                                   menu=self.get_menu('rois'))
         self.overshooter = Overshooter(dashboard=self)
         self.overshooter.get_external_toolbar_menu(toolbar=self.get_toolbar('overshooter'),
                                                    menu=self.get_menu('overshooter'))
@@ -252,12 +255,16 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.get_menu('state').setEnabled(True)
         self.get_toolbar('state').setEnabled(True)
 
+        self.get_menu('rois').setEnabled(True)
+        self.get_toolbar('rois').setEnabled(True)
+
         self.get_menu('overshooter').setEnabled(True)
         self.get_toolbar('overshooter').setEnabled(True)
 
         self.get_menu('extensions').setEnabled(True)
 
         self.state_manager.enable_actions(True)
+        self.roi_manager.enable_actions(True)
         self.overshooter.enable_actions(True)
         self.state_manager.execute_entry(self.state_manager.entry_filepath)
 
@@ -266,7 +273,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
         if self._scripted_experiment_load:
             self._scripted_experiment_load = False
             self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.APPLIED_EXPERIMENT_DONE, True))
-
         for device in itertools.chain(self.actuators_modules, self.detector_modules):
             self._connect_leco_request.connect(device.connect_leco)
         self._connect_leco_request.emit(self._connected)
@@ -275,11 +281,10 @@ class DashBoard(CustomApp, LECOComponentMixin):
         return "dashboard"
 
     def get_leco_host_port(self) -> tuple[str, int]:
-        host = config.get(("main_settings", "leco", "host"), 'localhost')
-        port = config.get(("main_settings", "leco", "port"), '12300')
+        host = config("utils", "network", "leco-server", "host")
+        port = config("utils", "network", "leco-server", "port")
 
         return host, port
-
 
     def process_leco_commands(self, status: ThreadCommand) -> None:
         if status.command == LECODashboardCommands.GET_DEVICES:
@@ -484,12 +489,10 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.add_menu('experiment', 'Experiment', MenuToolbarNames.TOOLS, icon_name=ExperimentManager.icon_name)
         self.add_menu('state', 'State', MenuToolbarNames.TOOLS, icon_name=StateManager.icon_name)
         self.get_menu('state').setEnabled(False)
-
+        self.add_menu('rois', 'Rois', MenuToolbarNames.TOOLS, icon_name=ROIManager.icon_name)
+        self.get_menu('rois').setEnabled(False)
         self.add_menu('overshooter', 'Overshooter', MenuToolbarNames.TOOLS, icon_name=Overshooter.icon_name)
         self.get_menu('overshooter').setEnabled(False)
-
-        # self.roi_menu = self.add_menu('roi', 'ROI', auto_menu=False)
-        # self.update_roi_menu()
 
         # self.remote_menu = self.add_menu('remote', "Remote/Shortcuts Control")
         # self.update_remote_menu()
@@ -501,6 +504,8 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.add_toolbar('experiment', 'Experiment', parent=self.mainwindow,
                          add_break=False)
         self.add_toolbar('state', 'State', parent=self.mainwindow,
+                         add_break=False)
+        self.add_toolbar('rois', 'rois', parent=self.mainwindow,
                          add_break=False)
         self.add_toolbar('overshooter', 'Overshoot', parent=self.mainwindow,
                          add_break=False)
@@ -517,32 +522,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.add_action("show_log_widget", "Show/hide log window", "", checkable=True, auto_toolbar=False,
                         menu=MenuToolbarNames.VIEW)
 
-        # self.add_action("save_roi", "Save ROIs as a file", "", auto_toolbar=False,
-        #                 menu='roi')
-        # self.add_action("modify_roi", "Modify ROI file", "", auto_toolbar=False,
-        #                 menu='roi')
-
-        # for file in get_set_roi_path().iterdir():
-        #     if file.suffix == ".xml":
-        #         self.add_action(
-        #             self.get_action_from_file(file, ManagerEnums.roi),
-        #             file.stem,
-        #             "",
-        #             auto_toolbar=False,
-        #         )
-        # self.add_action('show_remote', "Show/Hide Remote", 'visibility',
-        #                 icon_checked='visibility_off', auto_toolbar=False, menu='remote')
-        # self.add_action("new_remote", "Create New Remote", "", auto_toolbar=False, menu='remote')
-        # self.add_action("modify_remote", "Modify Remote file", "", auto_toolbar=False, menu='remote')
-        # for file in get_set_remote_path().iterdir():
-        #     if file.suffix == ".xml":
-        #         self.add_action(
-        #             self.get_action_from_file(file, ManagerEnums.remote),
-        #             file.stem,
-        #             "",
-        #             auto_toolbar=False,
-        #         )
-
         for ext_name in ExtensionEnum.names():
             self.add_action(ExtensionEnum[ext_name], ExtensionEnum[ext_name].value,
                             auto_toolbar=False, menu='extensions',
@@ -556,15 +535,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.connect_action("save_layout", self.save_layout_state)
         self.connect_action("show_log_widget", self.show_log_widget)
 
-        # self.connect_action("save_roi", self.create_roi_file)
-        # self.connect_action("modify_roi", self.modify_roi)
-        #
-        # for file in get_set_roi_path().iterdir():
-        #     if file.suffix == ".xml":
-        #         self.connect_action(
-        #             self.get_action_from_file(file, ManagerEnums.roi),
-        #             self.create_menu_slot_roi(get_set_roi_path().joinpath(file)),
-        #         )
         # self.connect_action('show_remote', self.show_remote)
         # self.connect_action("new_remote", self.create_remote)
         # self.connect_action("modify_remote", self.modify_remote)
@@ -579,16 +549,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
             self.connect_action(ExtensionEnum[ext_name],
                                 self.create_extension_slot(ExtensionEnum[ext_name]))
 
-    # def update_roi_menu(self):
-    #     self.roi_menu.addSeparator()
-    #     load_roi_menu = self.roi_menu.addMenu("Load roi configs")
-    #
-    #     for file in get_set_roi_path().iterdir():
-    #         if file.suffix == ".xml":
-    #             load_roi_menu.addAction(
-    #                 self.get_action(self.get_action_from_file(file, ManagerEnums.roi))
-    #             )
-    #
     # def update_remote_menu(self):
     #     self.remote_menu.addAction(self.get_action("show_remote"))
     #     self.connect_action('show_remote', self.show_remote)
@@ -837,7 +797,10 @@ class DashBoard(CustomApp, LECOComponentMixin):
                     self.dockarea,
                     orientation=Qt.Orientation.Vertical,
                 )
-                self.compact_actuator_manager.show("top")
+                if self.compact_detector_manager is not None:
+                    self.compact_actuator_manager.show('bottom', self.compact_detector_manager.dock)
+                else:
+                    self.compact_actuator_manager.show("top")
             dock = None  # Compact widgets don't have individual docks
 
         else:
@@ -846,12 +809,23 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
             if len(actuator_docks) == 1:
                 self.dockarea.addDock(dock, "top")
+                self.dockarea.moveDock(self.settings_dock, 'right', None)
+                self.settings_dock.setVisible(False)
+                self.dockarea.moveDock(self.rois_dock, 'right', None)
+                self.rois_dock.setVisible(False)
+                self.dockarea.moveDock(self.controls_dock, 'right', None)
+                self.controls_dock.setVisible(False)
             else:
                 self.dockarea.addDock(dock, "above", actuator_docks[-2])
         QtWidgets.QApplication.processEvents()
 
         actuator_widgets.append(QtWidgets.QWidget())
-        mov_mod_tmp = DAQ_Move(actuator_widgets[-1], plug_name, ui_identifier=ui_identifier)
+        mov_mod_tmp = DAQ_Move(actuator_widgets[-1],
+                               plug_name,
+                               ui_identifier=ui_identifier,
+                               settings_dock=self.settings_dock,
+                               controls_dock=self.controls_dock,
+                               )
 
         mov_mod_tmp.actuator = plug_type
         QtWidgets.QApplication.processEvents()
@@ -931,8 +905,12 @@ class DashBoard(CustomApp, LECOComponentMixin):
                                  **kwargs)
         self._finalize_extension_module(actuator, instrument_controller, self.actuators_modules)
 
-    def add_det(self, plug_name, plug_settings, detector_docks_viewer,
-                detector_modules, plug_type: str = None, plug_subtype: str = None) -> DAQ_Viewer:
+    def add_det(self,
+                plug_name, plug_settings,
+                detector_docks_viewer,
+                detector_modules,
+                plug_type: str = None,
+                plug_subtype: str = None) -> DAQ_Viewer:
         if plug_type is None:
             plug_type = plug_settings.child("main_settings", "DAQ_type").value()
         if plug_subtype is None:
@@ -945,12 +923,21 @@ class DashBoard(CustomApp, LECOComponentMixin):
                 self.dockarea,
                 orientation=Qt.Orientation.Vertical,
             )
-            self.compact_detector_manager.show("top")
+            if self.compact_actuator_manager is not None:
+                self.compact_detector_manager.show('bottom', self.compact_actuator_manager.dock)
+            else:
+                self.compact_detector_manager.show("top")
 
         # Create individual detector dock
         detector_docks_viewer.append(Dock(plug_name, size=(350, 350)))
         if len(detector_modules) == 0:
             self.dockarea.addDock(detector_docks_viewer[-1], "bottom")
+            self.dockarea.moveDock(self.settings_dock, 'right', None)
+            self.settings_dock.setVisible(False)
+            self.dockarea.moveDock(self.rois_dock, 'right', None)
+            self.rois_dock.setVisible(False)
+            self.dockarea.moveDock(self.controls_dock, 'right', None)
+            self.controls_dock.setVisible(False)
         else:
             self.dockarea.addDock(detector_docks_viewer[-1], "right", detector_docks_viewer[-2])
         widget = QtWidgets.QWidget()
@@ -959,6 +946,8 @@ class DashBoard(CustomApp, LECOComponentMixin):
             widget,
             title=plug_name,
             daq_type=plug_type,
+            settings_dock=self.settings_dock,
+            rois_dock=self.rois_dock,
         )
 
         self.compact_detector_manager.add_module(det_mod_tmp)
@@ -1293,6 +1282,20 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.remote_widget.layout().setContentsMargins(0, 0, 0, 0)
         self.remote_widget.setVisible(False)
 
+        self.settings_dock = Dock('Settings', )
+        self.settings_dock.label.setDim(True)
+        self.dockarea.addDock(self.settings_dock, position='right')
+        self.settings_dock.setVisible(False)
+
+        self.rois_dock = Dock('ROIs', )
+        self.rois_dock.label.setDim(True)
+        self.dockarea.addDock(self.rois_dock, position='right')
+        self.rois_dock.setVisible(False)
+
+        self.controls_dock = Dock('Controls', )
+        self.controls_dock.label.setDim(True)
+        self.dockarea.addDock(self.controls_dock, position='right')
+        self.controls_dock.setVisible(False)
 
     def value_changed(self, param: Parameter):
         if param.name() == "log_level":
@@ -1350,12 +1353,55 @@ class DashBoard(CustomApp, LECOComponentMixin):
         logger.info(txt)
 
 
-def create_load_dashboard() -> tuple[SharedUI, DashBoard]:
+def load_dashboard_with_arguments(show_dashboard=True, load_extension=True):
+
+    extensions_names = ExtensionEnum.values()
+    # Command-line argument parsing
+    parser = argparse.ArgumentParser(prog="dashboard",
+                                     description="PyMoDAQ dashboard. "
+                                                 "Command-line options only affect GUI initial state.",
+                                     )
+
+    parser.add_argument("-x", "--experiment", metavar="EXPERIMENT_NAME",
+                        help="experiment name to load at startup")
+    parser.add_argument("-c", "--config", metavar="CONFIG_NAME",
+                        help="config name to execute (ignored if no experiment provided), deprecated, use -s for state")
+    parser.add_argument("-s", "--state", metavar="STATE_NAME",
+                        help="State name to execute (ignored if no experiment provided)")
+    if load_extension:
+        parser.add_argument("-e", "--extension", metavar="EXTENSION_NAME",
+                            help="extension name to execute (ignored if no experiment provided), valid "
+                                 'values are within: "' + '\" \"'.join(extensions_names) +'"')
+
+    args, unknown_args = parser.parse_known_args()
+
+    if load_extension:
+        extension_name = args.extension.upper() if args.extension is not None else args.extension
+    else:
+        extension_name = None
+
+    # If experiment name is supplied, load dashboard with this experiment
+    if args.experiment:
+        dashboard, extension, win = load_dashboard_with_experiment(
+            experiment_name=args.experiment,
+            extension_name=extension_name,
+            state_name=args.state if args.state is not None else args.config,
+            show_dashboard=show_dashboard
+        )
+
+    # If no command-line arguments are supplied, start empty
+    else:
+        win, dashboard = create_load_dashboard(show_dashboard=show_dashboard)
+        extension = None
+    return win, dashboard, extension
+
+
+def create_load_dashboard(show_dashboard=True) -> tuple[SharedUI, DashBoard]:
 
     win, area = make_window(title='PyMoDAQ Dashboard')
     win.resize(1000, 500)
 
-    shared_ui = SharedUI(win)
+    shared_ui = SharedUI(win, show=show_dashboard)
     dashboard = DashBoard(area)
     shared_ui.affect_application(dashboard)
     return shared_ui, dashboard
@@ -1363,13 +1409,16 @@ def create_load_dashboard() -> tuple[SharedUI, DashBoard]:
 
 def load_dashboard_with_experiment(experiment_name: str,
                                    extension_name: str = None,
-                                   configuration_name: str = None)  -> tuple[DashBoard, 'CustomExt', SharedUI]:
+                                   configuration_name: str = None,
+                                   state_name: str = None,
+                                   show_dashboard=True)  -> tuple[DashBoard, 'CustomExt', SharedUI]:
 
     """ Load the Dashboard using a given experiment then load an extension
 
     Parameters
     ----------
-    configuration_name: str
+    configuration_name: str (deprecated, use state)
+    state_name: str
     experiment_name: str
         The filename (without extension) defining the experiment to be loaded in the Dashboard
     extension_name: str
@@ -1380,13 +1429,14 @@ def load_dashboard_with_experiment(experiment_name: str,
         * 'Bayesian'
 
         or the ones defined within a plugin
-
+    show_dashboard: bool
+        show dashboard at startup  or not (if no extension provided, it is shown)
     Returns
     -------
 
     """
     from pymodaq.utils.config import get_set_experiment_path
-    shared_ui, dashboard = create_load_dashboard()
+    shared_ui, dashboard = create_load_dashboard(show_dashboard=show_dashboard if extension_name is not None else True)
 
     experiment_path = get_set_experiment_path().joinpath(f'{experiment_name}.xml')
     experiment_name = experiment_path.stem
@@ -1394,8 +1444,11 @@ def load_dashboard_with_experiment(experiment_name: str,
 
     if experiment_name in dashboard.experiment_manager.entries:
         dashboard.experiment_manager.entry = experiment_name
-        if configuration_name is not None:
-            dashboard.state_manager.entry = configuration_name
+        if state_name is None:
+            # backcompatibility
+            state_name = configuration_name
+        if state_name is not None:
+            dashboard.state_manager.entry = state_name
         dashboard.experiment_manager.execute_entry(experiment_path)
 
         if extension_name in ExtensionEnum.names():
@@ -1419,36 +1472,10 @@ def main():
     # Create application and main window
     app = mkQApp('Dashboard')
 
-    extensions_names = ExtensionEnum.values()
-    # Command-line argument parsing
-    parser = argparse.ArgumentParser(prog="dashboard",
-                                     description="PyMoDAQ dashboard. "
-                                                 "Command-line options only affect GUI initial state.",
-                                     )
-    parser.add_argument("-x", "--experiment", metavar="EXPERIMENT_NAME",
-                        help="experiment name to load at startup")
-    parser.add_argument("-c", "--config", metavar="CONFIG_NAME",
-                        help="config name to execute (ignored if no experiment provided)")
-    parser.add_argument("-e", "--extension", metavar="EXTENSION_NAME",
-                        help="extension name to execute (ignored if no experiment provided), valid "
-                             'values are within: "' + '\" \"'.join(extensions_names) +'"')
-    args = parser.parse_args()
+    load_dashboard_with_arguments(show_dashboard=True)
 
-    # If experiment name is supplied, load dashboard with this experiment
-    if args.experiment:
-        dashboard, extension, win = load_dashboard_with_experiment(
-            experiment_name=args.experiment,
-            extension_name=args.extension.upper() if args.extension is not None else args.extension,
-            configuration_name=args.config
-        )
-
-
-    # If no command-line arguments are supplied, start empty
-    else:
-        win, dashboard = create_load_dashboard()
-
-    win.show()
-
+    # SharedUI shows the dashboard on creation; preserve visibility changes
+    # made while loading.
     # Run application
     sys.exit(app.exec())
 

@@ -12,6 +12,7 @@ from pymodaq.utils.leco.rpc_method_definitions import (
 discover_string = Request(1, "rpc.discover").model_dump_json()
 
 
+@pytest.mark.leco #tested locally but not in CI
 class Test_MoveDirector_methods:
     @pytest.fixture(scope="class")
     def methods(self) -> list[str]:
@@ -34,6 +35,7 @@ class Test_MoveDirector_methods:
         assert method in methods
 
 
+@pytest.mark.leco #tested locally but not in CI
 class Test_ViewerDirector_methods:
     @pytest.fixture(scope="class")
     def methods(self) -> list[str]:

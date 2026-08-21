@@ -14,7 +14,7 @@ from .filedir import FileDirParameter
 from .text import PlainTextPbParameter
 from .text_pattern import PatternParameter
 from .numeric import NumericParameter
-from .group import GroupParameter
+# from .group import GroupParameter
 from pyqtgraph.parametertree.Parameter import registerParameterType, registerParameterItemType
 
 
@@ -42,4 +42,4 @@ registerParameterType('text_pb', PlainTextPbParameter, override=True)
 registerParameterType("text_pattern", PatternParameter)
 
 registerParameterType('action_led', ActionLedParameter, override=True)
-registerParameterType('group', GroupParameter, override=True)
+# registerParameterType('group', GroupParameter, override=True)

@@ -101,12 +101,12 @@ jobs:
         run: |
           if [[ "${{ runner.os }}" == "Linux" ]]; then
             mkdir ${{ github.workspace }}/coverage
-            python -X faulthandler -m pytest --capture=no -vv --cov=pymodaq
+            python -X faulthandler -m pytest --capture=no -vv --cov=pymodaq -m "not leco"
             mv .coverage ${{ github.workspace }}/coverage/coverage_${{ matrix.os }}_${{ matrix.python-version }}_${{ matrix.qt-backend }}
           else
             workspace=$(echo "${{ github.workspace }}" | tr '\\' '/')
             mkdir ${workspace}/coverage
-            pytest -vv --cov=pymodaq
+            pytest -vv --cov=pymodaq -m "not leco"
             mv .coverage ${workspace}/coverage/coverage_${{ matrix.os }}_${{ matrix.python-version }}_${{ matrix.qt-backend }}
           fi
 

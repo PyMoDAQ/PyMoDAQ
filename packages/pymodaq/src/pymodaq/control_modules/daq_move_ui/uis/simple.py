@@ -16,9 +16,9 @@ from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 @ActuatorUIFactory.register('Simple')
 class DAQ_Move_UI_Simple(DAQ_Move_UI_Base):
     is_compact = True
-    def __init__(self, parent, title="DAQ_Move"):
+    def __init__(self, parent, title="DAQ_Move", **kwargs):
 
-        super().__init__(parent, title)
+        super().__init__(parent, title, **kwargs)
 
     def setup_docks_and_widgets(self):
         super().setup_docks_and_widgets()
@@ -35,7 +35,6 @@ class DAQ_Move_UI_Simple(DAQ_Move_UI_Base):
         self.current_value_sb.setMinimumHeight(20)
         self.current_value_sb.setMinimumWidth(80)
 
-        self.control_widget = QtWidgets.QWidget()
         self.populate_control_ui(self.control_widget)
 
     def setup_actions(self):

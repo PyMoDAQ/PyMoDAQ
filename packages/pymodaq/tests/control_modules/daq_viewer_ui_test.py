@@ -11,7 +11,7 @@ from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
 from pymodaq.utils.conftests import qtbotskip, main_modules_skip
 from pymodaq.control_modules.daq_viewer_ui.ui_base import DAQ_Viewer_UI, options
 from pymodaq.control_modules.instruments import DAQTypesEnum
-from pymodaq_gui.utils.dock import DockArea
+from pymodaq_gui.utils.dock import Dock
 from qtpy import QtWidgets
 from pymodaq.control_modules.thread_commands import UiToMainViewer
 import qt_themes
@@ -29,14 +29,16 @@ def ini_daq_viewer_ui(qtbot):
     qtbot.addWidget(win)
     qt_themes.set_theme(theme=config('gui', 'style', 'theme')[0],
                         style=config('gui', 'style', 'style')[0])
-
+    roi_dock = Dock('Rois')
+    qtbot.addWidget(roi_dock)
     widget = QtWidgets.QWidget()
     win.setCentralWidget(widget)
-    prog = DAQ_Viewer_UI(widget)
+    prog = DAQ_Viewer_UI(widget, rois_dock=roi_dock)
     win.show()
     yield prog, qtbot
     prog.close()
     prog.parent.close()
+    roi_dock.close()
     QtWidgets.QApplication.processEvents()
 
 @pytestmark

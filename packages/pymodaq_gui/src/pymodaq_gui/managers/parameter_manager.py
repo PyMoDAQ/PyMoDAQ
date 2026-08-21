@@ -278,8 +278,9 @@ class ParameterManager:
         )  # create a Parameter
         # object containing the settings defined in the preamble
         self._settings_tree.tree.header().setSectionResizeMode(
-            QtWidgets.QHeaderView.ResizeToContents,
+            QtWidgets.QHeaderView.Interactive,
         )
+        self._settings_tree.tree.resizeColumnToContents(0)
 
     @property
     def settings_tree(self) -> QtWidgets.QWidget:
@@ -318,6 +319,8 @@ class ParameterManager:
             self._settings, showTop=False,
         )  # load the tree with this parameter object
         self._settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
+        self._settings_tree.tree.itemExpanded.connect(lambda: self._settings_tree.tree.resizeColumnToContents(0))
+        self._settings_tree.tree.itemCollapsed.connect(lambda: self._settings_tree.tree.resizeColumnToContents(0))
 
     @staticmethod
     def create_parameter(

@@ -1,8 +1,10 @@
 from pathlib import Path
 from typing import Union
+import dataclasses
 
 import pyqtgraph as pg
 import qt_themes
+from pyqtgraph import mkColor
 from qtpy import QtCore, QtGui, QtWidgets
 
 from pymodaq_gui.resources.material_icons import MaterialIcon
@@ -120,7 +122,8 @@ def make_shape_icon(
         painter.end()
     return QtGui.QIcon(pixmap)
 
-def create_font(font_name=None, font_size=None, isbold=False, isitalic=False) -> QtGui.QFont:
+def create_font(font_name=None, font_size=None, isbold=False, isitalic=False,
+                ) -> QtGui.QFont:
     font = QtGui.QFont()
     if font_name is not None:
         font.setFamily(font_name)
@@ -327,3 +330,24 @@ def create_icon(icon_name: Union[QtGui.QIcon, str, Path],
 
 def resource_path_exists(path: str) -> bool:
     return QtCore.QFile(path).exists()
+
+
+@dataclasses.dataclass
+class Font:
+    font_name: str = 'Tahoma'
+    font_size: int = 14
+    isbold: bool = True
+    isitalic: bool = False
+    color: QtGui.QColor | str | tuple[int, int, int] = None
+
+    def apply_to_widget(self, widget: QtWidgets.QWidget):
+        if hasattr(widget, 'setFont'):
+            font = self.get_font()
+            widget.setFont(font)
+
+            if self.color is not None:
+                color = mkColor(self.color)
+                widget.setStyleSheet(f'color: #{hex(color.rgb())[2:]}')
+
+    def get_font(self) -> QtGui.QFont:
+        return create_font(self.font_name, self.font_size, self.isbold, self.isitalic)

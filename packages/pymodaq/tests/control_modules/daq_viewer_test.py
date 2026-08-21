@@ -7,6 +7,7 @@ import pytest
 from pytest import fixture, approx
 import qt_themes
 from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
+from pymodaq.utils.gui_utils.loader_utils import create_load_daq_viewer
 from pymodaq_gui.utils.dock import DockArea
 
 from pymodaq.control_modules import daq_viewer as daqvm
@@ -18,8 +19,7 @@ from pymodaq.utils.conftests import qtbotskip, main_modules_skip
 from pymodaq.utils.config import GlobalConfig
 
 from pymodaq_gui.parameter import utils as putils
-from pymodaq_gui.parameter import Parameter
-from pymodaq_data.h5modules.browsing import H5BrowserUtil
+
 
 config = GlobalConfig()
 
@@ -44,12 +44,15 @@ def ini_daq_viewer_without_ui(init_qt):
 @fixture
 def ini_daq_viewer_ui(init_qt):
     qtbot = init_qt
-    widget = QtWidgets.QWidget()
-    qtbot.addWidget(widget)
     qt_themes.set_theme(theme=config('gui', 'style', 'theme')[0],
                         style=config('gui', 'style', 'style')[0])
-    prog = daqvm.DAQ_Viewer(widget, 'test')
-    yield prog, qtbot, widget
+    shared_ui, prog = create_load_daq_viewer()
+    shared_ui.show()
+
+    qtbot.addWidget(shared_ui.mainwindow)
+
+
+    yield prog, qtbot, shared_ui.mainwindow
     prog.quit_fun()
     QtWidgets.QApplication.processEvents()
 
@@ -86,7 +89,26 @@ class TestWithUI:
     def test_daq_type_changed(self, ini_daq_viewer_ui, daq_type):
         prog, qtbot, dockarea = ini_daq_viewer_ui
         with qtbot.waitSignal(prog.ui.command_sig) as blocker:
+            prog.daq_type = daq_type
+        assert len(prog.viewers) == 1
+        assert prog.viewers[0].viewer_type == f'Data{daq_type[3:]}'
+
+
+    @pytest.mark.parametrize("daq_type", DAQTypesEnum.names())
+    def test_detector_changed(self, ini_daq_viewer_ui, daq_type):
+        prog, qtbot, dockarea = ini_daq_viewer_ui
+        with qtbot.waitSignal(prog.ui.command_sig) as blocker:
             prog.detector = SelectedModule(DAQTypesEnum[daq_type], 'Mock')
         assert len(prog.viewers) == 1
         assert prog.viewers[0].viewer_type == f'Data{daq_type[3:]}'
 
+
+    @pytest.mark.parametrize("daq_type", DAQTypesEnum.names())
+    def test_detector_name_changed(self, ini_daq_viewer_ui, daq_type):
+        prog, qtbot, dockarea = ini_daq_viewer_ui
+        with qtbot.waitSignal(prog.ui.command_sig) as blocker:
+            prog.daq_type = daq_type
+        with qtbot.waitSignal(prog.ui.command_sig) as blocker:
+            prog.detector = 'Mock'
+        assert len(prog.viewers) == 1
+        assert prog.viewers[0].viewer_type == f'Data{daq_type[3:]}'

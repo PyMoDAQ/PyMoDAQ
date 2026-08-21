@@ -234,10 +234,12 @@ def get_optimizer_models(model_name=None):
             except Exception as e:
                 logger.warning(f'Impossible to import the {pkg.value} optimizer model: {str(e)}')
 
-    if find_dict_in_list_from_key_val(models_import, 'name', 'OptimizerModelDefault') is None:
-        models_import.append({'name': 'OptimizerModelDefault',
-                              'module': inspect.getmodule(OptimizerModelDefault),
-                              'class': OptimizerModelDefault})
+
+    #adding default model
+
+    models_import.append({'name': 'OptimizerModelDefault',
+                          'module': inspect.getmodule(OptimizerModelDefault),
+                          'class': OptimizerModelDefault})
     if model_name is None:
         return models_import
     else:

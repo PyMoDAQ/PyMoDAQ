@@ -1,7 +1,7 @@
 import warnings
 
 
-def deprecation_msg(message, stacklevel=2):
+def deprecation_msg(message, stacklevel=3):
     warnings.warn(message, DeprecationWarning, stacklevel=stacklevel)
 
 
