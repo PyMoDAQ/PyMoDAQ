@@ -1,3 +1,4 @@
+import functools
 import sys
 from pathlib import Path
 from typing import Any, Union, TYPE_CHECKING, Optional
@@ -9,6 +10,7 @@ from qtpy.QtGui import QKeySequence
 from pymodaq_gui.utils.styling import create_icon
 
 from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_utils.weak import weak_slot
 from pymodaq.extensions.custom_ext import CustomExt
 
 from pymodaq_utils.enums import StrEnum
@@ -328,17 +330,27 @@ class ManagerBase(CustomExt):
         return combo
 
     def connect_things_base(self):
-        self.connect_action(ManagerActions.COPY, lambda: self.copy_entry())
-        self.connect_action(ManagerActions.NEW, lambda: self.create_entry())
-        self.connect_action(ManagerActions.DELETE, lambda: self.delete_entry())
-        self.connect_action(ManagerActions.SAVE, lambda: self.save_check())
-        self.connect_action(ManagerActions.RELOAD, lambda: self.update_entry())
-        self.connect_action(ManagerActions.EXECUTE, lambda: self.execute_current_entry())
+        # connect_action() auto-wraps bound-method slots in a weakref (see
+        # ActionManager.connect_action / pymodaq_utils.weak.weak_slot): PySide/PyQt
+        # keep an internal reference to a connected Python callable that outlives
+        # disconnect()/deleteLater(), so a plain bound method here would otherwise
+        # keep this manager alive indefinitely regardless of any teardown code.
+        self.connect_action(ManagerActions.COPY, self.copy_entry)
+        self.connect_action(ManagerActions.NEW, self.create_entry)
+        self.connect_action(ManagerActions.DELETE, self.delete_entry)
+        self.connect_action(ManagerActions.SAVE, self.save_check)
+        self.connect_action(ManagerActions.RELOAD, self.update_entry)
+        self.connect_action(ManagerActions.EXECUTE, self.execute_current_entry)
 
-        self.connect_action(ManagerActions.OPEN, lambda: self.show())
+        self.connect_action(ManagerActions.OPEN, self.show)
 
-        self.entries_sync.value_changed.connect(lambda value: self.update_entry(value['current']))
+        # entries_sync.value_changed is not routed through connect_action(), so it
+        # needs the same weak-wrapping applied explicitly.
+        self.entries_sync.value_changed.connect(weak_slot(self._on_entries_sync_changed))
         self.sync_entries_with(self.get_action_list())
+
+    def _on_entries_sync_changed(self, value):
+        self.update_entry(value['current'])
 
     def execute_current_entry(self):
         self.execute_entry(self.entry)
@@ -577,7 +589,10 @@ class ManagerBase(CustomExt):
             f'Execute the selected {self.entry_type} entry: {entry} ("Ctrl+A")')
 
     def create_slot_from_file(self, filename: Path):
-        return lambda: self.execute_entry(filename)
+        # A functools.partial of a bound method: connect_action() auto-weakifies
+        # this (see the note in connect_things_base()), so it's safe to connect to
+        # a per-file QAction without keeping this manager alive indefinitely.
+        return functools.partial(self.execute_entry, filename)
 
     def update_menu(self, menu: QtWidgets.QMenu = None):
         try:

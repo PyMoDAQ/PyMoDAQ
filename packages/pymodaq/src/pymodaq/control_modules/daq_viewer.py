@@ -7,6 +7,7 @@ Created on Wed Jan 10 16:54:14 2018
 from __future__ import annotations
 
 from abc import ABC
+import functools
 from importlib import import_module
 
 import os
@@ -25,6 +26,7 @@ from pymodaq_data.data import DataToExport, Axis, DataDistribution, Averaging
 from pymodaq.utils.data import DataFromPlugins
 
 from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_utils.weak import weak_slot
 from pymodaq.control_modules.utils import ParameterControlModule, HardwareWorkerBase
 
 from pymodaq_gui.utils.file_io import select_file
@@ -149,7 +151,7 @@ class DAQ_Viewer(ParameterControlModule):
         if self.ui is not None:
             QtWidgets.QApplication.processEvents()
             self.ui.add_setting_tree(self.settings_tree)
-            self.ui.command_sig.connect(self.process_ui_cmds)
+            self.ui.command_sig.connect(weak_slot(self.process_ui_cmds))
             self.viewers = self.ui.viewers
             self._viewer_types = self.ui.viewer_types
 
@@ -243,21 +245,33 @@ class DAQ_Viewer(ParameterControlModule):
             except:
                 pass
         for ind_viewer, viewer in enumerate(viewers):
-            viewer.data_to_export_signal.connect(self._get_data_from_viewer)
+            viewer.data_to_export_signal.connect(weak_slot(self._get_data_from_viewer))
 
+            # functools.partial binds ind_viewer by value immediately (unlike the
+            # closure a per-iteration lambda would capture by reference), and
+            # weak_slot() lets connect() hold only a weakref to self.
             viewer.roi_select_signal.connect(
-                lambda roi_info: self.command_hardware.emit(
-                    ThreadCommand(ControlToHardwareViewer.ROI_SELECT,
-                                  dict(roi_info=roi_info,
-                                       ind_viewer=ind_viewer))))
+                weak_slot(functools.partial(self._on_viewer_roi_selected, ind_viewer)))
             viewer.crosshair_dragged.connect(
-                lambda crosshair_info: self.command_hardware.emit(
-                    ThreadCommand(ControlToHardwareViewer.CROSSHAIR,
-                                  dict(crosshair_info=crosshair_info,
-                                       ind_viewer=ind_viewer))))
-
+                weak_slot(functools.partial(self._on_viewer_crosshair_dragged, ind_viewer)))
 
         self._viewers = viewers
+
+    def _on_viewer_roi_selected(self, ind_viewer: int, roi_info):
+        self.command_hardware.emit(
+            ThreadCommand(ControlToHardwareViewer.ROI_SELECT,
+                          dict(roi_info=roi_info, ind_viewer=ind_viewer)))
+
+    def _on_viewer_crosshair_dragged(self, ind_viewer: int, *crosshair_info):
+        # crosshair_dragged emits Signal(float, float). The lambda this replaces
+        # declared only one parameter, and Qt truncates extra signal arguments for
+        # slots that declare fewer params than the signal emits — a generic *args
+        # wrapper (weak_slot()) can't be introspected by Qt for that truncation, so
+        # replicate it explicitly by keeping only the first value.
+        self.command_hardware.emit(
+            ThreadCommand(ControlToHardwareViewer.CROSSHAIR,
+                          dict(crosshair_info=crosshair_info[0] if crosshair_info else None,
+                               ind_viewer=ind_viewer)))
 
     @property
     def Naverage(self):

@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import functools
 import itertools
 import sys
 import datetime
@@ -548,7 +549,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         #         )
         for ext_name in ExtensionEnum.names():
             self.connect_action(ExtensionEnum[ext_name],
-                                self.create_extension_slot(ExtensionEnum[ext_name]))
+                                functools.partial(self.load_extension, ExtensionEnum[ext_name]))
 
     # def update_remote_menu(self):
     #     self.remote_menu.addAction(self.get_action("show_remote"))
@@ -614,9 +615,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
     #
     # def create_menu_slot_remote(self, filename):
     #     return lambda: self.set_remote_configuration(filename)
-
-    def create_extension_slot(self, extenum: ExtensionEnum):
-        return lambda: self.load_extension(extenum)
 
     # def create_roi_file(self):
     #     try:
@@ -695,7 +693,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
             if self.pid_window is not None:
                 self.pid_window.close()
-
 
         except Exception as e:
             logger.exception(str(e))

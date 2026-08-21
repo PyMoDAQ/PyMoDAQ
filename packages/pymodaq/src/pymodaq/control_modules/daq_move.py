@@ -23,6 +23,7 @@ from easydict import EasyDict as edict
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import find_keys_from_val
 from pymodaq_utils import utils
+from pymodaq_utils.weak import weak_slot
 from pymodaq.utils.gui_utils import get_splash_sc
 from pymodaq_utils.config import get_set_local_dir, GlobalConfig as Config
 from pymodaq.utils.exceptions import ActuatorError
@@ -141,7 +142,7 @@ class DAQ_Move(ParameterControlModule):
         if self.ui is not None:
             self.ui.actuators = ACTUATOR_NAMES
             self.ui.add_setting_tree(self.settings_tree)
-            self.ui.command_sig.connect(self.process_ui_cmds)
+            self.ui.command_sig.connect(weak_slot(self.process_ui_cmds))
 
         self.splash_sc = get_splash_sc()
         self._title = title

@@ -1,3 +1,4 @@
+import functools
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -130,9 +131,14 @@ class ExtensionManager(ManagerBase):
 
     def connect_things(self):
         """Connect extension actions to load methods."""
+        # connect_action() auto-wraps bound-method slots in a weakref (see
+        # ActionManager.connect_action / pymodaq_utils.weak.weak_slot): PySide/PyQt
+        # keep an internal reference to a connected Python callable that outlives
+        # disconnect()/deleteLater(), so a plain functools.partial of a bound method
+        # here would otherwise keep this manager alive indefinitely.
         for ext_name in ExtensionEnum.names():
             self.connect_action(ExtensionEnum[ext_name],
-                               lambda e=ExtensionEnum[ext_name]: self.load_extension(e))
+                               functools.partial(self.load_extension, ExtensionEnum[ext_name]))
 
     def quit_fun(self):
         """Clean up extensions and internal dashboard."""
