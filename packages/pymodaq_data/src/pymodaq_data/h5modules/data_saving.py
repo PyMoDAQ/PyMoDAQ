@@ -591,7 +591,9 @@ class DataEnlargeableSaver(DataSaverLoader):
                 nav_indexes = ([0] +
                                list(np.array(nav_indexes, dtype=int) + 1))
 
-                self._h5saver.add_array(where, self._get_next_node_name(where), self.data_type,
+                self._h5saver.add_array(where,
+                                        self._get_next_node_name(where),
+                                        self.data_type,
                                         title=data.name,
                                         array_to_save=data[ind_data],
                                         data_shape=data[ind_data].shape,
@@ -604,6 +606,24 @@ class DataEnlargeableSaver(DataSaverLoader):
                                                       distribution='spread',
                                                       origin=data.origin,
                                                       nav_indexes=tuple(nav_indexes)))
+                if data.errors is not None:
+                    error_dwa = data.errors_as_dwa()
+                    self._h5saver.add_array(where,
+                                            self._error_saver._get_next_node_name(where),
+                                            self._error_saver.data_type,
+                                            title=error_dwa.name,
+                                            array_to_save=error_dwa[ind_data],
+                                            data_shape=error_dwa[ind_data].shape,
+                                            array_type=error_dwa[ind_data].dtype,
+                                            enlargeable=True,
+                                            data_dimension=error_dwa.dim.name,
+                                            metadata=dict(timestamp=error_dwa.timestamp,
+                                                          label=error_dwa.labels[ind_data],
+                                                          source=error_dwa.source.name,
+                                                          distribution='spread',
+                                                          origin=error_dwa.origin,
+                                                          nav_indexes=tuple(nav_indexes)))
+
             if add_enl_axes:
                 for ind_enl_axis in range(self._n_enl_axes):
                     self._axis_saver.add_axis(where,
@@ -661,6 +681,12 @@ class DataEnlargeableSaver(DataSaverLoader):
         for ind_data in range(len(data)):
             array: EARRAY = self.get_node_from_index(where, ind_data)
             array.append(data[ind_data])
+
+            if data.errors is not None:
+                error_array: EARRAY = self._error_saver.get_node_from_index(where, ind_data)
+                error_array.append(data.errors[ind_data])
+
+
         if add_enl_axes:
             for ind_axis in range(self._n_enl_axes):
                 axis_array: EARRAY = self._axis_saver.get_node_from_index(where, ind_axis)
@@ -715,7 +741,10 @@ class DataExtendedSaver(DataSaverLoader):
                 nav_indexes = [ind for ind in range(len(self.extended_shape))] +\
                               list(np.array(nav_indexes, dtype=int) + len(self.extended_shape))
 
-                self._h5saver.add_array(where, self._get_next_node_name(where), self.data_type, title=data.name,
+                self._h5saver.add_array(where,
+                                        self._get_next_node_name(where),
+                                        self.data_type,
+                                        title=data.name,
                                         data_shape=data[ind_data].shape,
                                         array_type=data[ind_data].dtype,
                                         fill_value=self.fill_value,
@@ -726,6 +755,24 @@ class DataExtendedSaver(DataSaverLoader):
                                                       source=data.source.name, distribution=distribution.name,
                                                       origin=data.origin,
                                                       nav_indexes=tuple(nav_indexes)))
+
+                if data.errors is not None:
+                    error_dwa = data.errors_as_dwa()
+                    self._h5saver.add_array(where,
+                                            self._error_saver._get_next_node_name(where),
+                                            self._error_saver.data_type,
+                                            title=error_dwa.name,
+                                            data_shape=error_dwa[ind_data].shape,
+                                            array_type=error_dwa[ind_data].dtype,
+                                            fill_value=self.fill_value,
+                                            scan_shape=self.extended_shape,
+                                            add_scan_dim=True,
+                                            data_dimension=error_dwa.dim.name,
+                                            metadata=dict(timestamp=error_dwa.timestamp, label=error_dwa.labels[ind_data],
+                                                          source=error_dwa.source.name, distribution=distribution.name,
+                                                          origin=error_dwa.origin,
+                                                          nav_indexes=tuple(nav_indexes)))
+
 
             if save_axes:
                 for axis in data.axes:
@@ -756,10 +803,13 @@ class DataExtendedSaver(DataSaverLoader):
             self._create_data_arrays(where, data, save_axes=True, distribution=distribution)
 
         for ind_data in range(len(data)):
-            #todo check that getting with index is safe...
+
             array: CARRAY = self.get_node_from_index(where, ind_data)
             array[tuple(indexes)] = data[ind_data]
             # maybe use array.__setitem__(indexes, data[ind_data]) if it's not working
+            if data.errors is not None:
+                error_array: CARRAY = self._error_saver.get_node_from_index(where, ind_data)
+                error_array[tuple(indexes)] = data.errors[ind_data]
 
 
 class DataToExportSaver:
