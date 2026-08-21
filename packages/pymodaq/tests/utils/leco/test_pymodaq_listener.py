@@ -21,6 +21,7 @@ def actorListener() -> ActorListener:
 discover_string = Request(1, "rpc.discover").model_dump_json()
 
 
+@pytest.mark.leco #tested locally but not in CI
 class Test_methods_presence:
     @pytest.fixture(scope="class")
     def methods(self) -> list[str]:
@@ -46,6 +47,7 @@ class Test_methods_presence:
         assert method in methods
 
 
+@pytest.mark.leco #tested locally but not in CI
 class TestSendRPCToRemote:
     remote_name = "receiver"
 

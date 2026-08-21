@@ -322,6 +322,11 @@ class ManagerBase(CustomExt):
         self.affect_to(ManagerActions.EXECUTE, toolbar)
         return toolbar, menu
 
+    def get_sync_combo_entry(self) -> ComboBox:
+        combo = ComboBox()
+        self.sync_entries_with(combo)
+        return combo
+
     def connect_things_base(self):
         self.connect_action(ManagerActions.COPY, lambda: self.copy_entry())
         self.connect_action(ManagerActions.NEW, lambda: self.create_entry())
@@ -537,6 +542,10 @@ class ManagerBase(CustomExt):
             self.mainwindow.raise_()
         else:
             self.mainwindow.hide()
+
+    def force_show(self, show: bool = True):
+        self.set_action_checked(ManagerActions.OPEN, show)
+        self.show()
 
     def update_action_list(self):
         with QtCore.QSignalBlocker(self.get_action_list()) as blocker:

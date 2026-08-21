@@ -99,7 +99,7 @@ class ViewerDispatcher:
                  rois_dock: Dock = None,):
         super().__init__()
         self._title = title if title != '' else self.__class__.__name__
-        self.rois_dock = rois_dock
+
         self._next_to_dock = next_to_dock
 
         if dockarea is None:
@@ -107,6 +107,10 @@ class ViewerDispatcher:
             dockarea.show()
         self.dockarea = dockarea
         self.dockarea.setWindowTitle(title)
+
+        if rois_dock is None:
+            rois_dock = Dock('Rois')
+        self.rois_dock = rois_dock
 
         self._direction = direction
 

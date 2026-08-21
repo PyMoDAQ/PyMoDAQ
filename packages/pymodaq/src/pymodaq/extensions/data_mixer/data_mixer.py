@@ -228,17 +228,16 @@ class DataMixer(CustomExt):
 def main():
     import sys
     from pymodaq_gui.qt_utils import mkQApp
-    from pymodaq.dashboard import create_load_dashboard
+    from pymodaq.dashboard import load_dashboard_with_arguments
     from pymodaq.utils.gui_utils.loader_utils import create_extension
 
     app = mkQApp('Data Mixer')
 
-    win, dashboard = create_load_dashboard()
+    win, dashboard, _ = load_dashboard_with_arguments(show_dashboard=False,
+                                                      load_extension=False,
+                                                      )
     win.mainwindow.setVisible(False)
-
-    win_ext, data_mixer = create_extension(dashboard, DataMixer)
-    win_ext.show()
-
+    win_ext, data_mixer = create_extension(dashboard, DataMixer, show_extension=True)
     sys.exit(app.exec())
 
 

@@ -128,37 +128,37 @@ class TestHistoFactory:
 
 
 class TestData0DWithHistory:
-    def test_add_datas_list(self, qtbot):
+    def test_add_data_list(self, qtbot):
         Nsamplesinhisto = 2
         data_histo = plot_utils.Data0DWithHistory(Nsamplesinhisto)
         dat = [[1, 2], [1, 2], [1, 2], [1, 2], [1, 2], [1, 2]]
         for ind, d in enumerate(dat):
-            data_histo.add_datas(d)
+            data_histo.add_data_list(d)
             assert data_histo._data_length == ind+1
             assert np.any(data_histo.xaxis == approx(np.linspace(max(0, ind+1-Nsamplesinhisto), ind+1,
                                                                  min(Nsamplesinhisto, ind+1)
                                                                  , endpoint=False, dtype=float)))
-            assert 'data_00' in data_histo.datas
-            assert 'data_01' in data_histo.datas
+            assert 'data_00' in data_histo.data
+            assert 'data_01' in data_histo.data
 
-    def test_add_datas(self, qtbot):
+    def test_add_data(self, qtbot):
         data_histo = plot_utils.Data0DWithHistory()
         dat = [dict(CH0=1, CH1=2.), dict(CH0=np.array([1]), CH1=2.), dict(CH0=1, CH1=2.), dict(CH0=1, CH1=2.)]
         for ind, d in enumerate(dat):
-            data_histo.add_datas(d)
+            data_histo.add_data_dict(d)
             assert data_histo._data_length == ind+1
             assert np.any(data_histo.xaxis == approx(np.linspace(0, ind+1, ind+1, endpoint=False)))
-            assert 'CH0' in data_histo.datas
-            assert 'CH1' in data_histo.datas
+            assert 'CH0' in data_histo.data
+            assert 'CH1' in data_histo.data
 
-    def test_add_datas_and_clear(self, qtbot):
+    def test_add_data_and_clear(self, qtbot):
         data_histo = plot_utils.Data0DWithHistory()
         dat = [dict(CH0=1, CH1=2.), dict(CH0=np.array([1]), CH1=2.), dict(CH0=1, CH1=2.), dict(CH0=1, CH1=2.)]
         for ind, d in enumerate(dat):
-            data_histo.add_datas(d)
+            data_histo.add_data_dict(d)
         data_histo.clear_data()
 
-        assert data_histo.datas == dict([])
+        assert data_histo.data == dict([])
         assert data_histo._data_length == 0
 
 

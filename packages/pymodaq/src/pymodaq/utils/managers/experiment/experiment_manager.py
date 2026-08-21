@@ -405,13 +405,23 @@ class ExperimentManager(ManagerBase):
             else:
                 try:
                     plug["ID"] = plug["value"][
-                        "params", "move_settings", "multiaxes", "controller_ID",
+                        "params", "move_settings", "controller", "controller_ID",
                     ]
                     plug["status"] = plug["value"][
-                        "params", "move_settings", "multiaxes", "multi_status",
+                        "params", "move_settings", "controller", "controller_status",
                     ]
-                except KeyError as e:
-                    raise ActuatorError
+                except KeyError:
+                    # some old plugins may still expose their controller settings
+                    # under the legacy 'multiaxes'/'multi_status' names
+                    try:
+                        plug["ID"] = plug["value"][
+                            "params", "move_settings", "multiaxes", "controller_ID",
+                        ]
+                        plug["status"] = plug["value"][
+                            "params", "move_settings", "multiaxes", "multi_status",
+                        ]
+                    except KeyError:
+                        raise ActuatorError
 
         plugins_sorted = self._group_plugins_by_id(plugins)
 

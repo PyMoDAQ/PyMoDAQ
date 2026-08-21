@@ -27,7 +27,6 @@ from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.enums import BaseEnum, StrEnum
 
-
 from pymodaq_gui.parameter import ParameterTree, Parameter
 from pymodaq_gui.utils import DockArea, Dock, select_file
 import pymodaq_gui.utils.layout as layout_mod
@@ -274,7 +273,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
         if self._scripted_experiment_load:
             self._scripted_experiment_load = False
             self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.APPLIED_EXPERIMENT_DONE, True))
-
         for device in itertools.chain(self.actuators_modules, self.detector_modules):
             self._connect_leco_request.connect(device.connect_leco)
         self._connect_leco_request.emit(self._connected)
@@ -283,11 +281,10 @@ class DashBoard(CustomApp, LECOComponentMixin):
         return "dashboard"
 
     def get_leco_host_port(self) -> tuple[str, int]:
-        host = config.get(("main_settings", "leco", "host"), 'localhost')
-        port = config.get(("main_settings", "leco", "port"), '12300')
+        host = config("utils", "network", "leco-server", "host")
+        port = config("utils", "network", "leco-server", "port")
 
         return host, port
-
 
     def process_leco_commands(self, status: ThreadCommand) -> None:
         if status.command == LECODashboardCommands.GET_DEVICES:
@@ -1297,12 +1294,55 @@ class DashBoard(CustomApp, LECOComponentMixin):
         logger.info(txt)
 
 
-def create_load_dashboard() -> tuple[SharedUI, DashBoard]:
+def load_dashboard_with_arguments(show_dashboard=True, load_extension=True):
+
+    extensions_names = ExtensionEnum.values()
+    # Command-line argument parsing
+    parser = argparse.ArgumentParser(prog="dashboard",
+                                     description="PyMoDAQ dashboard. "
+                                                 "Command-line options only affect GUI initial state.",
+                                     )
+
+    parser.add_argument("-x", "--experiment", metavar="EXPERIMENT_NAME",
+                        help="experiment name to load at startup")
+    parser.add_argument("-c", "--config", metavar="CONFIG_NAME",
+                        help="config name to execute (ignored if no experiment provided), deprecated, use -s for state")
+    parser.add_argument("-s", "--state", metavar="STATE_NAME",
+                        help="State name to execute (ignored if no experiment provided)")
+    if load_extension:
+        parser.add_argument("-e", "--extension", metavar="EXTENSION_NAME",
+                            help="extension name to execute (ignored if no experiment provided), valid "
+                                 'values are within: "' + '\" \"'.join(extensions_names) +'"')
+
+    args, unknown_args = parser.parse_known_args()
+
+    if load_extension:
+        extension_name = args.extension.upper() if args.extension is not None else args.extension
+    else:
+        extension_name = None
+
+    # If experiment name is supplied, load dashboard with this experiment
+    if args.experiment:
+        dashboard, extension, win = load_dashboard_with_experiment(
+            experiment_name=args.experiment,
+            extension_name=extension_name,
+            state_name=args.state if args.state is not None else args.config,
+            show_dashboard=show_dashboard
+        )
+
+    # If no command-line arguments are supplied, start empty
+    else:
+        win, dashboard = create_load_dashboard(show_dashboard=show_dashboard)
+        extension = None
+    return win, dashboard, extension
+
+
+def create_load_dashboard(show_dashboard=True) -> tuple[SharedUI, DashBoard]:
 
     win, area = make_window(title='PyMoDAQ Dashboard')
     win.resize(1000, 500)
 
-    shared_ui = SharedUI(win)
+    shared_ui = SharedUI(win, show=show_dashboard)
     dashboard = DashBoard(area)
     shared_ui.affect_application(dashboard)
     return shared_ui, dashboard
@@ -1310,13 +1350,16 @@ def create_load_dashboard() -> tuple[SharedUI, DashBoard]:
 
 def load_dashboard_with_experiment(experiment_name: str,
                                    extension_name: str = None,
-                                   configuration_name: str = None)  -> tuple[DashBoard, 'CustomExt', SharedUI]:
+                                   configuration_name: str = None,
+                                   state_name: str = None,
+                                   show_dashboard=True)  -> tuple[DashBoard, 'CustomExt', SharedUI]:
 
     """ Load the Dashboard using a given experiment then load an extension
 
     Parameters
     ----------
-    configuration_name: str
+    configuration_name: str (deprecated, use state)
+    state_name: str
     experiment_name: str
         The filename (without extension) defining the experiment to be loaded in the Dashboard
     extension_name: str
@@ -1327,13 +1370,14 @@ def load_dashboard_with_experiment(experiment_name: str,
         * 'Bayesian'
 
         or the ones defined within a plugin
-
+    show_dashboard: bool
+        show dashboard at startup  or not (if no extension provided, it is shown)
     Returns
     -------
 
     """
     from pymodaq.utils.config import get_set_experiment_path
-    shared_ui, dashboard = create_load_dashboard()
+    shared_ui, dashboard = create_load_dashboard(show_dashboard=show_dashboard if extension_name is not None else True)
 
     experiment_path = get_set_experiment_path().joinpath(f'{experiment_name}.xml')
     experiment_name = experiment_path.stem
@@ -1341,8 +1385,11 @@ def load_dashboard_with_experiment(experiment_name: str,
 
     if experiment_name in dashboard.experiment_manager.entries:
         dashboard.experiment_manager.entry = experiment_name
-        if configuration_name is not None:
-            dashboard.state_manager.entry = configuration_name
+        if state_name is None:
+            # backcompatibility
+            state_name = configuration_name
+        if state_name is not None:
+            dashboard.state_manager.entry = state_name
         dashboard.experiment_manager.execute_entry(experiment_path)
 
         if extension_name in ExtensionEnum.names():
@@ -1366,36 +1413,10 @@ def main():
     # Create application and main window
     app = mkQApp('Dashboard')
 
-    extensions_names = ExtensionEnum.values()
-    # Command-line argument parsing
-    parser = argparse.ArgumentParser(prog="dashboard",
-                                     description="PyMoDAQ dashboard. "
-                                                 "Command-line options only affect GUI initial state.",
-                                     )
-    parser.add_argument("-x", "--experiment", metavar="EXPERIMENT_NAME",
-                        help="experiment name to load at startup")
-    parser.add_argument("-c", "--config", metavar="CONFIG_NAME",
-                        help="config name to execute (ignored if no experiment provided)")
-    parser.add_argument("-e", "--extension", metavar="EXTENSION_NAME",
-                        help="extension name to execute (ignored if no experiment provided), valid "
-                             'values are within: "' + '\" \"'.join(extensions_names) +'"')
-    args = parser.parse_args()
+    load_dashboard_with_arguments(show_dashboard=True)
 
-    # If experiment name is supplied, load dashboard with this experiment
-    if args.experiment:
-        dashboard, extension, win = load_dashboard_with_experiment(
-            experiment_name=args.experiment,
-            extension_name=args.extension.upper() if args.extension is not None else args.extension,
-            configuration_name=args.config
-        )
-
-
-    # If no command-line arguments are supplied, start empty
-    else:
-        win, dashboard = create_load_dashboard()
-
-    win.show()
-
+    # SharedUI shows the dashboard on creation; preserve visibility changes
+    # made while loading.
     # Run application
     sys.exit(app.exec())
 

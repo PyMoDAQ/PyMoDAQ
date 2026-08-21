@@ -5,7 +5,7 @@ ownership and PySide6 does not garbage-collect them prematurely.
 """
 from typing import Callable, Optional
 
-from qtpy import QtWidgets, QtGui
+from qtpy import QtWidgets, QtGui, QtCore
 
 
 class StickyMenu(QtWidgets.QMenu):
@@ -114,3 +114,51 @@ def _add_leaf(menu, name, path, leaf_callback):
     action.triggered.connect(
         lambda checked=False, n=name, p=path: leaf_callback(n, p),
     )
+
+
+class IterableMenu(QtWidgets.QMenu):
+
+    def __init__(self, title: str, iterables,
+                 callable: Callable = None,
+                 parent=None):
+        super().__init__(title, parent=parent)
+        self.callable = callable
+
+        self.blockSignals(True)
+        try:
+            self.clear()
+            build_menu_from_iterable(self,
+                                     iterables,
+                                     leaf_callback=callable
+                                     )
+        finally:
+            self.blockSignals(False)
+
+
+class MenuButton(QtWidgets.QPushButton):
+    """
+    Create A PushButton displaying a menu (eventually nested)
+    """
+
+    triggered = QtCore.Signal(tuple)
+
+    def __init__(self, text: str,
+                 add_menu_entries: list[str] = None,
+                 parent = None,
+                 update_button_text: bool = True,):
+
+        super().__init__(text, parent=parent)
+        if add_menu_entries is None:
+            add_menu_entries = []
+        self._update_button_text = update_button_text
+
+        # Create the nested menu
+        self.menu = IterableMenu('iterable', add_menu_entries, callable=self._add_menu_item_selected)
+        self.setMenu(self.menu)
+
+    def _add_menu_item_selected(self, name, path_tuple):
+        """Called when a menu item is selected from the nested add menu."""
+        if self._update_button_text:
+            self.setText('/'.join(path_tuple))
+            self.adjustSize()
+        self.triggered.emit(path_tuple)

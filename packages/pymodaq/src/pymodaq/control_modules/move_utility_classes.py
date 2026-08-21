@@ -25,12 +25,16 @@ from pymodaq_data.data import DataUnitError, Q_, Unit
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.qt_utils import mkQApp
 
-from pymodaq.utils.messenger import deprecation_msg
+from pymodaq_utils.warnings import deprecation_msg
+
 from pymodaq.utils.data import DataActuator
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusMove
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 from pymodaq.control_modules.utils import (create_controller_param, create_remote_connection_params,
-                                            ControllerStatus, PluginBase)
+                                           ControllerStatus)
+from pymodaq.control_modules.plugin_base import PluginBase
+from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
+
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import ActuatorWorker
@@ -215,34 +219,6 @@ def main(plugin_file, init=True, title='test'):
 
     shared_ui.show()
     sys.exit(app.exec())
-
-
-##########################
-# this below is a patch to the Parameter class to enable the use of back-compatible 'multiaxes' Parameter name
-
-from pyqtgraph.parametertree.parameterTypes import GroupParameter, registerParameterType
-
-class GroupParameterPatch(GroupParameter):
-
-    def __getitem__(self, names: Union[str, tuple[str,]]):
-        if isinstance(names, str):
-            names = (names)
-        try:
-            return super().__getitem__(names)
-        except KeyError:
-            if 'multiaxes' in names:
-                names = list(names)
-                names[names.index('multiaxes')] = 'controller'
-                names = tuple(names)
-            if 'multi_status' in names:
-                names = list(names)
-                names[names.index('multi_status')] = 'controller_status'
-                names = tuple(names)
-            return super().__getitem__(names)
-
-
-registerParameterType('group', GroupParameterPatch, override=True)
-###########################################
 
 
 
@@ -679,28 +655,20 @@ class DAQ_Move_base(PluginBase):
           to subclass to transfer parameters to hardware
         """
 
-    def move_done(self, position: Optional[
-        DataActuator] = None):  # the position argument is just there to match some signature of child classes
-        """
-            | Emit a move done signal transmitting the float position to hardware.
-            | The position argument is just there to match some signature of child classes.
+    def move_done(self, position: Optional[DataActuator] = None):  # the position argument is just there to match some signature of child classes
+        """ Emit a move done signal transmitting the actuator's value to the GUI
 
-            =============== ========== =============================================================================
-             **Arguments**   **Type**  **Description**
-             *position*      float     The position argument is just there to match some signature of child classes
-            =============== ========== =============================================================================
-
+        The position argument is just there to match some signature of child classes.
         """
         if position is None:
-            if self.data_actuator_type.name == 'float':
+            if self.data_actuator_type == DataActuatorType.float:
                 position = DataActuator(self._title, data=self.get_actuator_value(),
                                         units=self.axis_unit)
             else:
                 position = self.get_actuator_value()
         if position.name != self._title:  # make sure the emitted DataActuator has the name of the real implementation
             #of the plugin
-            position = DataActuator(self._title, data=position.value(self.axis_unit),
-                                    units=self.axis_unit)
+            position.name = self._title
         self.move_done_signal.emit(position)
         self.move_is_done = True
 

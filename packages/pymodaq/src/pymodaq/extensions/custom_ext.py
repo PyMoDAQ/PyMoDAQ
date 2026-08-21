@@ -57,6 +57,8 @@ class CustomExt(CustomApp):
         """Method to be subclassed in order to define a custom quit function
         """
         super().quit_fun()
+        if self.runner_thread is not None:
+            self.exit_runner_thread()
         if self.dashboard is not None:
             self.show_dashboard(True)  #make sure to show it if it was hidden
 

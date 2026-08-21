@@ -71,7 +71,12 @@ class TableViewCustom(QtWidgets.QTableView):
 
 
 class TableViewParameterItem(WidgetParameterItem):
-    def makeWidget(self):
+
+    def __init__(self, *args, **kwargs):
+        self.widget: TableViewCustom = None
+        super().__init__(*args, **kwargs)
+
+    def makeWidget(self) -> TableViewCustom:
         """
             Make and initialize an instance of Table_custom.
 

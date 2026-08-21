@@ -7,17 +7,21 @@ config = Config()
 try:
     from pymodaq.utils.leco.utils import start_coordinator
 
-    logger.info('')
-    logger.info('')
-    logger.info(f'********************************')
-    logger.info(f"Starting the LECO Coordinator...")
-    start_coordinator()
-    logger.info(f"Done")
+
+    if config('utils', 'network', 'leco-server', 'run_coordinator_at_startup'):
+        logger.info('')
+        logger.info('')
+        logger.info(f'********************************')
+        logger.info(f"Starting the LECO Coordinator...")
+        start_coordinator()
+        logger.info(f"Done")
+
 except ImportError as e:
     logger.warning(f'Issue while importing the pyleco package: {str(e)}')
 except Exception as e:
     logger.warning(f'Issue while starting the pyleco coordinator: {str(e)}')
 finally:
-    logger.info('************************')
-    logger.info('')
-    logger.info('')
+    if config('utils', 'network', 'leco-server', 'run_coordinator_at_startup'):
+        logger.info('************************')
+        logger.info('')
+        logger.info('')
