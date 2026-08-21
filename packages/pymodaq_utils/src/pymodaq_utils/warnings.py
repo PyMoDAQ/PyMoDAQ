@@ -4,7 +4,7 @@ warnings.filterwarnings("ignore", message=".*libpyside.*", category=RuntimeWarni
 # but pyside6 do not do errors but throw this Runtimewarning)
 
 
-def deprecation_msg(message, stacklevel=2):
+def deprecation_msg(message, stacklevel=3):
     warnings.warn(message, DeprecationWarning, stacklevel=stacklevel)
 
 

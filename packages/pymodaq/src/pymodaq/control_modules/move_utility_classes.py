@@ -231,34 +231,6 @@ def main(plugin_file, init=True, title='test'):
     sys.exit(app.exec())
 
 
-##########################
-# this below is a patch to the Parameter class to enable the use of back-compatible 'multiaxes' Parameter name
-
-from pyqtgraph.parametertree.parameterTypes import GroupParameter, registerParameterType
-
-class GroupParameterPatch(GroupParameter):
-
-    def __getitem__(self, names: Union[str, tuple[str,]]):
-        if isinstance(names, str):
-            names = (names)
-        try:
-            return super().__getitem__(names)
-        except KeyError:
-            if 'multiaxes' in names:
-                names = list(names)
-                names[names.index('multiaxes')] = 'controller'
-                names = tuple(names)
-            if 'multi_status' in names:
-                names = list(names)
-                names[names.index('multi_status')] = 'controller_status'
-                names = tuple(names)
-            return super().__getitem__(names)
-
-
-registerParameterType('group', GroupParameterPatch, override=True)
-###########################################
-
-
 
 class DAQ_Move_base(PluginBase):
     """ The base class to be inherited by all actuator modules

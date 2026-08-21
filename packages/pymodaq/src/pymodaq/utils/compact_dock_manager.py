@@ -18,7 +18,7 @@ from pymodaq_gui.utils.styling import create_icon
 from pymodaq_gui.utils.widgets.collapsible_widget import CollapsibleWidget
 
 try:
-    from pymodaq_utils.config import Config as _PymConfig
+    from pymodaq_utils.config import GlobalConfig as _PymConfig
     _pymodaq_config = _PymConfig()
 except Exception:
     _pymodaq_config = None
