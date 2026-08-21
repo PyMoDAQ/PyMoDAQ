@@ -273,7 +273,10 @@ class ExperimentManager(ManagerBase):
                         if plug_init:
                             actuators_modules[-1].apply_controller_parameters(plugin["settings"].child("controller"))
                             actuators_modules[-1].init_hardware_ui()
-                            actuators_modules[-1].ui.get_action('ini_actuator').disconnect()
+                            try:
+                                actuators_modules[-1].ui.get_action('ini_actuator').disconnect()
+                            except TypeError:
+                                pass
                             actuators_modules[-1].master = True
                             QtWidgets.QApplication.processEvents()
                             self.dashboard.modules_manager.poll_init(actuators_modules[-1])
