@@ -52,6 +52,8 @@ class DataDisplayer(QObject):
         self._color_indices: Dict[str, int] = {}
 
         self._show_lines: bool = False
+        self._future_fraction: float = 0.
+        self._future_enabled: bool = False
 
         axis = self._plotitem.getAxis('bottom')
         axis.setLabel(text='Samples', units='S')
@@ -178,6 +180,24 @@ class DataDisplayer(QObject):
 
     def update_axis(self, history_length: int):
         self._data.length = history_length
+        self.update_plots()
+
+    def update_future_space(self, percentage: float):
+        """Set the fraction (in %) of the history length reserved as blank space
+        ahead of the last data point, so the curve appears to slide with some
+        room left on the right rather than filling the plot edge to edge."""
+        self._future_fraction = max(0., percentage) / 100.
+        self.update_plots()
+
+    def set_future_enabled(self, enabled: bool):
+        """Toggle whether the reserved blank space ahead of the last data point
+        is applied. Mirrors pyqtgraph's own 'A' (autorange) button: enabling this
+        disables the viewbox's automatic x autorange (which would otherwise fit
+        tightly to the data and erase our blank margin on every update); disabling
+        it hands x-axis control back to pyqtgraph's normal autorange."""
+        self._future_enabled = enabled
+        self._plotitem.getViewBox().enableAutoRange(x=not enabled)
+        self.update_plots()
 
     @property
     def Ndata(self):
@@ -203,6 +223,7 @@ class DataDisplayer(QObject):
             for label, plot_item in self._plot_items.items():
                 if label in self._data.data:
                     plot_item.setData(self.axis, self._data.data[label])
+            self.update_x_range()
 
         for label, values in self._data.data.items():
             if label not in self._mins:
@@ -214,6 +235,24 @@ class DataDisplayer(QObject):
             if label in self._min_lines:
                 self._min_lines[label].setValue(self._mins[label])
                 self._max_lines[label].setValue(self._maxs[label])
+
+    def update_x_range(self):
+        """Extend the plotted x-range beyond the last data point by a fraction of the
+        currently displayed history span, so some blank space is kept on the right
+        instead of the curve always filling the plot edge to edge. Only takes effect
+        while the 'future_space' toggle is on (x autorange is then off, see
+        set_future_enabled); otherwise pyqtgraph's own autorange handles the x-axis
+        and this is a no-op."""
+        if not self._future_enabled:
+            return
+        axis = self.axis
+        if axis is None or len(axis) == 0:
+            return
+        xmin, xmax = axis[0], axis[-1]
+        span = xmax - xmin
+        if span <= 0:
+            span = self._data.length
+        self._plotitem.setXRange(xmin, xmax + self._future_fraction * span, padding=0)
 
     def update_display_items(self, data: data_mod.DataWithAxes = None):
         new_labels = set(data.labels) if data is not None else set()
@@ -276,8 +315,21 @@ class View0D(ActionManager, QObject):
 
     def setup_actions(self):
         self.add_action('clear', 'Clear plot', 'ink_eraser', 'Clear the current plots')
+        self.toolbar.addSeparator()
         self.add_widget('Nhistory', SpinBox, tip='Set the history length of the plot',
-                        setters=dict(setMaximumWidth=100))
+                        int=True, step=1, bounds=(1, None),
+                        setters=dict(setMaximumWidth=60))
+        self.toolbar.addSeparator()
+        self.add_action('future_space', 'Reserve future space', 'slideshow',
+                        'If checked, keeps blank space ahead of the last data point (sized from the % '
+                        'spinbox) instead of letting the plot fill edge to edge', checkable=True,
+                        icon_color='#9E9E9E', icon_checked_color='#F9A825')
+        self.add_widget('Nfuture', SpinBox, tip='Percentage of the history span to reserve as blank '
+                                                 'space ahead of the last point (used when "Reserve future '
+                                                 'space" is checked)',
+                        setters=dict(setMaximumWidth=60, setSuffix='%', setMinimum=0, setMaximum=100,
+                                     setSingleStep=5))
+        self.toolbar.addSeparator()
         self.add_action('show_data_as_list', 'Show numbers', 'pin', 'If triggered, will display last data as numbers'
                                                                        'in a side panel', checkable=True)
         self.add_action('show_min_max', 'Show Min/Max lines', 'contrast_square',
@@ -285,6 +337,7 @@ class View0D(ActionManager, QObject):
         self.add_action('use_timestamps', 'Use Timestamps', 'timer_off',
                         'Use timestamps as axis', checkable=True,
                         icon_checked='timer')
+        self.toolbar.addSeparator()
         self.add_action('scatter', 'Scatter', 'Marker', 'Switch between line or scatter plots',
                         checkable=True)
         self.add_action('xyplot', 'XYPlotting', '2d',
@@ -321,6 +374,8 @@ class View0D(ActionManager, QObject):
         self.connect_action('clear', self.data_displayer.clear_data)
         self.connect_action('show_data_as_list', self.show_data_list)
         self.connect_action('Nhistory', self.data_displayer.update_axis, signal_name='valueChanged')
+        self.connect_action('Nfuture', self.data_displayer.update_future_space, signal_name='valueChanged')
+        self.connect_action('future_space', self.data_displayer.set_future_enabled)
         self.connect_action('show_min_max', self.data_displayer.show_min_max)
         self.connect_action('sync_x_axis', self.data_displayer.set_sync_x_axis)
         self.connect_action('use_timestamps', self.data_displayer.set_use_timestamps)
@@ -341,7 +396,8 @@ class View0D(ActionManager, QObject):
         self.values_list.setVisible(False)
         config = Config()
         self.get_action('Nhistory').setValue(config('gui', 'viewer', 'viewer0D', 'Nhistory'))
-        for action_name in ('show_data_as_list', 'show_min_max'):
+        self.get_action('Nfuture').setValue(config('gui', 'viewer', 'viewer0D', 'Nfuture'))
+        for action_name in ('show_data_as_list', 'show_min_max', 'future_space'):
             if config('gui', 'viewer', 'viewer0D', action_name):
                 self.get_action(action_name).trigger()
         if not config('gui', 'viewer', 'viewer0D', 'sync_x_axis'):
