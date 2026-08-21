@@ -123,7 +123,7 @@ class HardwareWorkerBase(QObject):
         return True
 
 
-class QThread(QThread):
+class QThreadCustom(QThread):
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -187,10 +187,10 @@ def create_remote_connection_params() -> list[dict]:
 class ControllerThread:
     """ Container for the control module worker thread and hardware plugin "controller" object and some related status
      """
-    thread: QThread | None = None
-    controller: Any = None
+    thread: QThreadCustom | None = None  # the thread shared by a master and its slaves
+    controller: Any = None  # the controller shared by a master and its slaves
     is_master: bool = True
-    id: int = None
+    id: int = None  # integer as defined in the ExperimentManager (One Master and multiple Slaves share it)
     initialized: bool = False
 
 
@@ -688,7 +688,7 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
         try:
             hardware = self._create_hardware()
             if self.controller_thread.is_master:
-                self.controller_thread.thread = QThread()
+                self.controller_thread.thread = QThreadCustom()
             else:
                 if self.controller_thread.thread is None or not self.controller_thread.thread.isRunning():
                     if self.ui is not None:
