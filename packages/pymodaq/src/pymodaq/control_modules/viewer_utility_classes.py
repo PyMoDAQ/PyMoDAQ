@@ -208,7 +208,7 @@ class DAQ_Viewer_base(PluginBase):
         Extensions that drive this plugin (e.g. ``DAQ_Scan``) may set caller context
         describing the active HDF5 file/node, so a plugin can mirror PyMoDAQ's file
         layout for its own files. Call ``self.get_caller()`` (inherited from
-        :class:`~pymodaq.control_modules.utils.PluginBase`) at any point in the plugin's
+        :class:`~pymodaq.control_modules.pluginBase.PluginBase`) at any point in the plugin's
         lifetime — not just inside ``grab_data`` — to read it. It returns ``None`` outside
         of an extension-driven run. During a ``DAQ_Scan`` run it is a
         :class:`~pymodaq.extensions.scan.daq_scan.DAQScanCaller`, which adds the current

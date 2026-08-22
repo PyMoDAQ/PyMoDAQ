@@ -52,7 +52,7 @@ params4 = [
             'tip': 'displays this text as a tooltip','children':
                 [{'title': 'Standard int:', 'name': 'aint', 'type': 'int', 'value': 20}]},
     ]},
-]    
+]
 
 P1 = Parameter(name='settings1', type='group', children=params1)
 P2 = Parameter(name='settings2', type='group', children=params2)

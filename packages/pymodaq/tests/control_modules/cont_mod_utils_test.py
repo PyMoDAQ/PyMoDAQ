@@ -7,7 +7,8 @@ Created the 15/11/2022
 import pytest
 
 from pymodaq.control_modules import utils
-from pymodaq.control_modules.utils import ControlModule, PluginBase, HardwareWorkerBase
+from pymodaq.control_modules.utils import ControlModule, HardwareWorkerBase
+from pymodaq.control_modules.plugin_base import PluginBase
 from pymodaq.utils.caller import CallerInfo
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
 from pymodaq.control_modules.instruments import DAQTypesEnum
