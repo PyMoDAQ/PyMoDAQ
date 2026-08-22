@@ -1,14 +1,18 @@
 from importlib import import_module
 from pathlib import Path
 from typing import Union
-
+import numpy as np
 from qtpy import QtCore, QtWidgets
 import qt_themes
 
+from pymodaq_gui.managers.action_manager import QAction
 from pymodaq_gui.utils import CustomApp
+from pymodaq_gui.utils import Dock
 from pymodaq_gui.utils.widgets import LabelWithFont
 from pymodaq_gui.utils.styling import create_font, create_icon
-
+from pymodaq_gui.plotting.utils.plot_utils import display_in_dock
+from pymodaq_gui.utils.widgets.widget_with_label_title import WidgetWithLabelTitle
+from pymodaq_gui.utils.widgets.widget_with_title_in_toolbar import WidgetWithTitleInToolbar
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import GlobalConfig as Config
 
@@ -34,11 +38,16 @@ class ControlModuleUI(CustomApp):
     # Common icon name for initialization action
     INIT_ICON = 'cable'
 
-    def __init__(self, parent):
-        super().__init__(parent)
+    def __init__(self, parent, title, settings_dock: Dock = None,):
+        super().__init__(parent, title=title)
+        self.settings_dock: Dock = settings_dock
         self.config = config
         self._ini_state = False
-        self._settings_widget = None
+
+        self._settings_widget = WidgetWithTitleInToolbar(self.title)
+
+    def add_setting_tree(self, tree):
+        self._settings_widget.insert_widget(tree)
 
     # ---- Common action setup methods ----
 
@@ -78,6 +87,10 @@ class ControlModuleUI(CustomApp):
                         icon_checked_color=self.get_theme().green,
                         toolbar=toolbar)
 
+    @property
+    def init_action(self) -> QAction:
+        return self.get_action(self._init_action_name)
+
     def _setup_settings_action(self, toolbar: QtWidgets.QToolBar = None) -> None:
         """Add the show settings action to the toolbar
 
@@ -89,6 +102,9 @@ class ControlModuleUI(CustomApp):
         self.add_action('show_settings', 'Show Settings', 'settings', "Show Settings",
                         checkable=True, icon_checked_color=self.get_theme().green,
                         toolbar=toolbar)
+        self._settings_widget.add_action('close', 'Close', 'cancel',
+                                         toolbar=self._settings_widget.toolbar,
+                                         icon_color=self.get_theme().red)
 
     def update_init_icon(self, initialized: bool, action_name: str = 'init') -> None:
         """Update the initialization action icon based on state
@@ -120,8 +136,19 @@ class ControlModuleUI(CustomApp):
 
     def _show_settings(self, show: bool = True):
         """Slot connected to the show_settings action."""
-        self._settings_widget.setVisible(show)
-        self._settings_widget.closeEvent = lambda event: self.set_action_checked('show_settings', False)
+        if (self.config('pymodaq', 'control_modules', 'settings_as_popup')
+            or self.settings_dock is None):
+            if self.settings_dock is not None:
+                self.settings_dock.removeWidgets(close=False)
+                self.settings_dock.setVisible(False)
+
+            self._settings_widget.setWindowTitle(f'{self.title} settings')
+            self._settings_widget.setVisible(show)
+            self._settings_widget.closeEvent = lambda event: self.set_action_checked('show_settings', False)
+        else:
+            display_in_dock(show,
+                            self._settings_widget,
+                            self.settings_dock)
 
     def show_settings(self, show=True):
         """Programmatically show/hide the settings widget. API entry."""
@@ -136,6 +163,8 @@ class ControlModuleUI(CustomApp):
         """
         if 'show_settings' in self.actions_names:
             self.connect_action('show_settings', self._show_settings)
+            self._settings_widget.connect_action('close',
+                                                 self.get_action('show_settings').trigger)
         if hasattr(self, '_init_action_name') and self._init_action_name in self.actions_names:
             self.connect_action(self._init_action_name, self.send_init)
 

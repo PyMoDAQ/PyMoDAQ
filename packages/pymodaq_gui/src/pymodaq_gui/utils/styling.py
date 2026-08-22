@@ -1,8 +1,10 @@
 from pathlib import Path
 from typing import Union
+import dataclasses
 
 import pyqtgraph as pg
 import qt_themes
+from pyqtgraph import mkColor
 from qtpy import QtCore, QtGui, QtWidgets
 
 from pymodaq_gui.resources.material_icons import MaterialIcon
@@ -120,7 +122,8 @@ def make_shape_icon(
         painter.end()
     return QtGui.QIcon(pixmap)
 
-def create_font(font_name=None, font_size=None, isbold=False, isitalic=False) -> QtGui.QFont:
+def create_font(font_name=None, font_size=None, isbold=False, isitalic=False,
+                ) -> QtGui.QFont:
     font = QtGui.QFont()
     if font_name is not None:
         font.setFamily(font_name)
@@ -156,20 +159,27 @@ def transform_icon(icon: QtGui.QIcon, transform: QtGui.QTransform) -> QtGui.QIco
     """
     new_icon = QtGui.QIcon()
     sizes = icon.availableSizes() or [QtCore.QSize(s, s) for s in (20, 40)]
+    modes = (QtGui.QIcon.Mode.Normal, QtGui.QIcon.Mode.Disabled,
+             QtGui.QIcon.Mode.Active, QtGui.QIcon.Mode.Selected)
     for size in sizes:
-        for state in (QtGui.QIcon.State.Off, QtGui.QIcon.State.On):
-            px = icon.pixmap(size, QtGui.QIcon.Mode.Normal, state)
-            if not px.isNull():
-                if type(px) is not QtGui.QPixmap:
-                    px = QtGui.QPixmap.fromImage(px)
-                px_transformed = px.transformed(transform)
-                if type(px) is not QtGui.QPixmap:
-                    px_transformed = QtGui.QPixmap.fromImage(px.transformed(transform))
-                new_icon.addPixmap(
-                    px_transformed,
-                    QtGui.QIcon.Mode.Normal,
-                    state,
-                )
+        for mode in modes:
+            for state in (QtGui.QIcon.State.Off, QtGui.QIcon.State.On):
+                # Call QIcon's own pixmap() rather than icon.pixmap(): some icon
+                # sources (e.g. MaterialIcon) override pixmap() in Python and
+                # recompute from a default colour instead of returning the
+                # already-coloured pixmap cached via addPixmap()/set_color().
+                px = QtGui.QIcon.pixmap(icon, size, mode, state)
+                if not px.isNull():
+                    if type(px) is not QtGui.QPixmap:
+                        px = QtGui.QPixmap.fromImage(px)
+                    px_transformed = px.transformed(transform)
+                    if type(px) is not QtGui.QPixmap:
+                        px_transformed = QtGui.QPixmap.fromImage(px.transformed(transform))
+                    new_icon.addPixmap(
+                        px_transformed,
+                        mode,
+                        state,
+                    )
     return new_icon
 
 def _translate_icon(icon: QtGui.QIcon, x: int = 0, y: int = 0) -> QtGui.QIcon:
@@ -216,16 +226,19 @@ def _rotate_icon(icon: QtGui.QIcon, angle: int = 0) -> QtGui.QIcon:
     angle: int
         The angle in degrees to rotate the icon.
     """
-    transform = QtGui.QTransform().rotate(angle)
-    return transform_icon(icon, transform)
-
+    if angle != 0:
+        transform = QtGui.QTransform().rotate(angle)
+        return transform_icon(icon, transform)
+    else:
+        return icon
 
 def _flip_icon(icon: QtGui.QIcon, flip_h: bool, flip_v: bool) -> QtGui.QIcon:
-    """Return a new QIcon with all Normal-mode pixmaps mirrored.
+    """Return a new QIcon with all pixmaps mirrored.
 
-    Only the Normal mode is transformed; Qt derives Disabled/Active/Selected
-    variants automatically.  Both Off and On states are handled so that
-    checkable actions with two visual states work correctly.
+    All modes (Normal/Disabled/Active/Selected) and both Off/On states are
+    transformed, so icons that bake in a distinct Disabled-mode pixmap
+    (e.g. MaterialIcon) keep their proper disabled appearance instead of
+    falling back to Qt's generic auto-generated disabled look.
 
     For SVG/vector icons (e.g. MaterialIcon) ``availableSizes()`` returns an
     empty list; the function falls back to the two standard Material sizes
@@ -242,7 +255,9 @@ def create_icon(icon_name: Union[QtGui.QIcon, str, Path],
                 icon_color: Union[QtGui.QColor, bytes, str] = None,
                 icon_checked_color: Union[QtGui.QColor, bytes, str] = None,
                 flip_h: bool = False,
-                flip_v: bool = False):
+                flip_v: bool = False,
+                rotate: int = 0,
+                fill: bool = None):
     """ Create an icon from various sources by order of preference:
 
     1) icon_name is a MaterialIcon
@@ -265,24 +280,33 @@ def create_icon(icon_name: Union[QtGui.QIcon, str, Path],
         Mirror the icon horizontally (left ↔ right).
     flip_v:
         Mirror the icon vertically (top ↔ bottom).
+    rotate:
+        Rotate the icon given the value in degrees
+    fill:
+        Is Material Icon filled or edged. If None, left to the user configuration else force the
+        choice on the icon
+    rotate:
+        rotation of the icon in degrees. If 0 nothing is done
     """
     if isinstance(icon_name, MaterialIcon):
         icon_name.set_color(create_color(icon_color))
         if icon_checked_color is not None:
             icon_name.set_color(create_color(icon_checked_color), state=QtGui.QIcon.State.On)
-        return _flip_icon(icon_name, flip_h, flip_v)
+        icon = _flip_icon(icon_name, flip_h, flip_v)
+        return _rotate_icon(icon, rotate)
     elif isinstance(icon_name, QtGui.QIcon):  #cannot set Color on non MaterialIcons
-        return _flip_icon(icon_name, flip_h, flip_v)
+        icon = _flip_icon(icon_name, flip_h, flip_v)
+        return _rotate_icon(icon, rotate)
     elif resource_path_exists(
             MaterialIcon.resource_path(
                 icon_name,
                 style=MaterialIcon.Style(config('gui', 'style', 'icons', 'style')[0]),
-                fill=config('gui', 'style', 'icons', 'fill')[0],
+                fill=config('gui', 'style', 'icons', 'fill')[0] if fill is None else fill,
                 size=config('gui', 'style', 'icons', 'size')[0])):
         icon = MaterialIcon(
             icon_name,
             style=MaterialIcon.Style(config('gui', 'style', 'icons', 'style')[0]),
-            fill=config('gui', 'style', 'icons', 'fill')[0],
+            fill=config('gui', 'style', 'icons', 'fill')[0] if fill is None else fill,
             size=config('gui', 'style', 'icons', 'size')[0])
         icon.set_color(create_color(icon_color))
         if icon_checked_color is not None:
@@ -300,8 +324,30 @@ def create_icon(icon_name: Union[QtGui.QIcon, str, Path],
         icon = QtWidgets.QWidget().style().standardIcon(pixmapi)
     else:
         icon = QtGui.QIcon()
-    return _flip_icon(icon, flip_h, flip_v)
+    icon = _flip_icon(icon, flip_h, flip_v)
+    return _rotate_icon(icon, angle=rotate)
 
 
 def resource_path_exists(path: str) -> bool:
     return QtCore.QFile(path).exists()
+
+
+@dataclasses.dataclass
+class Font:
+    font_name: str = 'Tahoma'
+    font_size: int = 14
+    isbold: bool = True
+    isitalic: bool = False
+    color: QtGui.QColor | str | tuple[int, int, int] = None
+
+    def apply_to_widget(self, widget: QtWidgets.QWidget):
+        if hasattr(widget, 'setFont'):
+            font = self.get_font()
+            widget.setFont(font)
+
+            if self.color is not None:
+                color = mkColor(self.color)
+                widget.setStyleSheet(f'color: #{hex(color.rgb())[2:]}')
+
+    def get_font(self) -> QtGui.QFont:
+        return create_font(self.font_name, self.font_size, self.isbold, self.isitalic)

@@ -10,8 +10,9 @@ from qtpy.QtCore import QObject, Signal, Slot
 
 from pymodaq_data.plotting.utils import PlotColors
 from pymodaq_gui.plotting.utils.plot_utils import Data0DWithHistory
-from pymodaq_gui.managers.roi_manager import ROIManager
+from pymodaq_gui.managers.roi_viewer_manager import ROIViewerManager
 from pymodaq_gui.plotting.items.crosshair import Crosshair
+from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
 
@@ -20,6 +21,12 @@ logger = set_logger(get_module_name(__file__))
 IMAGE_TYPES = ['red', 'green', 'blue']
 COLOR_LIST = list(PlotColors())
 COLORS_DICT = dict(red=(255, 0, 0), green=(0, 255, 0), blue=(0, 0, 255), spread=(128, 128, 128))
+
+
+class Lineouts(StrEnum):
+    HOR = 'hor'
+    VER = 'ver'
+    INT = 'int'
 
 
 def curve_item_factory(pen='red'):
@@ -49,7 +56,7 @@ class LineoutPlotter(QObject):
     graph_widgets: OrderedDict
         Includes plotwidgets to display data
     roi_manager:
-        The ROIManager to create ROIs and manage their properties
+        The ROIViewerManager to create ROIs and manage their properties
     crosshair:
         The Crosshair object
     """
@@ -58,9 +65,9 @@ class LineoutPlotter(QObject):
     crosshair_lineout_plotted = Signal(dict)
     roi_lineout_plotted = Signal(dict)
 
-    lineout_widgets = ['int']  # should be reimplemented see viewer2D
+    lineout_widgets = [Lineouts.INT]  # should be reimplemented see viewer2D
 
-    def __init__(self, graph_widgets: OrderedDict, roi_manager: ROIManager, crosshair: Crosshair):
+    def __init__(self, graph_widgets: OrderedDict, roi_manager: ROIViewerManager, crosshair: Crosshair):
         super().__init__()
 
         self._roi_manager = roi_manager
@@ -81,7 +88,7 @@ class LineoutPlotter(QObject):
         self._roi_manager.roi_value_changed.connect(self.update_roi)
 
     def plot_roi_lineouts(self, roi_dicts):
-        self.integrated_data.add_datas({roi_key: roi_dicts[roi_key].int_data for roi_key in roi_dicts})
+        self.integrated_data.add_data_dict({roi_key: roi_dicts[roi_key].int_data for roi_key in roi_dicts})
 
         # for roi_key, lineout_data in roi_dicts.items():
         #     if roi_key in self._roi_curves:
@@ -200,7 +207,7 @@ class LineoutPlotter(QObject):
         Example:
         --------
         >>> roi_dict_triplet = self.get_roi_cruves_triplet()
-        >>> hor_curve = roi_dict_triplet['ROI_00']['hor']  # where 'hor' is an entry of self.lineout_widgets
+        >>> hor_curve = roi_dict_triplet['ROI_00'][Lineouts.HOR]  # where 'hor' is an entry of self.lineout_widgets
         """
         return self._roi_curves
 
@@ -211,7 +218,7 @@ class LineoutPlotter(QObject):
         Example:
         --------
         >>> crosshair_dict_triplet = self.get_crosshair_curves_triplet()
-        >>> hor_curve = crosshair_dict_triplet['blue']['hor']  # where 'hor' is an entry of self.lineout_widgets
+        >>> hor_curve = crosshair_dict_triplet['blue'][Lineouts.HOR]  # where 'hor' is an entry of self.lineout_widgets
         """
         return self._crosshair_curves
 
@@ -225,3 +232,5 @@ class LineoutPlotter(QObject):
     def show_crosshair_curves(self, curve_key, show=True):
         """to reimplement if needed"""
         pass
+
+

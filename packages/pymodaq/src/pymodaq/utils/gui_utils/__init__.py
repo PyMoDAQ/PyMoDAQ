@@ -7,4 +7,4 @@ from pymodaq_gui.utils.widgets.push import PushButtonIcon, EditPush, EditPushRel
 from pymodaq_gui.utils.widgets.qled import QLED
 from pymodaq_gui.utils.widgets.spinbox import QSpinBox_ro
 
-from .utils import get_splash_sc
+from pymodaq_gui.utils.splash import get_splash_sc

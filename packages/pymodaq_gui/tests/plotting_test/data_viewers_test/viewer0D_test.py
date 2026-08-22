@@ -100,7 +100,7 @@ class TestViewer0D:
                                         data=[np.array([1.0]), np.array([2.0]), np.array([3.0])],
                                         labels=['ch1', 'ch2', 'ch3']))
         assert displayer._data.size == N + 1
-        assert np.sum(np.isnan(displayer._data.datas['ch3'])) == N  # first N entries are NaN
+        assert np.sum(np.isnan(displayer._data.data['ch3'])) == N  # first N entries are NaN
         prog.parent.deleteLater()
 
     def test_smart_diff_preserves_unchanged_plot_items(self, init_viewer0d):

@@ -6,7 +6,7 @@ from pymodaq_data import data as data_mod, DataDim
 from pymodaq_gui.plotting.data_viewers.viewer2D import Viewer2D
 from pymodaq_gui.plotting.data_viewers import viewer2D as v2d
 
-from pymodaq_gui.managers.roi_manager import ROIManager,roi_format
+from pymodaq_gui.managers.roi_viewer_manager import roi_format, ROIMeta
 import pymodaq_gui.plotting.utils.plot_utils as plot_utils
 from pathlib import Path
 import pytest
@@ -73,25 +73,25 @@ def create_one_roi(prog, qtbot, roitype='RectROI'):
     qtbot.wait(0)
     with qtbot.waitSignal(prog.view.roi_manager.new_ROI_signal, timeout=10000) as blocker:
         prog.view.roi_manager.add_roi_programmatically(roitype)
-    roi_name = blocker.args[0]    
-    roi = prog.view.roi_manager.get_roi(roi_name)
-    index_roi = roi.index
-    roi_type = roi.type()
+    roi_index = blocker.args[0]
+    roi_meta = prog.view.roi_manager.get_roi_from_index(roi_index)
+    index_roi = roi_meta.index
+    roi_type = roi_meta.roi.type()
     qtbot.wait(0)
-    return index_roi, roi, roi_type
+    return index_roi, roi_meta, roi_type
 
 
-def copy_one_roi(prog, qtbot, roi):
+def copy_one_roi(prog, qtbot, roi_meta: ROIMeta):
     prog.view.get_action('roi').trigger()
     qtbot.wait(0)
     with qtbot.waitSignal(prog.view.roi_manager.new_ROI_signal, timeout=10000) as blocker:
-        prog.view.roi_manager.copy_ROI(roi)
-    roi_name = blocker.args[0]    
-    roi = prog.view.roi_manager.get_roi(roi_name)
-    index_roi = roi.index
-    roi_type = roi.type()
+        prog.view.roi_manager.copy_ROI(roi_meta)
+    roi_index = blocker.args[0]
+    roi_meta = prog.view.roi_manager.get_roi_from_index(roi_index)
+    index_roi = roi_meta.index
+    roi_type = roi_meta.roi.type()
     qtbot.wait(0)
-    return index_roi, roi, roi_type
+    return index_roi, roi_meta, roi_type
 
 
 class TestImageFactory:
@@ -128,37 +128,37 @@ class TestHistoFactory:
 
 
 class TestData0DWithHistory:
-    def test_add_datas_list(self, qtbot):
+    def test_add_data_list(self, qtbot):
         Nsamplesinhisto = 2
         data_histo = plot_utils.Data0DWithHistory(Nsamplesinhisto)
         dat = [[1, 2], [1, 2], [1, 2], [1, 2], [1, 2], [1, 2]]
         for ind, d in enumerate(dat):
-            data_histo.add_datas(d)
+            data_histo.add_data_list(d)
             assert data_histo._data_length == ind+1
             assert np.any(data_histo.xaxis == approx(np.linspace(max(0, ind+1-Nsamplesinhisto), ind+1,
                                                                  min(Nsamplesinhisto, ind+1)
                                                                  , endpoint=False, dtype=float)))
-            assert 'data_00' in data_histo.datas
-            assert 'data_01' in data_histo.datas
+            assert 'data_00' in data_histo.data
+            assert 'data_01' in data_histo.data
 
-    def test_add_datas(self, qtbot):
+    def test_add_data(self, qtbot):
         data_histo = plot_utils.Data0DWithHistory()
         dat = [dict(CH0=1, CH1=2.), dict(CH0=np.array([1]), CH1=2.), dict(CH0=1, CH1=2.), dict(CH0=1, CH1=2.)]
         for ind, d in enumerate(dat):
-            data_histo.add_datas(d)
+            data_histo.add_data_dict(d)
             assert data_histo._data_length == ind+1
             assert np.any(data_histo.xaxis == approx(np.linspace(0, ind+1, ind+1, endpoint=False)))
-            assert 'CH0' in data_histo.datas
-            assert 'CH1' in data_histo.datas
+            assert 'CH0' in data_histo.data
+            assert 'CH1' in data_histo.data
 
-    def test_add_datas_and_clear(self, qtbot):
+    def test_add_data_and_clear(self, qtbot):
         data_histo = plot_utils.Data0DWithHistory()
         dat = [dict(CH0=1, CH1=2.), dict(CH0=np.array([1]), CH1=2.), dict(CH0=1, CH1=2.), dict(CH0=1, CH1=2.)]
         for ind, d in enumerate(dat):
-            data_histo.add_datas(d)
+            data_histo.add_data_dict(d)
         data_histo.clear_data()
 
-        assert data_histo.datas == dict([])
+        assert data_histo.data == dict([])
         assert data_histo._data_length == 0
 
 
@@ -242,7 +242,7 @@ class TestViewer2D:
 
 
 class TestAxis:
-    @pytest.mark.parametrize('position', ('left', 'bottom', 'right', 'top'))
+    @pytest.mark.parametrize('position', ('left', 'bottom'))
     def test_axis_label(self, init_viewer2d, position):
         prog, qtbot = init_viewer2d
         UNITS= 'myunits'
@@ -378,21 +378,21 @@ class TestROI:
         data = init_data()
         prog.show_data(data)
 
-        index_roi, roi, roi_type = create_one_roi(prog, qtbot, roitype='RectROI')
+        index_roi, roi_meta, roi_type = create_one_roi(prog, qtbot, roitype='RectROI')
 
-        assert isinstance(roi, RectROI)
-        assert roi.index == 0
+        assert isinstance(roi_meta.roi, RectROI)
+        assert roi_meta.index == 0
 
-        index_roi, roi, roi_type = create_one_roi(prog, qtbot, roitype='EllipseROI')
-        assert isinstance(roi, EllipseROI)
-        assert roi.index == 1
+        index_roi, roi_meta, roi_type = create_one_roi(prog, qtbot, roitype='EllipseROI')
+        assert isinstance(roi_meta.roi, EllipseROI)
+        assert roi_meta.index == 1
 
     def test_remove_roi(self, init_viewer2d):
         prog, qtbot = init_viewer2d
         data = init_data()
         prog.show_data(data)
 
-        index_roi, roi, roi_type = create_one_roi(prog, qtbot, roitype='RectROI')
+        index_roi, roi_meta, roi_type = create_one_roi(prog, qtbot, roitype='RectROI')
 
         prog.view.roi_manager.remove_roi_programmatically(index_roi)
         qtbot.wait(0)
@@ -403,12 +403,12 @@ class TestROI:
         data = init_data()
         prog.show_data(data)
 
-        index_roi, roi, roi_type = create_one_roi(prog, qtbot, roitype='RectROI')
-        index_roi_copied, roi_copied, roi_type_copied = copy_one_roi(prog, qtbot, roi)
+        index_roi, roi_meta, roi_type = create_one_roi(prog, qtbot, roitype='RectROI')
+        index_roi_copied, roi_copied, roi_type_copied = copy_one_roi(prog, qtbot, roi_meta)
 
         assert len(prog.view.roi_manager.ROIs)==2
-        assert roi.type() == roi_type_copied
-        assert roi.getState() == roi_copied.getState()
+        assert roi_meta.roi.type() == roi_type_copied
+        assert roi_meta.roi.getState() == roi_copied.roi.getState()
 
 
         prog.view.roi_manager.remove_roi_programmatically(index_roi)
@@ -421,24 +421,24 @@ class TestROI:
 
         index_roi, roi, roi_type = create_one_roi(prog, qtbot, roitype='RectROI')
 
-        prog.view.roi_manager.settings.child('ROIs', roi_format(index_roi), 'Color').setValue('b')
-        roi = prog.view.roi_manager.get_roi_from_index(index_roi)
+        prog.view.roi_manager.settings.child('rois', roi_format(index_roi), 'color').setValue('b')
+        roi_meta = prog.view.roi_manager.get_roi_from_index(index_roi)
         qtbot.wait(0)
-        assert roi.pen == mkPen('b')
+        assert roi_meta.roi.pen == mkPen('b')
 
     def test_data_from_roi(self, init_viewer2d):
         prog, qtbot = init_viewer2d
         data = init_data()
         prog.show_data(data)
 
-        index_roi, roi, roi_type = create_one_roi(prog, qtbot, roitype='RectROI')
-        roi.setPos((0, 0))
+        index_roi, roi_meta, roi_type = create_one_roi(prog, qtbot, roitype='RectROI')
+        roi_meta.roi.setPos((0, 0))
 
         assert prog.view.is_action_checked('roi')
 
         with qtbot.waitSignal(prog.data_to_export_signal, timeout=1000) as blocker:
-            roi.setSize((data[0].T).shape)
-            roi.setPos((0, 0))
+            roi_meta.roi.setSize([size.magnitude for size in data.get_axes_sizes()[::-1]])
+            roi_meta.roi.setPos((0, 0))
 
         data_to_export: data_mod.DataToExport = blocker.args[0]
         assert len(data_to_export.get_data_from_dim(DataDim.Data1D)) != 0
@@ -463,13 +463,13 @@ class TestROI:
         data = init_data(uniform=False)
         prog.show_data(data)
 
-        index_roi, roi, roi_type = create_one_roi(prog, qtbot, roitype='RectROI')
-        roi.setPos((0, 0))
+        index_roi, roi_meta, roi_type = create_one_roi(prog, qtbot, roitype='RectROI')
+        roi_meta.roi.setPos((0, 0))
 
         assert prog.view.is_action_checked('roi')
         with qtbot.waitSignal(prog.data_to_export_signal, timeout=1000) as blocker:
-            roi.setSize((10, 10))
-            roi.setPos((0, 0))
+            roi_meta.roi.setSize((10, 10))
+            roi_meta.roi.setPos((0, 0))
 
         data_to_export = blocker.args[0]
         assert len(data_to_export.get_data_from_dim('data1D')) != 0

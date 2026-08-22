@@ -165,7 +165,14 @@ def find_index(x, threshold: Union[Number, List[Number]]) -> List[tuple]:
         threshold = [threshold]
     out = []
     for value in threshold:
-        ix = int(np.argmin(np.abs(x - value)))
+        if np.any(np.isnan(x)):
+            try:
+                ix = int(np.nanargmin(np.abs(x - value)))
+            except ValueError:
+                x = np.nan_to_num(x, nan=np.max(x))
+                ix = int(np.argmin(np.abs(x - value)))
+        else:
+            ix = int(np.argmin(np.abs(x - value)))
         out.append((ix, x[ix]))
     return out
 

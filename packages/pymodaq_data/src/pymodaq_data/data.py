@@ -9,6 +9,7 @@ from __future__ import annotations
 from abc import ABCMeta, abstractmethod
 from copy import deepcopy
 import numbers
+import re
 
 import numpy as np
 from numpy.lib.mixins import NDArrayOperatorsMixin
@@ -27,7 +28,7 @@ from pint.compat import upcast_type_map
 from multipledispatch import dispatch
 
 
-from pymodaq_utils.enums import BaseEnum, enum_checker
+from pymodaq_utils.enums import BaseEnum, enum_checker, StrEnum
 from pymodaq_utils.warnings import deprecation_msg
 from pymodaq_utils.utils import find_objects_in_list_from_attr_name_val
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -46,6 +47,32 @@ plotter_factory = PlotterFactory()
 ser_factory = SerializableFactory()
 logger = set_logger(get_module_name(__file__))
 
+
+
+
+def parse_quantity(quantity: str) -> Q_:
+    """
+    Converts a string into a Pint Quantity object using
+    a regex to split it in two parts and force usage of
+    Q_(value, unit) constructor as Q_(value_unit_str)
+    induces some errors.
+    Parameters
+    ----------
+    quantity: The string to convert
+
+    Returns
+    -------
+    The Quantity object
+
+    """
+    match = re.match(r'^([+-]?\d*\.?\d*(?:[eE][+-]?\d+)?)\s*(.*)$', quantity.strip())
+    if match:
+        value, unit = float(match.group(1)), match.group(2).strip()
+        value = float(value)
+        unit = unit.strip() or 'dimensionless'
+        return Q_(value, unit)
+    return Q_(quantity)
+
 def dimensionless_aware_reduce_units(q: Type[Q_]) -> Type[Q_]:
     """
     Take a quantity q and converts it to its reduced units.
@@ -59,7 +86,9 @@ def dimensionless_aware_reduce_units(q: Type[Q_]) -> Type[Q_]:
     -------
     The reduced quantity
     """
-
+    # this may fire a pint.errors.UndefinedBehavior warning when the magnitude is a numpy array
+    # but pint https://github.com/hgrecco/pint/issues/2274 fixed this in July 2026
+    # at the moment, it just returns the same quantity layout
     return q.to_compact() if q.dimensionless else q.to_reduced_units()
 
 def check_units(units: str):
@@ -120,6 +149,13 @@ class DataDimError(Exception):
 
 class DataUnitError(Exception):
     pass
+
+
+class Averaging(StrEnum):
+    """ Keywords to describe averaging in Data objects"""
+    AVERAGED = 'averaged'
+    N_AVERAGED = 'n_averaged'
+
 
 
 class DwaType(BaseEnum):
@@ -495,6 +531,16 @@ class Axis(SerializableBase):
         if self._data is None:
             self._size = _size
 
+    @property
+    def axis_width(self) -> Q_:
+        """get the width of the axis in axis unit
+
+        That is the difference between the max value and the min value of the axis
+        """
+        if self.scaling is not None:
+            return Q_(self.size * self.scaling, self.units)
+        else:
+            return Q_(self.get_data().max() - self.get_data().min(), self.units)
     @staticmethod
     def _check_index_valid(index: int):
         if not isinstance(index, int):
@@ -619,10 +665,10 @@ class Axis(SerializableBase):
         """find the index of the threshold value within the axis"""
         if isinstance(threshold, Q_):
             threshold = threshold.m_as(self.units)
-        if threshold < self.min():
+        if threshold <= self.min():
             return 0
-        elif threshold > self.max():
-            return len(self) - 1
+        elif threshold >= self.max():
+            return len(self)
         elif self._data is not None:
             return mutils.find_index(self._data, threshold)[0][0]
         else:
@@ -668,7 +714,7 @@ class DataLowLevel:
 
     @name.setter
     def name(self, other_name: str):
-        self._name = other_name
+        self._name = str(other_name)
 
     @property
     def timestamp(self):
@@ -792,6 +838,8 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
         self._units = check_units(units)
         self._errors = None
         self.origin = origin
+        self._averaged = False
+        self._n_averaged = 0
 
         source = enum_checker(DataSource, source)
         self._source = source
@@ -1077,6 +1125,42 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
     def deepcopy(self):
         return copy.deepcopy(self)
 
+    @property
+    def averaged(self) -> bool:
+        """ Get/Set a boolean depending if self is the result of an average operation
+
+        See Also
+        --------
+        n_averaged
+        average
+        """
+        return self._averaged
+
+    @averaged.setter
+    def averaged(self, status: bool):
+        self._averaged = status
+
+    @property
+    def n_averaged(self) -> int:
+        """ Get/set the number of averaging that resulted in this data
+
+        See Also
+        --------
+        averaged
+        average
+        """
+        return self._n_averaged
+
+    @n_averaged.setter
+    def n_averaged(self, n_data: int):
+        """ Return the number of averaging that resulted in this data
+
+        See Also
+        --------
+        averaged
+        """
+        self._n_averaged = n_data
+
     def average(self, other: 'DataBase', weight: int) -> 'DataBase':
         """ Compute the weighted average between self and other DataBase
 
@@ -1090,7 +1174,11 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
         DataBase: the averaged DataBase object
         """
         if isinstance(other, DataBase) and len(other) == len(self) and isinstance(weight, numbers.Number):
-            return (other * weight + self) / (weight + 1)
+            averaged_data = (other * weight + self) / (weight + 1)
+            averaged_data.name = self.name
+            averaged_data.add_extra_attribute(**{Averaging.AVERAGED: True,
+                                                 Averaging.N_AVERAGED: weight + 1})
+            return averaged_data
         else:
             raise TypeError(f'Could not average a {other.__class__.__name__} or a {self.__class__.__name__} '
                             f'of a different length')
@@ -2061,6 +2149,10 @@ class DataWithAxes(DataBase, SerializableBase):
         dwa.timestamp = timestamp
         return dwa, remaining_bytes
 
+    def get_axes_sizes(self) -> Iterable[Q_]:
+        self.create_missing_axes()
+        return [self.get_axis_from_index(index)[0].axis_width for index in range(len(self.axes))]
+
     def check_axes_linear(self, axes: List[Axis] = None) -> bool:
         """ Check if any axis may be non linear
 
@@ -2719,6 +2811,10 @@ class DataWithAxes(DataBase, SerializableBase):
 
         do_squeeze = self.check_squeeze(total_slices, is_navigation)
         new_arrays_data = [squeeze(dat[total_slices], do_squeeze) for dat in self.data]
+        if self.errors is not None:
+            new_errors_data = [squeeze(dat[total_slices], do_squeeze) for dat in self.errors]
+        else:
+            new_errors_data = None
         tmp_axes = self._am.get_signal_axes() if is_navigation else self._am.get_nav_axes()
         axes_to_append = [copy.deepcopy(axis) for axis in tmp_axes]
 
@@ -2767,17 +2863,22 @@ class DataWithAxes(DataBase, SerializableBase):
         else:
             distribution = DataDistribution.uniform
 
-        data = DataWithAxes(self.name, data=new_arrays_data, nav_indexes=tuple(nav_indexes),
+        data = DataWithAxes(self.name,
+                            data=new_arrays_data,
+                            errors=new_errors_data,
+                            nav_indexes=tuple(nav_indexes),
                             axes=axes,
                             source=DataSource.calculated, origin=self.origin,
                             labels=self.labels[:],
                             distribution=distribution)
         return data
 
-    def deepcopy_with_new_data(self, data: List[np.ndarray] = None,
+    def deepcopy_with_new_data(self,
+                               data: List[np.ndarray] = None,
                                remove_axes_index: Union[int, List[int]] = None,
                                source: DataSource = DataSource.calculated,
-                               keep_dim=False) -> DataWithAxes:
+                               keep_dim=False,
+                               errors: List[np.ndarray] = None,) -> DataWithAxes:
         """deepcopy without copying the initial data (saving memory)
 
         The new data, may have some axes stripped as specified in remove_axes_index
@@ -2792,16 +2893,26 @@ class DataWithAxes(DataBase, SerializableBase):
         keep_dim: bool
             if False (the default) will calculate the new dim based on the data shape
             else keep the same (be aware it could lead to issues)
+        errors: list of numpy ndarray
+            The new errors corresponding to the new data
 
         Returns
         -------
         DataWithAxes
         """
+        def check_errors(data: list[np.ndarray], errors: list[np.ndarray]) -> bool:
+            for data_array, error_array in zip(data, errors):
+                if data_array.shape != error_array.shape:
+                    return False
+            return True
         try:
+            if errors is not None and check_errors(data, errors):
+                errors = None
             old_data = self.data
             self._data = None
             new_data = self.deepcopy()
             new_data._data = data
+            new_data.errors = errors
             new_data.get_dim_from_data(data)
 
             if source is not None:

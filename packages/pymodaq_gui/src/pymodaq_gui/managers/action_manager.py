@@ -9,6 +9,7 @@ from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtWidgets import QAction as QtQAction
 
 from pymodaq_gui.utils.styling import create_icon
+from pymodaq_utils.utils import find_keys_from_val
 from pymodaq_utils.warnings import deprecation_msg
 from pymodaq_utils.config import GlobalConfig as Config
 
@@ -33,18 +34,23 @@ class QAction(QtQAction):
                  icon_color: Union[QtGui.QColor, bytes, str]=None,
                  icon_checked_color: Union[QtGui.QColor, bytes, str]=None,
                  flip_h: bool = False,
-                 flip_v: bool = False):
+                 flip_v: bool = False,
+                 rotate: int = 0,
+                 fill: bool = None,
+                 ):
 
         if icon_unchecked is not None:
             self.icon_unchecked = create_icon(icon_unchecked, icon_color, icon_checked_color,
-                                              flip_h=flip_h, flip_v=flip_v)
+                                              flip_h=flip_h, flip_v=flip_v, rotate=rotate,
+                                              fill=fill)
             super().__init__(self.icon_unchecked, name)
         else:
             super().__init__(name)
 
         if icon_unchecked is not None and icon_checked is not None and not isinstance(icon_checked, QtGui.QIcon):
             icon_checked = create_icon(icon_checked, icon_checked_color, icon_checked_color,
-                                       flip_h=flip_h, flip_v=flip_v)
+                                       flip_h=flip_h, flip_v=flip_v, rotate=rotate,
+                                       fill=fill)
             if isinstance(icon_unchecked, MaterialIcon):
                 self.icon_unchecked.set_icon(icon_checked, state=QtGui.QIcon.State.On)
             else:
@@ -127,7 +133,9 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
               flip_h: bool = False,
               flip_v: bool = False,
               before: QtQAction = None,
-              action: QtQAction | QtWidgets.QWidgetAction = None
+              action: QtQAction | QtWidgets.QWidgetAction = None,
+              fill: bool = None,
+              rotate: int = 0,
               ):
     """Create a new action and add it eventually to a toolbar and a menu
 
@@ -170,10 +178,16 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
         mirror the icon horizontally (left ↔ right)
     flip_v: bool
         mirror the icon vertically (top ↔ bottom)
+    rotate: int
+        rotate the icon by the given value in degrees
     before: QAction, optional
         if set, the action is inserted before this action in the toolbar/menu;
         if None the action is appended at the end
     action: QAction, QWidgetAction, optional
+    fill: bool, optional
+        Fill or not the icon, if None left to the user configuration
+    rotate: int, optional
+        Rotate the icon by this value in degree
     """
     if action is None:
         if icon_name is None or icon_name == '':
@@ -181,7 +195,7 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
         else:
             action = QAction(icon_name, name, icon_checked=icon_checked,
                              icon_color=icon_color, icon_checked_color=icon_checked_color,
-                             flip_h=flip_h, flip_v=flip_v)
+                             flip_h=flip_h, flip_v=flip_v, rotate=rotate, fill=fill)
 
     if slot is not None:
         action.connect_to(slot)
@@ -213,7 +227,9 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
 def addwidget(klass: Union[str, QtWidgets.QWidget, object], *args, tip='',
               toolbar: QtWidgets.QToolBar = None,
               visible=True, signal_str=None, slot: Callable=None,
-              setters: dict = None, enabled=True, **kwargs) -> Union[WidgetActionProxy, QtWidgets.QWidget]:
+              setters: dict = None, enabled=True,
+              before: QtQAction = None,
+              **kwargs) -> Union[WidgetActionProxy, QtWidgets.QWidget]:
     """Create and eventually add a widget to a toolbar
 
     Parameters
@@ -234,6 +250,8 @@ def addwidget(klass: Union[str, QtWidgets.QWidget, object], *args, tip='',
         a callable connected to the signal
     enabled: bool
         enable state of the widget
+    before: QAction optional
+        if not None, insert this widget before this action
     kwargs: dict
         variable named arguments used as is in the widget constructor
     setters: dict
@@ -258,8 +276,10 @@ def addwidget(klass: Union[str, QtWidgets.QWidget, object], *args, tip='',
             return None
 
     if toolbar is not None:
-
-        action: QtWidgets.QAction = toolbar.addWidget(widget)
+        if before is None:
+            action: QtWidgets.QAction = toolbar.addWidget(widget)
+        else:
+            action: QtWidgets.QAction = toolbar.insertWidget(before, widget)
         action.setVisible(visible)
         widget.setToolTip(tip)
         widget = WidgetActionProxy(widget, action)
@@ -398,6 +418,8 @@ class ActionManager:
                    flip_v: bool = False,
                    before: Union[str, 'QAction', WidgetActionProxy, None] = None,
                    action: QtQAction | QtWidgets.QWidgetAction = None,
+                   fill: bool = None,
+                   rotate: int = 0
                    ):
         """Create a new action and add it to toolbar and menu
 
@@ -452,10 +474,16 @@ class ActionManager:
             mirror the icon horizontally (left ↔ right)
         flip_v: bool
             mirror the icon vertically (top ↔ bottom)
+        rotate: int
+            rotate the icon by the given value in degree
         before: str, QAction, WidgetActionProxy, or None, optional
             if set, the action is inserted before this action in the toolbar/menu;
             accepts a short_name str, a QAction instance, or a WidgetActionProxy
         action: QAction, QWidgetAction, optional
+        fill: bool, optional
+            Fill or not the icon, if None left to the user configuration
+        rotate: int, optional
+            Rotate the icon by this value in degree
 
         See Also
         --------
@@ -475,12 +503,32 @@ class ActionManager:
                                               flip_h=flip_h,
                                               flip_v=flip_v,
                                               before=before,
-                                              action=action)
+                                              action=action,
+                                              fill=fill,
+                                              rotate=rotate)
         return self._actions[short_name]
+
+    def remove_action(self, toolbar: QtWidgets.QToolBar | str = None,
+                      action: str | QAction | WidgetActionProxy | None = None,):
+        toolbar = self._resolve_toolbar(toolbar, auto=False)
+
+        try:
+            action_object = self._resolve_action(action)
+            if toolbar is not None and action_object is not None:
+                toolbar.removeAction(action_object)
+            if isinstance(action, str):
+                self._actions.pop(action, None)
+            else:
+                action_str_list = find_keys_from_val(self._actions, action)
+                if len(action_str_list) > 0:
+                    self._actions.pop(action_str_list[0], None)
+        except KeyError:
+            pass
 
     def add_widget(self, short_name, klass: Union[str, QtWidgets.QWidget, object], *args, tip='',
                    toolbar: Union[str, QtWidgets.QToolBar] = None, visible=True, signal_str=None,
                    slot: Callable=None, enabled=True, auto_toolbar=True,
+                   before: Union[str, 'QAction', WidgetActionProxy, None] = None,
                    **kwargs) -> Union[WidgetActionProxy, QtWidgets.QWidget]:
         """Create and add a widget to a toolbar
 
@@ -506,6 +554,9 @@ class ActionManager:
             enable state of the widget
         auto_toolbar: bool
             if True add this action to the defined toolbar
+        before: str, QAction, WidgetActionProxy, or None, optional
+            if set, the action is inserted before this action in the toolbar/menu;
+            accepts a short_name str, a QAction instance, or a WidgetActionProxy
         kwargs: dict
             variable named arguments passed as is to the widget constructor
         Returns
@@ -513,9 +564,12 @@ class ActionManager:
         QtWidgets.QWidget
         """
         toolbar = self._resolve_toolbar(toolbar, auto=auto_toolbar)
+        before = self._resolve_action(before)
 
         widget = addwidget(klass, *args, tip=tip, toolbar=toolbar, visible=visible, signal_str=signal_str,
-                           slot=slot, enabled=enabled, **kwargs)
+                           slot=slot, enabled=enabled,
+                           before=before,
+                           **kwargs)
 
         if widget is not None:
             self._actions[short_name] = widget

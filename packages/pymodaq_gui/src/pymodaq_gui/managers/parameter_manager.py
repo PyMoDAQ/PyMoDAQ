@@ -137,6 +137,7 @@ class ParameterTreeWidget(ActionManager):
             - 'save': Adds a button to save settings to an XML file
             - 'update': Adds a button to update settings from an XML file
             - 'load': Adds a button to load settings from an XML file
+            - 'clear': Adds a button to clear the content of the tree
             Default is ('search', 'save', 'update', 'load').
 
         See Also
@@ -155,7 +156,7 @@ class ParameterTreeWidget(ActionManager):
         self.add_action(
             "save_settings",
             "Save Settings",
-            "saveTree",
+            "save",
             "Save current settings in an xml file",
             visible="save" in action_list,
         )
@@ -163,7 +164,7 @@ class ParameterTreeWidget(ActionManager):
         self.add_action(
             "update_settings",
             "Update Settings",
-            "updateTree",
+            "refresh",
             "Update the settings from an xml file, the settings structure loaded must be identical to the current one",
             visible="update" in action_list,
         )
@@ -171,9 +172,17 @@ class ParameterTreeWidget(ActionManager):
         self.add_action(
             "load_settings",
             "Load Settings",
-            "openTree",
+            "file_open",
             "Load current settings from an xml file, the current settings structure is erased and is replaced by the new one",
             visible="load" in action_list,
+        )
+        # Clear action
+        self.add_action(
+            "clear_settings",
+            "Clear Settings",
+            "ink_eraser",
+            "Clear the settings tree",
+            visible="clear" in action_list,
         )
 
 
@@ -251,6 +260,10 @@ class ParameterManager:
         self._settings_tree.get_action(f"load_settings").connect_to(
             self.load_settings_slot,
         )
+        self._settings_tree.get_action(f"clear_settings").connect_to(
+            self.clear_settings_slot,
+        )
+
         # Add this line to connect the search widget
         if "search" in action_list:
             self._settings_tree.get_action("search_settings").searchTextChanged.connect(
@@ -265,8 +278,9 @@ class ParameterManager:
         )  # create a Parameter
         # object containing the settings defined in the preamble
         self._settings_tree.tree.header().setSectionResizeMode(
-            QtWidgets.QHeaderView.ResizeToContents,
+            QtWidgets.QHeaderView.Interactive,
         )
+        self._settings_tree.tree.resizeColumnToContents(0)
 
     @property
     def settings_tree(self) -> QtWidgets.QWidget:
@@ -295,16 +309,22 @@ class ParameterManager:
             - A list of dictionaries defining parameter structure
             - A Path to an XML file containing saved parameters
         """
+        self.set_settings(settings)
+
+    def set_settings(self, settings: Union[Parameter, List[Dict[str, str]], Path]):
+        """ similar to the property setter but easier to subclass"""
         settings = self.create_parameter(settings)
         self._settings = settings
         self.tree.setParameters(
             self._settings, showTop=False,
         )  # load the tree with this parameter object
         self._settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
+        self._settings_tree.tree.itemExpanded.connect(lambda: self._settings_tree.tree.resizeColumnToContents(0))
+        self._settings_tree.tree.itemCollapsed.connect(lambda: self._settings_tree.tree.resizeColumnToContents(0))
 
     @staticmethod
     def create_parameter(
-        settings: Union[Parameter, List[Dict[str, str]], Path],
+            settings: Union[Parameter, List[Dict[str, str]], Path],
     ) -> Parameter:
         """Create a Parameter object from various input types.
 
@@ -399,6 +419,9 @@ class ParameterManager:
 
             elif change == "limits":
                 self.limits_changed(param, data)
+
+            elif change == 'contextMenu':
+                self.menu_changed(param, data)
 
     def value_changed(self, param: Parameter):
         """Non-mandatory method to be subclassed for actions to perform when a parameter value changes.
@@ -543,6 +566,20 @@ class ParameterManager:
         Notes
         -----
         For this method to be triggered, the Parameter.setLimits() method must be used.
+        """
+        pass
+
+    def menu_changed(self, param: Parameter, data: str):
+        """Non-mandatory method to be subclassed for actions to perform when context menu changed.
+
+        This method is called automatically when the user selects one of the entry of the context menu
+
+        Parameters
+        ----------
+        param : Parameter
+            The parameter whose menu has been changed
+        data: str
+            The selected menu string
         """
         pass
 
@@ -702,6 +739,9 @@ class ParameterManager:
                 logger.info(
                     f"The loaded settings from {file_path} do not match the current settings structure and cannot be applied.",
                 )
+
+    def clear_settings_slot(self):
+        self.settings.clearChildren()
 
     def _apply_filter(self, text: str):
         """Apply search filter to the parameter tree with optimized updates.

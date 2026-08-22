@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pymodaq_gui.config
+from pymodaq import ActuatorUIFactory
 from pymodaq.utils import config as config_mod_pymodaq
 from pymodaq_utils import config as config_mod
 
@@ -47,14 +48,16 @@ def test_required_config_entries():
     assert 'polling_interval_ms' in config('actuator')
     assert 'polling_timeout_s' in config('actuator')
     assert 'refresh_timeout_ms' in config('actuator')
-    assert 'timeout' in config('actuator')
     assert 'siprefix' in config('actuator')
     assert 'siprefix_even_without_units' in config('actuator')
     assert 'display_units' in config('actuator')
 
-    assert 'binary' in config('actuator')
-    assert 'value_1' in config('actuator', 'binary')
-    assert 'value_2' in config('actuator', 'binary')
+    for ui in ActuatorUIFactory.keys():
+        assert ui in config('actuator', 'ui')
+
+    assert 'default_value_red' in config('actuator')
+    assert 'default_value_green' in config('actuator')
+    assert 'default_value_relative' in config('actuator')
 
     assert 'viewer' in config
     assert 'daq_type' in config('viewer')

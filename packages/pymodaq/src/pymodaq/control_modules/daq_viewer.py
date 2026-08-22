@@ -20,8 +20,8 @@ import numpy as np
 from qtpy import QtWidgets
 from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal
 
-from pymodaq_data import DataSource
-from pymodaq_data.data import DataToExport, Axis, DataDistribution
+
+from pymodaq_data.data import DataToExport, Axis, DataDistribution, Averaging
 from pymodaq.utils.data import DataFromPlugins
 
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -114,11 +114,13 @@ class DAQ_Viewer(ParameterControlModule):
     ui: Optional[DAQ_Viewer_UI]
 
     def __init__(
-        self,
-        parent: Optional[QtWidgets.QWidget] = None,
-        title: str = "Testing",
-        daq_type=config("pymodaq", "viewer", "daq_type"),
-        **kwargs,
+            self,
+            parent: Optional[QtWidgets.QWidget] = None,
+            title: str = "Testing",
+            daq_type=config("pymodaq", "viewer", "daq_type"),
+            area: DockArea = None,
+            rois_dock: Dock = None,
+            **kwargs,
     ):
 
         self.logger = set_logger(f'{logger.name}.{title}')
@@ -126,6 +128,7 @@ class DAQ_Viewer(ParameterControlModule):
 
         super().__init__(listener_class=ViewerActorListener, **kwargs)
 
+        self.rois_dock: Dock = rois_dock
         self._detector = SelectedModule(daq_type=DAQTypesEnum[daq_type])
 
         self._viewer_types: List[ViewersEnum] = []
@@ -136,7 +139,10 @@ class DAQ_Viewer(ParameterControlModule):
 
         self.parent = parent
         if parent is not None:
-            self.ui = DAQ_Viewer_UI(parent, title)
+            self.ui = DAQ_Viewer_UI(parent, title,
+                                    area = area,
+                                    rois_dock=self.rois_dock,
+                                    settings_dock=kwargs.pop('settings_dock', None),)
         else:
             self.ui = None
 
@@ -210,19 +216,6 @@ class DAQ_Viewer(ParameterControlModule):
         return self.viewer_docks
 
     @property
-    def daq_type(self) -> DAQTypesEnum:
-        """Get/Set the daq_type as a DAQTypesEnum
-
-        Update the detector property with the list of available detectors of a given daq_type
-        """
-        return self.detector.daq_type
-
-    @property
-    def daq_types(self) -> List[str]:
-        """List of available DAQ_TYPES as keys of the DAQTypesEnum"""
-        return DAQTypesEnum.names()
-
-    @property
     def grab_state(self):
         """:obj:`bool`: Get the current grabbing status"""
         return self._grabing
@@ -281,12 +274,32 @@ class DAQ_Viewer(ParameterControlModule):
         return self._detector
 
     @detector.setter
-    def detector(self, det: SelectedModule):
+    def detector(self, det: SelectedModule | str):
+        if isinstance(det, str):
+            det = SelectedModule(self._detector.daq_type, det)
         self._detector = det
         self.update_plugin_config()
         if self.ui is not None:
             self.ui.detector = det
         self._reload_plugin_settings()
+
+    @property
+    def daq_type(self) -> DAQTypesEnum:
+        """Get/Set the daq_type as a DAQTypesEnum
+
+        Update the detector property with the list of available detectors of a given daq_type
+        """
+        return self.detector.daq_type
+
+    @daq_type.setter
+    def daq_type(self, daq_type: DAQTypesEnum | str):
+        daq_type = enum_checker(DAQTypesEnum, daq_type)
+        self.detector = SelectedModule(daq_type=daq_type)
+
+    @property
+    def daq_types(self) -> List[str]:
+        """List of available DAQ_TYPES as keys of the DAQTypesEnum"""
+        return DAQTypesEnum.names()
 
     @property
     def current_data(self) -> DataToExport:
@@ -322,6 +335,8 @@ class DAQ_Viewer(ParameterControlModule):
             self.grab_data(cmd.attribute, snap_state=False)
         elif cmd.command == UiToMainViewer.SNAP:
             self.grab_data(False, snap_state=True)
+        elif cmd.command == UiToMainViewer.RESET_LIVE:
+            self.reset_live_averaging()
         elif cmd.command == UiToMainViewer.SAVE_CURRENT:
             self.save_current()
         elif cmd.command == UiToMainViewer.DETECTOR_CHANGED:
@@ -350,8 +365,8 @@ class DAQ_Viewer(ParameterControlModule):
 
     def _setup_hardware_thread(self, hardware):
         if self.config('pymodaq', 'viewer', 'viewer_in_thread'):
-            hardware.moveToThread(self._hardware_thread)
-            self._hardware_thread.start()
+            hardware.moveToThread(self.controller_thread.thread)
+            self.controller_thread.thread.start()
 
     def _connect_hardware_signals(self, hardware):
         hardware.data_detector_sig[DataToExport].connect(self.show_data)
@@ -433,8 +448,7 @@ class DAQ_Viewer(ParameterControlModule):
                                    caller=self.get_caller())))
         else:
             if not grab_state:
-                self.update_status(f'{self._title}: Stop Grab')
-                self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.STOP_GRAB))
+                self.stop()
             else:
                 self.thread_status(ThreadCommand(ThreadStatusViewer.UPDATE_CHANNELS))
                 self.update_status(f'{self._title}: Continuous Grab')
@@ -456,7 +470,7 @@ class DAQ_Viewer(ParameterControlModule):
         self.stop_grab()
 
     def stop_grab(self):
-        """ Stop the current continuous grabbing and unchecked the stop button of the UI
+        """ Stop the current continuous grabbing and unchecked the Grab button of the UI
 
         See Also
         --------
@@ -472,6 +486,9 @@ class DAQ_Viewer(ParameterControlModule):
         self.update_status(f'{self._title}: Stop Grab')
         self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.STOP_GRAB))
         self._grabing = False
+
+    def reset_live_averaging(self):
+        self._ind_continuous_grab = 0
 
     # -------------------------------------------------------------------------
     # Data handling
@@ -788,7 +805,9 @@ class DAQ_Viewer(ParameterControlModule):
                               ('do_plot' in dwa.extra_attributes and dwa.do_plot)]
         if self.ui is not None:
             if self.ui.viewer_types != self._viewer_types:
-                self.ui.update_viewers(self._viewer_types)
+                self.ui.update_viewers(self._viewer_types,
+                                       viewers_name=[f'{self.title} {dwa.name}' for dwa in dte],
+                                       )
 
     def set_data_to_viewers(self, dte: DataToExport, temp=False):
         """Process data dimensionality and send appropriate data to their data viewers
@@ -806,8 +825,11 @@ class DAQ_Viewer(ParameterControlModule):
         for ind, dwa in enumerate(dte):
             if ('do_plot' not in dwa.extra_attributes) or \
                     ('do_plot' in dwa.extra_attributes and dwa.do_plot):
-                self.viewers[ind].title = dwa.name
-                self.viewer_docks[ind].setTitle(self._title + ' ' + dwa.name)
+
+                self.viewers[ind].title = f'{self._title} {dwa.name}'
+                name = (f'{dwa.name}_Averaged: {dwa.n_averaged}'
+                        if dwa.averaged else dwa.name)
+                self.viewer_docks[ind].setTitle(f'{self._title} {name}')
 
                 if temp:
                     self.viewers[ind].show_data_temp(dwa)
@@ -861,9 +883,10 @@ class DAQ_Viewer(ParameterControlModule):
 
         elif param.name() == 'live_averaging':
             self.settings.child('main_settings', 'show_averaging').setValue(False)
+            self.ui.get_action('reset_live').setVisible(param.value())
             if param.value():
                 self.settings.child('main_settings', 'N_live_averaging').show()
-                self._ind_continuous_grab = 0
+                self.reset_live_averaging()
                 self.settings.child('main_settings', 'N_live_averaging').setValue(0)
             else:
                 self.settings.child('main_settings', 'N_live_averaging').hide()
@@ -951,12 +974,10 @@ class DAQ_Viewer(ParameterControlModule):
             if self.ui is not None:
                 self.ui.detector_init = status.attribute['initialized']
             if status.attribute['initialized']:
-                self.controller = status.attribute['controller']
-                self._initialized_state = True
-            else:
-                self._initialized_state = False
+                self._controller_and_thread.controller = status.attribute["controller"]
 
-            self.init_signal.emit(self._initialized_state)
+            self._controller_and_thread.initialized = status.attribute["initialized"]
+            self.init_signal.emit(self._controller_and_thread.initialized)
 
         elif status.command == ThreadStatusViewer.GRAB:
             self.grab_status.emit(True)
@@ -977,8 +998,13 @@ class DAQ_Viewer(ParameterControlModule):
             QtWidgets.QApplication.processEvents()
 
         elif status.command == ThreadStatusViewer.LCD:
-            """status.attribute should be a list of numpy arrays of shape (1,)"""
-            self._lcd.setvalues(status.attribute)
+            """status.attribute should be a list of arguments for the
+            LCD setvalues method. The first argument is a list of 
+            numpy arrays of shape (1,), use np.atleast_1D"""
+            if isinstance(status.attribute, list):
+                #for backcompatibility
+                status.attribute = dict(values = status.attribute)
+            self._lcd.setvalues(**status.attribute)
 
         elif status.command in (ThreadStatus.STOP, ThreadStatusViewer.STOP):
             self.stop_grab()
@@ -1170,7 +1196,7 @@ class DetectorWorker(HardwareWorkerBase):
             if self.ind_average == 1:
                 self.datas = data.deepcopy()
             else:
-                self.datas = data.average(self.datas, self.ind_average)
+                self.datas = data.average(self.datas, self.ind_average - 1)
 
             if self.show_averaging:
                 self.emit_temp_data(self.datas)

@@ -92,7 +92,7 @@ class Console(CustomExt):
              'np': np})
 
     def setup_docks_and_widgets(self):
-        self.create_dashboard_toolbar()
+        self.create_dashboard_toolbar(add_break=False)
         self.mainwindow.setCentralWidget(self.console)
 
     def setup_actions(self):
@@ -105,16 +105,18 @@ class Console(CustomExt):
 def main():
     import sys
     from pymodaq_gui.qt_utils import mkQApp
-    from pymodaq.dashboard import create_load_dashboard
+    from pymodaq.dashboard import load_dashboard_with_arguments
     from pymodaq.utils.gui_utils.loader_utils import create_extension
 
     app = mkQApp('Console')
 
-    win, dashboard = create_load_dashboard()
+    win, dashboard, _ = load_dashboard_with_arguments(show_dashboard=False,
+                                                      load_extension=False,
+                                                      )
     win.mainwindow.setVisible(False)
 
-    win_ext, console = create_extension(dashboard, Console)
-    win_ext.show()
+    win_ext, console = create_extension(dashboard, Console,
+                                        show_extension=True)
 
     sys.exit(app.exec())
 

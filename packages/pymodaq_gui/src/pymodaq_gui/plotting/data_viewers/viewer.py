@@ -4,7 +4,7 @@ import numpy as np
 from qtpy import QtWidgets
 
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_data.data import DataToExport, DataWithAxes, Axis, DataSource
+from pymodaq_data.data import DataToExport, DataWithAxes, Axis, DataSource, Averaging
 
 from pymodaq_utils.enums import enum_checker
 from pymodaq_utils.factory import ObjectFactory
@@ -43,23 +43,31 @@ class ViewerFactory(ObjectFactory):
 
 
 @ViewerFactory.register('Viewer0D')
-def create_viewer0D(parent: QtWidgets.QWidget = None, **_ignored):
-    return data_viewers.viewer0D.Viewer0D(parent)
+def create_viewer0D(parent: QtWidgets.QWidget = None, title='',
+                    rois_dock: Dock = None, **_ignored):
+    return data_viewers.viewer0D.Viewer0D(parent, title=title,
+                                          rois_dock=rois_dock)
 
 
 @ViewerFactory.register('Viewer1D')
-def create_viewer1D(parent: QtWidgets.QWidget, **_ignored):
-    return data_viewers.viewer1D.Viewer1D(parent)
+def create_viewer1D(parent: QtWidgets.QWidget, title='',
+                    rois_dock: Dock = None, **_ignored):
+    return data_viewers.viewer1D.Viewer1D(parent, title=title,
+                                          rois_dock=rois_dock)
 
 
 @ViewerFactory.register('Viewer2D')
-def create_viewer2D(parent: QtWidgets.QWidget, **_ignored):
-    return data_viewers.viewer2D.Viewer2D(parent)
+def create_viewer2D(parent: QtWidgets.QWidget, title='',
+                    rois_dock: Dock = None, **_ignored):
+    return data_viewers.viewer2D.Viewer2D(parent, title=title,
+                                          rois_dock=rois_dock)
 
 
 @ViewerFactory.register('ViewerND')
-def create_viewerND(parent: QtWidgets.QWidget, **_ignored):
-    return data_viewers.viewerND.ViewerND(parent)
+def create_viewerND(parent: QtWidgets.QWidget, title='',
+                    rois_dock: Dock = None, **_ignored):
+    return data_viewers.viewerND.ViewerND(parent, title=title,
+                                          rois_dock=rois_dock)
 
 
 # @ViewerFactory.register('ViewerSequential')
@@ -85,8 +93,10 @@ class ViewerDispatcher:
 
     """
 
-    def __init__(self, dockarea: DockArea = None, title: str = '', next_to_dock: Dock = None,
-                 direction='right'):
+    def __init__(self, dockarea: DockArea = None, title: str = '',
+                 next_to_dock: Dock = None,
+                 direction='right',
+                 rois_dock: Dock = None,):
         super().__init__()
         self._title = title if title != '' else self.__class__.__name__
 
@@ -97,6 +107,10 @@ class ViewerDispatcher:
             dockarea.show()
         self.dockarea = dockarea
         self.dockarea.setWindowTitle(title)
+
+        if rois_dock is None:
+            rois_dock = Dock('Rois')
+        self.rois_dock = rois_dock
 
         self._direction = direction
 
@@ -137,9 +151,12 @@ class ViewerDispatcher:
             widget.close()
             dock = self.viewer_docks.pop()
             dock.close()
-            self.viewers.pop()
+            viewer = self.viewers.pop()
+            if hasattr(viewer.view, 'roi_manager') and viewer.view.roi_manager is not None:
+                self.rois_dock.removeWidget(viewer.view.roi_manager.roiwidget)
             self.viewer_types.pop()
             QtWidgets.QApplication.processEvents()
+        self.rois_dock.setVisible(False)
 
     def add_viewer(self, viewer_type: ViewersEnum, dock_viewer=None, dock_name=None):
         viewer_type = enum_checker(ViewersEnum, viewer_type)
@@ -151,18 +168,14 @@ class ViewerDispatcher:
         self.viewer_docks.append(dock_viewer)
 
         self._viewer_widgets.append(QtWidgets.QWidget())
-        self.viewers.append(viewer_factory.get(viewer_type.name, parent=self._viewer_widgets[-1]))
+        self.viewers.append(viewer_factory.get(viewer_type.name,
+                                               parent=self._viewer_widgets[-1],
+                                               title=dock_name,
+                                               rois_dock=self.rois_dock))
 
         self.viewer_types.append(viewer_type)
 
         self.viewer_docks[-1].addWidget(self._viewer_widgets[-1])
-        # if len(self.viewer_docks) == 1:
-        #     if self._next_to_dock is not None:
-        #         self.dockarea.addDock(self.viewer_docks[-1], 'right', self._next_to_dock)
-        #     else:
-        #         self.dockarea.addDock(self.viewer_docks[-1])
-        # else:
-        #     self.dockarea.addDock(self.viewer_docks[-1], 'right', self.viewer_docks[-2])
         self.dockarea.addDock(self.viewer_docks[-1], self._direction)
 
     def update_viewers(self, viewers_type: List[Union[str, ViewersEnum]],
@@ -208,7 +221,8 @@ class ViewerDispatcher:
     def show_data(self, data: DataToExport, **kwargs):
         """ Convenience method. Display each dwa in a dedicated data viewer"""
         viewer_types = [ViewersEnum.get_viewers_enum_from_data(dwa) for dwa in data]
-        viewer_names = [dwa.name for dwa in data]
+        viewer_names = [f'{dwa.name}_Averaged: {dwa.n_averaged}'
+                        if dwa.averaged else dwa.name for dwa in data]
         if self.viewer_types != viewer_types:
             self.update_viewers(viewer_types, viewer_names)
         for viewer, dwa in zip(self.viewers, data):

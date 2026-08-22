@@ -11,7 +11,8 @@ from pymodaq_utils.config import GlobalConfig, get_set_local_dir
 from pymodaq_utils.warnings import deprecation_msg
 from qtpy.QtCore import Signal
 
-from pymodaq.control_modules.utils import PluginBase, create_controller_param, create_remote_connection_params
+from pymodaq.control_modules.utils import create_controller_param, create_remote_connection_params
+from pymodaq.control_modules.plugin_base import PluginBase
 
 config = GlobalConfig()
 

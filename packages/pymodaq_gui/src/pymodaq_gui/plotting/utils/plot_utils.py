@@ -1,3 +1,5 @@
+import time
+
 from collections.abc import Iterable
 
 import copy
@@ -8,17 +10,23 @@ from typing import Iterable as IterableType
 from multipledispatch import dispatch
 import numpy as np
 import pyqtgraph as pg
-from qtpy import QtGui, QtCore
+from qtpy import QtGui, QtCore, QtWidgets
+from pymodaq_gui.utils.dock import Dock
 from scipy.spatial import Delaunay as Triangulation
 
+from pymodaq_utils.config import GlobalConfig
 from pymodaq_data import data as data_mod
+
+config = GlobalConfig()
 
 
 def make_dashed_pens(color: tuple, nstyle=3):
-    pens = [dict(color=color)]
+    pens = [dict(color=color, width=config('data', 'plotting', 'linewidth'))]
     if nstyle > 1:
         for ind in range(nstyle - 1):
-            pens.append(dict(color=color, dash=np.array([5, 5]) * (ind + 1)))
+            pens.append(dict(color=color,
+                             dash=np.array([5, 5]) * (ind + 1),
+                             width=config('data', 'plotting', 'linewidth')))
     return pens
 
 
@@ -411,10 +419,11 @@ class Data0DWithHistory:
     """Object to store scalar values and keep a history of a given length to them"""
     def __init__(self, Nsamples=200, sync_x_axis=True):
         super().__init__()
-        self._datas = dict([])
+        self._data = dict([])
         self.last_data: data_mod.DataRaw = None
         self._Nsamples = Nsamples
         self._xaxis = None
+        self._timestamps: np.ndarray = np.array([])
         self._data_length = 0
         self._sync_x_axis = sync_x_axis
 
@@ -442,14 +451,14 @@ class Data0DWithHistory:
     def __len__(self):
         return self.length
 
-    @dispatch(data_mod.DataWithAxes)
-    def add_datas(self, data: data_mod.DataWithAxes):
+    def add_data(self, data: data_mod.DataWithAxes, timestamp: float = None):
         self.last_data = data
+        if timestamp is None:
+            timestamp = data.timestamp
         datas = {data.labels[ind]: data.data[ind] for ind in range(len(data))}
-        self.add_datas(datas)
+        self.add_data_dict(datas, timestamp)
 
-    @dispatch(list)
-    def add_datas(self, data: list):
+    def add_data_list(self, data: list, timestamp: float = None):
         """
         Add datas to the history
         Parameters
@@ -458,26 +467,27 @@ class Data0DWithHistory:
         """
         self.last_data = data_mod.DataRaw('Data0D', data=[np.array([dat]) for dat in data])
         datas = {f'data_{ind:02d}': data[ind] for ind in range(len(data))}
-        self.add_datas(datas)
+        self.add_data_dict(datas, timestamp)
 
-    @dispatch(dict)
-    def add_datas(self, datas: dict):
+    def add_data_dict(self, datas: dict, timestamp: float = None):
         """
         Add datas to the history on the form of a dict of key/data pairs (data is a numpy 0D array)
         Parameters
         ----------
         datas: (dict) dictionaary of floats or np.array(float)
         """
-        if datas.keys() != self._datas.keys():
+        if timestamp is None:
+            timestamp = time.time()
+        if datas.keys() != self._data.keys():
             if self._sync_x_axis:
                 self.clear_data()
             else:
                 # Drop channels that disappeared
-                for gone in set(self._datas.keys()) - set(datas.keys()):
-                    self._datas.pop(gone)
+                for gone in set(self._data.keys()) - set(datas.keys()):
+                    self._data.pop(gone)
                 # Pad new channels with NaN so they share the current xaxis
-                for new in set(datas.keys()) - set(self._datas.keys()):
-                    self._datas[new] = np.full(self._data_length, np.nan)
+                for new in set(datas.keys()) - set(self._data.keys()):
+                    self._data[new] = np.full(self._data_length, np.nan)
 
         self._data_length += 1
 
@@ -491,28 +501,39 @@ class Data0DWithHistory:
                 data = np.array([data])
 
             if self._data_length == 1:
-                self._datas[data_key] = data
+                self._data[data_key] = data
             else:
-                self._datas[data_key] = np.concatenate((self._datas[data_key], data))
-
+                self._data[data_key] = np.concatenate((self._data[data_key], data))
             if self._data_length > self._Nsamples:
-                self._datas[data_key] = self._datas[data_key][1:]
+                self._data[data_key] = self._data[data_key][1:]
+
+        if self._data_length == 1:
+            self._timestamps = np.atleast_1d(timestamp)
+        else:
+            self._timestamps = np.concatenate((self._timestamps, np.atleast_1d(timestamp)))
+        if self._data_length > self._Nsamples:
+            self._timestamps = self._timestamps[1:]
 
     @property
-    def datas(self):
-        return self._datas
+    def data(self):
+        return self._data
 
     @property
     def xaxis(self):
         return self._xaxis
 
+    @property
+    def timestamps(self):
+        return self._timestamps
+
     def clear_data(self):
-        self._datas = dict([])
+        self._data = dict([])
         self._data_length = 0
         self._xaxis = np.array([])
+        self._timestamps = np.array([])
 
 
-class View_cust(pg.ViewBox):
+class ViewBox(pg.ViewBox):
     """Custom ViewBox used to enable other properties compared to parent class: pg.ViewBox
 
     """
@@ -531,3 +552,17 @@ class View_cust(pg.ViewBox):
             self.sig_double_clicked.emit(pos.x(), pos.y())
 
 
+def display_in_dock(show: bool, widget: QtWidgets.QWidget,
+                    dock: Dock,
+                    orientation=QtCore.Qt.Orientation.Horizontal):
+    if widget not in dock.widgets:
+        if orientation == QtCore.Qt.Orientation.Horizontal:
+            dock.addWidget(widget,
+                           row=0,
+                           col=dock.layout.count())
+        else:
+            dock.addWidget(widget)
+    widget.setVisible(show)
+    dock.setVisible(True)
+    dock.setVisible(
+        bool(np.any([widget.isVisible() for widget in dock.widgets])))

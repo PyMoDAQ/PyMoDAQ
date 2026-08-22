@@ -1,5 +1,6 @@
 import random
 
+from pymodaq.control_modules.daq_move_ui.utils import UiType
 from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -7,7 +8,7 @@ from pymodaq_utils import utils
 from pymodaq_gui.parameter.pymodaq_ptypes import registerParameterType, GroupParameter
 from pymodaq_gui.parameter.utils import get_param_dict_from_name
 
-from pymodaq.control_modules.instruments import DET_TYPES, ACTUATOR_TYPES, ACTUATOR_NAMES
+from pymodaq.control_modules.instruments import DET_TYPES, ACTUATOR_TYPES, ACTUATOR_NAMES, find_actuator_class_from_name
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 from pymodaq.control_modules.utils import create_controller_param
 from pymodaq.utils.managers.modules.utils import ModuleType
@@ -114,6 +115,8 @@ def create_info_param(module_type: ModuleType,
     if module_type == ModuleType.Actuator:
         ui = ActuatorUIFactory.keys()
         ui_default = config('pymodaq', 'actuator', 'ui')[0]
+        class_ = find_actuator_class_from_name(module_class_name)
+        ui_default = class_.ui_type if class_.ui_type != UiType.NONE else ui_default
     else:
         ui = []
         ui_default = None

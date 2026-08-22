@@ -5,15 +5,25 @@ from qtpy import QtWidgets, QtGui
 from qtpy.QtCore import QObject, Slot, Signal, Qt
 import sys
 import pyqtgraph
+from pyqtgraph import mkPen
 
+from pymodaq_utils.config import GlobalConfig
+from pymodaq_utils.logger import set_logger, get_module_name
+
+import pyqtgraph as pg
+
+from pymodaq_gui.utils.widgets import SpinBox
 from pymodaq_utils import utils
+
 from pymodaq_data import data as data_mod
 from pymodaq_data.plotting.utils import PlotColors
-from pymodaq_utils.logger import set_logger, get_module_name
+
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerBase
 from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_gui.plotting.widgets import PlotWidget
 from pymodaq_gui.plotting.utils.plot_utils import Data0DWithHistory
+from pymodaq_gui import foreground_color
+from pymodaq_gui.utils.dock import Dock
 
 import numpy as np
 from collections import OrderedDict
@@ -21,6 +31,7 @@ import datetime
 
 logger = set_logger(get_module_name(__file__))
 PLOT_COLORS = [dict(color=color) for color in PlotColors()]
+config = GlobalConfig()
 
 
 class DataDisplayer(QObject):
@@ -31,15 +42,20 @@ class DataDisplayer(QObject):
     updated_item = Signal(list)
     labels_changed = Signal(list)
 
-    def __init__(self, plotitem: pyqtgraph.PlotItem, plot_colors=PLOT_COLORS):
+    def __init__(self, plotitem: pyqtgraph.PlotItem, plot_colors=None):
         super().__init__()
+        if plot_colors is None:
+            plot_colors = PLOT_COLORS
         self._plotitem = plotitem
         self.colors = plot_colors
+        self._do_scatter = False
+        self._do_xy = False
         self._plotitem.addLegend()
-        self._plot_items: Dict[str, pyqtgraph.PlotDataItem] = {}
-        self._min_lines: Dict[str, pyqtgraph.InfiniteLine] = {}
-        self._max_lines: Dict[str, pyqtgraph.InfiniteLine] = {}
+        self._plot_items: Dict[str, pg.PlotDataItem] = {}
+        self._min_lines: Dict[str, pg.InfiniteLine] = {}
+        self._max_lines: Dict[str, pg.InfiniteLine] = {}
         self._data = Data0DWithHistory()
+        self.use_timestamps = False
 
         self._mins: Dict[str, float] = {}
         self._maxs: Dict[str, float] = {}
@@ -62,12 +78,15 @@ class DataDisplayer(QObject):
         color_idx = self._next_color_index()
         self._color_indices[label] = color_idx
         color = self.colors[color_idx]
-
-        plot_item = pyqtgraph.PlotDataItem(pen=color)
+        width = color.pop('width', self.linewidth)
+        plot_item = pyqtgraph.PlotDataItem(pen=mkPen(width=width,
+                                                     **color))
         self._plot_items[label] = plot_item
         self._plotitem.addItem(plot_item)
         self.legend.addItem(plot_item, f"{label} ({units})")
-        dash_pen = pyqtgraph.mkPen(color=color['color'], style=Qt.PenStyle.DashLine)
+        dash_pen = pyqtgraph.mkPen(color=color['color'],
+                                   style=Qt.PenStyle.DashLine,
+                                   )
         max_line = pyqtgraph.InfiniteLine(angle=0, pen=dash_pen)
         min_line = pyqtgraph.InfiniteLine(angle=0, pen=dash_pen)
         self._max_lines[label] = max_line
@@ -83,6 +102,16 @@ class DataDisplayer(QObject):
         their history and the new channel is NaN-padded from the left."""
         self._data.sync_x_axis = sync
 
+    def set_use_timestamps(self, use_timestamps: bool = False):
+        self.use_timestamps = use_timestamps
+
+        axis = self._plotitem.getAxis('bottom')
+        if use_timestamps:
+            axis.setLabel(text='Timestamps', units='s')
+        else:
+            axis.setLabel(text='Samples', units='S')
+        self.update_plots()
+
     def _remove_label(self, label: str):
         if label in self._plot_items:
             plot_item = self._plot_items.pop(label)
@@ -96,17 +125,57 @@ class DataDisplayer(QObject):
         self._mins.pop(label, None)
         self._maxs.pop(label, None)
 
-    def update_colors(self, colors: List[QtGui.QPen]):
+    @property
+    def linewidth(self) -> int:
+        return config('data', 'plotting', 'linewidth')
+
+    def update_colors(self, colors: List[dict]):
         self.colors[0:len(colors)] = colors
+        symbol_size = 5
+        symbol = 'o'
+
         for label, color_idx in self._color_indices.items():
             color = self.colors[color_idx]
-            self._plot_items[label].setPen(color)
-            dash_pen = pyqtgraph.mkPen(color=color['color'], style=Qt.PenStyle.DashLine)
+            width = color.pop('width', self.linewidth)
+
+            if self._do_scatter:
+                pen = None
+                symbol_type = symbol
+                brush = color['color']
+            else:
+                pen = mkPen(width=width, **color)
+                symbol_type = None
+                brush = None
+            self._plot_items[label].setPen(pen)
+            self._plot_items[label].setSymbolBrush(brush)
+            self._plot_items[label].setSymbol(symbol_type)
+            self._plot_items[label].setSymbolSize(symbol_size)
+
+            dash_pen = pg.mkPen(color=color['color'], style=Qt.PenStyle.DashLine)
             self._max_lines[label].setPen(dash_pen)
             self._min_lines[label].setPen(dash_pen)
+        self.update_plots()
+
+    def update_scatter(self, do_scatter=False):
+        self._do_scatter = do_scatter
+        self.update_colors(self.colors)
+
+    def update_xyplot(self, do_xy=True):
+        self._do_xy = do_xy
+        self.update_plots()
+        labels = list(self._data.data.keys())
+        plot_items = [self._plot_items[label] for label in labels]
+        xaxis = self._plotitem.getAxis('bottom')
+        yaxis = self._plotitem.getAxis('left')
+        if do_xy and len(labels) >= 2:
+            plot_items[0].setVisible(False)
+            xaxis.setLabel(text=labels[0], units='')
+        else:
+            plot_items[0].setVisible(True)
+            self.set_use_timestamps(self.use_timestamps)
 
     @property
-    def legend(self) -> pyqtgraph.LegendItem:
+    def legend(self) -> pg.LegendItem:
         return self._plotitem.legend
 
     @property
@@ -115,7 +184,10 @@ class DataDisplayer(QObject):
 
     @property
     def axis(self):
-        return self._data.xaxis
+        if self.use_timestamps:
+            return self._data.timestamps
+        else:
+            return self._data.xaxis
 
     def clear_data(self):
         self._data.clear_data()
@@ -134,21 +206,32 @@ class DataDisplayer(QObject):
             if set(data.labels) != set(self._plot_items.keys()) or force_update:
                 self.update_display_items(data)
 
-            self._data.add_datas(data)
-            for label, plot_item in self._plot_items.items():
-                if label in self._data.datas:
-                    plot_item.setData(self._data.xaxis, self._data.datas[label])
+            self._data.add_data(data)
+            self.update_plots()
 
-            for label, values in self._data.datas.items():
-                if label not in self._mins:
-                    self._mins[label] = float(np.nanmin(values))
-                    self._maxs[label] = float(np.nanmax(values))
-                else:
-                    self._mins[label] = min(self._mins[label], float(np.nanmin(values)))
-                    self._maxs[label] = max(self._maxs[label], float(np.nanmax(values)))
-                if label in self._min_lines:
-                    self._min_lines[label].setValue(self._mins[label])
-                    self._max_lines[label].setValue(self._maxs[label])
+    def update_plots(self):
+
+        if self._do_xy and len(self._data.data) >= 2:
+            labels = list(self._data.data.keys())
+            plot_items = [self._plot_items[label] for label in labels]
+            data_list = [self._data.data[label] for label in labels]
+            for ind in range(1, len(data_list)):
+                plot_items[ind].setData(data_list[0], data_list[ind])
+        else:
+            for label, plot_item in self._plot_items.items():
+                if label in self._data.data:
+                    plot_item.setData(self.axis, self._data.data[label])
+
+        for label, values in self._data.data.items():
+            if label not in self._mins:
+                self._mins[label] = float(np.nanmin(values))
+                self._maxs[label] = float(np.nanmax(values))
+            else:
+                self._mins[label] = min(self._mins[label], float(np.nanmin(values)))
+                self._maxs[label] = max(self._maxs[label], float(np.nanmax(values)))
+            if label in self._min_lines:
+                self._min_lines[label].setValue(self._mins[label])
+                self._max_lines[label].setValue(self._maxs[label])
 
     def update_display_items(self, data: data_mod.DataWithAxes = None):
         new_labels = set(data.labels) if data is not None else set()
@@ -176,10 +259,10 @@ class DataDisplayer(QObject):
 
 class View0D(ActionManager, QObject):
     def __init__(self, parent_widget: QtWidgets.QWidget = None, show_toolbar=True,
-                 no_margins=False):
+                 no_margins=False, title=''):
         QObject.__init__(self)
         ActionManager.__init__(self, toolbar=QtWidgets.QToolBar())
-
+        self._title = title
         self.no_margins = no_margins
         self.data_displayer: DataDisplayer = None
         self.other_data_displayers: Dict[str, DataDisplayer] = {}
@@ -201,19 +284,35 @@ class View0D(ActionManager, QObject):
         if not show_toolbar:
             self.splitter.setSizes([0,1])
 
-        self.get_action('Nhistory').setValue(200)  #default history length
+    @property
+    def title(self) -> str:
+        return self._title
+
+    @title.setter
+    def title(self, value: str):
+        self._title = value
 
     def setup_actions(self):
-        self.add_action('clear', 'Clear plot', 'clear2', 'Clear the current plots')
-        self.add_widget('Nhistory', pyqtgraph.SpinBox, tip='Set the history length of the plot',
+        self.add_action('clear', 'Clear plot', 'ink_eraser', 'Clear the current plots')
+        self.add_widget('Nhistory', SpinBox, tip='Set the history length of the plot',
                         setters=dict(setMaximumWidth=100))
-        self.add_action('show_data_as_list', 'Show numbers', 'ChnNum', 'If triggered, will display last data as numbers'
+        self.add_action('show_data_as_list', 'Show numbers', 'pin', 'If triggered, will display last data as numbers'
                                                                        'in a side panel', checkable=True)
-        self.add_action('show_min_max', 'Show Min/Max lines', 'Statistics',
+        self.add_action('show_min_max', 'Show Min/Max lines', 'contrast_square',
                         'If triggered, will display horizontal dashed lines for min/max of data', checkable=True)
+        self.add_action('use_timestamps', 'Use Timestamps', 'timer_off',
+                        'Use timestamps as axis', checkable=True,
+                        icon_checked='timer')
+        self.add_action('scatter', 'Scatter', 'scatter_plot', 'Switch between line or scatter plots',
+                        checkable=True)
+        self.add_action('xyplot', 'XYPlotting', 'function',
+                        'Switch between normal or XY representation (valid for 2 channels)',
+                        checkable=True,
+                        visible=False)
         self.add_action('sync_x_axis', 'Sync X axis', 'sync_disabled',
                         'If checked, adding a new channel resets all histories so curves '
-                        'share the same x-axis origin', checkable=True, checked=True, icon_checked='sync_lock',
+                        'share the same x-axis origin', checkable=True, checked=True,
+                        icon_checked='sync_lock',
                         icon_color='#F9A825', icon_checked_color='#607D8B')
 
     def _setup_widgets(self):
@@ -242,11 +341,28 @@ class View0D(ActionManager, QObject):
         self.connect_action('Nhistory', self.data_displayer.update_axis, signal_name='valueChanged')
         self.connect_action('show_min_max', self.data_displayer.show_min_max)
         self.connect_action('sync_x_axis', self.data_displayer.set_sync_x_axis)
+        self.connect_action('use_timestamps', self.data_displayer.set_use_timestamps)
+        self.connect_action('use_timestamps', self.set_x_axis_type)
+        self.connect_action('scatter', self.data_displayer.update_scatter)
+        self.connect_action('xyplot', self.data_displayer.update_xyplot)
+        self.connect_action('xyplot', self.set_x_axis_type)
+
+    def set_x_axis_type(self):
+        if self.is_action_checked('use_timestamps') and not self.is_action_checked('xyplot'):
+            self.plot_widget.plotItem.setAxisItems({'bottom': pg.DateAxisItem()})
+        else:
+            self.plot_widget.plotItem.setAxisItems({'bottom': pg.AxisItem('bottom')})
+
 
     def _prepare_ui(self):
         """add here everything needed at startup"""
         self.values_list.setVisible(False)
-        self.get_action('sync_x_axis').setChecked(True)
+        self.get_action('Nhistory').setValue(config('gui', 'viewer', 'viewer0D', 'Nhistory'))
+        for action_name in ('show_data_as_list', 'show_min_max'):
+            if config('gui', 'viewer', 'viewer0D', action_name):
+                self.get_action(action_name).trigger()
+        if not config('gui', 'viewer', 'viewer0D', 'sync_x_axis'):
+            self.get_action('sync_x_axis').trigger()
 
     def get_double_clicked(self):
         return self.plot_widget.view.sig_double_clicked
@@ -256,6 +372,7 @@ class View0D(ActionManager, QObject):
         return self.plot_widget.plotItem
 
     def display_data(self, data: data_mod.DataWithAxes, displayer: str = None, **kwargs):
+        self.set_action_visible('xyplot', len(data) >= 2)
         if displayer is None:
             self.data_displayer.update_data(data)
         elif displayer in self.other_data_displayers:
@@ -286,9 +403,12 @@ class Viewer0D(ViewerBase):
     Datas and measurements are then exported with the signal data_to_export_signal
     """
 
-    def __init__(self, parent=None, title='', show_toolbar=True, no_margins=False):
+    def __init__(self, parent=None, title='', show_toolbar=True,
+                 no_margins=False,
+                 rois_dock: Dock = None):
         super().__init__(parent, title)
-        self.view = View0D(self.parent, show_toolbar=show_toolbar, no_margins=no_margins)
+        self.view = View0D(self.parent, show_toolbar=show_toolbar,
+                           no_margins=no_margins, title=title)
         self._labels = []
 
     def update_colors(self, colors: list, displayer=None):
@@ -332,8 +452,11 @@ def main():
     y2 = 0.7 * gauss1D(x, 120, 50, 2) + 0.2*np.random.rand(len(x))
     widget.show()
     prog.get_action('show_data_as_list').trigger()
+    prog.get_action('use_timestamps').trigger()
     for ind, data in enumerate(y1):
-        prog.show_data(data_mod.DataRaw('mydata', data=[np.array([data]), np.array([y2[ind]])],
+        prog.show_data(data_mod.DataRaw('mydata', data=[np.array([data]),
+                                                        np.array([y2[ind]]),
+                                                        -np.array([y2[ind]])],
                                         labels=['lab1', 'lab2'], units="V"))
         QtWidgets.QApplication.processEvents()
 

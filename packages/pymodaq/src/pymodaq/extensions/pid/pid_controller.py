@@ -369,7 +369,7 @@ class DAQ_PID(CustomExt):
         file_menu.addSeparator()
         self.actions_manager.affect_to('quit', file_menu)
         """
-        self.create_dashboard_toolbar()
+        self.create_dashboard_toolbar(add_break=False)
 
     def value_changed(self, param):
         """to be subclassed for actions to perform when one of the param's value in self.settings is changed
@@ -714,17 +714,7 @@ class DAQ_PID(CustomExt):
     def quit_fun(self):
         """ """
         try:
-            try:
-                self.exit_runner_thread()
-            except Exception as e:
-                print(e)
 
-            areas = self.dock_area.tempAreas[:]
-            for area in areas:
-                area.win.close()
-                QtWidgets.QApplication.processEvents()
-                QThread.msleep(1000)
-                QtWidgets.QApplication.processEvents()
 
             self.dashboard.remove_modules([setp for setp in self.model_class.setpoints_names])
             super().quit_fun()
@@ -907,7 +897,7 @@ class PIDRunner(QObject):
 
                 # # APPLY THE PID OUTPUT TO THE ACTUATORS
                 self.outputs_to_actuators: DataToActuators = (
-                    self.model_class.convert_output(self.outputs, dt=None)
+                    self.model_class.convert_output(self.outputs, dt=self.time_elapsed)
                 )
                 if self.clear_queues:
                     [queue_input.clear() for queue_input in self.queue_inputs]
@@ -972,15 +962,17 @@ class PIDRunner(QObject):
 if __name__ == "__main__":
     import sys
     from pymodaq_gui.qt_utils import mkQApp
-    from pymodaq.dashboard import create_load_dashboard
+    from pymodaq.dashboard import load_dashboard_with_arguments
     from pymodaq.utils.gui_utils.loader_utils import create_extension
 
     app = mkQApp("DAQ_PID")
 
-    win, dashboard = create_load_dashboard()
+    win, dashboard, _ = load_dashboard_with_arguments(show_dashboard=False,
+                                                      load_extension=False,
+                                                      )
     win.mainwindow.setVisible(False)
 
-    win_ext, scan = create_extension(dashboard, DAQ_PID)
-    win_ext.show()
+    win_ext, scan = create_extension(dashboard, DAQ_PID,
+                                     show_extension=True)
 
     sys.exit(app.exec())

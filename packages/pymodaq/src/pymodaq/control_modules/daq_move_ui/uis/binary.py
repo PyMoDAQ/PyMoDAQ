@@ -1,110 +1,23 @@
-import sys
-from typing import Union
 
-from qtpy.QtWidgets import QVBoxLayout, QToolBar
 from qtpy import QtWidgets
 
-import qt_themes
 
-from pymodaq.control_modules.daq_move_ui.ui_base import DAQ_Move_UI_Base
-from pymodaq.control_modules.thread_commands import UiToMainMove
-from pymodaq_gui.utils.widgets import LabelWithFont
-
-from pymodaq.utils.data import DataActuator
-
-from pymodaq_utils.utils import ThreadCommand
-from pymodaq_utils.config import Config
-
-from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
-from pymodaq.control_modules.daq_move_ui.uis.simple import DAQ_Move_UI_Simple
+from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory, DAQMoveUiBase
 from pymodaq_utils.config import GlobalConfig as Config
-from enum import Enum
+
 
 config = Config()
 
-
-class BinaryValue(Enum):
-    VALUE_ONE = config('pymodaq', 'actuator', 'binary', 'value_1')
-    VALUE_TWO = config('pymodaq', 'actuator', 'binary', 'value_2')
-
-
 @ActuatorUIFactory.register('Binary')
-class DAQ_Move_UI_Binary(DAQ_Move_UI_Simple):
-    """ UI for Actuators where only two values are encoded: 0 or 1 for instance
+class DAQMoveUISimple(DAQMoveUiBase):
 
-    Some other numerical values can be set in the config: 'actuator', 'binary', 'value_1'
-    The green arrow button will fire the 'value_1'
-    The red arrow button will fire the 'value_2'
+    def setup_docks_and_widgets(self):
+        pass
 
-    Could be used for 2 positions only actuators such as a Flip
-    """
+    def setup_move_actions(self):
+        self.ui_base.setup_absolute_actions()
 
-
-    is_compact = True
-
-    def _setup_move_actions(self, toolbar: QtWidgets.QToolBar):
-        self._setup_absolute_actions(toolbar)
-
-    def connect_things(self):
-        super().connect_things()
-        # first disconnect actions from  the base class
-        self.connect_action('move_abs', None, connect=False)
-        self.connect_action('move_abs_2', None, connect=False)
-
-        #then connect to the ones reimplemented here
-        self.connect_action('move_abs', lambda: self.emit_move_abs(BinaryValue.VALUE_ONE.value))
-        self.connect_action('move_abs_2', lambda: self.emit_move_abs(BinaryValue.VALUE_TWO.value))
-
-    def emit_move_abs(self, abs_value: Union[float, int]):
-        self.command_sig.emit(ThreadCommand(UiToMainMove.MOVE_ABS, DataActuator(data=abs_value,
-                                                                                units=self._unit)))
-
-def main(init_qt=True):
-    from pymodaq_gui.utils.dock import DockArea, Dock
-    if init_qt:  # used for the test suite
-        app = QtWidgets.QApplication(sys.argv)
-
-    actuators = [f'act{ind}' for ind in range(5)]
-
-    win = QtWidgets.QMainWindow()
-    area = DockArea()
-    win.setCentralWidget(area)
-    win.resize(1000, 500)
-    win.setWindowTitle('extension_name')
-
-
-    dock = Dock('Test')
-    dock.layout.setSpacing(0)
-    dock.layout.setContentsMargins(0,0,0,0)
-    area.addDock(dock)
-    widget = QtWidgets.QWidget()
-    widget.setMaximumHeight(60)
-    prog = DAQ_Move_UI_Simple(widget, title="test")
-    widget.show()
-
-    for ind in range(10):
-        widget = QtWidgets.QWidget()
-        widget.setMaximumHeight(60)
-        dock.addWidget(widget)
-        prog = DAQ_Move_UI_Binary(widget, title="test")
-
-
-        def print_command_sig(cmd_sig):
-            print(cmd_sig)
-            if cmd_sig.command == UiToMainMove.INIT:
-                prog.enable_move_buttons(True)
-            elif cmd_sig.command == UiToMainMove.MOVE_ABS:
-                prog.display_value(cmd_sig.attribute)
-
-        prog.command_sig.connect(print_command_sig)
-        prog.actuators = actuators
-
-    win.show()
-    if init_qt:
-        sys.exit(app.exec())
-    return prog, widget
-
-
-if __name__ == '__main__':
-    main()
-
+    def setup_action_visibility(self):
+        self.ui_base.set_action_visible('show_controls', True)
+        self.ui_base.set_action_visible('show_graph', True)
+        self.ui_base.set_action_visible('refresh_value', True)
