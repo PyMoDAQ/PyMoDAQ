@@ -25,7 +25,7 @@ from pymodaq_gui.h5modules.saving import H5Saver
 
 from pymodaq.utils.leco.pymodaq_listener import ActorListener, LECOClientCommands, LECOCommands, LECOComponentMixin
 from pymodaq.utils.h5modules.module_saving import DetectorSaver, ActuatorSaver
-from pymodaq.utils.caller import CallerBase
+from pymodaq.utils.caller import CallerInfo
 from pymodaq.control_modules.thread_commands import (ThreadStatus, ControlToHardware,
                                                      ControleModuleType, ControllerStatus)  # noqa: F401
 
@@ -68,6 +68,7 @@ class HardwareWorkerBase(QObject):
         self._plugin_name = plugin_name
         self.plugin = None              # set by subclass after ini_hardware
         self.controller_address = None
+        self._caller: Optional[CallerInfo] = None
 
     @property
     def title(self) -> str:
@@ -76,6 +77,14 @@ class HardwareWorkerBase(QObject):
     @property
     def plugin_name(self) -> str:
         return self._plugin_name
+
+    def set_caller(self, caller: Optional[CallerInfo]) -> None:
+        """Store the caller context for the current/next grab, read back via ``get_caller``."""
+        self._caller = caller
+
+    def get_caller(self) -> Optional[CallerInfo]:
+        """Return the caller context set by :meth:`set_caller`, or ``None`` outside a grab."""
+        return self._caller
 
     def ini_hardware(self, params_state=None, controller=None):
         raise NotImplementedError
@@ -275,7 +284,7 @@ class ControlModule(QObject):
         self._module_and_data_saver = mod
         self._module_and_data_saver.h5saver = self.h5saver
 
-    def get_caller(self) -> Optional[CallerBase]:
+    def get_caller(self) -> Optional[CallerInfo]:
         """Best-effort caller context derived from this module's own ``module_and_data_saver``.
 
         Used as a fallback when nothing more specific (e.g. an extension driving a scan)
@@ -297,7 +306,7 @@ class ControlModule(QObject):
         node_name = None
         if saver.module_group is not None:
             node_name = saver.module_group.name.split('/')[-1]
-        return CallerBase(
+        return CallerInfo(
             h5_file_path=str(saver.h5saver.settings['current_h5_file']),
             node_name=node_name,
             origin=type(saver).__name__,

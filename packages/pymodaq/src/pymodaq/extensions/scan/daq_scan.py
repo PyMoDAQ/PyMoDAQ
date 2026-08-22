@@ -46,7 +46,7 @@ from pymodaq.extensions.scan.daq_scan_ui import DAQScanUI
 from pymodaq.utils.h5modules import module_saving
 from pymodaq.utils.scanner.scan_selector import ScanSelector, SelectorItem
 from pymodaq.utils.data import DataActuator
-from pymodaq.utils.caller import CallerBase
+from pymodaq.utils.caller import CallerInfo
 
 
 if TYPE_CHECKING:
@@ -73,7 +73,7 @@ class ScanDataTemp:
 
 
 @dataclass
-class DAQScanCaller(CallerBase):
+class DAQScanCaller(CallerInfo):
     """Caller context set on the worker before every grab during a DAQ_Scan run.
 
     Passed as the ``caller`` kwarg to ``ModulesManager.grab_data``; consumed by

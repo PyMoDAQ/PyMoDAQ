@@ -213,7 +213,7 @@ class DAQ_Viewer_base(PluginBase):
         of an extension-driven run. During a ``DAQ_Scan`` run it is a
         :class:`~pymodaq.extensions.scan.daq_scan.DAQScanCaller`, which adds the current
         step index and averaging pass on top of the base
-        :class:`~pymodaq.utils.caller.CallerBase` (``h5_file_path``, ``node_name``).
+        :class:`~pymodaq.utils.caller.CallerInfo` (``h5_file_path``, ``node_name``).
         """
         raise NotImplementedError
 

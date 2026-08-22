@@ -10,7 +10,7 @@ from pymodaq.extensions.scan.daq_scan import DAQScan, DAQScanAcquisition
 from pymodaq.extensions.scan.daq_scan import DAQScanCaller
 
 from pymodaq.utils.managers.modules import ModulesManager
-from pymodaq.utils.caller import CallerBase
+from pymodaq.utils.caller import CallerInfo
 
 @pytest.fixture
 def scan_settings():
@@ -29,7 +29,7 @@ def scan_acquisition(qtbot, scan_settings):
 
 class TestDAQScanCaller:
     def test_is_a_caller_base(self):
-        assert isinstance(DAQScanCaller(), CallerBase)
+        assert isinstance(DAQScanCaller(), CallerInfo)
 
     def test_defaults(self):
         caller = DAQScanCaller()

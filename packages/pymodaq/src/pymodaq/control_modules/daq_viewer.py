@@ -1234,7 +1234,7 @@ class DetectorWorker(HardwareWorkerBase):
         live: bool
             Try to run the instrument plugin class grabbing in live mode
         kwargs: optional named arguments passed to the grab_data method of the instrument plugin class.
-            A ``caller`` key (instance of :class:`~pymodaq.utils.caller.CallerBase`), if present, is
+            A ``caller`` key (instance of :class:`~pymodaq.utils.caller.CallerInfo`), if present, is
             stored on this worker and not forwarded to the plugin; plugins read it via
             ``self.get_caller()`` whenever needed, rather than through this call's kwargs.
         """

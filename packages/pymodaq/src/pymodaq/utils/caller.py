@@ -1,7 +1,7 @@
 """Context objects describing who is invoking a control-module call (e.g. ``grab_data``)
 and which part of PyMoDAQ's HDF5 file structure that call corresponds to.
 
-Plugins receive a :class:`CallerBase` (or one of its subclasses) as the ``caller`` kwarg
+Plugins receive a :class:`CallerInfo` (or one of its subclasses) as the ``caller`` kwarg
 so they can mirror PyMoDAQ's file layout in their own files, without inventing independent
 session bookkeeping.
 """
@@ -10,7 +10,7 @@ from typing import Optional
 
 
 @dataclass
-class CallerBase:
+class CallerInfo:
     """Generic caller context: the HDF5 file PyMoDAQ is writing to and the active node.
 
     Outside of any extension-driven acquisition (live view, manual snap) no caller is

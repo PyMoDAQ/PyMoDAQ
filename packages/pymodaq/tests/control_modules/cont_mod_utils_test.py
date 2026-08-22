@@ -8,7 +8,7 @@ import pytest
 
 from pymodaq.control_modules import utils
 from pymodaq.control_modules.utils import ControlModule, PluginBase, HardwareWorkerBase
-from pymodaq.utils.caller import CallerBase
+from pymodaq.utils.caller import CallerInfo
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
 from pymodaq.control_modules.instruments import DAQTypesEnum
 
@@ -74,7 +74,7 @@ class TestControlModuleGetCaller:
 
         caller = cm.get_caller()
 
-        assert caller == CallerBase(h5_file_path='/tmp/data/Data_20260101.h5',
+        assert caller == CallerInfo(h5_file_path='/tmp/data/Data_20260101.h5',
                                     node_name='Detector000', origin='FakeModuleSaver')
 
     def test_no_module_group_leaves_node_name_none(self, qtbot):
@@ -97,7 +97,7 @@ class TestPluginBaseGetCaller:
         plugin = PluginBase(parent=worker)
         assert plugin.get_caller() is None
 
-        caller = CallerBase(h5_file_path='/tmp/a.h5', node_name='Scan001')
+        caller = CallerInfo(h5_file_path='/tmp/a.h5', node_name='Scan001')
         worker.set_caller(caller)
         assert plugin.get_caller() is caller
 
@@ -109,6 +109,6 @@ class TestHardwareWorkerBaseCaller:
 
     def test_set_caller_updates_state(self, qtbot):
         worker = HardwareWorkerBase(title='test', plugin_name='Mock')
-        caller = CallerBase(h5_file_path='/tmp/a.h5')
+        caller = CallerInfo(h5_file_path='/tmp/a.h5')
         worker.set_caller(caller)
         assert worker._caller is caller
