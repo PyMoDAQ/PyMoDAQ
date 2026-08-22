@@ -116,9 +116,8 @@ class UniformImageItem(PymodaqImage):
             self.image = image
             self._imageHasNans = None
             self._imageNanLocations = None
-            if self.image.shape[0] > 2**15-1 or self.image.shape[1] > 2**15-1:
-                if 'autoDownsample' not in kargs:
-                    kargs['autoDownsample'] = True
+            if (self.image.shape[0] > 2**15-1 or self.image.shape[1] > 2**15-1) and 'autoDownsample' not in kargs:
+                kargs['autoDownsample'] = True
             if shapeChanged:
                 self.prepareGeometryChange()
                 self.informViewBoundsChanged()
@@ -155,10 +154,10 @@ class UniformImageItem(PymodaqImage):
 
         if gotNewData:
             self.sigImageChanged.emit()
-        if self._defferedLevels is not None:
-            levels = self._defferedLevels
-            self._defferedLevels = None
-            self.setLevels((levels))
+        if self._deferredLevels is not None:
+            levels = self._deferredLevels
+            self._deferredLevels = None
+            self.setLevels(levels)
 
 class SpreadImageItem(PymodaqImage):
     """
