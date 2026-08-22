@@ -26,8 +26,19 @@ class CallerInfo:
     """Absolute path to the HDF5 file being written by PyMoDAQ."""
     node_name: Optional[str] = None
     """Name of the active HDF5 group for this call, e.g. ``'Scan001'``."""
-    origin: Optional[str] = None
-    """What produced this caller. An extension sets its own name (e.g. ``'DAQScan'``);
-    the module's own self-derived fallback (see ``ControlModule.get_caller``) sets the
-    class name of its current ``module_and_data_saver`` instead, since it has no notion
-    of which extension (if any) last configured that saver."""
+    caller_name: Optional[str] = None
+    """A descriptive label for what produced this caller. An extension sets its own name
+    (e.g. ``'DAQScan'``); the module's own self-derived fallback (see
+    ``ControlModule.get_caller``) sets the class name of its current
+    ``module_and_data_saver`` instead, since it has no notion of which extension (if any)
+    last configured that saver."""
+    caller_type: Optional[str] = None
+    """Class name of this caller object, e.g. ``'DAQScanCaller'``. Auto-filled from
+    ``type(self).__name__`` in :meth:`__post_init__` unless explicitly overridden, so
+    a plugin can reliably tell caller shapes apart (and therefore which extra fields, if
+    any, a given caller carries) without needing an explicit import of every caller
+    subclass to ``isinstance``-check against."""
+
+    def __post_init__(self):
+        if self.caller_type is None:
+            self.caller_type = type(self).__name__

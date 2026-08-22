@@ -65,7 +65,7 @@ class TestControlModuleGetCaller:
         caller = cm.get_caller()
 
         assert caller.h5_file_path == str(tmp_path / 'default.h5')
-        assert caller.origin == 'FakeModuleSaver'
+        assert caller.caller_name == 'FakeModuleSaver'
 
     def test_derives_caller_from_module_and_data_saver(self, qtbot):
         cm = ControlModule()
@@ -75,7 +75,7 @@ class TestControlModuleGetCaller:
         caller = cm.get_caller()
 
         assert caller == CallerInfo(h5_file_path='/tmp/data/Data_20260101.h5',
-                                    node_name='Detector000', origin='FakeModuleSaver')
+                                    node_name='Detector000', caller_name='FakeModuleSaver')
 
     def test_no_module_group_leaves_node_name_none(self, qtbot):
         cm = ControlModule()

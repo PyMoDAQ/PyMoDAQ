@@ -294,7 +294,7 @@ class ControlModule(QObject):
         been (re)configured for the current context. Returns None if no
         ``module_and_data_saver`` has been set at all.
 
-        ``origin`` is set to the class name of the current ``module_and_data_saver``
+        ``caller_name`` is set to the class name of the current ``module_and_data_saver``
         (e.g. ``'DetectorTimeSaver'`` vs ``'DetectorExtendedSaver'``) rather than an
         extension name, since this fallback has no notion of which extension (if any)
         last configured that saver - that distinction lets a plugin tell live
@@ -309,7 +309,7 @@ class ControlModule(QObject):
         return CallerInfo(
             h5_file_path=str(saver.h5saver.settings['current_h5_file']),
             node_name=node_name,
-            origin=type(saver).__name__,
+            caller_name=type(saver).__name__,
         )
 
     def custom_command(self, command: str, **kwargs):

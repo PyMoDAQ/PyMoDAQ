@@ -88,8 +88,8 @@ class DAQScanCaller(CallerInfo):
                 out_dir.mkdir(parents=True, exist_ok=True)
                 # save proprietary file as out_dir / f"frame_{caller.ind_scan:05d}.bin"
     """
-    origin: str = 'DAQScan'
-    """Caller origin"""
+    caller_name: str = 'DAQScan'
+    """Caller name"""
     ind_scan: int = 0
     """Zero-based linear step index within the current scan."""
     ind_average: int = 0

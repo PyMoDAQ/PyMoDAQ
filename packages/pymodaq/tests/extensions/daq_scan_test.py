@@ -33,7 +33,8 @@ class TestDAQScanCaller:
 
     def test_defaults(self):
         caller = DAQScanCaller()
-        assert caller.origin == 'DAQScan'
+        assert caller.caller_name == 'DAQScan'
+        assert caller.caller_type == 'DAQScanCaller'
         assert caller.ind_scan == 0
         assert caller.ind_average == 0
         assert caller.h5_file_path is None
@@ -46,7 +47,8 @@ class TestDAQScanCaller:
         assert caller.ind_average == 1
         assert caller.node_name == 'Scan001'
         assert caller.h5_file_path == '/tmp/data.h5'
-        assert caller.origin == 'DAQScan'
+        assert caller.caller_name == 'DAQScan'
+        assert caller.caller_type == 'DAQScanCaller'
 class TestTimeout:
 
     def test_stops_scan_when_stop_on_timeout_enabled(self, qtbot, scan_acquisition, scan_settings):
