@@ -25,12 +25,14 @@ from pymodaq.utils.managers.roi_manager.roi_manager import ROIManager
 from pymodaq.control_modules.instruments import find_actuator_class_from_name
 from pymodaq.control_modules.enums import DAQTypesEnum
 from pymodaq.control_modules.move_utility_classes import UiType
+from pymodaq.control_modules.utils import ControllerThread
+from pymodaq.utils.managers.roi_manager.roi_manager import ROIManager
+
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.enums import BaseEnum, StrEnum
-
 
 from pymodaq_gui.parameter import ParameterTree, Parameter
 from pymodaq_gui.utils import DockArea, Dock, select_file
@@ -250,7 +252,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.get_toolbar('state').setEnabled(False)
         self.get_toolbar('overshooter').setEnabled(False)
         self.experiment_manager.enable_actions(True)
-
 
     def do_things_after_experiment_set(self, experiment_name: str):
 
@@ -623,39 +624,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
     def create_extension_slot(self, extenum: ExtensionEnum):
         return lambda: self.load_extension(extenum)
 
-    # def create_roi_file(self):
-    #     try:
-    #         if self.preset_file is not None:
-    #             self.roi_saver.set_new_roi(self.preset_file.stem)
-    #             self.add_action(
-    #                 self.get_action_from_file(self.preset_file, ManagerEnums.roi),
-    #                 self.preset_file.stem,
-    #                 "",
-    #             )
-    #             self.setup_menu(self.menubar)
-    #             self.connect_action(
-    #                 self.get_action_from_file(self.preset_file, ManagerEnums.roi),
-    #                 self.create_menu_slot_roi(get_set_roi_path().joinpath(self.preset_file.name)),
-    #             )
-    #
-    #
-    #     except Exception as e:
-    #         logger.exception(str(e))
-
-
-    # def modify_roi(self):
-    #     try:
-    #         path = select_file(
-    #             start_path=get_set_roi_path(), save=False, ext="xml"
-    #         )
-    #         if path != "":
-    #             self.roi_saver.set_file_roi(path)
-    #
-    #         else:  # cancel
-    #             pass
-    #     except Exception as e:
-    #         logger.exception(str(e))
-
     def quit_fun(self):
         """
         Quit the current instance of DashBoard and close on cascade move and detector modules.
@@ -831,7 +799,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         instrument_name: str
             The name of the instrument class, for instance PID for the daq_move_PID
             module and the DAQ_Move_PID instrument class
-        instrument_controller: object
+        instrument_controller: ControllerThread
             whatever object is used to communicate between the instrument module and the extension
             which created it
         ui_identifier: str
@@ -887,10 +855,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
                 self.dockarea,
                 orientation=Qt.Orientation.Vertical,
             )
-            if self.compact_actuator_manager is not None:
-                self.compact_detector_manager.show('bottom', self.compact_actuator_manager.dock)
-            else:
-                self.compact_detector_manager.show("top")
+            self.compact_detector_manager.show("top")
 
         # Create individual detector dock
         self.docks_viewer.append(Dock(detector.title, size=(350, 350)))
@@ -923,6 +888,14 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
     def set_detector_type(self, detector: DAQ_Viewer, daq_type: DAQTypesEnum, class_name: str):
         detector.detector = SelectedModule(daq_type, class_name)  # will fire instrument_changed when done
+        
+    def move_utils_docks(self, position='right'):
+        self.dockarea.moveDock(self.settings_dock, position, None)
+        self.settings_dock.setVisible(False)
+        self.dockarea.moveDock(self.rois_dock, position, None)
+        self.rois_dock.setVisible(False)
+        self.dockarea.moveDock(self.controls_dock, position, None)
+        self.controls_dock.setVisible(False)
 
     def override_det_from_extension(self, overriden_grabbers: Sequence[str] = None):
         """(Experimental) If an extension adding detectors within the Dashboard need to,
@@ -969,7 +942,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         instrument_name: str
             The name of the instrument class, for instance DataMixer for the daq_0Dviewer_DataMixer
             module and the DAQ_0DViewer_DataMixer instrument class
-        instrument_controller: object
+        instrument_controller: ControllerThread
             whatever object is used to communicate between the instrument module and the extension
             which created it
         """

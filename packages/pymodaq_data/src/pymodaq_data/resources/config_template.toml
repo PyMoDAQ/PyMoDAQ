@@ -26,3 +26,4 @@ backend = ['h5py', 'tables', 'h5pyd']  # first element is the default, mostly te
 backend = ['matplotlib']  # either 'matplotlib' or 'qt' or any other custom backend
 plot_colors = [[255, 255, 255], [255, 0, 0], [0, 255, 0], [0, 0, 255], [14, 207, 189], [207, 14, 166], [207, 204, 14]]
 process_roi = true  # if True subdata is extracted from the ROI in the data viewers
+linewidth = 1  # default linewidth of the plots

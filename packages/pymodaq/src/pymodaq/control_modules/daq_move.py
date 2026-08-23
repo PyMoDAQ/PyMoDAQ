@@ -20,6 +20,7 @@ from qtpy import QtWidgets
 
 from easydict import EasyDict as edict
 
+from pymodaq.control_modules.daq_move_ui.utils import UiType
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import find_keys_from_val
 from pymodaq_utils import utils
@@ -43,8 +44,7 @@ from pymodaq.control_modules.thread_commands import (ThreadStatus, ThreadStatusM
                                                      ControlToHardwareMove, UiToMainMove,
                                                      )
 from pymodaq.control_modules.move_utility_classes import (ThreadCommand, MoveCommand, DAQ_Move_base, DataActuatorType,
-                                                          check_units, UiType)
-
+                                                          check_units)
 
 from pymodaq.control_modules.move_utility_classes import params as daq_move_params
 from pymodaq.utils.leco.pymodaq_listener import (MoveActorListener, LECOMoveCommands, LECOCommands,)
@@ -52,9 +52,7 @@ from pymodaq import Q_, Unit
 
 
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
-
-if TYPE_CHECKING:
-    from pymodaq.control_modules.daq_move_ui.ui_base import DAQ_Move_UI_Base
+from pymodaq.control_modules.daq_move_ui.ui_base import DAQMoveUI
 
 sys.path.append(str(get_set_local_dir()))
 logger = set_logger(get_module_name(__file__))
@@ -98,11 +96,11 @@ class DAQ_Move(ParameterControlModule):
          'visible': True, 'children': H5Saver.get_params_for_save_type(SaveType.actuator), 'expanded': False}]
 
     listener_class = MoveActorListener
-    ui: Optional[DAQ_Move_UI_Base]
+    ui: Optional[DAQMoveUI]
 
     def __init__(self, parent=None,
                  title="DAQ Move",
-                 ui_identifier: Optional[str] = None,
+                 ui_identifier: str | UiType | None = None,
                  **kwargs) -> None:
         """
 
@@ -112,6 +110,7 @@ class DAQ_Move(ParameterControlModule):
             if it is a valid QWidget, it will hold the user interface to drive it
         title: str
             The unique (should be unique) string identifier for the underlying actuator
+        ui_identifier:
         """
 
         self.logger = set_logger(f"{logger.name}.{title}")
@@ -120,19 +119,11 @@ class DAQ_Move(ParameterControlModule):
         super().__init__(listener_class=MoveActorListener,
                          action_list=("save", "update"), **kwargs)
 
-        if not (
-            ui_identifier is not None and ui_identifier in ActuatorUIFactory.keys()
-        ):
-            ui_identifier = config("pymodaq", "actuator", "ui")[0]
-        self.settings.child("main_settings", "ui_type").setValue(ui_identifier)
-        self.settings.child("main_settings", "ui_type").setOpts(readonly=True)
-
-
-        DAQ_Move_UI = ActuatorUIFactory.get(ui_identifier)
-
         self.parent = parent
+        self.ui_identifier_default = ui_identifier
         if parent is not None:
-            self.ui = DAQ_Move_UI(parent, title,
+
+            self.ui = DAQMoveUI(parent, title,
                                   controls_dock=kwargs.pop('controls_dock', None),
                                   settings_dock=kwargs.pop('settings_dock', None))
         else:
@@ -194,15 +185,44 @@ class DAQ_Move(ParameterControlModule):
     def actuator(self, act_type):
         if act_type in ACTUATOR_NAMES:
             self._actuator_type = act_type
-            self.update_plugin_config()
             if self.ui is not None:
-                self.ui.actuator = act_type
+                self.update_ui_from_actuator_selection(act_type)
             self._reload_plugin_settings()
         else:
             logger.error(
                 f"{act_type} is an invalid actuator, should be within {ACTUATOR_NAMES}"
             )
         self.instrument_changed.emit()
+
+    def update_ui_from_actuator_selection(self, act_name: str):
+        """ When the selected actuator change, the UI is updated to reflect the
+        actuator UI Type. This UI type is set in the priority order as:
+
+        1. check if the actuator define a particular UI to be used
+        2. if (1) is 'None' (default) and ui_identifier set in __init__, use the __init__ argument
+        3. if (1) is 'None' (default) and ui_identifier no set in __init__, check and use the preferences default UI
+
+        Parameters
+        ----------
+        act_name: str
+            The actuator class name
+        """
+        self.ui.cleanup_ui()
+        self.ui.actuator = act_name
+
+
+
+        actuator_class = find_actuator_class_from_name(act_name)
+        if actuator_class.ui_type != UiType.NONE:
+            ui_identifier = actuator_class.ui_type.value
+        elif self.ui_identifier_default is not None:
+            ui_identifier = self.ui_identifier_default
+        else:
+            ui_identifier = config('pymodaq', 'actuator', 'ui')[0]
+
+        self.settings.child("main_settings", "ui_type").setValue(ui_identifier)
+        self.settings.child("main_settings", "ui_type").setOpts(readonly=True)
+        self.ui.set_ui_type(ui_identifier)
 
     @property
     def actuators(self) -> List[str]:
@@ -227,6 +247,8 @@ class DAQ_Move(ParameterControlModule):
         self.update_default_values()
 
     def update_default_values(self):
+        if self.ui is not None:
+            self.ui.set_unit_as_suffix(self.units)
         self.value_changed(self.settings.child('main_settings', 'default_value_green'))
         self.value_changed(self.settings.child('main_settings', 'default_value_red'))
         self.value_changed(self.settings.child('main_settings', 'default_value_relative'))
@@ -593,11 +615,6 @@ class DAQ_Move(ParameterControlModule):
     # Settings / Plugin management
     # -------------------------------------------------------------------------
 
-    def update_plugin_config(self):
-        parent_module = utils.find_dict_in_list_from_key_val(
-            ACTUATOR_TYPES, "name", self.actuator
-        )
-        mod = import_module(parent_module["module"].__package__.split(".")[0])
 
     @staticmethod
     def get_unit_to_display(unit: str) -> str:
@@ -729,17 +746,17 @@ class DAQ_Move(ParameterControlModule):
                 f"info: {status.attribute['info']}",
             )
             if status.attribute["initialized"]:
-                self.controller = status.attribute["controller"]
+                self._controller_and_thread.controller = status.attribute["controller"]
+                self._controller_and_thread.initialized = True
                 if self.ui is not None:
                     self.ui.actuator_init = True
-                self._initialized_state = True
             else:
-                self._initialized_state = False
+                self._controller_and_thread.initialized = False
                 if self.ui is not None:
                     self.ui.actuator_init = False
-            if self._initialized_state:
+            if self._controller_and_thread.initialized:
                 self.get_actuator_value()
-            self.init_signal.emit(self._initialized_state)
+            self.init_signal.emit(self._controller_and_thread.initialized)
 
         elif (
             status.command == ThreadStatusMove.GET_ACTUATOR_VALUE
@@ -915,6 +932,7 @@ class ActuatorWorker(HardwareWorkerBase):
                 status.info = infos[0]
                 status.initialized = infos[1]
             status.controller = self.plugin.controller
+            status.ui_type = self.plugin.ui_type
             self.controller_address = self.plugin.controller
             self.plugin.move_done_signal.connect(self.move_done)
             if status.initialized:
