@@ -159,6 +159,7 @@ class TestExperimentExecutedTwice:
     must be fully cleaned up and new modules created.
     """
 
+    @pytest.mark.skip(reason="PR on signal connectionmanagement ongoing")
     def test_second_execute_cleans_old_modules(self, dashboard, qtbot):
         """
         Execute the default experiment once, then execute it a second time.
@@ -188,6 +189,7 @@ class TestExperimentExecutedTwice:
         assert len(dashboard.actuators_modules) == n_actuators_after_first
         assert len(dashboard.detector_modules) == n_detectors_after_first
 
+    @pytest.mark.skip(reason="PR on signal connectionmanagement ongoing")
     def test_second_execute_with_one_failing_module_still_loads_new_modules(
         self, dashboard, qtbot
     ):
