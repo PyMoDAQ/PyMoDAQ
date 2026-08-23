@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, TYPE_CHECKING
 
+from pymodaq.control_modules.utils import ControllerAndThread
 from pymodaq_gui.parameter import Parameter
 from qtpy import QtCore
 
@@ -32,7 +33,7 @@ class PluginInfo:
     do_init: bool = True
     ui: str | None = None
     daq_type: DAQTypesEnum | None = None
-    controller: Any = None
+    controller: ControllerAndThread = None
 
 
 class ModuleLoader(QtCore.QObject):
@@ -70,7 +71,7 @@ class ModuleLoader(QtCore.QObject):
         self._current_module: DAQ_Move | DAQ_Viewer = None
         self._modules: list[DAQ_Move | DAQ_Viewer] = []
         self._current_plugin: 'PluginInfo' = None
-        self._current_controller: Any = None
+        self._current_controller: ControllerAndThread = None
 
         self._init_timeout_timer = QtCore.QTimer()
         self._init_timeout_timer.setInterval(config('pymodaq', 'control_modules', 'control_module_ini_polling') * 1000)
@@ -139,7 +140,7 @@ class ModuleLoader(QtCore.QObject):
         if self._current_plugin.settings is not None:
             self._current_module.apply_controller_parameters(self._current_plugin.settings.child("controller"))
         if not self._current_plugin.is_master:
-            self._current_module.controller = self._current_controller
+            self._current_module.controller_and_thread = self._current_controller
 
         self._init_timeout_timer.start()
         self._current_module.init_hardware_ui()
@@ -155,7 +156,7 @@ class ModuleLoader(QtCore.QObject):
         self._current_module.init_signal.disconnect(self._on_init_done)
 
         if self._current_plugin.is_master and initialized:
-            self._current_controller = self._current_module.controller
+            self._current_controller = self._current_module.controller_and_thread
             self._current_plugin.controller = self._current_controller
 
         self.module_index_init.emit(self._ind, initialized)

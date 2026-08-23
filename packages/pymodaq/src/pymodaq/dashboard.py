@@ -25,7 +25,7 @@ from pymodaq.utils.managers.roi_manager.roi_manager import ROIManager
 from pymodaq.control_modules.instruments import find_actuator_class_from_name
 from pymodaq.control_modules.enums import DAQTypesEnum
 from pymodaq.control_modules.move_utility_classes import UiType
-from pymodaq.control_modules.utils import ControllerThread
+from pymodaq.control_modules.utils import ControllerAndThread
 from pymodaq.utils.managers.roi_manager.roi_manager import ROIManager
 
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -799,7 +799,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         instrument_name: str
             The name of the instrument class, for instance PID for the daq_move_PID
             module and the DAQ_Move_PID instrument class
-        instrument_controller: ControllerThread
+        instrument_controller: ControllerAndThread
             whatever object is used to communicate between the instrument module and the extension
             which created it
         ui_identifier: str
@@ -942,7 +942,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         instrument_name: str
             The name of the instrument class, for instance DataMixer for the daq_0Dviewer_DataMixer
             module and the DAQ_0DViewer_DataMixer instrument class
-        instrument_controller: ControllerThread
+        instrument_controller: ControllerAndThread
             whatever object is used to communicate between the instrument module and the extension
             which created it
         """
