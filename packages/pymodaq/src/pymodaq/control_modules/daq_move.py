@@ -305,7 +305,7 @@ class DAQ_Move(ParameterControlModule):
             * rel_value
         """
         if cmd.command == UiToMainMove.INIT:
-            self.init_hardware(cmd.attribute[0])
+            self.do_init_hardware_signal.emit(cmd.attribute[0])  # usually connected to ini_hardware method, but could be bypassed (see Dashboard/ModulesManager)
         elif cmd.command == UiToMainMove.GET_VALUE:
             self.get_actuator_value()
         elif cmd.command == UiToMainMove.LOOP_GET_VALUE:

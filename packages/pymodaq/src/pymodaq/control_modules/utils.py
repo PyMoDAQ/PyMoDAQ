@@ -452,6 +452,7 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
     """Base class for a control module with parameters."""
 
     _update_settings_signal = Signal(edict)
+    do_init_hardware_signal = Signal(bool)
 
     # Subclasses set _hw_kind to the short module kind name (e.g. 'actuator', 'detector').
     # The full settings key is derived automatically as "<kind>_settings".
@@ -469,6 +470,8 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
         ParameterManager.__init__(self, action_list=kwargs.get("action_list", ("search", "save", "update")))
         LECOComponentMixin.__init__(self, listener_class)
         ControlModule.__init__(self)
+
+        self.do_init_hardware_signal.connect(self.init_hardware)
 
     def thread_status(self, status: ThreadCommand):
         """Extend base thread_status with parameter-tree commands.
@@ -757,16 +760,23 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
     @property
     def master(self) -> bool:
         """Get/Set programmatically the Master/Slave status of the module's controller."""
-        if self.initialized_state:
-            return self._controller_and_thread.is_master
-        return True
+        return self._controller_and_thread.is_master
 
     @master.setter
     def master(self, is_master: bool):
-        if self.initialized_state:
-            self.settings.child(self._hw_settings_name, 'controller', 'controller_status').setValue(
-                ControllerStatus.MASTER if is_master else ControllerStatus.SLAVE)
-            self.controller_and_thread.is_master = self.master
+        self.settings.child(self._hw_settings_name, 'controller', 'controller_status').setValue(
+            ControllerStatus.MASTER if is_master else ControllerStatus.SLAVE)
+        self.controller_and_thread.is_master = is_master
+
+    @property
+    def id(self) -> int:
+        """Get/Set programmatically the id value of the module's controller."""
+        return self._controller_and_thread.id
+
+    @id.setter
+    def id(self, id_value: int):
+        self.settings.child(self._hw_settings_name, 'controller', 'controller_ID').setValue(id_value)
+        self.controller_and_thread.id = id_value
 
     def param_deleted(self, param):
         """Propagate parameter deletion to the hardware thread."""

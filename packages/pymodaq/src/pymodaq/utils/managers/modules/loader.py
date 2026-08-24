@@ -71,7 +71,7 @@ class ModuleLoader(QtCore.QObject):
         self._current_module: DAQ_Move | DAQ_Viewer = None
         self._modules: list[DAQ_Move | DAQ_Viewer] = []
         self._current_plugin: 'PluginInfo' = None
-        self._current_controller: ControllerAndThread = None
+        self._current_master_controller: ControllerAndThread = None
 
         self._init_timeout_timer = QtCore.QTimer()
         self._init_timeout_timer.setInterval(config('pymodaq', 'control_modules', 'control_module_ini_polling') * 1000)
@@ -104,10 +104,8 @@ class ModuleLoader(QtCore.QObject):
     def _process_current(self):
         plugin_info, ind_in_group, group_size = self._queue[self._ind]
         self._current_plugin = plugin_info
-        if plugin_info.controller is not None:  #  else get one from its parent Master
-            self._current_controller = plugin_info.controller
 
-        validate_master_slave_order(plugin_info, ind_in_group, group_size)
+        self.validate_master_slave_order(plugin_info, ind_in_group, group_size)
 
         if plugin_info.type == ModuleType.Actuator:
             self._current_module = self.dashboard.create_actuator(
@@ -115,6 +113,14 @@ class ModuleLoader(QtCore.QObject):
         else:
             self._current_module = self.dashboard.create_detector(
                 plugin_info.name, plugin_info.daq_type)
+
+        # affecting the right controller and thread object (important for later initialization)
+        if plugin_info.is_master:
+            self._current_master_controller = ControllerAndThread(is_master=True, id=plugin_info.id)
+        self._current_module.controller_and_thread.controller = self._current_master_controller.controller
+        self._current_module.controller_and_thread.thread = self._current_master_controller.thread
+        self._current_module.master = plugin_info.is_master
+        self._current_module.id = plugin_info.id
 
         self._modules.append(self._current_module)
         self._current_module.instrument_changed.connect(self._on_type_set)
@@ -139,11 +145,9 @@ class ModuleLoader(QtCore.QObject):
         self._current_module.init_signal.connect(self._on_init_done)
         if self._current_plugin.settings is not None:
             self._current_module.apply_controller_parameters(self._current_plugin.settings.child("controller"))
-        if not self._current_plugin.is_master:
-            self._current_module.controller_and_thread = self._current_controller
 
         self._init_timeout_timer.start()
-        self._current_module.init_hardware_ui()
+        self._current_module.do_init_hardware_signal.emit()
 
     def _on_set_type_timeout(self):
         logger.info(f"Timeout reached when attempting setting the type of module: "
@@ -156,8 +160,9 @@ class ModuleLoader(QtCore.QObject):
         self._current_module.init_signal.disconnect(self._on_init_done)
 
         if self._current_plugin.is_master and initialized:
-            self._current_controller = self._current_module.controller_and_thread
-            self._current_plugin.controller = self._current_controller
+            # update the current plugin master with info on running thread and actual instrument controller
+            self._current_master_controller.controller = self._current_module.controller_and_thread.controller
+            self._current_master_controller.thread = self._current_module.controller_and_thread.thread
 
         self.module_index_init.emit(self._ind, initialized)
 
@@ -170,32 +175,35 @@ class ModuleLoader(QtCore.QObject):
     def _set_module_type(self):
         self._set_type_timeout_timer.start()
         if self._current_plugin.type == ModuleType.Actuator:
-            self.dashboard.set_actuator_type(self._current_module, self._current_plugin.class_name)
+            self.dashboard.set_actuator_type(self._current_module,
+                                             self._current_plugin.class_name)
         else:
             self.dashboard.set_detector_type(self._current_module,
-                                                     self._current_plugin.daq_type,
-                                                     self._current_plugin.class_name)
+                                             self._current_plugin.daq_type,
+                                             self._current_plugin.class_name)
         # transition to _on_type_set happens through the module's own instrument_changed signal
 
 
-def validate_master_slave_order(plugin_info: 'PluginInfo', ind_in_group: int, group_size: int) -> Any:
-    """Check that a plugin's Master/Slave status matches its position within its controller group.
+    def validate_master_slave_order(self, plugin_info: 'PluginInfo', ind_in_group: int, group_size: int) -> Any:
+        """Check that a plugin's Master/Slave status matches its position within its controller group.
 
-    Raises
-    ------
-    MasterSlaveError
-        if the first plugin of a group isn't Master, if a later one is,
-        or if a Master with no init has slaves depending on its controller.
-    """
-    if ind_in_group == 0:
-        if not plugin_info.is_master and plugin_info.controller is None:
-            raise MasterSlaveError(f"The instrument {plugin_info.name} without affected controller "
-                                   f"should be defined as Master")
-        if not plugin_info.do_init and group_size > 1 and plugin_info.is_master:
-            raise MasterSlaveError(
-                f"The instrument {plugin_info.name} defined as Master has to be "
-                f"initialized (init checked in the experiment) in order to init "
-                f"its associated slave instrument")
-    else:
-        if plugin_info.is_master:
-            raise MasterSlaveError(f"The instrument {plugin_info.name} should be defined as Slave")
+        Raises
+        ------
+        MasterSlaveError
+            if the first plugin of a group isn't Master, if a later one is,
+            or if a Master with no init has slaves depending on its controller.
+        """
+        if ind_in_group == 0:
+            if not plugin_info.is_master and plugin_info.controller is None:
+                raise MasterSlaveError(f"The instrument {plugin_info.name} without affected controller "
+                                       f"should be defined as Master")
+            if not plugin_info.do_init and group_size > 1 and plugin_info.is_master:
+                for slave_plug_info, _, _ in self._queue[self._ind + 1 : self._ind + group_size]:
+                    if slave_plug_info.do_init:
+                        raise MasterSlaveError(
+                            f"The instrument {plugin_info.name} defined as Master is not defined as "
+                            f"initialized (init checked in the experiment) while some of its Slaves are: "
+                            f"{slave_plug_info.name}. Either init the Master and/or Slaves or None at all.")
+        else:
+            if plugin_info.is_master:
+                raise MasterSlaveError(f"The instrument {plugin_info.name} should be defined as Slave")

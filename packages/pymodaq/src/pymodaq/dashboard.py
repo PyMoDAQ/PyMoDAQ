@@ -733,11 +733,19 @@ class DashBoard(CustomApp, LECOComponentMixin):
     ) -> DAQ_Move:        
 
         actuator = self.create_actuator(plug_name, plug_type, ui_identifier)
-
         self.set_actuator_type(actuator, plug_type)
-
         self.add_actuator(actuator)
         return  actuator
+
+    def _on_hardware_initialization(self, do_init: bool, module: DAQ_Move | DAQ_Viewer):
+        """ Bypass method during initialization to assert whether a Master of some slave module already exists"""
+        if not module.master:
+            for other_module in self.modules_manager.modules_all:
+                if other_module.id == module.id and other_module.master:
+                    module.controller_and_thread.controller = other_module.controller_and_thread.controller
+                    module.controller_and_thread.thread = other_module.controller_and_thread.thread
+                    break
+        module.init_hardware(do_init)
 
     def create_actuator(self, name: str, class_name: str, ui_identifier: str) -> DAQ_Move:
         actuator_class = find_actuator_class_from_name(class_name)
@@ -748,14 +756,22 @@ class DashBoard(CustomApp, LECOComponentMixin):
             pass
         else:
             ui_identifier = config("pymodaq", "actuator", "ui")
-        mov_mod_tmp = DAQ_Move(QtWidgets.QWidget(),
-                               name,
-                               ui_identifier=ui_identifier,
-                               settings_dock=self.settings_dock,
-                               controls_dock=self.controls_dock,
-                               )
-        mov_mod_tmp.bounds_signal[bool].connect(self.do_stuff_from_out_bounds)
-        return mov_mod_tmp
+        actuator = DAQ_Move(QtWidgets.QWidget(),
+                            name,
+                            ui_identifier=ui_identifier,
+                            settings_dock=self.settings_dock,
+                            controls_dock=self.controls_dock,
+                            )
+        actuator.bounds_signal[bool].connect(self.do_stuff_from_out_bounds)
+        try:
+            # disconnect the usual route, to add an extra step at init to check around for existing Masters in
+            # case one add a Slave after Experiment is set
+            actuator.do_init_hardware_signal.disconnect()
+        except TypeError:
+            pass
+        actuator.do_init_hardware_signal.connect(lambda do_init: self._on_hardware_initialization(do_init, actuator))
+
+        return actuator
 
     def set_actuator_type(self, actuator: DAQ_Move, class_name: str):
         actuator.actuator = class_name  # will fire instrument_changed when done
@@ -877,14 +893,22 @@ class DashBoard(CustomApp, LECOComponentMixin):
     def create_detector(self, name: str, daq_type: DAQTypesEnum) -> DAQ_Viewer:
         widget = QtWidgets.QWidget()
 
-        det_mod_tmp = DAQ_Viewer(
+        detector = DAQ_Viewer(
             widget,
             title=name,
             daq_type=daq_type.name,
             settings_dock=self.settings_dock,
             rois_dock=self.rois_dock,
         )
-        return det_mod_tmp
+        try:
+            # disconnect the usual route, to add an extra step at init to check around for existing Masters in
+            # case one add a Slave after Experiment is set
+            detector.do_init_hardware_signal.disconnect()
+        except TypeError:
+            pass
+        detector.do_init_hardware_signal.connect(lambda do_init: self._on_hardware_initialization(do_init, detector))
+
+        return detector
 
     def set_detector_type(self, detector: DAQ_Viewer, daq_type: DAQTypesEnum, class_name: str):
         detector.detector = SelectedModule(daq_type, class_name)  # will fire instrument_changed when done
