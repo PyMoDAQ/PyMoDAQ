@@ -4,18 +4,25 @@ from numbers import Real
 from qtpy import QtWidgets, QtGui
 from qtpy.QtCore import QObject, Slot, Signal, Qt
 import sys
+import pyqtgraph
+from pyqtgraph import mkPen
+
+from pymodaq_utils.config import GlobalConfig
+from pymodaq_utils.logger import set_logger, get_module_name
+
 import pyqtgraph as pg
 
 from pymodaq_gui.utils.widgets import SpinBox
 from pymodaq_utils import utils
-from pymodaq_utils.config import GlobalConfig as Config
+
 from pymodaq_data import data as data_mod
 from pymodaq_data.plotting.utils import PlotColors
-from pymodaq_utils.logger import set_logger, get_module_name
+
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerBase
 from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_gui.plotting.widgets import PlotWidget
 from pymodaq_gui.plotting.utils.plot_utils import Data0DWithHistory
+from pymodaq_gui import foreground_color
 from pymodaq_gui.utils.dock import Dock
 
 import numpy as np
@@ -24,6 +31,7 @@ import datetime
 
 logger = set_logger(get_module_name(__file__))
 PLOT_COLORS = [dict(color=color) for color in PlotColors()]
+config = GlobalConfig()
 
 
 class DataDisplayer(QObject):
@@ -34,8 +42,10 @@ class DataDisplayer(QObject):
     updated_item = Signal(list)
     labels_changed = Signal(list)
 
-    def __init__(self, plotitem: pg.PlotItem, plot_colors=PLOT_COLORS):
+    def __init__(self, plotitem: pyqtgraph.PlotItem, plot_colors=None):
         super().__init__()
+        if plot_colors is None:
+            plot_colors = PLOT_COLORS
         self._plotitem = plotitem
         self.colors = plot_colors
         self._do_scatter = False
@@ -68,14 +78,17 @@ class DataDisplayer(QObject):
         color_idx = self._next_color_index()
         self._color_indices[label] = color_idx
         color = self.colors[color_idx]
-
-        plot_item = pg.PlotDataItem(pen=color)
+        width = color.pop('width', self.linewidth)
+        plot_item = pyqtgraph.PlotDataItem(pen=mkPen(width=width,
+                                                     **color))
         self._plot_items[label] = plot_item
         self._plotitem.addItem(plot_item)
         self.legend.addItem(plot_item, f"{label} ({units})")
-        dash_pen = pg.mkPen(color=color['color'], style=Qt.PenStyle.DashLine)
-        max_line = pg.InfiniteLine(angle=0, pen=dash_pen)
-        min_line = pg.InfiniteLine(angle=0, pen=dash_pen)
+        dash_pen = pyqtgraph.mkPen(color=color['color'],
+                                   style=Qt.PenStyle.DashLine,
+                                   )
+        max_line = pyqtgraph.InfiniteLine(angle=0, pen=dash_pen)
+        min_line = pyqtgraph.InfiniteLine(angle=0, pen=dash_pen)
         self._max_lines[label] = max_line
         self._min_lines[label] = min_line
         max_line.setVisible(self._show_lines)
@@ -112,22 +125,27 @@ class DataDisplayer(QObject):
         self._mins.pop(label, None)
         self._maxs.pop(label, None)
 
-    def update_colors(self, colors: List[QtGui.QPen]):
+    @property
+    def linewidth(self) -> int:
+        return config('data', 'plotting', 'linewidth')
+
+    def update_colors(self, colors: List[dict]):
         self.colors[0:len(colors)] = colors
         symbol_size = 5
         symbol = 'o'
 
         for label, color_idx in self._color_indices.items():
             color = self.colors[color_idx]
+            width = color.pop('width', self.linewidth)
+
             if self._do_scatter:
                 pen = None
                 symbol_type = symbol
                 brush = color['color']
             else:
-                pen = color['color']
+                pen = mkPen(width=width, **color)
                 symbol_type = None
                 brush = None
-
             self._plot_items[label].setPen(pen)
             self._plot_items[label].setSymbolBrush(brush)
             self._plot_items[label].setSymbol(symbol_type)
@@ -285,9 +303,9 @@ class View0D(ActionManager, QObject):
         self.add_action('use_timestamps', 'Use Timestamps', 'timer_off',
                         'Use timestamps as axis', checkable=True,
                         icon_checked='timer')
-        self.add_action('scatter', 'Scatter', 'Marker', 'Switch between line or scatter plots',
+        self.add_action('scatter', 'Scatter', 'scatter_plot', 'Switch between line or scatter plots',
                         checkable=True)
-        self.add_action('xyplot', 'XYPlotting', '2d',
+        self.add_action('xyplot', 'XYPlotting', 'function',
                         'Switch between normal or XY representation (valid for 2 channels)',
                         checkable=True,
                         visible=False)
@@ -339,7 +357,6 @@ class View0D(ActionManager, QObject):
     def _prepare_ui(self):
         """add here everything needed at startup"""
         self.values_list.setVisible(False)
-        config = Config()
         self.get_action('Nhistory').setValue(config('gui', 'viewer', 'viewer0D', 'Nhistory'))
         for action_name in ('show_data_as_list', 'show_min_max'):
             if config('gui', 'viewer', 'viewer0D', action_name):

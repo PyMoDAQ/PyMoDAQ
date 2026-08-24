@@ -10,6 +10,8 @@ from qtpy.QtCore import QObject, Slot, QThread, Signal
 
 from simple_pid import PID
 
+from pymodaq.utils.managers.modules import ModuleType
+from pymodaq.utils.managers.modules.loader import PluginInfo
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import ThreadCommand, find_dict_in_list_from_key_val
 from pymodaq.utils.exceptions import DetectorError, ActuatorError, PIDError
@@ -513,8 +515,15 @@ class DAQ_PID(CustomExt):
     def create_setp_actuators(self):
         # Now that we have the module manager, load PID if it is checked in managers
         try:
+            modules: list[PluginInfo] = []
             for setp in self.model_class.setpoints_names:
-                self.dashboard.add_move_from_extension(setp, "PID", PIDController(self, setp))
+                modules.append(PluginInfo(0,
+                                          setp,
+                                          'PID',
+                                          type=ModuleType.Actuator,
+                                          controller=PIDController(self, setp)
+                                          ))
+            self.dashboard.add_move_from_extension(modules=modules)
             self.set_action_enabled("create_setp_actuators", False)
 
         except Exception as e:
