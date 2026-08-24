@@ -18,12 +18,10 @@ from qtpy.QtWidgets import (
     QMessageBox,
 )
 
-from pymodaq.utils.managers.module_creator import ModuleCreator
+from pymodaq.utils.managers.modules.module_creator import ModuleCreator
 from pymodaq.utils.managers.modules import ModuleType
 from pymodaq.utils.managers.modules.loader import ModuleLoader, PluginInfo
-from pymodaq.control_modules.instruments import find_actuator_class_from_name
 from pymodaq.control_modules.enums import DAQTypesEnum
-from pymodaq.control_modules.move_utility_classes import UiType
 from pymodaq.control_modules.utils import ControllerAndThread
 from pymodaq.utils.managers.roi_manager.roi_manager import ROIManager
 
@@ -342,68 +340,16 @@ class DashBoard(CustomApp, LECOComponentMixin):
         except Exception as e:
             logger.exception(str(e))
 
-    def _remove_module_list(self, modules: list[DAQ_Move | DAQ_Viewer],
-                            module_list:list[DAQ_Move | DAQ_Viewer],
-                            compact_manager_attr,
-                            remove_dock_widgets=False):
-        """Remove a list of control modules, clean up compact manager and docks.
-
-        Parameters
-        ----------
-        modules: list
-            Modules to remove.
-        module_list: list
-            The dashboard-level list (self.actuators_modules or self.detector_modules)
-            from which modules are removed.
-        compact_manager_attr: str
-            Name of the compact manager attribute on self.
-        remove_dock_widgets: bool
-            Whether to call dock.removeWidgets() before dock.close() (needed for actuators).
-        """
-        for module in modules[:]:
-            try:
-                if module in module_list:
-                    module_list.remove(module)
-                compact_manager = getattr(self, compact_manager_attr)
-                if compact_manager:
-                    if compact_manager.remove_module(module):
-                        compact_manager.close()
-                        setattr(self, compact_manager_attr, None)
-                module.quit_fun()
-                dock = self.dockarea.docks.get(module.title, None)
-                if dock:
-                    self.docks_viewer.remove(dock) #dereference the dock
-                    if remove_dock_widgets:
-                        dock.removeWidgets()
-                    dock.close()
-            except Exception as e:
-                logger.exception(str(e))
-
     def remove_detectors(self, detector_modules: List[DAQ_Viewer] = None):
-        """
-        Remove the given list of detectors from the dashboard.
-        Parameters
-        ----------
-        detector_modules: List[DAQ_Viewer]
-            List of DAQ_Viewer instances to be removed.
-        """
-        if detector_modules is None:
-            detector_modules = []
-        self._remove_module_list(detector_modules, self.detector_modules,
-                                 'compact_detector_manager')
+        self.module_creator.remove_detectors(detector_modules)
 
     def remove_actuators(self, actuator_modules: List[DAQ_Move] = None):
-        """
-        Remove the given list of actuators from the dashboard.
-        Parameters
-        ----------
-        actuator_modules: List[DAQ_Move]
-            List of DAQ_Move instances to be removed.
-        """
-        if actuator_modules is None:
-            actuator_modules = []
-        self._remove_module_list(actuator_modules, self.actuators_modules,
-                                 'compact_actuator_manager', remove_dock_widgets=True)
+        self.module_creator.remove_actuators(actuator_modules)
+
+    def remove_modules(
+        self, modules: List[Union["DAQ_Move", "DAQ_Viewer", "str"]] = None,
+    ):
+        self.module_creator.remove_modules(modules)
 
     def get_docks_from_modules(
         self, modules: Sequence[Union["DAQ_Move", "DAQ_Viewer"]],
@@ -427,44 +373,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
                 docks.append(module.dock)
         return docks
 
-    def remove_modules(
-        self, modules: List[Union["DAQ_Move", "DAQ_Viewer", "str"]] = None,
-    ):
-        """
-        Remove the given list of actuators/detectors from the dashboard.
-
-        Parameters
-        ----------
-        modules: List[DAQ_Move/DAQ_Viewer]
-            List of DAQ_Move/DAQ_Viewer instances to be removed.
-        """
-        if modules is None:
-            modules = []
-        try:
-            actuators_modules = []
-            detector_modules = []
-            for module in modules:
-                if isinstance(module, DAQ_Move):  # Test if module is an instance of DAQ_Move
-                    actuators_modules.append(module)
-                elif isinstance(module, DAQ_Viewer):  # Test if module is an instance of DAQ_Viewer
-                    detector_modules.append(module)
-                if isinstance(module, str):  # Test if module is a string (name of the module)
-                    actuators_modules.extend(
-                        self.modules_manager.get_mods_from_names([module], "act"))  # For actuators
-
-                    detector_modules.extend(
-                        self.modules_manager.get_mods_from_names([module], "det"),  # For detectors
-                    )
-            if (hasattr(self, "actuators_modules")) & (
-                self.actuators_modules is not None
-            ):  # Remove actuators
-                self.remove_actuators(actuators_modules)
-            if (hasattr(self, "detector_modules")) & (
-                self.detector_modules is not None
-            ):  # Remove detectors
-                self.remove_detectors(detector_modules)
-        except Exception as e:
-            logger.exception(str(e))
 
     def load_extension(self, ext_enum: ExtensionEnum,
                        win: QtWidgets.QMainWindow = None,
@@ -730,6 +638,13 @@ class DashBoard(CustomApp, LECOComponentMixin):
             orientation=Qt.Orientation.Vertical,
         )
 
+    def create_compact_detector_manager(self):
+        self.compact_detector_manager = DetectorCompactDock(
+            "Detectors",
+            self.dockarea,
+            orientation=Qt.Orientation.Vertical,
+        )
+
     def add_move_from_extension(
         self, *args, modules: list[PluginInfo] = None,
         **kwargs,
@@ -777,7 +692,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.module_loader.all_instruments_added.connect(self.modules_manager.add_modules)
         self.module_loader.start()
 
-
     @property
     def docks_viewer(self):
         return self._docks_viewer
@@ -786,72 +700,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
     def n_docks_viewer(self) -> int:
         return len(self._docks_viewer)
 
-    def add_det(self,
-                plug_name,
-                plug_type: DAQTypesEnum | str = DAQTypesEnum.DAQ0D,
-                plug_subtype: str = None) -> DAQ_Viewer:
-
-        det_mod_tmp = self.create_detector(plug_name, plug_type)
-
-        self.set_detector_type(det_mod_tmp, plug_type, plug_subtype)
-
-        self.add_detector(det_mod_tmp)
-        return  det_mod_tmp
-
-    def add_detector(self, detector: DAQ_Viewer):
-
-        # Create compact manager if needed
-        if self.compact_detector_manager is None:
-            self.compact_detector_manager = DetectorCompactDock(
-                "Detectors",
-                self.dockarea,
-                orientation=Qt.Orientation.Vertical,
-            )
-            self.compact_detector_manager.show("top")
-
-        # Create individual detector dock
-        self.docks_viewer.append(Dock(detector.title, size=(350, 350)))
-        if self.n_docks_viewer == 1:
-            self.dockarea.addDock(self.docks_viewer[-1], "bottom")
-            self.dockarea.moveDock(self.settings_dock, 'right', None)
-            self.settings_dock.setVisible(False)
-            self.dockarea.moveDock(self.rois_dock, 'right', None)
-            self.rois_dock.setVisible(False)
-            self.dockarea.moveDock(self.controls_dock, 'right', None)
-            self.controls_dock.setVisible(False)
-        else:
-            self.dockarea.addDock(self._docks_viewer[-1], "right", self._docks_viewer[-2])
-
-        self.compact_detector_manager.add_module(detector)
-        self._docks_viewer[-1].addWidget(detector.parent)
-        return detector
-
-    def create_detector(self, name: str, daq_type: DAQTypesEnum) -> DAQ_Viewer:
-        widget = QtWidgets.QWidget()
-
-        detector = DAQ_Viewer(
-            widget,
-            title=name,
-            daq_type=daq_type.name,
-            settings_dock=self.settings_dock,
-            rois_dock=self.rois_dock,
-        )
-        try:
-            # disconnect the usual route, to add an extra step at init to check around for existing Masters in
-            # case one add a Slave after Experiment is set
-            detector.do_init_hardware_signal.disconnect()
-        except TypeError:
-            pass
-        detector.do_init_hardware_signal.connect(
-            lambda do_init: self.modules_manager.on_hardware_initialization(do_init, detector))
-        detector.ui.add_action('remove', 'RemoveDetector', 'remove', icon_color=self.get_theme().blue,
-                               toolbar=detector.ui.toolbar,)
-        detector.ui.connect_action('remove', lambda: self.remove_detectors([detector]))
-        return detector
-
-    def set_detector_type(self, detector: DAQ_Viewer, daq_type: DAQTypesEnum, class_name: str):
-        detector.detector = SelectedModule(daq_type, class_name)  # will fire instrument_changed when done
-        
     def move_utils_docks(self, position='right'):
         self.dockarea.moveDock(self.settings_dock, position, None)
         self.settings_dock.setVisible(False)

@@ -62,6 +62,7 @@ class ModuleLoader(QtCore.QObject):
                  plugins: list[list['PluginInfo']], parent=None):
         super().__init__(parent)
         self.dashboard = dashboard
+        self.creator = self.dashboard.module_creator
 
         self._queue: list[tuple['PluginInfo', int, int]] = [
             (plugin, ind_in_group, len(group))
@@ -109,10 +110,10 @@ class ModuleLoader(QtCore.QObject):
         self.validate_master_slave_order(plugin_info, ind_in_group, group_size)
 
         if plugin_info.type == ModuleType.Actuator:
-            self._current_module = self.dashboard.create_actuator(
+            self._current_module = self.creator.create_actuator(
                 plugin_info.name, plugin_info.class_name, ui_identifier=plugin_info.ui)
         else:
-            self._current_module = self.dashboard.create_detector(
+            self._current_module = self.creator.create_detector(
                 plugin_info.name, plugin_info.daq_type)
 
 
@@ -137,9 +138,9 @@ class ModuleLoader(QtCore.QObject):
             self._current_module.axis_name = self._current_plugin.axis_name
 
         if self._current_plugin.type == ModuleType.Actuator:
-            self.dashboard.add_actuator(self._current_module)
+            self.creator.add_actuator(self._current_module)
         else:
-            self.dashboard.add_detector(self._current_module)
+            self.creator.add_detector(self._current_module)
 
         if not self._current_plugin.do_init:
             # module intentionally left un-initialized (unchecked in the experiment)
@@ -178,10 +179,10 @@ class ModuleLoader(QtCore.QObject):
     def _set_module_type(self):
         self._set_type_timeout_timer.start()
         if self._current_plugin.type == ModuleType.Actuator:
-            self.dashboard.set_actuator_type(self._current_module,
+            self.creator.set_actuator_type(self._current_module,
                                              self._current_plugin.class_name)
         else:
-            self.dashboard.set_detector_type(self._current_module,
+            self.creator.set_detector_type(self._current_module,
                                              self._current_plugin.daq_type,
                                              self._current_plugin.class_name)
         # transition to _on_type_set happens through the module's own instrument_changed signal
