@@ -277,6 +277,10 @@ class DAQ_Move_base(PluginBase):
 
     data_shape = (1,)  # expected shape of the underlying actuator's value (in general a float so shape = (1, ))
 
+    @classmethod
+    def get_class_axis(cls) -> list[str] | None:
+        return cls._axis_names
+
     def __init__(self, parent: Optional['ActuatorWorker'] = None,
                  params_state: Optional[dict] = None,
                  **kwargs):
