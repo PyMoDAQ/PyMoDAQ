@@ -12,7 +12,6 @@ from pymodaq_gui.utils.widgets import LabelWithFont
 from pymodaq_gui.utils.styling import create_font, create_icon
 from pymodaq_gui.plotting.utils.plot_utils import display_in_dock
 from pymodaq_gui.utils.widgets.widget_with_label_title import WidgetWithLabelTitle
-from pymodaq_gui.utils.widgets.widget_with_title_in_toolbar import WidgetWithTitleInToolbar
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import GlobalConfig as Config
 
@@ -108,9 +107,6 @@ class ControlModuleUI(CustomApp):
         self.add_action('show_settings', 'Show Settings', 'settings', "Show Settings",
                         checkable=True, icon_checked_color=self.get_theme().green,
                         toolbar=toolbar)
-        self._settings_widget.add_action('close', 'Close', 'cancel',
-                                         toolbar=self._settings_widget.toolbar,
-                                         icon_color=self.get_theme().red)
 
     def update_init_icon(self, initialized: bool, action_name: str = 'init') -> None:
         """Update the initialization action icon based on state
@@ -181,8 +177,6 @@ class ControlModuleUI(CustomApp):
         """
         if 'show_settings' in self.actions_names:
             self.connect_action('show_settings', self._show_settings)
-            self._settings_widget.connect_action('close',
-                                                 self.get_action('show_settings').trigger)
         if hasattr(self, '_init_action_name') and self._init_action_name in self.actions_names:
             self.connect_action(self._init_action_name, self.send_init)
 
