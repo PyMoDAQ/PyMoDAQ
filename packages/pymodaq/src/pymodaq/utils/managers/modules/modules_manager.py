@@ -103,6 +103,16 @@ class ModulesManager(QObject, ParameterManager):
         self.set_actuators(actuators, selected_actuators)
         self.set_detectors(detectors, selected_detectors)
 
+    def on_hardware_initialization(self, do_init: bool, module: Union['DAQ_Move', 'DAQ_Viewer']):
+        """ Bypass method during initialization to assert whether a Master of some slave module already exists"""
+        if not module.master:
+            for other_module in self.modules_all:
+                if other_module.initialized_state and other_module.id == module.id and other_module.master:
+                    module.controller_and_thread.controller = other_module.controller_and_thread.controller
+                    module.controller_and_thread.thread = other_module.controller_and_thread.thread
+                    break
+        module.init_hardware(do_init)
+
     @property
     def actuator_timeout(self):
         return config('pymodaq', 'actuator', 'polling_timeout_s')
@@ -667,3 +677,5 @@ if __name__ == '__main__':
     print(dashboard.modules_manager.get_probed_data_full_names())
 
     sys.exit(app.exec())
+
+

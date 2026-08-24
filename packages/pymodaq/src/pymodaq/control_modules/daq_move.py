@@ -758,6 +758,8 @@ class DAQ_Move(ParameterControlModule):
             if self._controller_and_thread.initialized:
                 self.get_actuator_value()
             self.init_signal.emit(self._controller_and_thread.initialized)
+            if self.ui is not None:
+                self.ui.set_init_color(self.get_color_from_status())
 
         elif (
             status.command == ThreadStatusMove.GET_ACTUATOR_VALUE

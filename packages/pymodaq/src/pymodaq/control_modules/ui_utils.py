@@ -2,7 +2,7 @@ from importlib import import_module
 from pathlib import Path
 from typing import Union
 import numpy as np
-from qtpy import QtCore, QtWidgets
+from qtpy import QtCore, QtWidgets, QtGui
 import qt_themes
 
 from pymodaq_gui.managers.action_manager import QAction
@@ -63,6 +63,9 @@ class ControlModuleUI(CustomApp):
         self.add_widget('name', LabelWithFont(f'{self.title}', font_name="Tahoma",
                                                 font_size=14, isbold=True, isitalic=True),
                         toolbar=toolbar)
+
+    def set_init_color(self, color: QtGui.QColor):
+        self.get_action('name').widget.set_color(color)
 
     def _setup_init_action(self, toolbar: QtWidgets.QToolBar = None,
                            action_name: str = 'init',

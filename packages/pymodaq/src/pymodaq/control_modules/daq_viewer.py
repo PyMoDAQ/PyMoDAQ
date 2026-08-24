@@ -971,6 +971,9 @@ class DAQ_Viewer(ParameterControlModule):
             self._controller_and_thread.initialized = status.attribute["initialized"]
             self.init_signal.emit(self._controller_and_thread.initialized)
 
+            if self.ui is not None:
+                self.ui.set_init_color(self.get_color_from_status())
+
         elif status.command == ThreadStatusViewer.GRAB:
             self.grab_status.emit(True)
 

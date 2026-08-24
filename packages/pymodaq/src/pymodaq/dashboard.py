@@ -6,11 +6,11 @@ import datetime
 import subprocess
 from pathlib import Path
 
-from typing import Union, List, Any, TYPE_CHECKING, Sequence, Callable
+from typing import Union, List, TYPE_CHECKING, Sequence, Callable
 import argparse
 
-from qtpy import QtGui, QtWidgets, QtCore
-from qtpy.QtCore import Qt, QThread, Signal, QSize
+from qtpy import QtWidgets, QtCore
+from qtpy.QtCore import Qt, Signal, QSize
 from qtpy.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
@@ -18,10 +18,8 @@ from qtpy.QtWidgets import (
     QMessageBox,
 )
 
-from pymodaq.control_modules.thread_commands import ControllerStatus
 from pymodaq.utils.managers.modules import ModuleType
 from pymodaq.utils.managers.modules.loader import ModuleLoader, PluginInfo
-from pymodaq.utils.managers.roi_manager.roi_manager import ROIManager
 from pymodaq.control_modules.instruments import find_actuator_class_from_name
 from pymodaq.control_modules.enums import DAQTypesEnum
 from pymodaq.control_modules.move_utility_classes import UiType
@@ -32,16 +30,16 @@ from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import GlobalConfig as Config
-from pymodaq_utils.enums import BaseEnum, StrEnum
+from pymodaq_utils.enums import BaseEnum
 
 from pymodaq_gui.parameter import ParameterTree, Parameter
-from pymodaq_gui.utils import DockArea, Dock, select_file
+from pymodaq_gui.utils import DockArea, Dock
 import pymodaq_gui.utils.layout as layout_mod
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.managers.roi_viewer_manager import ROISaver
 from pymodaq_gui.utils.custom_app import CustomApp
 from pymodaq_gui.utils.shared_ui import MenuToolbarNames
-from pymodaq_gui.config import get_set_layout_path, get_set_roi_path
+from pymodaq_gui.config import get_set_layout_path
 from pymodaq_gui.utils.widgets.window import make_window
 
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager
@@ -52,7 +50,6 @@ from pymodaq.utils.daq_utils import get_instrument_plugins
 
 from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
-from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
 from pymodaq.utils.gui_utils.loader_utils import create_extension
 from pymodaq.utils.leco.pymodaq_listener import LECODashboardCommands, DashboardActorListener, LECOComponentMixin
@@ -737,16 +734,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.add_actuator(actuator)
         return  actuator
 
-    def _on_hardware_initialization(self, do_init: bool, module: DAQ_Move | DAQ_Viewer):
-        """ Bypass method during initialization to assert whether a Master of some slave module already exists"""
-        if not module.master:
-            for other_module in self.modules_manager.modules_all:
-                if other_module.initialized_state and other_module.id == module.id and other_module.master:
-                    module.controller_and_thread.controller = other_module.controller_and_thread.controller
-                    module.controller_and_thread.thread = other_module.controller_and_thread.thread
-                    break
-        module.init_hardware(do_init)
-
     def create_actuator(self, name: str, class_name: str, ui_identifier: str) -> DAQ_Move:
         actuator_class = find_actuator_class_from_name(class_name)
         forced_ui = actuator_class.ui_type
@@ -769,8 +756,8 @@ class DashBoard(CustomApp, LECOComponentMixin):
             actuator.do_init_hardware_signal.disconnect()
         except TypeError:
             pass
-        actuator.do_init_hardware_signal.connect(lambda do_init: self._on_hardware_initialization(do_init, actuator))
-
+        actuator.do_init_hardware_signal.connect(
+            lambda do_init: self.modules_manager.on_hardware_initialization(do_init, actuator))
         return actuator
 
     def set_actuator_type(self, actuator: DAQ_Move, class_name: str):
@@ -906,8 +893,8 @@ class DashBoard(CustomApp, LECOComponentMixin):
             detector.do_init_hardware_signal.disconnect()
         except TypeError:
             pass
-        detector.do_init_hardware_signal.connect(lambda do_init: self._on_hardware_initialization(do_init, detector))
-
+        detector.do_init_hardware_signal.connect(
+            lambda do_init: self.modules_manager.on_hardware_initialization(do_init, detector))
         return detector
 
     def set_detector_type(self, detector: DAQ_Viewer, daq_type: DAQTypesEnum, class_name: str):

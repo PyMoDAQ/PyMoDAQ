@@ -12,6 +12,8 @@ from easydict import EasyDict as edict
 from qtpy import QtWidgets
 from qtpy.QtCore import Signal, QObject, Qt, Slot, QThread
 
+from qt_themes import get_theme
+
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -241,6 +243,14 @@ class ControlModule(QObject):
     def __repr__(self):
         return f'{self.__class__.__name__}: {self.title}'
 
+    def get_color_from_status(self):
+        if not self._controller_and_thread.initialized:
+            return get_theme().text
+        elif self._controller_and_thread.is_master:
+            return get_theme().green
+        else:
+            return get_theme().magenta
+
     def create_new_file(self, new_file: bool):
         if new_file:
             self.close_file()
@@ -321,8 +331,11 @@ class ControlModule(QObject):
             except Exception as e:
                 self.logger.exception(f'Wrong call to the "close" command: \n{str(e)}')
 
-            self._controller_and_thread.initialized = False
-            self.init_signal.emit(self._controller_and_thread.initialized)
+            self.thread_status(
+                ThreadCommand(
+                    ThreadStatus.INI_HARDWARE,
+                    attribute={'initialized': False,
+                               'info': 'Hardware has been closed'}))
 
         elif status.command == ThreadStatus.UPDATE_UI:
             try:
@@ -474,6 +487,7 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
         ControlModule.__init__(self, title=title)
 
         self.do_init_hardware_signal.connect(self.init_hardware)
+
 
     def thread_status(self, status: ThreadCommand):
         """Extend base thread_status with parameter-tree commands.
@@ -638,10 +652,12 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
         # Listener.stop_listen() which joins the zmq listener thread.
         self.connect_leco(False)
         try:
-            self.command_hardware.emit(ThreadCommand(ControlToHardware.CLOSE))  #terminate worker actions
+            self.command_hardware.emit(ThreadCommand(ControlToHardware.CLOSE))
+            #terminate worker actions
             QtWidgets.QApplication.processEvents()
 
-            hardware = self.controller_and_thread.thread.remove_hardware(self.title) #remove the handle onto the hardware worker even if slave
+            hardware = self.controller_and_thread.thread.remove_hardware(self.title)
+            #remove the handle onto the hardware worker even if slave
             hardware.status_sig.disconnect()
 
             if (self.controller_and_thread.is_master and self.controller_and_thread.thread is not None and
@@ -663,6 +679,7 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
 
             if self.ui is not None and self._ui_init_attr:
                 setattr(self.ui, self._ui_init_attr, False)
+                self.ui.set_init_color(get_theme().text)
         except Exception as e:
             self.logger.exception(str(e))
 
@@ -700,6 +717,7 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
                 if self.controller_and_thread.thread is None or not self.controller_and_thread.thread.isRunning():
                     if self.ui is not None:
                         self.ui.init_action.setChecked(False)
+                        self.ui.set_init_color(get_theme().red)
                     raise ValueError("You set this module as slave but no Master Controller is set")
 
             self._setup_hardware_thread(hardware)
@@ -714,6 +732,9 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
             self._post_hardware_init()
         except Exception as e:
             self.logger.exception(str(e))
+            if self.ui is not None:
+                self.ui.init_action.setChecked(False)
+                self.ui.set_init_color(get_theme().red)
 
     @property
     def controller_and_thread(self) -> ControllerAndThread | None:
