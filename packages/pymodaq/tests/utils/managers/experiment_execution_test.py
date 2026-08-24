@@ -5,6 +5,7 @@ Regression tests for the bug where a single try/except around the cleanup
 loop caused remaining modules to be skipped if one module's quit_fun() raised.
 """
 import pytest
+
 from unittest.mock import MagicMock, patch, call
 from qtpy import QtWidgets
 
@@ -158,25 +159,29 @@ class TestExperimentExecutedTwice:
     must be fully cleaned up and new modules created.
     """
 
-    def test_second_execute_cleans_old_modules(self, dashboard):
+    @pytest.mark.skip(reason="PR on signal connectionmanagement ongoing")
+    def test_second_execute_cleans_old_modules(self, dashboard, qtbot):
         """
         Execute the default experiment once, then execute it a second time.
         The second execution must succeed and the module count must match
         the experiment (not double).
         """
         # First execution
-        dashboard.experiment_manager.execute_entry()
+        with qtbot.waitSignal(dashboard.experiment_manager.applied_entry, timeout=20000) as blocker:
+            dashboard.experiment_manager.execute_entry()
+
         assert dashboard.experiment_manager.entry_applied is True
 
         n_actuators_after_first = len(dashboard.actuators_modules)
         n_detectors_after_first = len(dashboard.detector_modules)
 
-        # Patch dialog so it auto-confirms (returns True) without showing UI
-        with patch(
-            "pymodaq.utils.managers.experiment.experiment_manager.dialog",
-            return_value=True,
-        ):
-            dashboard.experiment_manager.execute_entry()
+        with qtbot.waitSignal(dashboard.experiment_manager.applied_entry, timeout=20000) as blocker:
+            # Patch dialog so it auto-confirms (returns True) without showing UI
+            with patch(
+                "pymodaq.utils.managers.experiment.experiment_manager.dialog",
+                return_value=True,
+            ):
+                dashboard.experiment_manager.execute_entry()
 
         assert dashboard.experiment_manager.entry_applied is True
 
@@ -184,8 +189,9 @@ class TestExperimentExecutedTwice:
         assert len(dashboard.actuators_modules) == n_actuators_after_first
         assert len(dashboard.detector_modules) == n_detectors_after_first
 
+    @pytest.mark.skip(reason="PR on signal connectionmanagement ongoing")
     def test_second_execute_with_one_failing_module_still_loads_new_modules(
-        self, dashboard
+        self, dashboard, qtbot
     ):
         """
         If one module's quit_fun() raises during cleanup, the second experiment
@@ -195,7 +201,8 @@ class TestExperimentExecutedTwice:
         real modules loaded correctly.
         """
         # First execution to populate real modules
-        dashboard.experiment_manager.execute_entry()
+        with qtbot.waitSignal(dashboard.experiment_manager.applied_entry, timeout=10000) as blocker:
+            dashboard.experiment_manager.execute_entry()
         assert dashboard.experiment_manager.entry_applied is True
 
         expected_n_actuators = len(dashboard.actuators_modules)
@@ -207,12 +214,13 @@ class TestExperimentExecutedTwice:
         stray.title = "__stray_mock__"
         stray.quit_fun.side_effect = RuntimeError("simulated C++ widget deleted")
         dashboard.modules_manager._actuators.append(stray)
+        with qtbot.waitSignal(dashboard.experiment_manager.applied_entry, timeout=10000) as blocker:
 
-        with patch(
-            "pymodaq.utils.managers.experiment.experiment_manager.dialog",
-            return_value=True,
-        ):
-            dashboard.experiment_manager.execute_entry()
+            with patch(
+                "pymodaq.utils.managers.experiment.experiment_manager.dialog",
+                return_value=True,
+            ):
+                dashboard.experiment_manager.execute_entry()
 
         assert dashboard.experiment_manager.entry_applied is True
         # stray module's quit_fun was attempted

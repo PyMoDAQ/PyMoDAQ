@@ -401,8 +401,8 @@ class DAQ_Move_base(PluginBase):
 
         The property controller_units is deprecated please use the axis_unit property
         """
-        deprecation_msg('The property controller_units is deprecated please use the'
-                        'axis_unit property.')
+        deprecation_msg(f'The property controller_units is deprecated please use the'
+                        f'axis_unit property.')
         return self.axis_unit
 
     @controller_units.setter
@@ -773,7 +773,12 @@ class DAQ_Move_base(PluginBase):
             if self.move_is_done:
                 self.emit_status(ThreadCommand(ThreadStatus.UPDATE_STATUS, 'Move has been stopped'))
                 logger.info('Move has been stopped')
-            self.current_value = self.get_actuator_value()
+            try:
+                self.current_value = self.get_actuator_value()
+            except Exception as e:
+                logger.error(str(e))
+                self.poll_timer.stop()
+
             self.emit_value(self._current_value)
             logger.debug(f'Current value: {self._current_value}')
 

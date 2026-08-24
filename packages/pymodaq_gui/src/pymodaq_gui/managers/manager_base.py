@@ -368,6 +368,10 @@ class ManagerBase(CustomExt):
             },
         )
 
+    def quit_fun(self):
+        self.entries_sync.unbind_all()
+        super().quit_fun()
+
     def create_entry(self, entry: str = None, bypass_dialog=False):
         if entry is not None:
             ok = True
@@ -466,6 +470,10 @@ class ManagerBase(CustomExt):
             self._applied_entry_name = self.entry
             self.applied_entry.emit(self._applied_entry_name)
 
+    @QtCore.Slot(bool)
+    def set_entry_applied(self, value: bool):
+        self.entry_applied = value
+
     @property
     def applied_entry_name(self) -> str | None:
         """ Get the name of the last entry that has been successfully applied/executed """
@@ -486,7 +494,11 @@ class ManagerBase(CustomExt):
             logger.info(f"Cannot Load {self.entry_type.capitalize()} file: {entry_path.stem} as no Dashboard is initialized")
             return
 
-        self.entry_applied = self._execute_entry(entry_path, **kwargs)
+        res = self._execute_entry(entry_path, **kwargs)
+        if isinstance(res, bool):
+            # covers the cases where _execute_entry is async and return None, while the async
+            # execution will trigger set_entry_applied method (qt slot or manual call)
+            self.entry_applied = res
 
     def _execute_entry(self, entry_path: Path = None, **kwargs) -> bool:
         """Particular implementation of the entry execution for this manager

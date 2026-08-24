@@ -5,15 +5,23 @@ Created the 07/11/2023
 @author: Sebastien Weber
 """
 import pytest
-
+import qt_themes
 from qtpy import QtWidgets
 from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.parameter import ioxml
+from pymodaq_utils.config import GlobalConfig
+
+config = GlobalConfig()
+
 
 @pytest.fixture
 def init_qt(qtbot):
+    qt_themes.set_theme(
+        theme=config('gui', 'style', 'theme')[0],
+        style=config('gui', 'style', 'style')[0],
+    )
     return qtbot
 
 
@@ -32,7 +40,7 @@ def ini_experiment(init_qt):
 
     yield experiment_manager, qtbot
 
-    experiment_manager.mainwindow.close()
+    experiment_manager.quit_fun()
     external_ui.close()
 
 

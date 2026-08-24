@@ -273,8 +273,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     def _detector_changed(self, sel_mod: SelectedModule):
         try:
             self.command_sig.emit(ThreadCommand(UiToMainViewer.DETECTOR_CHANGED, sel_mod))
-            if self.viewer_types != [sel_mod.daq_type.to_viewer_type()]:
-                self.update_viewers([sel_mod.daq_type.to_viewer_type()])
+            self.update_viewers([sel_mod.daq_type.to_viewer_type()])
         except ValueError as e:
             pass
 

@@ -189,9 +189,10 @@ class DAQ_Move(ParameterControlModule):
                 self.update_ui_from_actuator_selection(act_type)
             self._reload_plugin_settings()
         else:
-            raise ActuatorError(
+            logger.error(
                 f"{act_type} is an invalid actuator, should be within {ACTUATOR_NAMES}"
             )
+        self.instrument_changed.emit()
 
     def update_ui_from_actuator_selection(self, act_name: str):
         """ When the selected actuator change, the UI is updated to reflect the
@@ -751,6 +752,8 @@ class DAQ_Move(ParameterControlModule):
                     self.ui.actuator_init = True
             else:
                 self._controller_and_thread.initialized = False
+                if self.ui is not None:
+                    self.ui.actuator_init = False
             if self._controller_and_thread.initialized:
                 self.get_actuator_value()
             self.init_signal.emit(self._controller_and_thread.initialized)
@@ -945,6 +948,7 @@ class ActuatorWorker(HardwareWorkerBase):
 
             return status
         except Exception as e:
+            status.initialized = False
             self.logger.exception(str(e))
             return status
 
@@ -1021,8 +1025,7 @@ class ActuatorWorker(HardwareWorkerBase):
         if super().queue_command(command):
             return
         try:
-            logger.debug(f"Threadcommand {command.command} sent to {self.title}")
-
+            logger.debug(f"Threadcommand {command.command}/{command.attribute} sent to {self.title}")
             if command.command == ControlToHardwareMove.INI_STAGE:
                 # Legacy alias → emit the canonical INI_HARDWARE status
                 status: edict = self.ini_hardware(*command.attribute)
