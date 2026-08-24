@@ -143,7 +143,7 @@ class MenuButton(QtWidgets.QPushButton):
     triggered = QtCore.Signal(tuple)
 
     def __init__(self, text: str,
-                 add_menu_entries: list[str] = None,
+                 add_menu_entries: list[str] | dict | str = None,
                  parent = None,
                  update_button_text: bool = True,):
 
