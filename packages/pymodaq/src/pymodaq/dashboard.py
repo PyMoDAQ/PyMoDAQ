@@ -351,29 +351,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
     ):
         self.module_creator.remove_modules(modules)
 
-    def get_docks_from_modules(
-        self, modules: Sequence[Union["DAQ_Move", "DAQ_Viewer"]],
-    ) -> List[Dock]:
-        """
-        Get a list of Dock instances from the given modules.
-
-        Parameters
-        ----------
-        modules: Sequence[DAQ_Move/DAQ_Viewer]
-            Sequence of DAQ_Move or DAQ_Viewer instances.
-
-        Returns
-        -------
-        List[Dock]
-            List of Dock instances corresponding to the given modules.
-        """
-        docks = []
-        for module in modules:
-            if hasattr(module, "dock"):
-                docks.append(module.dock)
-        return docks
-
-
     def load_extension(self, ext_enum: ExtensionEnum,
                        win: QtWidgets.QMainWindow = None,
                        ) -> 'CustomExt':
