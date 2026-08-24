@@ -1,7 +1,7 @@
 from qtpy import QtCore, QtWidgets
 from .label import LabelWithFont
-from .push import PushButtonIcon
-from pymodaq_gui.utils.styling import create_icon
+from .push import ToolButtonIcon
+from pymodaq_gui.utils.styling import create_icon, theme
 
 
 class WidgetWithLabelTitle(QtWidgets.QWidget):
@@ -45,17 +45,21 @@ class WidgetWithLabelTitle(QtWidgets.QWidget):
         header_layout.addWidget(label)
         header_layout.addStretch()
 
-        self.attach_pb: QtWidgets.QPushButton = None
+        icon_size = QtCore.QSize(label.sizeHint().height(), label.sizeHint().height())
+
+        self.attach_pb: QtWidgets.QToolButton = None
         if attachable:
-            self.attach_pb = PushButtonIcon('open_in_new', '', checkable=True,
-                                            tip='Detach this widget from its dock')
+            self.attach_pb = ToolButtonIcon('open_in_new', checkable=True,
+                                            tip='Detach this widget from its dock',
+                                            icon_size=icon_size)
             self.attach_pb.toggled.connect(self._update_attach_button)
             self.attach_pb.toggled.connect(self.sig_attach_detach.emit)
             header_layout.addWidget(self.attach_pb)
 
-        self.close_pb: QtWidgets.QPushButton = None
+        self.close_pb: QtWidgets.QToolButton = None
         if closable:
-            self.close_pb = PushButtonIcon('close', '', tip='Close this widget')
+            self.close_pb = ToolButtonIcon('cancel', tip='Close this widget',
+                                           icon_color=theme.red, icon_size=icon_size)
             self.close_pb.clicked.connect(self.sig_close.emit)
             header_layout.addWidget(self.close_pb)
 
