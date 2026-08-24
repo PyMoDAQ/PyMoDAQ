@@ -162,6 +162,8 @@ def test_settings_legacy_multiaxes_access(qtbot):
 
     hardware = HardwareWithList()
 
-    assert hardware.settings['multiaxes', 'axis'] == hardware.settings['controller', 'axis']
-    assert (hardware.settings['multiaxes', 'multi_status']
-            == hardware.settings['controller', 'controller_status'])
+    with pytest.deprecated_call():
+        assert hardware.settings['multiaxes', 'axis'] == hardware.settings['controller', 'axis']
+    with pytest.deprecated_call():
+        assert (hardware.settings['multiaxes', 'multi_status']
+                == hardware.settings['controller', 'controller_status'])

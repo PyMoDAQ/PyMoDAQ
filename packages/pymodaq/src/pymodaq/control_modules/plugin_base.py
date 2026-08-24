@@ -1,3 +1,5 @@
+import warnings
+
 from qtpy.QtCore import QObject, Slot
 from easydict import EasyDict as edict
 from pyqtgraph.parametertree import Parameter
@@ -38,6 +40,12 @@ class _BackCompatGroupParameter(GroupParameter):
             translated = tuple(_LEGACY_SETTINGS_NAMES.get(name, name) for name in names)
             if translated == tuple(names):
                 raise
+            warnings.warn(
+                f"Accessing settings with the legacy name(s) {names} is deprecated and will "
+                f"be removed in a future release. Use {translated} instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
             return super().__getitem__(translated)
 
 
