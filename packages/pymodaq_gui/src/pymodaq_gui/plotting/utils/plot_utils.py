@@ -4,7 +4,7 @@ from collections.abc import Iterable
 
 import copy
 from numbers import Number
-from typing import List, Union
+from typing import Callable, List, Union
 from typing import Iterable as IterableType
 
 from multipledispatch import dispatch
@@ -584,3 +584,63 @@ def display_in_dock(show: bool, widget: QtWidgets.QWidget,
     dock.setVisible(True)
     dock.setVisible(
         bool(np.any([widget.isVisible() for widget in dock.widgets])))
+
+
+class DetachablePanel:
+    """ Show/hide a :class:`WidgetWithLabelTitle` either docked or floating
+
+    Wraps the show/hide logic shared by every dockable, detachable side-panel
+    (settings, controls, ROIs, ...): when detached (or there is no dock at all) the
+    widget is a floating top-level window; otherwise it lives inside `dock`.
+
+    Also owns the attach/detach state, which starts from `detached` (typically an
+    app-wide config default) but can be overridden live for this instance via the
+    widget's `sig_attach_detach` signal (see :class:`WidgetWithLabelTitle`) - if the
+    panel is visible when the user toggles attach/detach, it is immediately re-shown
+    in the new mode.
+
+    Parameters
+    ----------
+    widget: WidgetWithLabelTitle
+        Created with `attachable=True`; `closable` is up to the caller
+    dock: Dock or None
+        Dock to host the widget when attached; if None the widget can only float
+    title: str
+        Window title used while floating
+    detached: bool
+        Initial attach/detach state
+    orientation: Qt.Orientation
+        Forwarded to :func:`display_in_dock` while attached
+    is_shown: Callable[[], bool]
+        Returns whether the panel is currently supposed to be visible; used to decide
+        whether an attach/detach toggle should immediately re-render it
+    """
+    def __init__(self, widget: QtWidgets.QWidget, dock: Union[Dock, None], title: str,
+                detached: bool, orientation=QtCore.Qt.Orientation.Horizontal,
+                is_shown: Callable[[], bool] = lambda: False):
+        self.widget = widget
+        self.dock = dock
+        self.title = title
+        self.orientation = orientation
+        self.is_shown = is_shown
+        self._detached = detached
+
+        self.widget.set_attached(not detached)
+        if self.dock is None and self.widget.attach_pb is not None:
+            self.widget.attach_pb.setVisible(False)
+        self.widget.sig_attach_detach.connect(self._set_detached)
+
+    def _set_detached(self, detach: bool):
+        self._detached = detach
+        if self.is_shown():
+            self.show(True)
+
+    def show(self, show: bool = True):
+        if self._detached or self.dock is None:
+            if self.dock is not None:
+                self.dock.removeWidget(self.widget, close=False)
+                self.dock.setVisible(bool(np.any([w.isVisible() for w in self.dock.widgets])))
+            self.widget.setWindowTitle(self.title)
+            self.widget.setVisible(show)
+        else:
+            display_in_dock(show, self.widget, self.dock, orientation=self.orientation)
