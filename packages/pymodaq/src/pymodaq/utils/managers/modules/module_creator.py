@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 from qtpy import QtWidgets
 from qt_themes import get_theme
 
@@ -7,7 +9,7 @@ from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
 from pymodaq.control_modules.enums import DAQTypesEnum
 from pymodaq_utils.config import GlobalConfig as Config
 
-from pymodaq.dashboard import DashBoard
+
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.move_utility_classes import UiType
@@ -15,13 +17,17 @@ from pymodaq_gui.utils.menu_utils import MenuButton
 from pymodaq.control_modules.instruments import DET_TYPES, ACTUATOR_TYPES, ACTUATOR_NAMES, find_actuator_class_from_name
 from pymodaq_utils.logger import get_module_name, set_logger
 
+
+if TYPE_CHECKING:
+    from pymodaq.dashboard import DashBoard
+
 config = Config()
 logger = set_logger(get_module_name(__file__))
 
 
 class ModuleCreator:
 
-    def __init__(self, dashboard: DashBoard):
+    def __init__(self, dashboard: 'DashBoard'):
         self.dashboard = dashboard
         self.menu_button: MenuButton = None
 
@@ -164,7 +170,7 @@ class ModuleCreator:
                 if compact_manager:
                     if compact_manager.remove_module(module):
                         compact_manager.close()
-                        setattr(self, compact_manager_attr, None)
+                        setattr(self.dashboard, compact_manager_attr, None)
                 module.quit_fun()
                 dock = self.dashboard.dockarea.docks.get(module.title, None)
                 if dock:
