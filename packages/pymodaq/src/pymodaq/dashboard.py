@@ -18,6 +18,7 @@ from qtpy.QtWidgets import (
     QMessageBox,
 )
 
+from pymodaq.utils.managers.module_creator import ModuleCreator
 from pymodaq.utils.managers.modules import ModuleType
 from pymodaq.utils.managers.modules.loader import ModuleLoader, PluginInfo
 from pymodaq.control_modules.instruments import find_actuator_class_from_name
@@ -193,6 +194,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.ispygame_init = False
 
         self.modules_manager = ModulesManager()
+        self.module_creator = ModuleCreator(self)
 
         self.actuators_modules: list[DAQ_Move] = []
         self.detector_modules: list[DAQ_Viewer] = []
@@ -721,65 +723,12 @@ class DashBoard(CustomApp, LECOComponentMixin):
             path = get_set_layout_path().joinpath(self.experiment_file.stem + ".dock")
             self.save_layout_state(path)
 
-    def add_move(
-            self,
-            plug_name: str = None,
-            plug_type: str = None,
-            ui_identifier: str = None,
-            **kwargs,
-    ) -> DAQ_Move:        
-
-        actuator = self.create_actuator(plug_name, plug_type, ui_identifier)
-        self.set_actuator_type(actuator, plug_type)
-        self.add_actuator(actuator)
-        return  actuator
-
-    def create_actuator(self, name: str, class_name: str, ui_identifier: str) -> DAQ_Move:
-        actuator_class = find_actuator_class_from_name(class_name)
-        forced_ui = actuator_class.ui_type
-        ui_identifier = forced_ui if forced_ui != UiType.NONE else ui_identifier
-
-        if ui_identifier is not None:
-            pass
-        else:
-            ui_identifier = config("pymodaq", "actuator", "ui")
-        actuator = DAQ_Move(QtWidgets.QWidget(),
-                            name,
-                            ui_identifier=ui_identifier,
-                            settings_dock=self.settings_dock,
-                            controls_dock=self.controls_dock,
-                            )
-        actuator.bounds_signal[bool].connect(self.do_stuff_from_out_bounds)
-        try:
-            # disconnect the usual route, to add an extra step at init to check around for existing Masters in
-            # case one add a Slave after Experiment is set
-            actuator.do_init_hardware_signal.disconnect()
-        except TypeError:
-            pass
-        actuator.do_init_hardware_signal.connect(
-            lambda do_init: self.modules_manager.on_hardware_initialization(do_init, actuator))
-        return actuator
-
-    def set_actuator_type(self, actuator: DAQ_Move, class_name: str):
-        actuator.actuator = class_name  # will fire instrument_changed when done
-
-    def add_actuator(self, actuator: DAQ_Move):
-        # Create compact manager if needed
-        if self.compact_actuator_manager is None:
-            self.compact_actuator_manager = ActuatorCompactDock(
-                "Actuators",
-                self.dockarea,
-                orientation=Qt.Orientation.Vertical,
-            )
-            if self.compact_detector_manager is not None:
-                self.compact_actuator_manager.show('bottom', self.compact_detector_manager.dock)
-            else:
-                self.compact_actuator_manager.show("top")
-
-        QtWidgets.QApplication.processEvents()
-
-        self.compact_actuator_manager.add_module(actuator)
-        return actuator
+    def create_compact_actuator_manager(self):
+        self.compact_actuator_manager = ActuatorCompactDock(
+            "Actuators",
+            self.dockarea,
+            orientation=Qt.Orientation.Vertical,
+        )
 
     def add_move_from_extension(
         self, *args, modules: list[PluginInfo] = None,
@@ -895,6 +844,9 @@ class DashBoard(CustomApp, LECOComponentMixin):
             pass
         detector.do_init_hardware_signal.connect(
             lambda do_init: self.modules_manager.on_hardware_initialization(do_init, detector))
+        detector.ui.add_action('remove', 'RemoveDetector', 'remove', icon_color=self.get_theme().blue,
+                               toolbar=detector.ui.toolbar,)
+        detector.ui.connect_action('remove', lambda: self.remove_detectors([detector]))
         return detector
 
     def set_detector_type(self, detector: DAQ_Viewer, daq_type: DAQTypesEnum, class_name: str):
