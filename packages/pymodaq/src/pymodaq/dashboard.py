@@ -741,7 +741,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         """ Bypass method during initialization to assert whether a Master of some slave module already exists"""
         if not module.master:
             for other_module in self.modules_manager.modules_all:
-                if other_module.id == module.id and other_module.master:
+                if other_module.initialized_state and other_module.id == module.id and other_module.master:
                     module.controller_and_thread.controller = other_module.controller_and_thread.controller
                     module.controller_and_thread.thread = other_module.controller_and_thread.thread
                     break
