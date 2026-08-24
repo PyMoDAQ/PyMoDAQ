@@ -117,7 +117,9 @@ class DAQ_Move(ParameterControlModule):
         self.logger.info(f"Initializing DAQ_Move: {title}")
 
         super().__init__(listener_class=MoveActorListener,
-                         action_list=("save", "update"), **kwargs)
+                         action_list=("save", "update"),
+                         title=title,
+                         **kwargs)
 
         self.parent = parent
         self.ui_identifier_default = ui_identifier
@@ -135,7 +137,6 @@ class DAQ_Move(ParameterControlModule):
             self.ui.command_sig.connect(self.process_ui_cmds)
 
         self.splash_sc = get_splash_sc()
-        self._title = title
         if len(ACTUATOR_NAMES) > 0:  # will be 0 if no valid plugins are installed
             self.actuator = kwargs.get("actuator", ACTUATOR_NAMES[0])
 

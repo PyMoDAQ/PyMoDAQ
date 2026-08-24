@@ -186,6 +186,7 @@ def create_remote_connection_params() -> list[dict]:
 class ControllerAndThread:
     """ Container for the control module worker thread and hardware plugin "controller" object and some related status
      """
+    name: str = ''
     thread: QThreadCustom | None = None  # the thread shared by a master and its slaves
     controller: Any = None  # the controller shared by a master and its slaves
     is_master: bool = True
@@ -215,14 +216,14 @@ class ControlModule(QObject):
     timeout_signal = Signal(str)
     ui = None
 
-    def __init__(self):
+    def __init__(self, title: str = ''):
         QObject.__init__(self)
 
         self.ui: Union['DAQMoveUI', 'DAQ_Viewer_UI'] = None
 
-        self._title = ""
+        self._title = title
 
-        self._controller_and_thread = ControllerAndThread()
+        self._controller_and_thread = ControllerAndThread(name=self._title)
         # the hardware controller instance set after initialization and to be used by other modules if they share the
         # same controller
 
@@ -466,10 +467,11 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
     def _ui_init_attr(self) -> str:
         return f"{self._hw_kind}_init"
 
-    def __init__(self, listener_class = Type[ActorListener], **kwargs):
+    def __init__(self, listener_class = Type[ActorListener],
+                 title: str = '', **kwargs):
         ParameterManager.__init__(self, action_list=kwargs.get("action_list", ("search", "save", "update")))
         LECOComponentMixin.__init__(self, listener_class)
-        ControlModule.__init__(self)
+        ControlModule.__init__(self, title=title)
 
         self.do_init_hardware_signal.connect(self.init_hardware)
 

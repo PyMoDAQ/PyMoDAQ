@@ -126,7 +126,7 @@ class DAQ_Viewer(ParameterControlModule):
         self.logger = set_logger(f'{logger.name}.{title}')
         self.logger.info(f'Initializing DAQ_Viewer: {title}')
 
-        super().__init__(listener_class=ViewerActorListener, **kwargs)
+        super().__init__(listener_class=ViewerActorListener, title=title, **kwargs)
 
         self.rois_dock: Dock = rois_dock
         daq_type = enum_checker(DAQTypesEnum, daq_type)
@@ -156,7 +156,6 @@ class DAQ_Viewer(ParameterControlModule):
 
         self.splash_sc = get_splash_sc()
 
-        self._title = title
 
         self._module_and_data_saver: Union[None,
                                           module_saving.DetectorSaver,
