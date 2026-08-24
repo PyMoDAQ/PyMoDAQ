@@ -114,13 +114,6 @@ class ModuleLoader(QtCore.QObject):
             self._current_module = self.dashboard.create_detector(
                 plugin_info.name, plugin_info.daq_type)
 
-        # affecting the right controller and thread object (important for later initialization)
-        if plugin_info.is_master:
-            self._current_master_controller = ControllerAndThread(is_master=True, id=plugin_info.id)
-        self._current_module.controller_and_thread.controller = self._current_master_controller.controller
-        self._current_module.controller_and_thread.thread = self._current_master_controller.thread
-        self._current_module.master = plugin_info.is_master
-        self._current_module.id = plugin_info.id
 
         self._modules.append(self._current_module)
         self._current_module.instrument_changed.connect(self._on_type_set)
@@ -130,6 +123,15 @@ class ModuleLoader(QtCore.QObject):
     def _on_type_set(self):
         self._set_type_timeout_timer.stop()
         self._current_module.instrument_changed.disconnect(self._on_type_set)
+
+        # affecting the right controller and thread object (important for later initialization)
+        # done here after the instrument has been set (as this is generating a random number for the controller ID)
+        if self._current_plugin.is_master:
+            self._current_master_controller = ControllerAndThread(is_master=True, id=self._current_plugin.id)
+        self._current_module.controller_and_thread.controller = self._current_master_controller.controller
+        self._current_module.controller_and_thread.thread = self._current_master_controller.thread
+        self._current_module.master = self._current_plugin.is_master
+        self._current_module.id = self._current_plugin.id
 
         if self._current_plugin.type == ModuleType.Actuator:
             self.dashboard.add_actuator(self._current_module)
@@ -143,8 +145,6 @@ class ModuleLoader(QtCore.QObject):
             return
 
         self._current_module.init_signal.connect(self._on_init_done)
-        if self._current_plugin.settings is not None:
-            self._current_module.apply_controller_parameters(self._current_plugin.settings.child("controller"))
 
         self._init_timeout_timer.start()
         self._current_module.do_init_hardware_signal.emit()
