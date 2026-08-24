@@ -34,6 +34,7 @@ class PluginInfo:
     ui: str | None = None
     daq_type: DAQTypesEnum | None = None
     controller: ControllerAndThread = None
+    axis_name: str = None
 
 
 class ModuleLoader(QtCore.QObject):
@@ -132,6 +133,8 @@ class ModuleLoader(QtCore.QObject):
         self._current_module.controller_and_thread.thread = self._current_master_controller.thread
         self._current_module.master = self._current_plugin.is_master
         self._current_module.id = self._current_plugin.id
+        if self._current_plugin.axis_name is not None:
+            self._current_module.axis_name = self._current_plugin.axis_name
 
         if self._current_plugin.type == ModuleType.Actuator:
             self.dashboard.add_actuator(self._current_module)

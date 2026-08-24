@@ -7,6 +7,7 @@ import sys
 
 from qtpy import QtWidgets
 
+from pymodaq_gui.parameter.utils import iter_children_params
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_gui.messenger import dialog
 
@@ -212,12 +213,16 @@ class ExperimentManager(ManagerBase):
                     id = child['controller', 'controller_ID'],
                     name = child['name'],
                     class_name=child['info', 'type'],
-                    type = ModuleType.Actuator if ModuleType.Actuator.value.lower() == child.parent().name().lower() else ModuleType.Detector,
+                    type = (ModuleType.Actuator if ModuleType.Actuator.value.lower() == child.parent().name().lower()
+                            else ModuleType.Detector),
                     settings=child,
                     is_master=child["controller", "controller_status"] == ControllerStatus.MASTER.value,
                     do_init=child['info', 'init'],
                     ui = child['info', 'ui'] if 'ui' in [ch.name() for ch in child.child('info').children()] else None,
-                    daq_type=DAQTypesEnum[child['info', 'dim']] if 'dim' in [ch.name() for ch in child.child('info').children()] else None,
+                    daq_type=DAQTypesEnum[child['info', 'dim']] if 'dim' in [
+                        ch.name() for ch in child.child('info').children()] else None,
+                    axis_name=child["controller", "axis"] if 'axis' in [
+                        param.name() for param in child.child('controller').children()] else None,
                 )
             )
 
