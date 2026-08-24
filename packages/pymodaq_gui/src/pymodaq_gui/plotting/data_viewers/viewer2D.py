@@ -39,7 +39,7 @@ from pymodaq_gui.plotting.items.crosshair import Crosshair
 from pymodaq_gui.plotting.utils.filter import Filter2DFromCrosshair, Filter2DFromRois
 from pymodaq_gui.plotting.utils.plot_utils import make_dashed_pens
 from pymodaq_gui.utils.dock import Dock
-from pymodaq_gui.plotting.utils.plot_utils import display_in_dock
+from pymodaq_gui.plotting.utils.plot_utils import DetachablePanel
 
 logger = set_logger(get_module_name(__file__))
 
@@ -353,7 +353,14 @@ class View2D(ActionManager, QtCore.QObject):
 
         self.image_widget = ImageWidget()
         self.roi_manager = ROIViewerManager(self.image_widget.plotitem.vb, ROIDim.ROI2D)
-        self.roi_widget = WidgetWithLabelTitle(self.title, self.roi_manager.roiwidget)
+        self.roi_widget = WidgetWithLabelTitle(self.title, self.roi_manager.roiwidget,
+                                               closable=True, attachable=True)
+        self.roi_widget.sig_close.connect(lambda: self.get_action('roi').trigger())
+        self.roi_widget.closeEvent = lambda event: self.set_action_checked('roi', False)
+        self._rois_panel = DetachablePanel(
+            self.roi_widget, self.rois_dock, f'{self.title} ROIs',
+            detached=config('gui', 'viewer', 'rois_as_popup'),
+            is_shown=lambda: self.is_action_checked('roi'))
         self.roi_target: Union[pgROI, Crosshair] = None
 
         self.setup_view_box()
@@ -676,20 +683,7 @@ class View2D(ActionManager, QtCore.QObject):
     @Slot(bool)
     def roi_clicked(self, isroichecked=True):
 
-        if (config('gui', 'viewer', 'rois_as_popup')
-            or self.rois_dock is None):
-            if self.rois_dock is not None:
-                self.rois_dock.removeWidget(self.roi_widget, close=False)
-                self.rois_dock.setVisible(
-                    bool(np.any([w.isVisible() for w in self.rois_dock.widgets])))
-
-            self.roi_widget.setWindowTitle(f'{self.title} ROIs')
-            self.roi_widget.setVisible(isroichecked)
-            self.roi_widget.closeEvent = lambda event: self.set_action_checked('roi', False)
-        else:
-            display_in_dock(isroichecked,
-                            self.roi_widget,
-                            self.rois_dock)
+        self._rois_panel.show(isroichecked)
 
         for roi_meta in self.roi_manager.ROIs:
             roi_meta.roi.setVisible(isroichecked)

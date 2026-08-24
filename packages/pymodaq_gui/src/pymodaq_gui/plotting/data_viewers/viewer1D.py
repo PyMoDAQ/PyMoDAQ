@@ -28,7 +28,7 @@ from pymodaq_gui.plotting.widgets import PlotWidget
 from pymodaq_gui.plotting.data_viewers.viewer0D import Viewer0D
 from pymodaq_gui import foreground_color
 from pymodaq_gui.utils.dock import Dock
-from pymodaq_gui.plotting.utils.plot_utils import display_in_dock
+from pymodaq_gui.plotting.utils.plot_utils import DetachablePanel
 
 logger = set_logger(get_module_name(__file__))
 
@@ -300,7 +300,14 @@ class View1D(ActionManager, QObject):
 
         self.plot_widget = PlotWidget()
         self.roi_manager = ROIViewerManager(self.plotitem.vb, ROIDim.ROI1D)
-        self.roi_widget = WidgetWithLabelTitle(self.title, self.roi_manager.roiwidget)
+        self.roi_widget = WidgetWithLabelTitle(self.title, self.roi_manager.roiwidget,
+                                               closable=True, attachable=True)
+        self.roi_widget.sig_close.connect(lambda: self.get_action('do_math').trigger())
+        self.roi_widget.closeEvent = lambda event: self.set_action_checked('do_math', False)
+        self._rois_panel = DetachablePanel(
+            self.roi_widget, self.rois_dock, f'{self.title} ROIs',
+            detached=config('gui', 'viewer', 'rois_as_popup'),
+            is_shown=lambda: self.is_action_checked('do_math'))
         self.data_displayer = DataDisplayer(self.plotitem, flip_axes=self.flip_axes)
         self.other_data_displayers: Dict[str, DataDisplayer] = {}
         self.setup_widgets()
@@ -409,21 +416,7 @@ class View1D(ActionManager, QObject):
 
     def do_math(self):
         try:
-            if (config('gui', 'viewer', 'rois_as_popup')
-                    or self.rois_dock is None):
-                if self.rois_dock is not None:
-                    self.rois_dock.removeWidget(self.roi_widget, close=False)
-                    self.rois_dock.setVisible(
-                        bool(np.any([w.isVisible() for w in self.rois_dock.widgets])))
-
-                self.roi_widget.setWindowTitle(f'{self.title} ROIs')
-                self.roi_widget.setVisible(self.is_action_checked('do_math'))
-                self.roi_widget.closeEvent = lambda event: self.set_action_checked('do_math', False)
-            else:
-                display_in_dock(self.is_action_checked('do_math'),
-                                self.roi_widget,
-                                self.rois_dock)
-
+            self._rois_panel.show(self.is_action_checked('do_math'))
             self.lineout_widgets.setVisible(self.is_action_checked('do_math'))
 
         except Exception as e:
