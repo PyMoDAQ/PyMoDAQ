@@ -1,10 +1,47 @@
 from qtpy.QtCore import QObject, Slot
 from easydict import EasyDict as edict
 from pyqtgraph.parametertree import Parameter
+from pyqtgraph.parametertree.parameterTypes import GroupParameter
+from pyqtgraph.parametertree.Parameter import registerParameterType
 
 from pymodaq.control_modules.thread_commands import ControllerStatus, ThreadStatus
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_utils.utils import ThreadCommand
+
+# mapping from pre-5.1 group/parameter names to their current equivalent, kept so that
+# plugins written before the 'controller' group renaming (PR #1157/#1173) keep working
+_LEGACY_SETTINGS_NAMES = {
+    'multiaxes': 'controller',
+    'multi_status': 'controller_status',
+}
+
+_BACKCOMPAT_SETTINGS_TYPE = 'plugin_backcompat_group'
+
+
+class _BackCompatGroupParameter(GroupParameter):
+    """GroupParameter used only for a plugin's top-level ``settings`` tree.
+
+    Redirects legacy path segments (e.g. ``'multiaxes'``, ``'multi_status'``) to their
+    current names so that old plugin code such as ``self.settings['multiaxes', 'axis']``
+    keeps working. Registered under its own parameter type name (rather than overriding
+    the global ``'group'`` type), so it does not affect every ``GroupParameter`` in the
+    application and stays consistent with pyqtgraph's requirement that a Parameter's
+    ``type`` option match its registered class.
+    """
+
+    def __getitem__(self, names):
+        if isinstance(names, str):
+            names = (names,)
+        try:
+            return super().__getitem__(names)
+        except KeyError:
+            translated = tuple(_LEGACY_SETTINGS_NAMES.get(name, name) for name in names)
+            if translated == tuple(names):
+                raise
+            return super().__getitem__(translated)
+
+
+registerParameterType(_BACKCOMPAT_SETTINGS_TYPE, _BackCompatGroupParameter, override=True)
 
 
 class PluginBase(QObject):
@@ -23,7 +60,8 @@ class PluginBase(QObject):
     def __init__(self, parent=None, params_state=None):
         QObject.__init__(self)
         self.parent_parameters_path = []
-        self.settings = Parameter.create(name='Settings', type='group', children=self.params)
+        self.settings = Parameter.create(name='Settings', type=_BACKCOMPAT_SETTINGS_TYPE,
+                                         children=self.params)
         if params_state is not None:
             if isinstance(params_state, dict):
                 self.settings.restoreState(params_state)
