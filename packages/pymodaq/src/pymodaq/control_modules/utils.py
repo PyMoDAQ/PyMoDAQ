@@ -195,6 +195,10 @@ class ControllerAndThread:
     id: int = None  # integer as defined in the ExperimentManager (One Master and multiple Slaves share it)
     initialized: bool = False
 
+    def __post_init__(self):
+        if self.thread is not None and not isinstance(self.thread, QThreadCustom):
+            self.thread.__class__ == QThreadCustom
+
 
 class ControlModule(QObject):
     """Abstract Base class common to both DAQ_Move and DAQ_Viewer control modules
@@ -655,18 +659,26 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
             self.command_hardware.emit(ThreadCommand(ControlToHardware.CLOSE))
             #terminate worker actions
             QtWidgets.QApplication.processEvents()
-
-            hardware = self.controller_and_thread.thread.remove_hardware(self.title)
+            try:
+                hardware = self.controller_and_thread.thread.remove_hardware(self.title)
+            except AttributeError:  # in case thread is a regular Qthread (see PID)
+                hardware = self.controller_and_thread.thread._hardwares.pop(self.title)
             #remove the handle onto the hardware worker even if slave
             hardware.status_sig.disconnect()
 
             if (self.controller_and_thread.is_master and self.controller_and_thread.thread is not None and
                     self.controller_and_thread.thread.isRunning()):
+                try:
+                    for hardware_name in self.controller_and_thread.thread.hardware_names:
+                        hardware = self.controller_and_thread.thread.remove_hardware(hardware_name)
+                        hardware.close_hardware()
+                        hardware.status_sig.disconnect()
+                except AttributeError:  # in case thread is a regular Qthread (see PID)
+                    for hardware_name in self.controller_and_thread.thread._hardwares:
+                        hardware = self.controller_and_thread.thread._hardwares.pop(hardware_name)
+                        hardware.close_hardware()
+                        hardware.status_sig.disconnect()
 
-                for hardware_name in self.controller_and_thread.thread.hardware_names:
-                    hardware = self.controller_and_thread.thread.remove_hardware(hardware_name)
-                    hardware.close_hardware()
-                    hardware.status_sig.disconnect()
                 QtWidgets.QApplication.processEvents()
                 self.controller_and_thread.thread.quit()
 
@@ -726,8 +738,13 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
             hardware.status_sig[ThreadCommand].connect(self.thread_status)
             self._update_settings_signal[edict].connect(hardware.update_settings)
             self._connect_hardware_signals(hardware)
+            try:
+                self.controller_and_thread.thread.add_hardware(self.title, hardware) # to hold a reference
+            except AttributeError:  # in case thread is a regular Qthread (see PID)
+                if not hasattr(self.controller_and_thread.thread, '_hardwares'):
+                    self.controller_and_thread.thread._hardwares = {self.title: hardware}
+                self.controller_and_thread.thread._hardwares
 
-            self.controller_and_thread.thread.add_hardware(self.title, hardware) # to hold a reference
             self.command_hardware.emit(self._ini_hardware_command())
             self._post_hardware_init()
         except Exception as e:

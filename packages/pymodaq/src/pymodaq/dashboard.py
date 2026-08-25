@@ -630,48 +630,8 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self, *args, modules: list[PluginInfo] = None,
         **kwargs,
     ):
-        """Specific method to add DAQ_Moves within the Dashboard. This Particular actuator
-        should be defined in the plugin of the extension and is used to mimic an actuator while
-        move_abs is actually triggering an action on the extension which loaded it
-
-        For an exemple, see the PyMoDAQ builtin PID extension
-
-        Parameters
-        ----------
-        modules: list[PluginInfo]
-
-
-        Deprecated:
-        name: str
-            The name to print on the UI title
-        instrument_name: str
-            The name of the instrument class, for instance PID for the daq_move_PID
-            module and the DAQ_Move_PID instrument class
-        instrument_controller: ControllerAndThread
-            whatever object is used to communicate between the instrument module and the extension
-            which created it
-        ui_identifier: str
-            One of the possible registered UI
-        kwargs: named arguments to be passed to add_move
-        """
-        if modules is None:
-            modules = [
-                PluginInfo(
-                    id=0,
-                    name=args[0],
-                    class_name=args[1],
-                    type=ModuleType.Actuator,
-                    settings=None,
-                    is_master=False,
-                    do_init=True,
-                    ui=None,
-                    daq_type=None,
-                    controller=args[2]
-                ),
-            ]
-        self.module_loader = ModuleLoader(self.module_creator, [[mod] for mod in modules])
-        self.module_loader.all_instruments_added.connect(self.modules_manager.add_modules)
-        self.module_loader.start()
+        """ For backcompatibility"""
+        self.module_creator.add_move_from_extension(*args, modules=modules, **kwargs)
 
     @property
     def docks_viewer(self):
@@ -713,51 +673,10 @@ class DashBoard(CustomApp, LECOComponentMixin):
             callback: Callable = None,
             **kwargs,
     ):
-        """Specific method to add a DAQ_Viewer within the Dashboard. This Particular detector
-        should be defined in the plugin of the extension and is used to mimic a grab while data
-        are actually coming from the extension which loaded it
+        """ For backcompatibility
 
-        For an exemple, see the pymodaq_plugins_datamixer plugin and its DataMixer extension
-        or the DAQ_PID extension
-
-        Parameters
-        ----------
-        modules: list[PluginInfo]
-        callback: a callable method (slot like) that will receive the *list of added modules* when done
-
-        Deprecated:
-        -----------
-        name: str
-            The name to print on the UI title
-        daq_type: str
-            either DAQ0D, DAQ1D, DAQ2D or DAQND depending the type of the instrument
-        instrument_name: str
-            The name of the instrument class, for instance DataMixer for the daq_0Dviewer_DataMixer
-            module and the DAQ_0DViewer_DataMixer instrument class
-        instrument_controller: ControllerAndThread
-            whatever object is used to communicate between the instrument module and the extension
-            which created it
         """
-        if modules is None:
-            modules = [
-                PluginInfo(
-                    id=0,
-                    name=args[0],
-                    class_name=args[2],
-                    type=ModuleType.Detector,
-                    settings=None,
-                    is_master=False,
-                    do_init=True,
-                    ui=None,
-                    daq_type=DAQTypesEnum[args[1]] ,
-                    controller=args[3]
-                ),
-            ]
-        self.module_loader = ModuleLoader(self.module_creator, [[mod] for mod in modules])
-        self.module_loader.all_instruments_added.connect(self.modules_manager.add_modules)
-        if callback is not None:
-            self.module_loader.all_instruments_added.connect(callback)
-        self.module_loader.start()
+        self.module_creator.add_det_from_extension(*args, modules=modules, callback=callback, **kwargs)
 
 
     # def set_remote_configuration(self, filename):
@@ -1132,6 +1051,7 @@ def create_load_dashboard(show_dashboard=True) -> tuple[SharedUI, DashBoard]:
 
     shared_ui = SharedUI(win, show=show_dashboard)
     dashboard = DashBoard(area)
+    
     shared_ui.affect_application(dashboard)
     return shared_ui, dashboard
 
