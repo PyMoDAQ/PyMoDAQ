@@ -1,3 +1,6 @@
+from pymodaq.utils.managers.modules import ModuleType
+from pymodaq.utils.managers.modules.loader import ModuleLoader, PluginInfo
+from pymodaq_utils.enums import StrEnum, enum_checker
 from typing import TYPE_CHECKING
 
 from qtpy import QtWidgets
@@ -25,23 +28,100 @@ config = Config()
 logger = set_logger(get_module_name(__file__))
 
 
+class ModuleTypeInPath(StrEnum):
+    ACTUATOR = 'Actuators:'
+    DETECTOR = 'Detectors:'
+
+
 class ModuleCreator:
 
     def __init__(self, dashboard: 'DashBoard'):
         self.dashboard = dashboard
-        self.menu_button: MenuButton = None
+        self.module_loader: ModuleLoader = None
 
-        self.create_menu_to_add_modules()
-
+        self.menu_button: MenuButton = MenuButton(text='AddModule',
+                                                  add_menu_entries=build_menu_for_module_creation(self._get_masters()),
+                                                  update_button_text=False)
         self.menu_button.triggered.connect(self._add_module)
+        self.dashboard.modules_manager.modules_added_signal.connect(self._update_masters)
+
+    def _get_masters(self):
+        return [mod.title for mod in self.dashboard.modules_manager.modules_all if mod.master]
+
+    def _update_masters(self):
+        self.menu_button.update_entries(build_menu_for_module_creation(self._get_masters()))
 
     def create_menu_to_add_modules(self) -> MenuButton:
         masters = [mod for mod in self.dashboard.modules_manager.modules_all if mod.master]
-        self.menu_button = build_menu_for_module_creation(masters)
-        return self.menu_button
+        return build_menu_for_module_creation(masters)
 
     def _add_module(self, path: tuple[str]):
-        pass
+        path = list(path)
+        if path[0] == ModuleTypeInPath.ACTUATOR.value:
+            self._add_actuator(path[1:])
+        else:
+            self._add_detector(path[1:])
+
+    def _add_actuator(self, path: list[str]):
+        actuator_class = path[0]
+        axis = path[1] if path[1] != 'default_axis' else None
+        master = path[2] == 'Master'
+        if not master:
+            master_module: DAQ_Move | DAQ_Viewer = self.dashboard.modules_manager.get_mod_from_name(
+                path[3], mod=ModuleType.Control)
+            controller = master_module.controller_and_thread
+            id = controller.id
+        else:
+            controller = None
+            id = self.dashboard.modules_manager.get_random_id()
+
+        module_info = PluginInfo(
+            id=id,
+            name=f'ActWithID_{id}' if master else f'ActSlaveOf_{path[3]}',
+            class_name=actuator_class,
+            type=ModuleType.Actuator,
+            settings=None,
+            is_master=master,
+            do_init=True,
+            ui=None,
+            daq_type=None,
+            controller=controller,
+            axis_name=axis
+        )
+        self._load_created_module(module_info)
+
+    def _add_detector(self, path: list[str]):
+        daq_type = enum_checker(DAQTypesEnum, path[0])
+        detector_class = path[1]
+        master = path[2] == 'Master'
+        if not master:
+            master_module: DAQ_Move | DAQ_Viewer = self.dashboard.modules_manager.get_mod_from_name(
+                path[3], mod=ModuleType.Control)
+            controller = master_module.controller_and_thread
+            id = controller.id
+        else:
+            controller = None
+            id = self.dashboard.modules_manager.get_random_id()
+
+        module_info = PluginInfo(
+            id=id,
+            name=f'DetWithID_{id}' if master else f'DetSlaveOf_{path[3]}',
+            class_name=detector_class,
+            type=ModuleType.Detector,
+            settings=None,
+            is_master=master,
+            do_init=True,
+            ui=None,
+            daq_type=daq_type,
+            controller=controller
+        )
+        self._load_created_module(module_info)
+
+    def _load_created_module(self, module_info: PluginInfo):
+
+        self.module_loader = ModuleLoader(self, [[module_info]])
+        self.module_loader.all_instruments_added.connect(self.dashboard.modules_manager.add_modules)
+        self.module_loader.start()
 
     def create_actuator(self, name: str, class_name: str, ui_identifier: str) -> DAQ_Move:
         actuator_class = find_actuator_class_from_name(class_name)
@@ -51,7 +131,7 @@ class ModuleCreator:
         if ui_identifier is not None:
             pass
         else:
-            ui_identifier = config("pymodaq", "actuator", "ui")
+            ui_identifier = config("pymodaq", "actuator", "ui")[0]
         actuator = DAQ_Move(QtWidgets.QWidget(),
                             name,
                             ui_identifier=ui_identifier,
@@ -110,7 +190,7 @@ class ModuleCreator:
             self.dashboard.dockarea.moveDock(self.dashboard.controls_dock, 'right', None)
             self.dashboard.controls_dock.setVisible(False)
         else:
-            self.dashboard.dockarea.addDock(self.dashboard.docks_viewer[-1], "right", self._docks_viewer[-2])
+            self.dashboard.dockarea.addDock(self.dashboard.docks_viewer[-1], "right", self.dashboard.docks_viewer[-2])
 
         self.dashboard.compact_detector_manager.add_module(detector)
         self.dashboard.docks_viewer[-1].addWidget(detector.parent)
@@ -247,7 +327,7 @@ class ModuleCreator:
             logger.exception(str(e))
 
 
-def build_menu_for_module_creation(masters: list[str]) -> MenuButton:
+def build_menu_for_module_creation(masters: list[str]) -> dict:
     master_slave = ['Master', {'Slave of:': masters}]
     actuator_dict = {}
     for act_name in ACTUATOR_NAMES:
@@ -255,7 +335,7 @@ def build_menu_for_module_creation(masters: list[str]) -> MenuButton:
         if actuator_class.get_class_axis() is not None and actuator_class.get_class_axis() != ['']:
             axis_dict = {axis: master_slave for axis in actuator_class.get_class_axis()}
         else:
-            axis_dict = master_slave
+            axis_dict = {'default_axis': master_slave}
         actuator_dict[act_name] = axis_dict
 
     detector_options = {
@@ -265,12 +345,9 @@ def build_menu_for_module_creation(masters: list[str]) -> MenuButton:
         'DAQND': [{name: master_slave} for name in [plugin['name'] for plugin in DET_TYPES['DAQND']]],
     }
 
-    menu_entries = {'Actuators:': actuator_dict,
-                    'Detectors:': detector_options, }
+    return {ModuleTypeInPath.ACTUATOR.value: actuator_dict,
+            ModuleTypeInPath.DETECTOR.value: detector_options, }
 
-    return MenuButton(text='AddModule',
-                      add_menu_entries=menu_entries,
-                      update_button_text=False)
 
 
 if __name__ == '__main__':

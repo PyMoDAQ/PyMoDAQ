@@ -374,6 +374,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
         self.add_menu(MenuToolbarNames.VIEW, 'View', menubar)
 
+
         self.add_menu('docked', 'Docked', MenuToolbarNames.VIEW)
 
         self.add_menu(MenuToolbarNames.TOOLS, 'Tools', menubar)
@@ -419,6 +420,9 @@ class DashBoard(CustomApp, LECOComponentMixin):
                             icon_name=extensions[ExtensionEnum[ext_name]].klass.icon_name)
 
         self.add_action("state", "State", auto_toolbar=False)
+
+        self.add_widget('add_module', self.module_creator.menu_button, tip='Select a Module to add to this Dashboard',
+                        toolbar='experiment')
 
     def connect_things(self):
         self.status_signal[str].connect(self.add_status)
@@ -665,7 +669,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
                     controller=args[2]
                 ),
             ]
-        self.module_loader = ModuleLoader(self, [[mod] for mod in modules])
+        self.module_loader = ModuleLoader(self.module_creator, [[mod] for mod in modules])
         self.module_loader.all_instruments_added.connect(self.modules_manager.add_modules)
         self.module_loader.start()
 
@@ -749,7 +753,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
                     controller=args[3]
                 ),
             ]
-        self.module_loader = ModuleLoader(self, [[mod] for mod in modules])
+        self.module_loader = ModuleLoader(self.module_creator, [[mod] for mod in modules])
         self.module_loader.all_instruments_added.connect(self.modules_manager.add_modules)
         if callback is not None:
             self.module_loader.all_instruments_added.connect(callback)

@@ -248,7 +248,7 @@ class ExperimentManager(ManagerBase):
         self.actuators_modules: list[DAQ_Move] = []
         self.detector_modules: list[DAQ_Viewer] = []
 
-        self.loader = ModuleLoader(self.dashboard, plugins_sorted)
+        self.loader = ModuleLoader(self.dashboard.module_creator, plugins_sorted)
         self.loader.all_instruments_added.connect(self.finalize_execute)
         self.loader.load_failed.connect(self._on_load_failed)
         self.loader.module_index_init.connect(self.subentries_model.set_status)

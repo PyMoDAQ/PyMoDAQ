@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+
 from typing import Any, TYPE_CHECKING
 
 from pymodaq.control_modules.utils import ControllerAndThread
@@ -13,10 +14,11 @@ from pymodaq.utils.managers.modules import ModuleType
 from pymodaq_utils.config import GlobalConfig
 from pymodaq_utils.logger import set_logger, get_module_name
 
+
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
-    from pymodaq.dashboard import DashBoard
+    from pymodaq.utils.managers.modules.module_creator import ModuleCreator
 
 config = GlobalConfig()
 logger = set_logger(get_module_name(__file__))
@@ -58,11 +60,12 @@ class ModuleLoader(QtCore.QObject):
     load_failed = QtCore.Signal(str)
     module_index_init = QtCore.Signal(int, bool)
 
-    def __init__(self, dashboard: 'DashBoard',
-                 plugins: list[list['PluginInfo']], parent=None):
+    def __init__(self, module_creator: 'ModuleCreator',
+                 plugins: list[list['PluginInfo']],
+                 parent=None,
+                 ):
         super().__init__(parent)
-        self.dashboard = dashboard
-        self.creator = self.dashboard.module_creator
+        self.creator = module_creator
 
         self._queue: list[tuple['PluginInfo', int, int]] = [
             (plugin, ind_in_group, len(group))
@@ -130,8 +133,8 @@ class ModuleLoader(QtCore.QObject):
         # done here after the instrument has been set (as this is generating a random number for the controller ID)
         if self._current_plugin.is_master:
             self._current_master_controller = ControllerAndThread(is_master=True, id=self._current_plugin.id)
-        self._current_module.controller_and_thread.controller = self._current_master_controller.controller
-        self._current_module.controller_and_thread.thread = self._current_master_controller.thread
+        self._current_module.controller_and_thread.controller = self._current_master_controller.controller if self._current_plugin.controller is None else self._current_plugin.controller.controller
+        self._current_module.controller_and_thread.thread = self._current_master_controller.thread if self._current_plugin.controller is None else self._current_plugin.controller.thread
         self._current_module.master = self._current_plugin.is_master
         self._current_module.id = self._current_plugin.id
         if self._current_plugin.axis_name is not None:
@@ -151,7 +154,7 @@ class ModuleLoader(QtCore.QObject):
         self._current_module.init_signal.connect(self._on_init_done)
 
         self._init_timeout_timer.start()
-        self._current_module.do_init_hardware_signal.emit()
+        self._current_module.do_init_hardware_signal.emit(True)
 
     def _on_set_type_timeout(self):
         logger.info(f"Timeout reached when attempting setting the type of module: "

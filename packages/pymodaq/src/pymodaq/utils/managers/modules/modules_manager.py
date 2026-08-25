@@ -1,4 +1,5 @@
 from typing import List, Union, TYPE_CHECKING, Optional, Sequence
+import numpy as np
 
 from pymodaq.control_modules.viewer_utility_classes import HW_SETTINGS_KEY as DETECTOR_SETTINGS_KEY
 
@@ -45,6 +46,7 @@ class ModulesManager(QObject, ParameterManager):
         sublist of actuators
     """
     settings_name = 'ModulesManagerSettings'
+    modules_added_signal = Signal()
     detectors_changed = Signal(list)
     actuators_changed = Signal(list)
     det_done_signal = Signal(DataToExport)  # dte here contains DataWithAxes
@@ -112,6 +114,14 @@ class ModulesManager(QObject, ParameterManager):
                     module.controller_and_thread.thread = other_module.controller_and_thread.thread
                     break
         module.init_hardware(do_init)
+
+    def get_random_id(self) -> int:
+        """ get a random *id* not already used by a module"""
+        ids = [mod.id for mod in self.modules_all]
+        id = np.random.randint(1, 1000)
+        while id in ids:
+            id = np.random.randint(1, 1000)
+        return id
 
     @property
     def actuator_timeout(self):
@@ -191,6 +201,7 @@ class ModulesManager(QObject, ParameterManager):
         self.set_detectors(self.detectors_all + detectors, self.detectors)
         logger.debug(f"New modules added to the ModulesManager: {modules}"
                      f"Total list is: {self.modules_name}")
+        self.modules_added_signal.emit()
 
 
     def set_actuators(self, actuators: list['DAQ_Move'], selected_actuators: list['DAQ_Move']):

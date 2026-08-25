@@ -279,7 +279,12 @@ class DAQ_Move_base(PluginBase):
 
     @classmethod
     def get_class_axis(cls) -> list[str] | None:
-        return cls._axis_names
+        if cls.stage_names is not None and len(cls.stage_names) != []:
+            #check for old and deprecated plugins
+            axis = cls.stage_names
+        if cls._axis_names is not None:
+            axis = cls._axis_names
+        return axis
 
     def __init__(self, parent: Optional['ActuatorWorker'] = None,
                  params_state: Optional[dict] = None,

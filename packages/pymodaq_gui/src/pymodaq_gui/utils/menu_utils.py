@@ -148,10 +148,13 @@ class MenuButton(QtWidgets.QPushButton):
                  update_button_text: bool = True,):
 
         super().__init__(text, parent=parent)
+
+        self._update_button_text = update_button_text
+        self.update_entries(add_menu_entries)
+
+    def update_entries(self, add_menu_entries: list[str] | dict | str = None,):
         if add_menu_entries is None:
             add_menu_entries = []
-        self._update_button_text = update_button_text
-
         # Create the nested menu
         self.menu = IterableMenu('iterable', add_menu_entries, callable=self._add_menu_item_selected)
         self.setMenu(self.menu)
