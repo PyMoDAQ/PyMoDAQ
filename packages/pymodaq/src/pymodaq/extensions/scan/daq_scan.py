@@ -79,11 +79,13 @@ class DAQScanCaller(CallerInfo):
     Passed as the ``caller`` kwarg to ``ModulesManager.grab_data``; consumed by
     ``DAQ_Viewer_Hardware.grab_data`` and stored on the worker, not forwarded into the
     plugin's own ``grab_data`` kwargs. Plugins read it via ``self.get_caller()`` at any
-    point, and it is ``None`` outside of a scan (live view, manual snap)::
+    point; check ``caller.caller_type == 'DAQScanCaller'`` to confirm a scan is actually
+    driving the current grab, rather than a stale or fallback caller from outside the
+    scan (see :class:`~pymodaq.utils.caller.CallerInfo`)::
 
         def grab_data(self, Naverage=1, **kwargs):
-            caller = self.get_caller()  # None when not in a scan
-            if caller is not None:
+            caller = self.get_caller()
+            if caller is not None and caller.caller_type == 'DAQScanCaller':
                 out_dir = Path(caller.h5_file_path).parent / caller.node_name
                 out_dir.mkdir(parents=True, exist_ok=True)
                 # save proprietary file as out_dir / f"frame_{caller.ind_scan:05d}.bin"

@@ -63,8 +63,13 @@ class PluginBase(QObject):
     def get_caller(self):
         """Return the caller context set on the parent worker, or ``None`` if unavailable.
 
-        See :class:`~pymodaq.utils.caller.CallerInfo`. ``None`` outside of an
-        extension-driven run, or when this plugin has no parent worker (standalone use).
+        See :class:`~pymodaq.utils.caller.CallerInfo`. ``None`` when this plugin has no
+        parent worker (standalone use), or when the control module has never been
+        configured to save (never manually saved once, never had continuous saving
+        enabled, never driven by an extension). Otherwise this may be an explicit caller
+        set by a driving extension, or the control module's own best-effort fallback
+        reflecting whatever it is currently set up to save to - it is not proof that an
+        extension is currently driving the acquisition.
         """
         if self.parent is not None and hasattr(self.parent, 'get_caller'):
             return self.parent.get_caller()

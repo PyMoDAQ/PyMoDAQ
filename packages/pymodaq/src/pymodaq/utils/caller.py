@@ -13,11 +13,16 @@ from typing import Optional
 class CallerInfo:
     """Generic caller context: the HDF5 file PyMoDAQ is writing to and the active node.
 
-    Outside of any extension-driven acquisition (live view, manual snap) no caller is
-    passed at all, so plugins must treat it as optional::
+    An extension (e.g. ``DAQ_Scan``) driving an acquisition sets an explicit caller. Absent
+    that, the control module falls back to a best-effort caller derived from its own
+    ``module_and_data_saver`` (see ``ControlModule.get_caller``), which is only ``None``
+    if that module has never been configured to save at all (never manually saved once,
+    never had continuous saving enabled, never driven by an extension). Plugins must
+    therefore always treat it as optional, and should not assume a non-``None`` caller
+    implies an extension is currently driving the acquisition::
 
         def grab_data(self, Naverage=1, **kwargs):
-            caller = kwargs.get('caller')  # None when not driven by an extension
+            caller = self.get_caller()  # None only if this module has never been set up to save
             if caller is not None and caller.h5_file_path is not None:
                 out_dir = Path(caller.h5_file_path).parent / caller.node_name
                 ...
