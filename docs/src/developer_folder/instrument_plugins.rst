@@ -456,6 +456,54 @@ grab or snap data. The MockCamera plugin illustrates this feature:
                 QtWidgets.QApplication.processEvents()
 
 
+.. _caller_context:
+
+Caller Context
+**************
+
+A plugin often needs to write its own proprietary files (raw camera frames, a vendor
+logfile...) alongside the HDF5 file PyMoDAQ itself is saving, and to mirror PyMoDAQ's
+file layout when doing so (e.g. drop its files next to the current scan's node) rather
+than invent its own independent naming/session scheme.
+
+For this, any ``DAQ_Move_base``/``DAQ_Viewer_base`` plugin can call ``self.get_caller()``
+at any point in its lifetime (not just inside ``grab_data``) to get a
+:class:`~pymodaq.utils.caller.CallerInfo` describing the HDF5 file and node PyMoDAQ is
+currently associated with:
+
+.. code-block:: python
+
+    def grab_data(self, Naverage=1, **kwargs):
+        caller = self.get_caller()
+        if caller is not None and caller.h5_file_path is not None:
+            out_dir = Path(caller.h5_file_path).parent / caller.node_name
+            out_dir.mkdir(parents=True, exist_ok=True)
+            # save a proprietary file into out_dir, named however you like
+
+``CallerInfo`` carries:
+
+* ``h5_file_path``: absolute path to the HDF5 file PyMoDAQ is writing to
+* ``node_name``: name of the active HDF5 group for this call, e.g. ``'Scan001'``
+* ``caller_name``: a descriptive label for what produced this caller
+* ``caller_type``: the caller's class name, e.g. ``'DAQScanCaller'``
+
+An extension driving the module (e.g. :ref:`DAQ_Scan <DAQ_Scan_module>`) sets its own
+caller subclass carrying extra fields. During a scan, ``get_caller()`` returns a
+``DAQScanCaller`` which adds ``ind_scan`` (the current linear step index) and
+``ind_average`` (the current averaging pass) on top of the base fields above.
+
+.. important::
+    ``get_caller()`` is only ``None`` if the control module has *never* been configured
+    to save at all (no manual "save data", no continuous saving ever enabled, no
+    extension has ever driven it). Otherwise, absent a more specific caller from a
+    driving extension, the control module falls back to a best-effort ``CallerInfo``
+    describing whatever it is currently set up to save to (e.g. continuous-saving mode).
+    This fallback can be stale - it may still reflect a previously finished scan or a
+    one-off manual save rather than the current acquisition. A non-``None`` caller is
+    therefore *not* proof that an extension is currently driving the grab: check
+    ``caller.caller_type`` (e.g. ``'DAQScanCaller'``) if your plugin needs to
+    distinguish an active scan from this fallback.
+
 
 Hardware needed files
 ---------------------
