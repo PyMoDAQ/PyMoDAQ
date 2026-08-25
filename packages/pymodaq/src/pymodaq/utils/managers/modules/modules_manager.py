@@ -625,15 +625,6 @@ class ModulesManager(QObject, ParameterManager):
         self.move_done_flag = True
         self.det_done_flag = True
 
-    def poll_init(self, module: Union['DAQ_Move', 'DAQ_Viewer']):
-        tstart = time.perf_counter()
-        while not module.initialized_state:
-            QThread.msleep(1000)
-            QtWidgets.QApplication.processEvents()
-            if time.perf_counter() - tstart > config('pymodaq', 'control_modules', 'control_module_ini_polling'):  # timeout of 60sec
-                break
-        return module.initialized_state
-
     def order_positions(self, positions: DataToExport):
         """ Reorder the content of the DataToExport given the order of the selected actuators"""
         actuators = self.selected_actuators_name

@@ -100,6 +100,8 @@ class StateSubEntry:
 
 class SubEntryHandler(QtCore.QObject):
     new_entry = QtCore.Signal(StateSubEntry)
+    executed_signal = QtCore.Signal() # to be emited when execution is done
+    execution_failed = QtCore.Signal(Exception)
 
     handler_name: SubEntryHandlerTypes = abstract_attribute()  # to reimplement in real dialogs
     use_dialog = True
@@ -225,6 +227,7 @@ class SettingsEntryHandler(SubEntryHandler):
         """ Execute the given subentry """
         module = self.get_module(entry, dashboard)
         module.settings.child(*entry.setting.path[3:]).setValue(entry.setting.value())
+        self.executed_signal.emit()
 
 
 @SubEntryHandlerFactory.register_handler()
@@ -270,6 +273,7 @@ class ActuatorValueSubEntryHandler(SubEntryHandler):
     def execute_subentry(self, entry: StateSubEntry,
                          dashboard: 'DashBoard'):
         """ Execute the given subentry """
+        self._dashboard = dashboard
         module = self.get_module(entry, dashboard)
         if not module.initialized_state:
             raise SubEntryError('Could not move an actuator that is not initialized')
@@ -278,9 +282,18 @@ class ActuatorValueSubEntryHandler(SubEntryHandler):
                 DataActuator(entry.module_name, data=entry.setting.parameter.value(),
                              units=entry.setting.parameter.opts.get('suffix', module.units))])
 
+            dashboard.modules_manager.timeout_signal.connect(self._on_timeout)
             dashboard.modules_manager.connect_and_move_actuators(dte_actuators)
+            # blocking call
+            self.executed_signal.emit()
+
         except Exception as e:
-            raise SubEntryError from e
+            self.execution_failed.emit(e)
+            dashboard.modules_manager.timeout_signal.disconnect(self._on_timeout)
+
+    def _on_timeout(self):
+        self._dashboard.modules_manager.timeout_signal.disconnect(self._on_timeout)
+        self.execution_failed.emit(SubEntryError('Timeout while waiting for actuators to be moved'))
 
 @SubEntryHandlerFactory.register_handler()
 class InitSubEntryHandler(SubEntryHandler):
@@ -313,20 +326,26 @@ class InitSubEntryHandler(SubEntryHandler):
     def execute_subentry(self, entry: StateSubEntry,
                          dashboard: 'DashBoard'):
         """ Execute the given subentry """
+        self._entry = entry
+        self._dashboard = dashboard
         module = self.get_module(entry, dashboard)
         if module.initialized_state == entry.setting.value():
             raise SubEntryError(
                 f'The {entry.module_name} module is already '
                 f'{"initialized" if module.initialized_state else "uninitialized"}')
         try:
+            module.init_signal.connect(self._on_module_initialization)
             module.init_hardware_ui(entry.setting.value())
-            if entry.setting.value():
-                init_state = dashboard.modules_manager.poll_init(module)
-                if init_state != entry.setting.value():
-                    raise SubEntryError('Could not initialize the module')
         except Exception as e:
+            self.execution_failed.emit(e)
 
-            raise SubEntryError from e
+    def _on_module_initialization(self, initialized: bool):
+        module = self.get_module(self._entry, self._dashboard)
+        module.init_signal.disconnect(self._on_module_initialization)
+        if initialized != self._entry.setting.value():
+            self.execution_failed.emit(ValueError('Could not initialize the module'))
+        else:
+            self.executed_signal.emit()
 
 @SubEntryHandlerFactory.register_handler()
 class WaitSubEntryHandler(SubEntryHandler):
@@ -358,10 +377,11 @@ class WaitSubEntryHandler(SubEntryHandler):
     def execute_subentry(self, entry: StateSubEntry,
                          dashboard: 'DashBoard'):
         """ Execute the given subentry """
-        start = time.perf_counter()
+        QtCore.QTimer.singleShot(int(entry.setting.value()),
+                                 self._on_wait_time_done)
 
-        while abs(time.perf_counter() - start) < entry.setting.value():
-            QtWidgets.QApplication.processEvents()
+        def _on_wait_time_done():
+            self.executed_signal.emit()
 
 
 @SubEntryHandlerFactory.register_handler()
@@ -396,11 +416,13 @@ class StopSubEntryHandler(SubEntryHandler):
         """ Execute the given subentry """
         module = self.get_module(entry, dashboard)
         if not module.initialized_state:
-            raise SubEntryError('Could not stop an actuator that is not initialized')
+            self.execution_failed.emit(
+                SubEntryError('Could not stop an actuator that is not initialized'))
         try:
             dashboard.modules_manager.stop_module(entry.module_name)
+            self.executed_signal.emit()
         except Exception as e:
-            raise SubEntryError from e
+            self.execution_failed.emit(e)
 
 
 @SubEntryHandlerFactory.register_handler()
@@ -435,8 +457,9 @@ class StopAllSubEntryHandler(SubEntryHandler):
                module = dashboard.modules_manager.get_mod_from_name(mod_name, ModuleType.Control)
                if module.initialized_state:
                    module.stop_module()
+            self.executed_signal.emit()
         except Exception as e:
-            raise SubEntryError from e
+            self.execution_failed.emit(e)
 
 
 @SubEntryHandlerFactory.register_handler()
@@ -472,8 +495,9 @@ class StopExtensionSubEntryHandler(SubEntryHandler):
         try:
             if ExtensionEnum(entry.module_name) in dashboard.extensions:
                 dashboard.extensions[ExtensionEnum(entry.module_name)].stop()
+            self.executed_signal.emit()
         except Exception as e:
-            raise SubEntryError from e
+            self.execution_failed.emit(e)
 
 
 if __name__ == '__main__':

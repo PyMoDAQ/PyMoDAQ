@@ -126,7 +126,7 @@ class StateManager(ManagerBase):
                  f'{entry.setting.parameter.title()} '
                  f'{entry.setting.value()}') for entry in entries]
 
-    def _execute_entry(self, entry_path: Path = None, **kwargs) -> bool:
+    def _execute_entry(self, entry_path: Path = None, **kwargs) -> None | bool:
         """Applies the entry from the given file in the manager.
 
         Parameters:
@@ -136,33 +136,51 @@ class StateManager(ManagerBase):
         """
         if entry_path is None:
             entry_path = self.entry_filepath
-        config_subentries = state_subentries_from_path(entry_path)
+        self.config_subentries = state_subentries_from_path(entry_path)
 
         if self.experiment_manager.applied_entry_name != self.experiment_filename:
             logger.warning(f'The current state is referring to the experiment: {self.experiment_filename} '
                            f'while the current applied experiment is: {self.experiment_manager.applied_entry_name}')
             return False
 
-        if len(config_subentries) > 0:
-            self.show_subentries(config_subentries, f'Loading State: {self.entry}')
+        if len(self.config_subentries) > 0:
+            self.show_subentries(self.config_subentries, f'Loading State: {self.entry}')
 
-        for ind, entry in enumerate(config_subentries):
-            subentry_handler = handler_factory.get_subentry_handler(entry.entry_type)(
-                self.config_model, self.settings, self.actuators, self.detectors)
-            try:
-                subentry_handler.execute_subentry(entry, dashboard=self.dashboard)
-                self.subentries_model.set_status(ind, True)
-                QtWidgets.QApplication.processEvents()
-                QtCore.QThread.msleep(0)
-            except SubEntryError as e:
-                logger.exception(str(e))
-                self.subentries_model.set_status(ind, False)
+        self._ind_subentry = -1
 
+        self._advance()
+        return None
+
+    def _advance(self):
+        self._ind_subentry += 1
+        if self._ind_subentry == len(self.config_subentries):
+            self.finalize()
+            return
+
+        entry = self.config_subentries[self._ind_subentry]
+        self.subentry_handler = handler_factory.get_subentry_handler(entry.entry_type)(
+            self.config_model, self.settings, self.actuators, self.detectors)
+        try:
+            self.subentry_handler.executed_signal.connect(self._on_executed)
+            self.subentry_handler.execution_failed.connect(self._on_execution_failed)
+            self.subentry_handler.execute_subentry(entry, dashboard=self.dashboard)
+        except SubEntryError as e:
+            logger.exception(str(e))
+            self.subentries_model.set_status(self._ind_subentry, False)
+            self._advance()
+
+    def _on_execution_failed(self):
+        self.subentries_model.set_status(self._ind_subentry, False)
+        self._advance()
+
+    def _on_executed(self):
+        self.subentries_model.set_status(self._ind_subentry, True)
+        self._advance()
+
+    def finalize(self):
         self.close_subentries_display(1000)
-
         self.save_new_history_entry()
-
-        return True
+        self.set_entry_applied(True)
 
     def populate_from_settings(self, settings: Parameter):
         """
