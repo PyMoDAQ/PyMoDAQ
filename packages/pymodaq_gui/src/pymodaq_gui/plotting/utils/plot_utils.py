@@ -4,7 +4,7 @@ from collections.abc import Iterable
 
 import copy
 from numbers import Number
-from typing import Callable, List, Union
+from typing import Callable, List, Tuple, Union
 from typing import Iterable as IterableType
 
 from multipledispatch import dispatch
@@ -586,6 +586,78 @@ def display_in_dock(show: bool, widget: QtWidgets.QWidget,
         bool(np.any([widget.isVisible() for widget in dock.widgets])))
 
 
+class DockLayoutMenu:
+    """ Right-click menu on a shared Dock's title bar to choose how the panels docked
+    into it (settings, controls, ROIs, ...) are arranged, and remember that choice
+
+    Several unrelated panels (e.g. every actuator's settings widget) can land in the
+    same Dock via :func:`display_in_dock`; the arrangement is therefore a property of
+    the Dock itself, not of any one panel. One instance is installed per Dock (see
+    :func:`get_dock_layout_menu`), and changing the layout reflows every widget
+    currently docked into it by removing and re-adding them via `display_in_dock`.
+
+    Parameters
+    ----------
+    dock: Dock
+    config_path: tuple[str, ...]
+        Path to a string config entry holding 'horizontal' or 'vertical' for this
+        dock kind, e.g. ('pymodaq', 'control_modules', 'settings_dock_layout')
+    """
+    _orientations = {
+        'horizontal': QtCore.Qt.Orientation.Horizontal,
+        'vertical': QtCore.Qt.Orientation.Vertical,
+    }
+
+    def __init__(self, dock: Dock, config_path: Tuple[str, ...]):
+        self.dock = dock
+        self.config_path = config_path
+        self.orientation = self._orientations.get(
+            config(*config_path), QtCore.Qt.Orientation.Horizontal)
+
+        dock.label.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
+        dock.label.customContextMenuRequested.connect(self._show_menu)
+
+    def _show_menu(self, pos):
+        menu = QtWidgets.QMenu()
+        action_orientations = {}
+        for name, orientation in self._orientations.items():
+            action = menu.addAction(name.capitalize())
+            action.setCheckable(True)
+            action.setChecked(orientation == self.orientation)
+            action_orientations[action] = orientation
+
+        chosen = menu.exec(self.dock.label.mapToGlobal(pos))
+        if chosen is not None:
+            self._set_orientation(action_orientations[chosen])
+
+    def _set_orientation(self, orientation):
+        if orientation == self.orientation:
+            return
+        self.orientation = orientation
+        config[self.config_path] = ('horizontal' if orientation == QtCore.Qt.Orientation.Horizontal
+                                    else 'vertical')
+        config.save()
+        self._reflow()
+
+    def _reflow(self):
+        widgets = list(self.dock.widgets)
+        was_visible = {widget: widget.isVisible() for widget in widgets}
+        for widget in widgets:
+            self.dock.removeWidget(widget, close=False)
+        for widget in widgets:
+            display_in_dock(was_visible[widget], widget, self.dock, orientation=self.orientation)
+
+
+def get_dock_layout_menu(dock: Dock, config_path: Tuple[str, ...]) -> DockLayoutMenu:
+    """ Get the :class:`DockLayoutMenu` installed on this dock's title bar, creating it
+    (once) on first use """
+    menu = getattr(dock, '_pymodaq_layout_menu', None)
+    if menu is None:
+        menu = DockLayoutMenu(dock, config_path)
+        dock._pymodaq_layout_menu = menu
+    return menu
+
+
 class DetachablePanel:
     """ Show/hide a :class:`WidgetWithLabelTitle` either docked or floating
 
@@ -610,18 +682,26 @@ class DetachablePanel:
     detached: bool
         Initial attach/detach state
     orientation: Qt.Orientation
-        Forwarded to :func:`display_in_dock` while attached
+        Forwarded to :func:`display_in_dock` while attached; ignored if `layout_config_path`
+        is given, in which case the dock's own :class:`DockLayoutMenu` decides instead
+    layout_config_path: tuple[str, ...] or None
+        If given (and `dock` is not None), installs (or reuses) a :class:`DockLayoutMenu`
+        on the dock's title bar, letting the user pick and persist how panels sharing this
+        dock are arranged
     is_shown: Callable[[], bool]
         Returns whether the panel is currently supposed to be visible; used to decide
         whether an attach/detach toggle should immediately re-render it
     """
     def __init__(self, widget: QtWidgets.QWidget, dock: Union[Dock, None], title: str,
                 detached: bool, orientation=QtCore.Qt.Orientation.Horizontal,
+                layout_config_path: Union[Tuple[str, ...], None] = None,
                 is_shown: Callable[[], bool] = lambda: False):
         self.widget = widget
         self.dock = dock
         self.title = title
-        self.orientation = orientation
+        self._orientation = orientation
+        self._layout_menu = (get_dock_layout_menu(dock, layout_config_path)
+                             if dock is not None and layout_config_path is not None else None)
         self.is_shown = is_shown
         self._detached = detached
 
@@ -629,6 +709,10 @@ class DetachablePanel:
         if self.dock is None and self.widget.attach_pb is not None:
             self.widget.attach_pb.setVisible(False)
         self.widget.sig_attach_detach.connect(self._set_detached)
+
+    @property
+    def orientation(self):
+        return self._layout_menu.orientation if self._layout_menu is not None else self._orientation
 
     def _set_detached(self, detach: bool):
         self._detached = detach
