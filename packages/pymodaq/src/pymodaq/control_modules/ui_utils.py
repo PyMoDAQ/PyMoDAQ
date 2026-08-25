@@ -48,6 +48,7 @@ class ControlModuleUI(CustomApp):
         self._settings_panel = DetachablePanel(
             self._settings_widget, self.settings_dock, f'{self.title} settings',
             detached=self.config('pymodaq', 'control_modules', 'settings_as_popup'),
+            layout_config_path=('pymodaq', 'control_modules', 'settings_dock_layout'),
             is_shown=lambda: self.is_action_checked('show_settings'))
 
     def add_setting_tree(self, tree):

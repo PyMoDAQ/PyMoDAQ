@@ -360,6 +360,7 @@ class View2D(ActionManager, QtCore.QObject):
         self._rois_panel = DetachablePanel(
             self.roi_widget, self.rois_dock, f'{self.title} ROIs',
             detached=config('gui', 'viewer', 'rois_as_popup'),
+            layout_config_path=('gui', 'viewer', 'rois_dock_layout'),
             is_shown=lambda: self.is_action_checked('roi'))
         self.roi_target: Union[pgROI, Crosshair] = None
 

@@ -307,6 +307,7 @@ class View1D(ActionManager, QObject):
         self._rois_panel = DetachablePanel(
             self.roi_widget, self.rois_dock, f'{self.title} ROIs',
             detached=config('gui', 'viewer', 'rois_as_popup'),
+            layout_config_path=('gui', 'viewer', 'rois_dock_layout'),
             is_shown=lambda: self.is_action_checked('do_math'))
         self.data_displayer = DataDisplayer(self.plotitem, flip_axes=self.flip_axes)
         self.other_data_displayers: Dict[str, DataDisplayer] = {}

@@ -54,12 +54,12 @@ params4 = [
     ]},
 ]    
 
-P1 = Parameter(name='settings1', type='group', children=params1)
-P2 = Parameter(name='settings2', type='group', children=params2)
-P3 = Parameter(name='settings3', type='group', children=params3)
-P4 = Parameter(name='settings4', type='group', children=params4)
-P1_bool = Parameter(name='settings1', type='bool', children=params1)
-P1_noedit = Parameter(name='settings1', type='group', children=params1, editable=False)
+P1 = Parameter.create(name='settings1', type='group', children=params1)
+P2 = Parameter.create(name='settings2', type='group', children=params2)
+P3 = Parameter.create(name='settings3', type='group', children=params3)
+P4 = Parameter.create(name='settings4', type='group', children=params4)
+P1_bool = Parameter.create(name='settings1', type='bool', children=params1)
+P1_noedit = Parameter.create(name='settings1', type='group', children=params1, editable=False)
 
 def test_iter_children_params():
     settings = Parameter.create(name='settings', type='group', children=params)

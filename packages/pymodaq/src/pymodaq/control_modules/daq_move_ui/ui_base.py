@@ -160,6 +160,7 @@ class DAQMoveUI(ControlModuleUI):
             self.control_widget, self.controls_dock, f'{self.title} controls',
             detached=self.config('pymodaq', 'actuator', 'controls_as_popup'),
             orientation=QtCore.Qt.Orientation.Vertical,
+            layout_config_path=('pymodaq', 'actuator', 'controls_dock_layout'),
             is_shown=lambda: self.is_action_checked('show_controls'))
         self.parent.layout().setContentsMargins(0, 0, 0, 0)
 
