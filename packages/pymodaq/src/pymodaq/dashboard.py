@@ -1340,6 +1340,7 @@ def create_load_dashboard(show_dashboard=True) -> tuple[SharedUI, DashBoard]:
 
     shared_ui = SharedUI(win, show=show_dashboard)
     dashboard = DashBoard(area)
+    dashboard.shared_ui = shared_ui
     shared_ui.affect_application(dashboard)
     return shared_ui, dashboard
 
