@@ -1,0 +1,52 @@
+# Root configuration for development tooling
+# Package-specific build configs remain in packages/*/pyproject.toml
+
+[tool.pytest.ini_options]
+addopts = "--import-mode=importlib"
+testpaths = ["packages"]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["packages"]
+omit = [
+    "*/tests/*",
+    "*/examples/*",
+    "*/resources/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py39"
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear
+    "SIM",    # flake8-simplify
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "B008",   # function call in default argument (common in Qt)
+    "SIM108", # ternary operator (can reduce readability)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["pymodaq", "pymodaq_utils", "pymodaq_data", "pymodaq_gui"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/*" = ["B", "SIM"]  # relaxed rules for tests
