@@ -361,11 +361,6 @@ class DAQ_Viewer(ParameterControlModule):
     def _create_hardware(self):
         return DetectorWorker(self._title, self.settings, self.detector)
 
-    def _setup_hardware_thread(self, hardware):
-        if self.config('pymodaq', 'viewer', 'viewer_in_thread'):
-            hardware.moveToThread(self.controller_and_thread.thread)
-            self.controller_and_thread.thread.start()
-
     def _connect_hardware_signals(self, hardware):
         hardware.data_detector_sig[DataToExport].connect(self.show_data)
         hardware.data_detector_temp_sig[DataToExport].connect(self.show_temp_data)
