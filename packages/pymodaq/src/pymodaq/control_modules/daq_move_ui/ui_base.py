@@ -337,6 +337,22 @@ class DAQMoveUI(ControlModuleUI):
             self.actuators_combo.currentTextChanged.disconnect()
         except TypeError:
             pass
+        if 'move_abs_green' in self.actions_names:
+            self.connect_action('move_abs_green', connect=False)
+        if 'move_abs_red' in self.actions_names:
+            self.connect_action('move_abs_red', connect=False)
+        try:
+            self.move_abs_pb.clicked.disconnect()
+        except TypeError:
+            pass
+        try:
+            self.move_rel_plus_pb.clicked.disconnect()
+        except TypeError:
+            pass
+        try:
+            self.move_rel_minus_pb.clicked.disconnect()
+        except TypeError:
+            pass
         self.remove_absolute_spinbox_actions(self.toolbar)
         self.remove_absolute_actions(self.toolbar)
         self.remove_relative_actions(self.toolbar)
