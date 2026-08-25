@@ -1,6 +1,7 @@
 import time
 from pymodaq.control_modules.move_utility_classes import HW_SETTINGS_KEY as ACTUATOR_SETTINGS_KEY
 from functools import partial  # needed for the button to sync setpoint with currpoint
+from pymodaq.control_modules.utils import ControllerAndThread, QThreadCustom
 from typing import Dict, List, TYPE_CHECKING
 from collections import deque
 import numpy as np
@@ -517,13 +518,19 @@ class DAQ_PID(CustomExt):
         try:
             modules: list[PluginInfo] = []
             for setp in self.model_class.setpoints_names:
-                modules.append(PluginInfo(0,
+                id = self.dashboard.modules_manager.get_random_id()
+                modules.append(PluginInfo(id,
                                           setp,
                                           'PID',
                                           type=ModuleType.Actuator,
-                                          controller=PIDController(self, setp)
+                                          is_master=False,
+                                          controller=ControllerAndThread(name=setp,
+                                                                         id=id,
+                                                                         thread=self.thread(),
+                                                                         controller=PIDController(self, setp),
+                                                                         is_master=False,)
                                           ))
-            self.dashboard.add_move_from_extension(modules=modules)
+            self.dashboard.module_creator.add_move_from_extension(modules=modules)
             self.set_action_enabled("create_setp_actuators", False)
 
         except Exception as e:

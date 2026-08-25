@@ -195,10 +195,6 @@ class ControllerAndThread:
     id: int = None  # integer as defined in the ExperimentManager (One Master and multiple Slaves share it)
     initialized: bool = False
 
-    def __post_init__(self):
-        if self.thread is not None and not isinstance(self.thread, QThreadCustom):
-            self.thread.__class__ == QThreadCustom
-
 
 class ControlModule(QObject):
     """Abstract Base class common to both DAQ_Move and DAQ_Viewer control modules
@@ -743,7 +739,8 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
             except AttributeError:  # in case thread is a regular Qthread (see PID)
                 if not hasattr(self.controller_and_thread.thread, '_hardwares'):
                     self.controller_and_thread.thread._hardwares = {self.title: hardware}
-                self.controller_and_thread.thread._hardwares
+                else:
+                    self.controller_and_thread.thread._hardwares[self.title] = hardware
 
             self.command_hardware.emit(self._ini_hardware_command())
             self._post_hardware_init()
