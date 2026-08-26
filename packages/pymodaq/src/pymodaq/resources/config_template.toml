@@ -1,5 +1,6 @@
 [control_modules]
 settings_as_popup = false
+settings_dock_layout = 'horizontal'  # 'horizontal' or 'vertical', also changeable from the Settings dock's right-click menu
 control_module_ini_polling = 60 # in seconds
 
 [actuator]
@@ -15,6 +16,7 @@ default_value_red = 0.0
 default_value_green = 1.0
 default_value_relative = 1.0
 controls_as_popup = false
+controls_dock_layout = 'vertical'  # 'horizontal' or 'vertical', also changeable from the Controls dock's right-click menu
 
 [actuator.allowed_units]
 V = 'V'

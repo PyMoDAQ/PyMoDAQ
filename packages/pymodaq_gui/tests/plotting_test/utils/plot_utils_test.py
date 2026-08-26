@@ -7,8 +7,11 @@ Created the 03/11/2022
 import pytest
 import numpy as np
 
+from qtpy import QtWidgets
+
 from pymodaq_gui.plotting.utils.plot_utils import (Point, get_sub_segmented_positions,
-                                                   )
+                                                   display_in_dock, _next_free_col)
+from pymodaq_gui.utils.dock import Dock, DockArea
 from pymodaq_utils.math_utils import linspace_step
 
 
@@ -81,3 +84,25 @@ def test_get_sub_segmented_positions():
     pass
 
 
+
+
+class TestDisplayInDock:
+
+    def test_reattach_reuses_freed_slot_without_overlap(self, qtbot):
+        area = DockArea()
+        dock = Dock('settings')
+        area.addDock(dock)
+
+        widgets = [QtWidgets.QWidget() for _ in range(3)]
+        for w in widgets:
+            display_in_dock(True, w, dock)
+
+        # detach the middle widget, freeing its column
+        dock.removeWidget(widgets[1], close=False)
+        assert _next_free_col(dock) == 1
+
+        # reattaching should take that freed slot, not overlap widgets[2]
+        display_in_dock(True, widgets[1], dock)
+        positions = {id(w): dock.layout.getItemPosition(dock.layout.indexOf(w))[:2]
+                    for w in widgets}
+        assert len(set(positions.values())) == len(widgets)

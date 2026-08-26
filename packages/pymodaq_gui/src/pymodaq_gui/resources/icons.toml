@@ -23,6 +23,7 @@ names = [
     'aspect_ratio',
     'bar_chart',
     'background_replace',
+    'back_to_tab',
     'bid_landscape',
     'bid_landscape_disabled',
     'blur_circular',
