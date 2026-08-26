@@ -182,7 +182,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
         self.title = ""
 
-        self.module_loader: ModuleLoader = None
         self.roi_saver: ROISaver = None
 
         self.remote_timer = QtCore.QTimer(self)
