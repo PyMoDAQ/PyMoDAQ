@@ -127,6 +127,12 @@ class ModuleCreator:
             self.module_loader.all_instruments_added.connect(callback)
         self.module_loader.start()
 
+    def forget_callback(self, callback : Callable):
+        try:
+            self.module_loader.all_instruments_added.disconnect(callback)
+        except TypeError:
+            pass
+
     def create_actuator(self, name: str, class_name: str, ui_identifier: str) -> DAQ_Move:
         actuator_class = find_actuator_class_from_name(class_name)
         forced_ui = actuator_class.ui_type
