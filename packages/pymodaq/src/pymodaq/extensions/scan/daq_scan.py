@@ -10,7 +10,8 @@ import logging
 import os
 from pathlib import Path
 import tempfile
-from typing import List, Tuple, TYPE_CHECKING
+from dataclasses import dataclass
+from typing import List, Optional, Tuple, TYPE_CHECKING
 
 import numpy as np
 from qtpy import QtWidgets, QtCore
@@ -45,6 +46,7 @@ from pymodaq.extensions.scan.daq_scan_ui import DAQScanUI
 from pymodaq.utils.h5modules import module_saving
 from pymodaq.utils.scanner.scan_selector import ScanSelector, SelectorItem
 from pymodaq.utils.data import DataActuator
+from pymodaq.utils.caller import CallerInfo
 
 
 if TYPE_CHECKING:
@@ -69,6 +71,31 @@ class ScanDataTemp:
         self.indexes = indexes
         self.data = data
 
+
+@dataclass
+class DAQScanCaller(CallerInfo):
+    """Caller context set on the worker before every grab during a DAQ_Scan run.
+
+    Passed as the ``caller`` kwarg to ``ModulesManager.grab_data``; consumed by
+    ``DAQ_Viewer_Hardware.grab_data`` and stored on the worker, not forwarded into the
+    plugin's own ``grab_data`` kwargs. Plugins read it via ``self.get_caller()`` at any
+    point; check ``caller.caller_type == 'DAQScanCaller'`` to confirm a scan is actually
+    driving the current grab, rather than a stale or fallback caller from outside the
+    scan (see :class:`~pymodaq.utils.caller.CallerInfo`)::
+
+        def grab_data(self, Naverage=1, **kwargs):
+            caller = self.get_caller()
+            if caller is not None and caller.caller_type == 'DAQScanCaller':
+                out_dir = Path(caller.h5_file_path).parent / caller.node_name
+                out_dir.mkdir(parents=True, exist_ok=True)
+                # save proprietary file as out_dir / f"frame_{caller.ind_scan:05d}.bin"
+    """
+    caller_name: str = 'DAQScan'
+    """Caller name"""
+    ind_scan: int = 0
+    """Zero-based linear step index within the current scan."""
+    ind_average: int = 0
+    """Zero-based averaging pass index (0 when scan_average == 1)."""
 
 class DAQScan(CustomExt):
     """
@@ -957,7 +984,7 @@ class DAQScan(CustomExt):
                         viewer_enum = ViewersEnum.get_viewers_enum_from_data(dwa).increase_dim(self.scanner.n_axes)
 
                         if self.settings['plot_options', 'group0D'] and ViewersEnum.get_viewers_enum_from_data(dwa) == ViewersEnum.Viewer0D:
-                            if not ViewersEnum.Viewer0D.increase_dim(self.scanner.n_axes) in viewers_enum:
+                            if ViewersEnum.Viewer0D.increase_dim(self.scanner.n_axes) not in viewers_enum:
                                 viewers_enum.append(viewer_enum)
                                 data_names.append(self.live_plotter.grouped_data0D_fullname)
                         else:
@@ -1116,6 +1143,8 @@ class DAQScan(CustomExt):
 
             scan_node = self.module_and_data_saver.get_set_node(new=True)
             self.save_metadata(scan_node, 'scan_info')
+            node_name = scan_node.name.split('/')[-1]
+            h5_file_path = str(self.h5saver.settings['current_h5_file'])
 
             self._init_live()
             Naverage = self.settings['scan_options', 'scan_average']
@@ -1150,7 +1179,8 @@ class DAQScan(CustomExt):
             self.runner_thread = QThread()
 
             scan_acquisition = DAQScanAcquisition(self.settings, self.scanner, self.modules_manager,
-                                                  )
+                                                  node_name=node_name,
+                                                  h5_file_path=h5_file_path)
 
             if config('pymodaq', 'scan', 'scan_in_thread'):
                 scan_acquisition.moveToThread(self.runner_thread)
@@ -1264,11 +1294,12 @@ class DAQScanAcquisition(QObject):
     status_sig = Signal(utils.ThreadCommand)
 
     def __init__(self, scan_settings: Parameter = None, scanner: Scanner = None,
-                 modules_manager: ModulesManager = None):
+                 modules_manager: ModulesManager = None,
+                 node_name: str = '', h5_file_path: str = ''):
 
         """
         DAQScanAcquisition deal with the acquisition part of daq_scan, that is transferring commands to modules,
-        getting back data, saviong and letting know th UI about the scan status
+        getting back data, saving and letting know the UI about the scan status
 
         """
 
@@ -1277,6 +1308,8 @@ class DAQScanAcquisition(QObject):
         self.scan_settings = scan_settings
         self.modules_manager = modules_manager
         self.scanner = scanner
+        self.node_name = node_name
+        self.h5_file_path = h5_file_path
 
         self.stop_scan_flag = False
         self.pause_scan_flag = False
@@ -1375,7 +1408,14 @@ class DAQScanAcquisition(QObject):
                     QThread.msleep(self.scan_settings['time_flow', 'wait_time_between'])
 
                     #grab datas and wait for grab completion
-                    self.det_done(self.modules_manager.grab_data(positions=positions))
+                    self.det_done(self.modules_manager.grab_data(
+                        positions=positions,
+                        caller=DAQScanCaller(
+                            ind_scan=self.ind_scan,
+                            ind_average=self.ind_average,
+                            node_name=self.node_name,
+                            h5_file_path=self.h5_file_path,
+                        )))
 
                     # daq_scan wait time
                     QThread.msleep(self.scan_settings.child('time_flow', 'wait_time').value())
