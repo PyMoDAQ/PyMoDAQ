@@ -1156,8 +1156,8 @@ class DAQScan(CustomExt):
             scan_acquisition = DAQScanAcquisition(self.settings, self.scanner, self.modules_manager,
                                                   )
 
-            if config('pymodaq', 'scan', 'scan_in_thread'):
-                scan_acquisition.moveToThread(self.runner_thread)
+            # if config('pymodaq', 'scan', 'scan_in_thread'):
+            #     scan_acquisition.moveToThread(self.runner_thread)
             self.command_daq_signal[utils.ThreadCommand].connect(scan_acquisition.queue_command)
             scan_acquisition.scan_data_tmp[ScanDataTemp].connect(self.save_temp_live_data)
             scan_acquisition.status_sig[utils.ThreadCommand].connect(self.thread_status)
@@ -1288,10 +1288,9 @@ class DAQScanAcquisition(QObject):
         self.stop_scan_flag = False
         self.pause_scan_flag = False
         self.Naverage = self.scan_settings['scan_options', 'scan_average']
-        self.ind_average = 0
-        self.ind_scan = 0
+        self._ind_average: int = None
+        self._ind_scan: int = None
 
-        self._current_target_positions: DataToExport = None
         self._current_done_positions: DataToExport = None
         self._current_dte_to_be_plotted: DataToExport = None
         self._current_indexes: tuple[int] = None
@@ -1365,7 +1364,7 @@ class DAQScanAcquisition(QObject):
             self.navigation_axes = self.scanner.get_nav_axes()
             self.status_sig.emit(utils.ThreadCommand("Update_Status",
                                                      attribute="Acquisition has started"))
-            self._ind_average = -1
+            self._ind_average = 0
             self._ind_scan = -1
 
         except Exception as e:
@@ -1377,12 +1376,15 @@ class DAQScanAcquisition(QObject):
             if self.stop_scan_flag or self.timeout_scan_flag:
                 self.finalize_scan()
 
-            if self.ind_average == self.Naverage and self.ind_scan == self.scanner.n_steps:
+            if self._ind_average == self.Naverage-1 and self._ind_scan == self.scanner.n_steps-1:
                 self.finalize_scan()
-            elif self.ind_scan == self.scanner.n_steps:
-                self.ind_average += 1
+                return
+            elif self._ind_scan == self.scanner.n_steps-1:
+                self._ind_average += 1
+                self._ind_scan = -1
 
-            self.ind_scan += 1
+            self._ind_scan += 1
+
 
             positions = self.get_next_position()
 
@@ -1397,10 +1399,11 @@ class DAQScanAcquisition(QObject):
 
     def get_next_position(self) -> DataToExport:
         try:
-            self._current_target_positions: DataToExport = self.scanner.positions_at(self.ind_scan)  # get positions
+
             self.status_sig.emit(
                 utils.ThreadCommand("Update_scan_index",
-                                    attribute=[self.ind_scan, self.ind_average]))
+                                    attribute=[self._ind_scan, self._ind_average]))
+            return self.scanner.positions_at(self._ind_scan)  # get positions
         except Exception as e:
             self.scan_step_failed_signal.emit(ScanStepError(f"Error when getting next step position:\n"
                                                             f"ind_step: {self._ind_scan}:\n"
@@ -1448,11 +1451,11 @@ class DAQScanAcquisition(QObject):
         """
         self._data_saved_flag = False
 
-        self._current_indexes = self.scanner.get_indexes_from_scan_index(self.ind_scan)
+        self._current_indexes = self.scanner.get_indexes_from_scan_index(self._ind_scan)
         if self.Naverage > 1:
-            self._current_indexes = [self.ind_average] + list(self._current_indexes)
+            self._current_indexes = [self._ind_average] + list(self._current_indexes)
         self._current_indexes = tuple(self._current_indexes)
-        if self.ind_scan == 0:
+        if self._ind_scan == 0:
             self.status_sig.emit(utils.ThreadCommand(
                 "Update_Status",
                 attribute=("Creating the arrays nodes in the h5file, please be patient", 0)))
@@ -1479,15 +1482,13 @@ class DAQScanAcquisition(QObject):
         self.status_sig.emit(
             utils.ThreadCommand("add_data",
                                 dict(indexes=self._current_indexes, distribution=self.scanner.distribution,
-                                     ind_scan=self.ind_scan,
+                                     ind_scan=self._ind_scan,
                                      extra_data=self._current_dte_to_be_plotted if self.scanner.scanner.do_process_data else None,)))
 
     def _on_h5data_ready(self):
-        if self.ind_scan == 0:
-            self.status_sig.emit(utils.ThreadCommand("Update_Status", attribute="Acquisition has started"))
 
         self.det_done_flag = True
-        self.scan_data_tmp.emit(ScanDataTemp(self.ind_scan,
+        self.scan_data_tmp.emit(ScanDataTemp(self._ind_scan,
                                              self._current_indexes,
                                              self._current_dte_to_be_plotted))
 
@@ -1522,7 +1523,7 @@ class DAQScanAcquisition(QObject):
 
         self.status_sig.emit(utils.ThreadCommand("Update_Status", attribute=msg))
         self.status_sig.emit(utils.ThreadCommand("Timeout", attribute=msg))
-        self.advance()
+        #self.advance()
 
     def finalize_scan(self):
         self.modules_manager.timeout_signal.disconnect()
