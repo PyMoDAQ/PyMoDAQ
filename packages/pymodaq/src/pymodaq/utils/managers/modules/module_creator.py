@@ -454,21 +454,3 @@ def build_menu_for_module_creation(masters: list[str]) -> dict:
     return {ModuleTypeInPath.ACTUATOR.value: actuator_dict,
             ModuleTypeInPath.DETECTOR.value: detector_options, }
 
-
-
-if __name__ == '__main__':
-    import sys
-    from pymodaq_gui.qt_utils import mkQApp
-
-    app = mkQApp('Selector')
-
-
-    def print_path(path: tuple[str]):
-        print(path)
-
-
-    button = build_menu_for_module_creation(masters=['act0', 'act1', 'act2'], )
-    button.triggered.connect(print_path)
-    button.show()
-
-    sys.exit(app.exec())
