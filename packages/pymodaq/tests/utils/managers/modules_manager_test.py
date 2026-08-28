@@ -4,10 +4,10 @@ import numpy as np
 import pytest
 from unittest.mock import patch, PropertyMock
 
-from qtpy.QtCore import QObject, Signal
+from qtpy.QtCore import QObject, Signal, QThread
 
 from pymodaq.control_modules.enums import MoveType
-from pymodaq.control_modules.thread_commands import ControlToHardwareMove
+from pymodaq.control_modules.thread_commands import ControlToHardwareMove, ControlToHardwareViewer
 from pymodaq_data.data import DataToExport, DataRaw, DataSource, DataDim
 
 from pymodaq.utils.data import DataActuator
@@ -29,7 +29,38 @@ class MockDetector(QObject):
         self.Naverage = naverage
 
 
+class MockDetectorWithEmission(QObject):
+    grab_done_signal = Signal(DataToExport)
+    command_hardware = Signal(ThreadCommand)
+
+    def __init__(self, title: str, naverage: int = 1):
+        super().__init__()
+        self.title = title
+        self.Naverage = naverage
+        self.command_hardware.connect(self._queue_command)
+
+    def _queue_command(self, cmd: ThreadCommand):
+        if cmd.command == ControlToHardwareViewer.SINGLE:
+            self.grab_done_signal.emit(
+                DataToExport(self.title,
+                             data=[
+                                 DataRaw('mydata', data=[np.zeros((10,))],
+                                         origin=self.title)
+                             ]))
+
+
 class MockActuator(QObject):
+    move_done_signal = Signal(DataActuator)
+    current_value_signal = Signal(DataActuator)
+    command_hardware = Signal(ThreadCommand)
+
+    def __init__(self, title: str, current_value: float = 0.0):
+        super().__init__()
+        self.title = title
+        self._current_value = DataActuator(title, data=current_value)
+
+
+class MockActuatorWithEmission(QObject):
     move_done_signal = Signal(DataActuator)
     current_value_signal = Signal(DataActuator)
     command_hardware = Signal(ThreadCommand)
@@ -43,7 +74,9 @@ class MockActuator(QObject):
 
     def _queue_command(self, cmd: ThreadCommand):
         if cmd.command == ControlToHardwareMove.MOVE_ABS:
-            self.move_done_signal.emit(cmd.attribute[0])
+            dwa = cmd.attribute[0]
+            dwa.origin = self.title
+            self.move_done_signal.emit(dwa)
 
 
 # ---------------------------------------------------------------------------
@@ -52,12 +85,25 @@ class MockActuator(QObject):
 
 @pytest.fixture
 def detectors(qtbot):
-    return [MockDetector('Det1'), MockDetector('Det2'), MockDetector('Det3')]
+    return [MockDetector('Det1'),
+            MockDetector('Det2'),
+            MockDetector('Det3')]
+
+@pytest.fixture
+def detectors_with_emission(qtbot):
+    return [MockDetectorWithEmission('Det1'),
+            MockDetectorWithEmission('Det2'),
+            MockDetectorWithEmission('Det3')]
 
 
 @pytest.fixture
 def actuators(qtbot):
     return [MockActuator('X_axis', 0.0), MockActuator('Y_axis', 1.0)]
+
+@pytest.fixture
+def actuators_with_emission(qtbot):
+    return [MockActuatorWithEmission('X_axis', 0.0),
+            MockActuatorWithEmission('Y_axis', 1.0)]
 
 
 @pytest.fixture
@@ -70,6 +116,15 @@ def manager(detectors, actuators):
     )
     yield mm
 
+@pytest.fixture
+def manager_with_emission(detectors_with_emission, actuators_with_emission):
+    mm = ModulesManager(
+        detectors=detectors_with_emission,
+        actuators=actuators_with_emission,
+        selected_detectors=[detectors_with_emission[0]],
+        selected_actuators=[actuators_with_emission[0]],
+    )
+    yield mm
 
 # ---------------------------------------------------------------------------
 # Helpers to build controlled DataToExport for tree-building tests
@@ -308,14 +363,14 @@ class TestMoveDone:
         assert not manager.move_done_flag
 
 class TestMoveActuators:
-    def test_callback_called_when_done(self, qtbot, manager, actuators):
+    def test_callback_called_when_done(self, qtbot, manager_with_emission):
         """."""
-        manager.selected_actuators_name = ['X_axis', 'Y_axis']
+        manager_with_emission.selected_actuators_name = ['X_axis', 'Y_axis']
         self.dte_back = DataToExport('None')
 
         move_dte = DataToExport('move_dte', data=[
-            DataActuator(name='X_axis', data=[np.atleast_1d(1.0)], origin='X_axis'),
-            DataActuator(name='Y_axis', data=[np.atleast_1d(2.0)], origin='Y_axis')
+            DataActuator(name='X_axis', data=[np.atleast_1d(1.0)]),
+            DataActuator(name='Y_axis', data=[np.atleast_1d(2.0)])
         ])
         self.move_done = False
 
@@ -323,14 +378,36 @@ class TestMoveActuators:
             self.move_done = True
             self.dte_back = dte
 
-        with qtbot.waitSignal(manager.move_done_signal, timeout=5000):
-            manager.move_actuators_with_callback(move_dte,
-                                                 mode=MoveType.ABS,
-                                                 callback=callback)
-        manager.forget_callback(callback)
+        with qtbot.waitSignal(manager_with_emission.move_done_signal, timeout=5000):
+            manager_with_emission.move_actuators_with_callback(move_dte,
+                                                               mode=MoveType.ABS,
+                                                               callback=callback)
+        manager_with_emission.forget_callback(callback)
         assert self.move_done
         assert self.dte_back[0] in move_dte
         assert self.dte_back[1] in move_dte
+
+
+class TestGrabData:
+    def test_callback_called_when_done(self, qtbot, manager_with_emission):
+        """."""
+        manager_with_emission.selected_detectors_name = ['Det1', 'Det3']
+        self.dte_back = DataToExport('None')
+
+        self.grab_done = False
+
+        def callback(dte: DataToExport):
+            self.grab_done = True
+            self.dte_back = dte
+
+        with qtbot.waitSignal(manager_with_emission.det_done_signal, timeout=5000):
+            manager_with_emission.grab_data_with_callback(callback=callback)
+
+        manager_with_emission.forget_callback(callback, module_type=ModuleType.Detector)
+        assert self.grab_done
+        assert 'Det1' in self.dte_back.get_origins()
+        assert 'Det3' in self.dte_back.get_origins()
+        assert 'Det2' not in self.dte_back.get_origins()
 
 
 class TestGetDetDataList:

@@ -299,7 +299,6 @@ class ModulesManager(QObject, ParameterManager):
             self.settings.child('actuators').setValue(dict(all_items=self.actuators_name,
                                                            selected=actuators))
 
-
     def value_changed(self, param):
         if param.name() == 'detectors':
             self.detectors_changed.emit(param.value()['selected'])
@@ -358,23 +357,12 @@ class ModulesManager(QObject, ParameterManager):
                 names.extend([child.name() for child in det_param.children()])
         return names
 
-    def grab_data(self, check_do_override=True, Naverage: Optional[int] = None, **kwargs):
-        """Do a single grab of connected and selected detectors
-
-        Parameter
-        ---------
-        check_do_override: bool
-            If this is True the signal emission to the DAQ_Viewers will be conditionned to the status of their internal
-            override_grab_from_extension attribute
-        Naverage: int, optional
-            If provided, overrides each detector's own Naverage setting. Useful for probing data shape without averaging.
-        """
+    def _grab_data(self, check_do_override=True, Naverage: Optional[int] = None, **kwargs):
         self.det_done_datas = DataToExport(name=__class__.__name__, control_module='DAQ_Viewer')
         self._received_data = 0
         self.det_done_flag = False
         self.settings.child('probe_data').setValue(self.det_done_flag)
-        tzero = time.perf_counter()
-        
+
         if check_do_override and 'DataMixer' in self.selected_detectors_name:
             overridden_detectors = self.get_mod_from_name(
                 'DataMixer', ModuleType.Detector).settings.child(
@@ -387,6 +375,33 @@ class ModulesManager(QObject, ParameterManager):
                 kwargs.update(dict(Naverage=Naverage if Naverage is not None else mod.Naverage))
                 mod.command_hardware.emit(utils.ThreadCommand(ControlToHardwareViewer.SINGLE, kwargs))
 
+    def grab_data_with_callback(self,
+                                check_do_override=True,
+                                Naverage: Optional[int] = None,
+                                callback: Callable[[DataToExport], Any] = None,
+                                **kwargs):
+
+        if callback is not None:
+            self.det_done_signal.connect(callback)
+            self.connect_detectors(True)
+        self._grab_data(check_do_override, Naverage, **kwargs)
+
+
+    def grab_data(self, check_do_override=True, Naverage: Optional[int] = None, **kwargs) -> DataToExport:
+        """Do a single grab of connected and selected detectors
+
+        Parameter
+        ---------
+        check_do_override: bool
+            If this is True the signal emission to the DAQ_Viewers will be conditionned to the status of their internal
+            override_grab_from_extension attribute
+        Naverage: int, optional
+            If provided, overrides each detector's own Naverage setting. Useful for probing data shape without averaging.
+        """
+
+        self._grab_data(check_do_override=check_do_override, Naverage=Naverage, **kwargs)
+
+        tzero = time.perf_counter()
         while not self.det_done_flag:
             # wait for grab done signals to end
             QtWidgets.QApplication.processEvents()  # mandatory for the det_done_flag boolean to be modified in the corresponding method
@@ -402,7 +417,6 @@ class ModulesManager(QObject, ParameterManager):
                 break
             QThread.msleep(10)
 
-        self.det_done_signal.emit(self.det_done_datas)
         return self.det_done_datas
 
     def grab_datas(self, **kwargs):
@@ -526,7 +540,6 @@ class ModulesManager(QObject, ParameterManager):
                  'type': 'float', 'value': dact.value(), 'readonly': True},
             )
 
-
     def connect_and_move_actuators(self, dte_act: DataToExport,
                                    mode=MoveType.ABS,
                                    polling=True,
@@ -559,14 +572,33 @@ class ModulesManager(QObject, ParameterManager):
             self.connect_actuators(True)
         self._move_actuators(dte_act, mode=mode,)
 
-    def forget_callback(self, callback : Callable):
-        """ to be called by the caller of self.move_actuators_with_callback in order to disconnect properly
-        the callback """
-        self.connect_actuators(False)
-        try:
-            self.move_done_signal.disconnect(callback)
-        except TypeError:
-            pass
+    def forget_callback(self,
+                        callback : Callable,
+                        module_type=ModuleType.Detector,
+                        disconnect_modules=True):
+        """ to be called by the caller of self.move_actuators_with_callback or self.grab_data_with_callback
+        in order to disconnect properly the callback
+
+
+        Optionaly also disconnect each selected actuaor and/or detector to the inner method checking when each move/grab
+        is done
+        """
+        if module_type == ModuleType.Detector or module_type==ModuleType.Control:
+            if disconnect_modules:
+                self.connect_detectors(False)
+            try:
+                self.det_done_signal.disconnect(callback)
+            except TypeError:
+                pass
+
+        if module_type == ModuleType.Actuator or module_type == ModuleType.Control:
+            if disconnect_modules:
+                self.connect_actuators(False)
+            try:
+                self.move_done_signal.disconnect(callback)
+            except TypeError:
+                pass
+
 
     def _move_actuators(self, dte_act: DataToExport | DataToActuators,
                         mode: MoveType = MoveType.ABS,):
@@ -688,6 +720,7 @@ class ModulesManager(QObject, ParameterManager):
             if self._received_data == len(self.detectors):
                 self.det_done_flag = True
                 self.settings.child('probe_data').setValue(self.det_done_flag)
+                self.det_done_signal.emit(self.det_done_datas)
 
 
 if __name__ == '__main__':
