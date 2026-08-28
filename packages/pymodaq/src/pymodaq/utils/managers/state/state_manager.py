@@ -169,7 +169,8 @@ class StateManager(ManagerBase):
             self.subentries_model.set_status(self._ind_subentry, False)
             self._advance()
 
-    def _on_execution_failed(self):
+    def _on_execution_failed(self, exception: Exception | SubEntryError):
+        logger.warning(str(exception))
         self.subentries_model.set_status(self._ind_subentry, False)
         self._advance()
 
