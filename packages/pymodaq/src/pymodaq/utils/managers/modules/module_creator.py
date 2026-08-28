@@ -138,9 +138,7 @@ class ModuleCreator:
         forced_ui = actuator_class.ui_type
         ui_identifier = forced_ui if forced_ui != UiType.NONE else ui_identifier
 
-        if ui_identifier is not None:
-            pass
-        else:
+        if ui_identifier is None:
             ui_identifier = config("pymodaq", "actuator", "ui")[0]
         actuator = DAQ_Move(QtWidgets.QWidget(),
                             name,
