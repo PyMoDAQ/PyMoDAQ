@@ -602,7 +602,7 @@ class ModulesManager(QObject, ParameterManager):
 
         self.selected_actuators_name = [dwa.name for dwa in dte_act]
         if callback is not None:
-            self.actuators_timeout_timer.setInterval(int(self.actuator_timeout))
+            self.actuators_timeout_timer.setInterval(int(self.actuator_timeout * 1000))
             self.actuators_timeout_timer.start()
             self.move_done_signal.connect(callback)
             self.connect_actuators(True)
@@ -642,9 +642,9 @@ class ModulesManager(QObject, ParameterManager):
         self.move_done_flag = False
         self.settings.child('test_actuator').setValue(self.move_done_flag)
 
-        if mode == 'abs':
+        if mode == MoveType.ABS:
             command = ControlToHardwareMove.MOVE_ABS
-        elif mode == 'rel':
+        elif mode == MoveType.REL:
             command = ControlToHardwareMove.MOVE_REL
         else:
             logger.error(f'Invalid positioning mode: {mode}')
