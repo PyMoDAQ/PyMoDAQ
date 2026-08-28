@@ -1342,7 +1342,8 @@ class DAQScanAcquisition(QObject):
     def set_ini_positions(self):
         """ Set the actuators's positions totheir initial value as defined in the scanner  """
         try:
-            self.modules_manager.move_actuators(self.scanner.positions_at(0), polling=False)
+            self.modules_manager.move_actuators_with_callback(
+                self.scanner.positions_at(0), mode=MoveType.ABS)
 
         except Exception as e:
             logger.exception(str(e))
@@ -1354,8 +1355,8 @@ class DAQScanAcquisition(QObject):
 
     def init_scan(self):
         try:
-            self.modules_manager.connect_actuators()
-            self.modules_manager.connect_detectors()
+            self.modules_manager.connect_actuators(True)
+            self.modules_manager.connect_detectors(True)
             self.stop_scan_flag = False
             self.timeout_scan_flag = False
 
@@ -1390,7 +1391,8 @@ class DAQScanAcquisition(QObject):
 
             self.modules_manager.move_actuators_with_callback(positions,
                                                               mode=MoveType.ABS,
-                                                              callback=self._on_move_done)
+                                                              callback=self._on_move_done,
+                                                              do_connect_modules=False)
         except Exception as e:
             self.scan_step_failed_signal.emit(ScanStepError(f"Error at advance step:\n"
                                                             f"ind_step: {self._ind_scan}:\n"
@@ -1427,7 +1429,8 @@ class DAQScanAcquisition(QObject):
         try:
             self.modules_manager.grab_data_with_callback(check_do_override=True,
                                                          Naverage=None,
-                                                         callback=self._on_grab_done)
+                                                         callback=self._on_grab_done,
+                                                         do_connect_modules=False)
         except Exception as e:
             self.scan_step_failed_signal.emit(ScanStepError(f"Error at grab step:\n"
                                                             f"ind_step: {self._ind_scan}:\n"
@@ -1517,9 +1520,6 @@ class DAQScanAcquisition(QObject):
             msg = f'Timeout during acquisition, no answer received from: {", ".join(missing_modules)}'
         else:
             msg = 'Timeout during acquisition'
-
-
-
         self.status_sig.emit(utils.ThreadCommand("Update_Status", attribute=msg))
         self.status_sig.emit(utils.ThreadCommand("Timeout", attribute=msg))
         logger.warning(msg)

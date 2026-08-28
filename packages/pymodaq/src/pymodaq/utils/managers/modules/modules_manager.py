@@ -387,13 +387,15 @@ class ModulesManager(QObject, ParameterManager):
                                 check_do_override=True,
                                 Naverage: Optional[int] = None,
                                 callback: Callable[[DataToExport], Any] = None,
+                                do_connect_modules=True,
                                 **kwargs):
 
         if callback is not None:
             self.detectors_timeout_timer.setInterval(int(self.detector_timeout))
             self.detectors_timeout_timer.start()
             self.det_done_signal.connect(callback)
-            self.connect_detectors(True)
+            if do_connect_modules:
+                self.connect_detectors(True)
         self._grab_data(check_do_override, Naverage, **kwargs)
 
     def _on_detectors_timeout(self):
@@ -591,7 +593,8 @@ class ModulesManager(QObject, ParameterManager):
 
     def move_actuators_with_callback(self, dte_act: DataToExport | DataToActuators,
                                      mode: MoveType = MoveType.REL,
-                                     callback: Callable[[DataToExport], Any] = None):
+                                     callback: Callable[[DataToExport], Any] = None,
+                                     do_connect_modules=True):
         """ Move actuators defined within a DataToExport to the value included in the DatActuators within
 
         This method will emit a signal to a given callback with a DataToExport containing
@@ -605,7 +608,8 @@ class ModulesManager(QObject, ParameterManager):
             self.actuators_timeout_timer.setInterval(int(self.actuator_timeout * 1000))
             self.actuators_timeout_timer.start()
             self.move_done_signal.connect(callback)
-            self.connect_actuators(True)
+            if do_connect_modules:
+                self.connect_actuators(True)
         self._move_actuators(dte_act, mode=mode,)
 
     def forget_callback(self,
