@@ -1349,6 +1349,7 @@ class DAQScanAcquisition(QObject):
             logger.exception(str(e))
 
     def start_acquisition(self):
+        self.modules_manager.enable_modules(False)
         self.init_scan()
 
         self.advance()
@@ -1414,7 +1415,9 @@ class DAQScanAcquisition(QObject):
 
     def _on_move_done(self, move_dte: DataToExport):
         try:
-            self.modules_manager.forget_callback(self._on_move_done, module_type=ModuleType.Actuator)
+            self.modules_manager.forget_callback(self._on_move_done,
+                                                 module_type=ModuleType.Actuator,
+                                                 disconnect_modules=False)
             self._current_done_positions = self.modules_manager.order_positions(move_dte)
 
             QTimer.singleShot(int(self.scan_settings['time_flow', 'wait_time_between']),
@@ -1439,7 +1442,9 @@ class DAQScanAcquisition(QObject):
 
     def _on_grab_done(self, dte_grabed: DataToExport):
         try:
-            self.modules_manager.forget_callback(self._on_grab_done, module_type=ModuleType.Detector)
+            self.modules_manager.forget_callback(self._on_grab_done,
+                                                 module_type=ModuleType.Detector,
+                                                 disconnect_modules=False)
             self.det_done(dte_grabed)
 
         except Exception as e:
@@ -1529,9 +1534,11 @@ class DAQScanAcquisition(QObject):
             self.advance()
 
     def finalize_scan(self):
+
         self.modules_manager.timeout_signal.disconnect()
         self.modules_manager.connect_actuators(False)
         self.modules_manager.connect_detectors(False)
+        self.modules_manager.enable_modules(True)
 
         self.status_sig.emit(utils.ThreadCommand("Update_Status",
                                                  attribute="Acquisition has finished"))

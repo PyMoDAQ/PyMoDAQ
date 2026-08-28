@@ -122,6 +122,10 @@ class ModulesManager(QObject, ParameterManager):
     def detector_timeout(self):
         return config('pymodaq', 'viewer', 'timeout')
 
+    def enable_modules(self, enable=True):
+        for module in self.modules_all:
+            module.ui.toolbar.setEnabled(enable)
+
     def __repr__(self):
         return f'ModulesManager of "{self.parent_name}" with control modules: {self.get_names(self.modules_all)}'
 
