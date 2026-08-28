@@ -37,16 +37,18 @@ class MockDetectorWithEmission(QObject):
         super().__init__()
         self.title = title
         self.Naverage = naverage
+        self.do_emission = True  # to be used to block or not emission (test timeout)
         self.command_hardware.connect(self._queue_command)
 
     def _queue_command(self, cmd: ThreadCommand):
         if cmd.command == ControlToHardwareViewer.SINGLE:
-            self.grab_done_signal.emit(
-                DataToExport(self.title,
-                             data=[
-                                 DataRaw('mydata', data=[np.zeros((10,))],
-                                         origin=self.title)
-                             ]))
+            if self.do_emission:
+                self.grab_done_signal.emit(
+                    DataToExport(self.title,
+                                 data=[
+                                     DataRaw('mydata', data=[np.zeros((10,))],
+                                             origin=self.title)
+                                 ]))
 
 
 class MockActuator(QObject):
@@ -69,14 +71,15 @@ class MockActuatorWithEmission(QObject):
         super().__init__()
         self.title = title
         self._current_value = DataActuator(title, data=current_value)
-
+        self.do_emission = True  # to be used to block or not emission (test timeout)
         self.command_hardware.connect(self._queue_command)
 
     def _queue_command(self, cmd: ThreadCommand):
         if cmd.command == ControlToHardwareMove.MOVE_ABS:
             dwa = cmd.attribute[0]
             dwa.origin = self.title
-            self.move_done_signal.emit(dwa)
+            if self.do_emission:
+                self.move_done_signal.emit(dwa)
 
 
 # ---------------------------------------------------------------------------
@@ -362,7 +365,7 @@ class TestMoveDone:
         assert len(manager.move_done_positions) == 1
         assert not manager.move_done_flag
 
-class TestMoveActuators:
+class TestMoveActuatorsWithCallback:
     def test_callback_called_when_done(self, qtbot, manager_with_emission):
         """."""
         manager_with_emission.selected_actuators_name = ['X_axis', 'Y_axis']
@@ -388,6 +391,36 @@ class TestMoveActuators:
         assert self.dte_back[1] in move_dte
 
 
+    @pytest.mark.parametrize('timeout_acts', [['X_axis', 'Y_axis'], ['X_axis'], ['Y_axis']])
+    def test_timeout(self, qtbot, manager_with_emission, timeout_acts):
+        """."""
+        manager_with_emission.selected_actuators_name = ['X_axis', 'Y_axis']
+        self.dte_back = DataToExport('None')
+
+        move_dte = DataToExport('move_dte', data=[
+            DataActuator(name='X_axis', data=[np.atleast_1d(1.0)]),
+            DataActuator(name='Y_axis', data=[np.atleast_1d(2.0)])
+        ])
+        for act_name in timeout_acts:
+            act = manager_with_emission.get_mod_from_name(act_name, mod=ModuleType.Actuator)
+            act.do_emission = False
+
+        def callback(dte: DataToExport):
+            self.move_done = True
+            self.dte_back = dte
+
+        with patch.object(type(manager_with_emission), 'actuator_timeout', new_callable=PropertyMock,
+                          return_value=1):
+
+            with qtbot.waitSignal(manager_with_emission.timeout_signal, timeout=5000) as blocker:
+                manager_with_emission.move_actuators_with_callback(move_dte,
+                                                                   mode=MoveType.ABS,
+                                                                   callback=callback)
+            for act in timeout_acts:
+                assert act in blocker.args[0]
+            for act in blocker.args[0]:
+                assert act in timeout_acts
+
 class TestGrabData:
     def test_callback_called_when_done(self, qtbot, manager_with_emission):
         """."""
@@ -409,6 +442,31 @@ class TestGrabData:
         assert 'Det3' in self.dte_back.get_origins()
         assert 'Det2' not in self.dte_back.get_origins()
 
+    @pytest.mark.parametrize('timeout_dets', [['Det1', 'Det3'], ['Det1'], ['Det3']])
+    def test_timeout(self, qtbot, manager_with_emission, timeout_dets):
+        """."""
+        manager_with_emission.selected_detectors_name = ['Det1', 'Det3']
+        self.dte_back = DataToExport('None')
+
+        self.grab_done = False
+
+        def callback(dte: DataToExport):
+            self.grab_done = True
+            self.dte_back = dte
+
+        for det_name in timeout_dets:
+            det = manager_with_emission.get_mod_from_name(det_name, mod=ModuleType.Detector)
+            det.do_emission = False
+
+        with patch.object(type(manager_with_emission), 'detector_timeout', new_callable=PropertyMock,
+                          return_value=1):
+            with qtbot.waitSignal(manager_with_emission.timeout_signal, timeout=5000) as blocker:
+                manager_with_emission.grab_data_with_callback(callback=callback)
+
+        for det in timeout_dets:
+            assert det in blocker.args[0]
+        for det in blocker.args[0]:
+            assert det in timeout_dets
 
 class TestGetDetDataList:
 

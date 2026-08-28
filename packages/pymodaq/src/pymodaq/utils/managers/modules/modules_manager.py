@@ -3,9 +3,9 @@ from typing import List, Union, TYPE_CHECKING, Optional, Sequence, Callable, Any
 from pymodaq.control_modules.enums import MoveType
 from pymodaq.control_modules.viewer_utility_classes import HW_SETTINGS_KEY as DETECTOR_SETTINGS_KEY
 
-from qtpy.QtCore import QObject, Signal, Slot
+from qtpy.QtCore import QObject, Signal, Slot, QThread, QTimer
 from qtpy import QtWidgets
-from qtpy.QtCore import QThread
+
 import time
 
 from pymodaq.utils.managers.modules.utils import ModuleType
@@ -105,6 +105,14 @@ class ModulesManager(QObject, ParameterManager):
 
         self.set_actuators(actuators, selected_actuators)
         self.set_detectors(detectors, selected_detectors)
+
+        self.detectors_timeout_timer = QTimer()
+        self.detectors_timeout_timer.setSingleShot(True)
+        self.detectors_timeout_timer.timeout.connect(self._on_detectors_timeout)
+
+        self.actuators_timeout_timer = QTimer()
+        self.actuators_timeout_timer.setSingleShot(True)
+        self.actuators_timeout_timer.timeout.connect(self._on_actuators_timeout)
 
     @property
     def actuator_timeout(self):
@@ -382,10 +390,23 @@ class ModulesManager(QObject, ParameterManager):
                                 **kwargs):
 
         if callback is not None:
+            self.detectors_timeout_timer.setInterval(int(self.detector_timeout))
+            self.detectors_timeout_timer.start()
             self.det_done_signal.connect(callback)
             self.connect_detectors(True)
         self._grab_data(check_do_override, Naverage, **kwargs)
 
+    def _on_detectors_timeout(self):
+        missing_detectors = self.get_missing_detectors()
+        self.timeout_signal.emit(missing_detectors)
+        logger.error('Timeout Fired during waiting for data to be acquired from: '
+                     f'{", ".join(missing_detectors)}')
+
+    def _on_actuators_timeout(self):
+        missing_actuators = self.get_missing_actuators()
+        self.timeout_signal.emit(missing_actuators)
+        logger.error('Timeout Fired during waiting for data to be acquired from: '
+                     f'{", ".join(missing_actuators)}')
 
     def grab_data(self, check_do_override=True, Naverage: Optional[int] = None, **kwargs) -> DataToExport:
         """Do a single grab of connected and selected detectors
@@ -406,18 +427,31 @@ class ModulesManager(QObject, ParameterManager):
             # wait for grab done signals to end
             QtWidgets.QApplication.processEvents()  # mandatory for the det_done_flag boolean to be modified in the corresponding method
             if time.perf_counter() - tzero > self.detector_timeout / 1000:
-                # match on origin (stable per-module id) rather than name, since a single
-                # detector emits one DataWithAxes per channel, each possibly named differently
-                received_origins = {dwa.origin for dwa in self.det_done_datas}
-                missing_detectors = [det_title for det_title in self.selected_detectors_name
-                                      if det_title not in received_origins]
-                self.timeout_signal.emit(missing_detectors)
+                missing_detectors = self.get_missing_detectors()
+                self.timeout_signal.emit(self.get_missing_detectors())
                 logger.error('Timeout Fired during waiting for data to be acquired from: '
                               f'{", ".join(missing_detectors)}')
                 break
             QThread.msleep(10)
 
         return self.det_done_datas
+
+    def get_missing_detectors(self) -> list[str]:
+        """match on origin (stable per-module id) rather than name, since a single
+        detector emits one DataWithAxes per channel, each possibly named differently
+        """
+        received_origins = {dwa.origin for dwa in self.det_done_datas}
+        return [det_title for det_title in self.selected_detectors_name
+                if det_title not in received_origins]
+
+    def get_missing_actuators(self) -> list[str]:
+        """ match on origin (stable per-module id) rather than name: dte_act's
+         `.name` holds the requested actuator's title, which is what gets
+         stamped as `.origin` on the DataActuator the actuator reports back
+        """
+        received_origins = {dwa.origin for dwa in self.move_done_positions}
+        return [act_title for act_title in self.selected_actuators_name
+                if act_title not in received_origins]
 
     def grab_datas(self, **kwargs):
         """ For back compatibility but use self.grab_data"""
@@ -568,6 +602,8 @@ class ModulesManager(QObject, ParameterManager):
 
         self.selected_actuators_name = [dwa.name for dwa in dte_act]
         if callback is not None:
+            self.actuators_timeout_timer.setInterval(int(self.actuator_timeout))
+            self.actuators_timeout_timer.start()
             self.move_done_signal.connect(callback)
             self.connect_actuators(True)
         self._move_actuators(dte_act, mode=mode,)
@@ -658,12 +694,7 @@ class ModulesManager(QObject, ParameterManager):
 
                 QtWidgets.QApplication.processEvents()  # mandatory for the det_done_flag boolean to be modified in the corresponding method
                 if time.perf_counter() - tzero > self.actuator_timeout:  # timeout in seconds
-                    # match on origin (stable per-module id) rather than name: dte_act's
-                    # `.name` holds the requested actuator's title, which is what gets
-                    # stamped as `.origin` on the DataActuator the actuator reports back
-                    received_origins = {dact.origin for dact in self.move_done_positions}
-                    missing_actuators = [dact.name for dact in dte_act
-                                          if dact.name not in received_origins]
+                    missing_actuators = self.get_missing_actuators()
                     self.timeout_signal.emit(missing_actuators)
                     logger.error('Timeout Fired during waiting for actuators to be moved: '
                                   f'{", ".join(missing_actuators)}')
@@ -705,9 +736,11 @@ class ModulesManager(QObject, ParameterManager):
                 self.move_done_positions.append(data_act)
 
             if len(self.move_done_positions) == len(self.actuators):
+                self.actuators_timeout_timer.stop()
                 self.move_done_flag = True
                 self.settings.child('test_actuator').setValue(self.move_done_flag)
                 self.move_done_signal.emit(self.move_done_positions)
+
         except Exception as e:
             logger.exception(str(e))
 
@@ -718,6 +751,7 @@ class ModulesManager(QObject, ParameterManager):
                 self.det_done_datas.append(data)
 
             if self._received_data == len(self.detectors):
+                self.detectors_timeout_timer.stop()
                 self.det_done_flag = True
                 self.settings.child('probe_data').setValue(self.det_done_flag)
                 self.det_done_signal.emit(self.det_done_datas)
