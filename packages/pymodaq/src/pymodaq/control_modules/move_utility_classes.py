@@ -1,6 +1,7 @@
 import numbers
 
 from pymodaq.control_modules.daq_move_ui.utils import UiType
+from pymodaq.control_modules.enums import MoveType
 
 HW_KIND = 'actuator'
 HW_SETTINGS_KEY = f'{HW_KIND}_settings'
@@ -33,8 +34,6 @@ from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 from pymodaq.control_modules.utils import (create_controller_param, create_remote_connection_params,
                                            ControllerStatus)
 from pymodaq.control_modules.plugin_base import PluginBase
-from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
-
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import ActuatorWorker
@@ -102,28 +101,25 @@ def comon_parameters(epsilon=config('pymodaq', 'actuator', 'epsilon_default'),
                 {'title': 'Offset factor:', 'name': 'offset', 'type': 'float', 'value': 0., 'default': 0.}]}]
 
 
-MOVE_COMMANDS = ['abs', 'rel', 'home']
-
-
 class MoveCommand:
     """Utility class to contain a given move type and value
 
     Attributes
     ----------
-    move_type: str
+    move_type: pymodaq.control_modules.enums.MoveType | str
         either:
 
-        * 'abs': performs an absolute action
-        * 'rel': performs a relative action
-        * 'home': find the actuator's home
+        * 'abs' or MoveType.ABS: performs an absolute action
+        * 'rel' or MoveType.REL: performs a relative action
+        * 'home or MoveType.HOME': find the actuator's home
     value: float
         the value the move should reach
 
     """
 
-    def __init__(self, move_type, value=0):
-        if move_type not in MOVE_COMMANDS:
-            raise ValueError(f'The allowed move types fro an actuator are {MOVE_COMMANDS}')
+    def __init__(self, move_type: MoveType | str, value=0):
+        if move_type not in MoveType.names():
+            raise ValueError(f'The allowed move types for an actuator are {MoveType.names()}')
         self.move_type = move_type
         self.value = value
 
