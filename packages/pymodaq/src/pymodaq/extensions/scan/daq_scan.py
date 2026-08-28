@@ -1266,7 +1266,6 @@ class DAQScanAcquisition(QObject):
     """
     scan_data_tmp = Signal(ScanDataTemp)
     status_sig = Signal(utils.ThreadCommand)
-    pause_acquisition_signal = Signal(bool)
     h5_data_array_ready_signal = Signal()
     scan_step_failed_signal = Signal(ScanStepError)
 
@@ -1287,6 +1286,7 @@ class DAQScanAcquisition(QObject):
 
         self.stop_scan_flag = False
         self.pause_scan_flag = False
+
         self.Naverage = self.scan_settings['scan_options', 'scan_average']
         self._ind_average: int = None
         self._ind_scan: int = None
@@ -1299,7 +1299,6 @@ class DAQScanAcquisition(QObject):
         self.h5_data_array_ready_signal.connect(self._on_h5data_ready)
         self.scan_step_failed_signal.connect(self._on_scan_step_failed)
 
-        self.timeout_scan_flag = False
 
         self.move_done_flag = False
         self.det_done_flag = False
@@ -1326,11 +1325,17 @@ class DAQScanAcquisition(QObject):
 
         elif command.command == "stop_acquisition":
             self.stop_scan_flag = True
+            if self.pause_scan_flag:
+                self.finalize_scan()
             self.pause_scan_flag = False
 
         elif command.command == "pause_acquisition":
             self.pause_scan_flag = command.attribute
-            self.pause_acquisition_signal.emit(command.attribute)
+            if not self.stop_scan_flag:
+                self.modules_manager.enable_modules(self.pause_scan_flag)
+                self._on_scan_pausing(self.pause_scan_flag)
+                if not self.pause_scan_flag:
+                    self.advance()
 
         elif command.command == "move_stages":
             self.modules_manager.move_actuators(command.attribute, polling=False)
@@ -1349,7 +1354,7 @@ class DAQScanAcquisition(QObject):
             logger.exception(str(e))
 
     def start_acquisition(self):
-        self.modules_manager.enable_modules(False)
+
         self.init_scan()
 
         self.advance()
@@ -1358,12 +1363,11 @@ class DAQScanAcquisition(QObject):
         try:
             self.modules_manager.connect_actuators(True)
             self.modules_manager.connect_detectors(True)
-            self.stop_scan_flag = False
-            self.timeout_scan_flag = False
 
-            Naxes = self.scanner.n_axes
-            scan_type = self.scanner.scan_type
-            self.navigation_axes = self.scanner.get_nav_axes()
+            self.stop_scan_flag = False
+            self.pause_scan_flag = False
+
+            self.modules_manager.enable_modules(False)
             self.status_sig.emit(utils.ThreadCommand("Update_Status",
                                                      attribute="Acquisition has started"))
             self._ind_average = 0
@@ -1373,10 +1377,22 @@ class DAQScanAcquisition(QObject):
             self.scan_step_failed_signal.emit(ScanStepError(f"Error at init step:\n"
                                                             f"{str(e)}"))
 
+    def _on_scan_pausing(self, pausing=True):
+        if pausing:
+            message = "Acquisition has been paused"
+        else:
+            message = "Acquisition resumed"
+
+        self.status_sig.emit(utils.ThreadCommand("Update_Status", attribute=message))
+        logger.info(message)
+
     def advance(self):
         try:
-            if self.stop_scan_flag or self.timeout_scan_flag:
+            if self.stop_scan_flag:
                 self.finalize_scan()
+
+            if self.pause_scan_flag:
+                return
 
             if self._ind_average == self.Naverage-1 and self._ind_scan == self.scanner.n_steps-1:
                 self.finalize_scan()
