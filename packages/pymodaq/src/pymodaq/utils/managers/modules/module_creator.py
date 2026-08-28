@@ -438,8 +438,8 @@ def build_menu_for_module_creation(masters: list[str]) -> dict:
     actuator_dict = {}
     for act_name in ACTUATOR_NAMES:
         actuator_class = find_actuator_class_from_name(act_name)
-        if actuator_class.get_class_axis() is not None and actuator_class.get_class_axis() != ['']:
-            axis_dict = {axis: master_slave for axis in actuator_class.get_class_axis()}
+        if actuator_class.get_class_axis_names() is not None and actuator_class.get_class_axis_names() != ['']:
+            axis_dict = {axis: master_slave for axis in actuator_class.get_class_axis_names()}
         else:
             axis_dict = {'default_axis': master_slave}
         actuator_dict[act_name] = axis_dict
