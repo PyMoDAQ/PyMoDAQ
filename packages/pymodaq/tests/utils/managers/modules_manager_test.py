@@ -6,10 +6,13 @@ from unittest.mock import patch, PropertyMock
 
 from qtpy.QtCore import QObject, Signal
 
+from pymodaq.control_modules.enums import MoveType
+from pymodaq.control_modules.thread_commands import ControlToHardwareMove
 from pymodaq_data.data import DataToExport, DataRaw, DataSource, DataDim
 
 from pymodaq.utils.data import DataActuator
 from pymodaq.utils.managers.modules import ModulesManager, ModuleType
+from pymodaq_utils.utils import ThreadCommand
 
 
 # ---------------------------------------------------------------------------
@@ -18,7 +21,7 @@ from pymodaq.utils.managers.modules import ModulesManager, ModuleType
 
 class MockDetector(QObject):
     grab_done_signal = Signal(DataToExport)
-    command_hardware = Signal(object)
+    command_hardware = Signal(ThreadCommand)
 
     def __init__(self, title: str, naverage: int = 1):
         super().__init__()
@@ -29,12 +32,18 @@ class MockDetector(QObject):
 class MockActuator(QObject):
     move_done_signal = Signal(DataActuator)
     current_value_signal = Signal(DataActuator)
-    command_hardware = Signal(object)
+    command_hardware = Signal(ThreadCommand)
 
     def __init__(self, title: str, current_value: float = 0.0):
         super().__init__()
         self.title = title
         self._current_value = DataActuator(title, data=current_value)
+
+        self.command_hardware.connect(self._queue_command)
+
+    def _queue_command(self, cmd: ThreadCommand):
+        if cmd.command == ControlToHardwareMove.MOVE_ABS:
+            self.move_done_signal.emit(cmd.attribute[0])
 
 
 # ---------------------------------------------------------------------------
@@ -297,6 +306,31 @@ class TestMoveDone:
         manager.move_done(make_actuator_response('X_axis', 9.0))  # duplicate
         assert len(manager.move_done_positions) == 1
         assert not manager.move_done_flag
+
+class TestMoveActuators:
+    def test_callback_called_when_done(self, qtbot, manager, actuators):
+        """."""
+        manager.selected_actuators_name = ['X_axis', 'Y_axis']
+        self.dte_back = DataToExport('None')
+
+        move_dte = DataToExport('move_dte', data=[
+            DataActuator(name='X_axis', data=[np.atleast_1d(1.0)], origin='X_axis'),
+            DataActuator(name='Y_axis', data=[np.atleast_1d(2.0)], origin='Y_axis')
+        ])
+        self.move_done = False
+
+        def callback(dte: DataToExport):
+            self.move_done = True
+            self.dte_back = dte
+
+        with qtbot.waitSignal(manager.move_done_signal, timeout=5000):
+            manager.move_actuators_with_callback(move_dte,
+                                                 mode=MoveType.ABS,
+                                                 callback=callback)
+        manager.forget_callback(callback)
+        assert self.move_done
+        assert self.dte_back[0] in move_dte
+        assert self.dte_back[1] in move_dte
 
 
 class TestGetDetDataList:
