@@ -282,6 +282,8 @@ class DAQ_Move_base(PluginBase):
         if cls.stage_names is not None and len(cls.stage_names) != []:
             #check for old and deprecated plugins
             axis = cls.stage_names
+            deprecation_msg("using 'stage_names' class attribute in plugins is deprecated, please use"
+                            "'_axis_names' instead" )
         if cls._axis_names is not None:
             axis = cls._axis_names
         return axis
