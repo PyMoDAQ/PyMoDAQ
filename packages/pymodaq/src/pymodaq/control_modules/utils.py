@@ -4,13 +4,14 @@ Created the 03/10/2022
 
 @author: Sebastien Weber
 """
+import functools
 import dataclasses
 from random import randint
 from typing import Optional, Type, Union, TYPE_CHECKING, Any
 from easydict import EasyDict as edict
 
 from qtpy import QtWidgets
-from qtpy.QtCore import Signal, QObject, Qt, Slot, QThread
+from qtpy.QtCore import Signal, QObject, Qt, Slot, QThread, SignalInstance
 
 from qt_themes import get_theme
 
@@ -124,30 +125,57 @@ class HardwareWorkerBase(QObject):
         return True
 
 
-class QThreadProxy(QObject):
+
+class QThreadProxy:
     """ Proxy around Qthread to attach/memorize hardware added to it
 
     Could not use inheritance as sometime, we have to use the main thread where methods cannot
-    be added
+    be added. Here inherits from Generic to let the type checker believe we are faced with a real QThread
     """
-    def __init__(self, thread: QThread = None, parent=None):
-        super().__init__(parent)
-        self.thread = thread if thread is not None else QThread()
+    def __init__(self, thread: QThread = None):
+        super().__init__()
+        self.thread: QThread = thread if thread is not None else QThread()
 
         self._hardwares = {}
+        if thread.__doc__:
+            self.__doc__ = f"{QThreadProxy.__doc__}\n\n=== Proxied Object Docs ===\n{thread.__doc__}"
 
-    def __getattr__(self, item):
-        if hasattr(self.thread, item):
-            return getattr(self.thread, item)
-        else:
-            raise AttributeError(f'{item} is not a known attribute of Qthread')
+
+    def __getattr__(self, name: str):
+        # Safely extract the thread reference from __dict__ to avoid any recursion risks
+        thread = self.__dict__.get("thread")
+        if thread is None:
+            raise AttributeError(f"'ThreadProxy' object has no attribute '{name}'")
+
+        # Delegate lookups (methods, signals, properties) to the underlying QThread
+        try:
+            attr = getattr(thread, name)
+            if isinstance(attr, SignalInstance):
+                return attr
+
+            if callable(attr):
+                # copy the docstring signature of the inner method to the returned attribute
+                @functools.wraps(attr)
+                def wrapper(*args, **kwargs):
+                    return attr(*args, **kwargs)
+                return wrapper
+            return attr
+
+        except AttributeError:
+            raise AttributeError(f"'QThread' object has no attribute '{name}'")
+
+    def __dir__(self):
+        """ Listing all attributes including the proxied Qthread."""
+        thread = self.__dict__.get("_thread")
+        proxy_attrs = set(self.__dict__.keys())
+        if thread is not None:
+            return sorted(proxy_attrs | set(dir(thread)))
+        return sorted(proxy_attrs)
+
 
     def start(self):
         """Convenience method"""
         self.thread.start()
-
-    def isRunning(self):
-        return self.thread.isRunning()
 
     def add_hardware(self, name: str, worker: HardwareWorkerBase):
             self._hardwares[name] = worker
@@ -208,7 +236,9 @@ class ControllerAndThread:
     """ Container for the control module worker thread and hardware plugin "controller" object and some related status
      """
     name: str = ''
-    thread: QThreadProxy | None = None  # the thread shared by a master and its slaves
+    thread: QThreadProxy | QThread | None = None  # the thread shared by a master and its slaves
+    # (should not be a Qthread but a proxy QThreadProxy (or None), here typing is added to cheat
+    # the IDE autocompletion tool!
     controller: Any = None  # the controller shared by a master and its slaves
     is_master: bool = True
     id: int = None  # integer as defined in the ExperimentManager (One Master and multiple Slaves share it)
@@ -744,13 +774,8 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
             hardware.status_sig[ThreadCommand].connect(self.thread_status)
             self._update_settings_signal[edict].connect(hardware.update_settings)
             self._connect_hardware_signals(hardware)
-            try:
-                self.controller_and_thread.thread.add_hardware(self.title, hardware) # to hold a reference
-            except AttributeError:  # in case thread is a regular Qthread (see PID)
-                if not hasattr(self.controller_and_thread.thread, '_hardwares'):
-                    self.controller_and_thread.thread._hardwares = {self.title: hardware}
-                else:
-                    self.controller_and_thread.thread._hardwares[self.title] = hardware
+            self.controller_and_thread.thread.add_hardware(self.title, hardware) # to hold a reference
+
 
             self.command_hardware.emit(self._ini_hardware_command())
             self._post_hardware_init()
