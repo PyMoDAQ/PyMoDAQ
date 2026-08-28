@@ -1518,12 +1518,15 @@ class DAQScanAcquisition(QObject):
         else:
             msg = 'Timeout during acquisition'
 
-        if self.scan_settings['scan_options', 'stop_on_timeout']:
-            self.timeout_scan_flag = True
+
 
         self.status_sig.emit(utils.ThreadCommand("Update_Status", attribute=msg))
         self.status_sig.emit(utils.ThreadCommand("Timeout", attribute=msg))
-        #self.advance()
+        logger.warning(msg)
+        if self.scan_settings['scan_options', 'stop_on_timeout']:
+            self.finalize_scan()
+        else:
+            self.advance()
 
     def finalize_scan(self):
         self.modules_manager.timeout_signal.disconnect()
@@ -1537,6 +1540,7 @@ class DAQScanAcquisition(QObject):
     def _on_scan_step_failed(self, exception: ScanStepError):
         logger.warning(exception)
         self.status_sig.emit(utils.ThreadCommand("Scan_done"))
+        self.finalize_scan()
 
 
 def main():
