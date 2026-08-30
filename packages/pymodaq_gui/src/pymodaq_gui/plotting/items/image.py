@@ -116,9 +116,8 @@ class UniformImageItem(PymodaqImage):
             self.image = image
             self._imageHasNans = None
             self._imageNanLocations = None
-            if self.image.shape[0] > 2**15-1 or self.image.shape[1] > 2**15-1:
-                if 'autoDownsample' not in kargs:
-                    kargs['autoDownsample'] = True
+            if (self.image.shape[0] > 2**15-1 or self.image.shape[1] > 2**15-1) and 'autoDownsample' not in kargs:
+                kargs['autoDownsample'] = True
             if shapeChanged:
                 self.prepareGeometryChange()
                 self.informViewBoundsChanged()
@@ -155,10 +154,16 @@ class UniformImageItem(PymodaqImage):
 
         if gotNewData:
             self.sigImageChanged.emit()
-        if self._defferedLevels is not None:
-            levels = self._defferedLevels
+        # Patching for people not using the last version of pyqtgraph
+        if hasattr(self, "_defferedLevels") and self._defferedLevels is not None:
+            self._deferredLevels = self._defferedLevels
             self._defferedLevels = None
-            self.setLevels((levels))
+            print("Warning: you are using an old version of pyqtgraph, please update to the last version")
+
+        if self._deferredLevels is not None:
+            levels = self._deferredLevels
+            self._deferredLevels = None
+            self.setLevels(levels)
 
 class SpreadImageItem(PymodaqImage):
     """
