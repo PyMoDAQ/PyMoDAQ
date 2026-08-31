@@ -34,8 +34,9 @@ class TestExtensions:
     def test_load(self, dashboard, ext):
         dashboard = dashboard
 
-        dashboard.load_extension(ext)
+        ext = dashboard.load_extension(ext)
         QtWidgets.QApplication.processEvents()
+        ext.quit_fun()
 
 
 

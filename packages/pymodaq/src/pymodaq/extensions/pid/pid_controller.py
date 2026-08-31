@@ -733,13 +733,11 @@ class DAQ_PID(CustomExt):
     def quit_fun(self):
         """ """
         try:
-
-
-            self.dashboard.remove_modules([setp for setp in self.model_class.setpoints_names])
-            super().quit_fun()
-
+            if self.model_class is not None:
+                self.dashboard.remove_modules([setp for setp in self.model_class.setpoints_names])
         except Exception as e:
             print(e)
+        super().quit_fun()
 
     def update_runner_setpoints(self):
         self.command_pid.emit(ThreadCommand("update_setpoints", self.setpoints))
