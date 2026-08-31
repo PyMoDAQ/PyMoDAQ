@@ -26,7 +26,7 @@ from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils import utils
 
-from pymodaq_data import data as data_mod, DataDistribution, DataDim
+from pymodaq_data import DataDistribution, DataDim, DataToExport, Axis
 from pymodaq_data.h5modules import data_saving
 
 from pymodaq_gui.parameter import ioxml, Parameter
@@ -67,7 +67,7 @@ class ScanStepError(Exception):
 
 class ScanDataTemp:
     """Convenience class to hold temporary data to be plotted in the live plots"""
-    def __init__(self, scan_index: int, indexes: Tuple[int], data: data_mod.DataToExport):
+    def __init__(self, scan_index: int, indexes: Tuple[int], data: DataToExport):
         self.scan_index = scan_index
         self.indexes = indexes
         self.data = data
@@ -793,7 +793,7 @@ class DAQScan(CustomExt):
         positions = [posx, posy]
         positions = positions[:self.scanner.n_axes]
         actuators = self.modules_manager.actuators
-        dte = data_mod.DataToExport(name="move_at")
+        dte = DataToExport(name="move_at")
         for ind, pos in enumerate(positions):
             dte.append(DataActuator(actuators[ind].title, data=float(pos), units=actuators[ind].units))
 
@@ -979,9 +979,9 @@ class DAQScan(CustomExt):
             if Naverage > 1:
                 for nav_axis in nav_axes:
                     nav_axis.index += 1
-                nav_axes.append(data_mod.Axis('Average',
-                                              data=np.linspace(0, Naverage - 1, Naverage),
-                                              index=0))
+                nav_axes.append(Axis('Average',
+                                     data=np.linspace(0, Naverage - 1, Naverage),
+                                     index=0))
 
             self.extended_saver.add_nav_axes(self.h5temp.raw_group, nav_axes)
 
@@ -1133,9 +1133,9 @@ class DAQScan(CustomExt):
                 scan_shape.extend(self.scanner.get_scan_shape())
                 for nav_axis in nav_axes:
                     nav_axis.index += 1
-                nav_axes.insert(0, data_mod.Axis('Average',
-                                                  data=np.linspace(0, Naverage - 1, Naverage),
-                                                  index=0))
+                nav_axes.insert(0, Axis('Average',
+                                        data=np.linspace(0, Naverage - 1, Naverage),
+                                        index=0))
             else:
                 scan_shape = self.scanner.get_scan_shape()
 
@@ -1465,7 +1465,8 @@ class DAQScanAcquisition(QObject):
             if self.Naverage > 1:
                 for nav_axis in nav_axes:
                     nav_axis.index += 1
-                nav_axes.append(data_mod.Axis('Average', data=np.linspace(0, self.Naverage - 1, self.Naverage),
+                nav_axes.append(Axis('Average',
+                                     data=np.linspace(0, self.Naverage - 1, self.Naverage),
                                               index=0))
             self.status_sig.emit(utils.ThreadCommand("add_nav_axes", nav_axes))
 
