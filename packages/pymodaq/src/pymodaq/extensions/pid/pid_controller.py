@@ -267,7 +267,7 @@ class DAQ_PID(CustomExt):
         if self.is_action_checked("ini_pid"):
             output_limits = self.get_output_limits()
             self.update_queues(refresh=True)
-            self.runner_thread = QThread()
+            self.runner_thread = QThread(self)
             pid_runner = PIDRunner(
                 self.model_class,
                 self.modules_manager,

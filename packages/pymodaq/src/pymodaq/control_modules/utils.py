@@ -132,9 +132,9 @@ class QThreadProxy:
     Could not use inheritance as sometime, we have to use the main thread where methods cannot
     be added. Here inherits from Generic to let the type checker believe we are faced with a real QThread
     """
-    def __init__(self, thread: QThread = None):
+    def __init__(self, thread: QThread = None, parent=None):
         super().__init__()
-        self.thread: QThread = thread if thread is not None else QThread()
+        self.thread: QThread = thread if thread is not None else QThread(parent)
 
         self._hardwares = {}
         if thread.__doc__:
@@ -760,7 +760,7 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
         try:
             hardware = self._create_hardware()
             if self.controller_and_thread.is_master:
-                self.controller_and_thread.thread = QThreadProxy()
+                self.controller_and_thread.thread = QThreadProxy(parent=self)
             else:
                 if self.controller_and_thread.thread is None or not self.controller_and_thread.thread.isRunning():
                     if self.ui is not None:

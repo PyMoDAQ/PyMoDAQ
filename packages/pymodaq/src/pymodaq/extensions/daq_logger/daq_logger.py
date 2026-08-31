@@ -289,7 +289,7 @@ class DAQ_Logger(CustomExt):
             self.exit_runner_thread()
             self.runner_thread = None
 
-        self.runner_thread = QThread()
+        self.runner_thread = QThread(self)
 
         log_acquisition = DAQ_Logging(self.settings, self.logger, self.modules_manager)
 
