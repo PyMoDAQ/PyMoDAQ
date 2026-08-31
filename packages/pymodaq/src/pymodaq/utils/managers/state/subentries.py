@@ -56,12 +56,14 @@ class StateSubEntryHandler(SubEntryHandler):
                  actuators: list[str] = None,
                  detectors: list[str] = None,
                  extensions: list[str] = None,
+                 dashboard: 'DashBoard' = None
                  ):
 
         super().__init__(model, settings)
         self.actuators: list[str] = actuators if actuators is not None else []
         self.detectors: list[str] = detectors if detectors is not None else []
         self.extensions: list[str] = extensions if extensions is not None else []
+        self.dashboard = dashboard
 
     @staticmethod
     def get_module(entry: SubEntry, dashboard: 'DashBoard') -> Union['DAQ_Move', 'DAQ_Viewer']:
@@ -103,20 +105,24 @@ class ActuatorValueSubEntryHandler(StateSubEntryHandler):
     def setup_widgets(self):
         self.actuator_cb = QtWidgets.QComboBox()
         self.actuator_cb.addItems(self.actuators)
-
-        self.value_sb = SpinBox(suffix=self.get_units_from_module_name(self.actuators[0]), siPrefix=False)
+        self.value_sb = SpinBox(suffix=self.get_units_from_module_name(self.actuators[0]), siPrefix=True)
         self.actuator_cb.currentTextChanged.connect(self.update_suffix_in_dialog)
 
         self.widget.layout().addWidget(self.actuator_cb)
         self.widget.layout().addWidget(self.value_sb)
 
     def get_units_from_module_name(self, actuator_name: str):
-        mods_settings = [group.child('name').value() for
-                        group in self.settings.child(ModuleType.Actuator).children()]
-        actuator_settings = self.settings.child(ModuleType.Actuator).children()[
-            mods_settings.index(actuator_name)]
 
-        return actuator_settings.child(ACTUATOR_SETTINGS_KEY, 'units').value()
+        module = self.dashboard.modules_manager.get_mod_from_name(actuator_name, ModuleType.Actuator)
+        if module is not None:
+            units = module.get_unit_to_display(module.units)
+        else:
+            mods_settings = [group.child('name').value() for
+                             group in self.settings.child(ModuleType.Actuator).children()]
+            actuator_settings = self.settings.child(ModuleType.Actuator).children()[
+                mods_settings.index(actuator_name)]
+            units = actuator_settings.child(ACTUATOR_SETTINGS_KEY, 'units').value()
+        return units
 
     def update_suffix_in_dialog(self, actuator_name: str):
         self.value_sb.setOpts(suffix=self.get_units_from_module_name(actuator_name))
