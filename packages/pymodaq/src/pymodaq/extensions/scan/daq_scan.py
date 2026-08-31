@@ -146,6 +146,7 @@ class DAQScan(CustomExt):
 
         self.navigator: Navigator = None
         self.scan_selector: ScanSelector = None
+        self.scan_acquisition: DAQScanAcquisition = None
 
         self.ind_scan = 0
         self.ind_average = 0
@@ -154,8 +155,6 @@ class DAQScan(CustomExt):
 
         self.curvilinear_values = []
         self.plot_colors = PlotColors()
-
-        self.runner_thread: QThread = None
 
         self.modules_manager.settings.child('probe_data').setOpts(expanded=False)
         self.modules_manager.settings.child('test_actuator').setOpts(expanded=False)
@@ -1145,25 +1144,8 @@ class DAQScan(CustomExt):
                 interval = self.h5saver.settings['backend', 'swmr_options', 'flush_interval']
                 self.h5saver.set_swmr_flush_interval(interval)
 
-            # mandatory to deal with multithreads
-            if self.runner_thread is not None:
-                self.command_daq_signal.disconnect()
-                self.exit_runner_thread()
-                self.runner_thread = None
-
-            self.runner_thread = QThread()
-
-            scan_acquisition = DAQScanAcquisition(self.settings, self.scanner, self.modules_manager,
-                                                  )
-
-            # if config('pymodaq', 'scan', 'scan_in_thread'):
-            #     scan_acquisition.moveToThread(self.runner_thread)
-            self.command_daq_signal[utils.ThreadCommand].connect(scan_acquisition.queue_command)
-            scan_acquisition.scan_data_tmp[ScanDataTemp].connect(self.save_temp_live_data)
-            scan_acquisition.status_sig[utils.ThreadCommand].connect(self.thread_status)
-
-            self.runner_thread.scan_acquisition = scan_acquisition
-            self.runner_thread.start()
+            if self.scan_acquisition is None:
+                self.ini_scan_acquisition()
 
             self.ui.set_action_enabled('ini_positions', False)
             self.ui.set_action_enabled('start', False)
@@ -1175,6 +1157,13 @@ class DAQScan(CustomExt):
             self.command_daq_signal.emit(utils.ThreadCommand('start_acquisition'))
             self.ui.set_permanent_status('Running acquisition')
             logger.info('Running acquisition')
+
+    def ini_scan_acquisition(self):
+        self.scan_acquisition = DAQScanAcquisition(self.settings, self.scanner, self.modules_manager,
+                                                   )
+        self.command_daq_signal[utils.ThreadCommand].connect(self.scan_acquisition.queue_command)
+        self.scan_acquisition.scan_data_tmp[ScanDataTemp].connect(self.save_temp_live_data)
+        self.scan_acquisition.status_sig[utils.ThreadCommand].connect(self.thread_status)
 
     def _init_live(self):
         Naverage = self.settings['scan_options', 'scan_average']
@@ -1330,11 +1319,15 @@ class DAQScanAcquisition(QObject):
     def set_ini_positions(self):
         """ Set the actuators's positions to their initial value as defined in the scanner  """
         self.modules_manager.move_actuators_with_callback(
-            self.scanner.positions_at(0), mode=MoveType.ABS, callback=self._on_ini_positions)
+            self.scanner.positions_at(0),
+            mode=MoveType.ABS,
+            callback=self._on_ini_positions)
 
-    def _on_ini_positions(self):
+    def _on_ini_positions(self, dte: DataToExport):
         self._update_status("Initial values of actuators reached!")
-
+        self.modules_manager.forget_callback(self._on_ini_positions,
+                                             module_type=ModuleType.Actuator,
+                                             disconnect_modules=True)
         if self.start_scan_flag:
             self.init_scan()
             self.advance()
