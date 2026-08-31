@@ -10,6 +10,8 @@ from qtpy.QtCore import QObject, Slot, QThread, Signal
 
 from simple_pid import PID
 
+from pymodaq.utils.managers.modules import ModuleType
+from pymodaq.utils.managers.modules.loader import PluginInfo
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import ThreadCommand, find_dict_in_list_from_key_val
 from pymodaq.utils.exceptions import PIDError
@@ -513,8 +515,15 @@ class DAQ_PID(CustomExt):
     def create_setp_actuators(self):
         # Now that we have the module manager, load PID if it is checked in managers
         try:
+            modules: list[PluginInfo] = []
             for setp in self.model_class.setpoints_names:
-                self.dashboard.add_move_from_extension(setp, "PID", PIDController(self, setp))
+                modules.append(PluginInfo(0,
+                                          setp,
+                                          'PID',
+                                          type=ModuleType.Actuator,
+                                          controller=PIDController(self, setp)
+                                          ))
+            self.dashboard.add_move_from_extension(modules=modules)
             self.set_action_enabled("create_setp_actuators", False)
 
         except Exception as e:
@@ -714,17 +723,7 @@ class DAQ_PID(CustomExt):
     def quit_fun(self):
         """ """
         try:
-            try:
-                self.exit_runner_thread()
-            except Exception as e:
-                print(e)
 
-            areas = self.dock_area.tempAreas[:]
-            for area in areas:
-                area.win.close()
-                QtWidgets.QApplication.processEvents()
-                QThread.msleep(1000)
-                QtWidgets.QApplication.processEvents()
 
             self.dashboard.remove_modules([setp for setp in self.model_class.setpoints_names])
             super().quit_fun()
@@ -907,7 +906,7 @@ class PIDRunner(QObject):
 
                 # # APPLY THE PID OUTPUT TO THE ACTUATORS
                 self.outputs_to_actuators: DataToActuators = (
-                    self.model_class.convert_output(self.outputs, dt=None)
+                    self.model_class.convert_output(self.outputs, dt=self.time_elapsed)
                 )
                 if self.clear_queues:
                     [queue_input.clear() for queue_input in self.queue_inputs]
@@ -972,15 +971,17 @@ class PIDRunner(QObject):
 if __name__ == "__main__":
     import sys
     from pymodaq_gui.qt_utils import mkQApp
-    from pymodaq.dashboard import create_load_dashboard
+    from pymodaq.dashboard import load_dashboard_with_arguments
     from pymodaq.utils.gui_utils.loader_utils import create_extension
 
     app = mkQApp("DAQ_PID")
 
-    win, dashboard = create_load_dashboard()
+    win, dashboard, _ = load_dashboard_with_arguments(show_dashboard=False,
+                                                      load_extension=False,
+                                                      )
     win.mainwindow.setVisible(False)
 
-    win_ext, scan = create_extension(dashboard, DAQ_PID)
-    win_ext.show()
+    win_ext, scan = create_extension(dashboard, DAQ_PID,
+                                     show_extension=True)
 
     sys.exit(app.exec())

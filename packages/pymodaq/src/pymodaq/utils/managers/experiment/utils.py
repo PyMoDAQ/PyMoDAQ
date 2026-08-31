@@ -1,6 +1,6 @@
 import random
 
-from pymodaq.control_modules.move_utility_classes import UiType
+from pymodaq.control_modules.daq_move_ui.utils import UiType
 from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.logger import set_logger, get_module_name

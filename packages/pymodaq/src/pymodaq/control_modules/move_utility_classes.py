@@ -1,5 +1,6 @@
 import numbers
 
+from pymodaq.control_modules.daq_move_ui.utils import UiType
 
 HW_KIND = 'actuator'
 HW_SETTINGS_KEY = f'{HW_KIND}_settings'
@@ -10,31 +11,28 @@ from typing import Union, List, Dict, TYPE_CHECKING, Optional, TypeVar
 
 from easydict import EasyDict as edict
 import numpy as np
-from qtpy import QtWidgets
-from qtpy.QtCore import QObject, Slot, Signal, QTimer
+from qtpy.QtCore import Slot, Signal, QTimer
 from pint.errors import OffsetUnitCalculusError
 
 
 from pymodaq_utils.utils import ThreadCommand, find_keys_from_val
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_utils.enums import BaseEnum, enum_checker, StrEnum
-from pymodaq_utils.serialize.mysocket import Socket
-from pymodaq_utils.serialize.serializer_legacy import DeSerializer, Serializer
+from pymodaq_utils.enums import BaseEnum
 
 from pymodaq_data.data import DataUnitError, Q_, Unit
 
-import pymodaq_gui.parameter.utils as putils
 from pymodaq_gui.parameter import Parameter
-from pymodaq_gui.parameter import ioxml
 from pymodaq_gui.qt_utils import mkQApp
 
-from pymodaq.utils.messenger import deprecation_msg
+from pymodaq_utils.warnings import deprecation_msg
+
 from pymodaq.utils.data import DataActuator
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusMove
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 from pymodaq.control_modules.utils import (create_controller_param, create_remote_connection_params,
-                                            ControllerStatus, PluginBase)
+                                           ControllerStatus)
+from pymodaq.control_modules.plugin_base import PluginBase
 from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 
 
@@ -76,12 +74,6 @@ class DataActuatorType(BaseEnum):
     """Enum for new or old style holding the value of the actuator"""
     float = 0
     DataActuator = 1
-
-class UiType(StrEnum):
-    NONE = 'None'
-    SIMPLE = 'Simple'
-    BINARY = 'Binary'
-    RELATIVE = 'Relative'
 
 
 def comon_parameters(epsilon=config('pymodaq', 'actuator', 'epsilon_default'),
@@ -229,34 +221,6 @@ def main(plugin_file, init=True, title='test'):
     sys.exit(app.exec())
 
 
-##########################
-# this below is a patch to the Parameter class to enable the use of back-compatible 'multiaxes' Parameter name
-
-from pyqtgraph.parametertree.parameterTypes import GroupParameter, registerParameterType
-
-class GroupParameterPatch(GroupParameter):
-
-    def __getitem__(self, names: Union[str, tuple[str,]]):
-        if isinstance(names, str):
-            names = (names)
-        try:
-            return super().__getitem__(names)
-        except KeyError:
-            if 'multiaxes' in names:
-                names = list(names)
-                names[names.index('multiaxes')] = 'controller'
-                names = tuple(names)
-            if 'multi_status' in names:
-                names = list(names)
-                names[names.index('multi_status')] = 'controller_status'
-                names = tuple(names)
-            return super().__getitem__(names)
-
-
-registerParameterType('group', GroupParameterPatch, override=True)
-###########################################
-
-
 
 class DAQ_Move_base(PluginBase):
     """ The base class to be inherited by all actuator modules
@@ -305,8 +269,12 @@ class DAQ_Move_base(PluginBase):
     params = []
 
     data_actuator_type = DataActuatorType.float  # for backcompatibility, but new plugins should have DataActuatorType.DataActuator
-    ui_type = UiType.NONE  # should precise/force what should be the ui type to be used with this actuator
-    has_encoder = True
+    ui_type = UiType.NONE  # should precise (force if possible) what should be the ui type to be used with this
+    # actuator. If NONE, PyMoDAQ will use the default ui type (see preferences).
+    has_encoder = True  # tell PyMoDAQ if this actuator is able to set an absolute position and read the controller
+    # value. If False, you should consider having ui_type = UiType.RELATIVE
+
+
     data_shape = (1,)  # expected shape of the underlying actuator's value (in general a float so shape = (1, ))
 
     def __init__(self, parent: Optional['ActuatorWorker'] = None,
@@ -338,7 +306,6 @@ class DAQ_Move_base(PluginBase):
 
         self.poll_timer = QTimer(self)
         self.poll_timer.setInterval(config('pymodaq', 'actuator', 'polling_interval_ms'))
-        self._poll_timeout = config('pymodaq', 'actuator', 'polling_timeout_s')
         self.poll_timer.timeout.connect(self.check_target_reached)
 
         self.ini_attributes()
@@ -434,8 +401,8 @@ class DAQ_Move_base(PluginBase):
 
         The property controller_units is deprecated please use the axis_unit property
         """
-        deprecation_msg('The property controller_units is deprecated please use the'
-                        'axis_unit property.')
+        deprecation_msg(f'The property controller_units is deprecated please use the'
+                        f'axis_unit property.')
         return self.axis_unit
 
     @controller_units.setter
@@ -688,28 +655,20 @@ class DAQ_Move_base(PluginBase):
           to subclass to transfer parameters to hardware
         """
 
-    def move_done(self, position: Optional[
-        DataActuator] = None):  # the position argument is just there to match some signature of child classes
-        """
-            | Emit a move done signal transmitting the float position to hardware.
-            | The position argument is just there to match some signature of child classes.
+    def move_done(self, position: Optional[DataActuator] = None):  # the position argument is just there to match some signature of child classes
+        """ Emit a move done signal transmitting the actuator's value to the GUI
 
-            =============== ========== =============================================================================
-             **Arguments**   **Type**  **Description**
-             *position*      float     The position argument is just there to match some signature of child classes
-            =============== ========== =============================================================================
-
+        The position argument is just there to match some signature of child classes.
         """
         if position is None:
-            if self.data_actuator_type.name == 'float':
+            if self.data_actuator_type == DataActuatorType.float:
                 position = DataActuator(self._title, data=self.get_actuator_value(),
                                         units=self.axis_unit)
             else:
                 position = self.get_actuator_value()
         if position.name != self._title:  # make sure the emitted DataActuator has the name of the real implementation
             #of the plugin
-            position = DataActuator(self._title, data=position.value(self.axis_unit),
-                                    units=self.axis_unit)
+            position.name = self._title
         self.move_done_signal.emit(position)
         self.move_is_done = True
 
@@ -814,7 +773,12 @@ class DAQ_Move_base(PluginBase):
             if self.move_is_done:
                 self.emit_status(ThreadCommand(ThreadStatus.UPDATE_STATUS, 'Move has been stopped'))
                 logger.info('Move has been stopped')
-            self.current_value = self.get_actuator_value()
+            try:
+                self.current_value = self.get_actuator_value()
+            except Exception as e:
+                logger.error(str(e))
+                self.poll_timer.stop()
+
             self.emit_value(self._current_value)
             logger.debug(f'Current value: {self._current_value}')
 

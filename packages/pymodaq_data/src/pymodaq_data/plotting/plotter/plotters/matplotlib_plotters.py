@@ -20,7 +20,10 @@ logger = set_logger(get_module_name(__file__))
 config = configmod.GlobalConfig()
 
 PLOT_COLORS = PlotColors()
-PLOT_COLORS.remove((255, 255, 255))  # remove white color as plotted on white background
+try:
+    PLOT_COLORS.remove((255, 255, 255))# remove white color as plotted on white background
+except ValueError:
+    pass  # this color is not in PLOT_COLORS (maybe because light style is used)
 PLOT_COLORS = PlotColors([(np.array(color) / 255).tolist() for color in PLOT_COLORS])  # translation to matplotlib
 
 
@@ -38,17 +41,25 @@ class Plotter(PlotterBase):
     def plot(self, data: Union[DataWithAxes, DataToExport], *args, viewer=None,
              **kwargs) -> plt.Figure:
         fig = plt.figure()
+        if 'linewidth' in kwargs:
+            linewidth = kwargs['linewidth']
+        else:
+            linewidth = self.linewidth
 
         if isinstance(data, DataWithAxes):
             self.n_columns = len(data) if data.dim.name == 'Data2D' else 1
-            self.plot_dwa(data, *args, **kwargs)
+            self.plot_dwa(data, *args, linewidth=linewidth, **kwargs)
         elif isinstance(data, DataToExport):
             self.n_columns = max([len(dwa) if dwa.dim.name == 'Data2D' else 1 for dwa in data])
             self.n_lines = len(data)
-            self.plot_dte(data, *args, **kwargs)
+            self.plot_dte(data, *args, linewidth=linewidth, **kwargs)
         plt.tight_layout()
         fig.suptitle(f'{data.name} taken the {datetime.datetime.fromtimestamp(data.timestamp)}')
         return fig
+
+    @property
+    def linewidth(self) -> int:
+        return config('data', 'plotting', 'linewidth')
 
     def plot_dwa(self, dwa: DataWithAxes, *args, **kwargs):
         if dwa.dim.name == 'Data1D':

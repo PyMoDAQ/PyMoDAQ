@@ -1,7 +1,7 @@
 from qtpy import QtWidgets, QtCore
 from pathlib import Path
 
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from pymodaq_gui import utils as gutils
 from pymodaq_utils.config import GlobalConfig as Config
@@ -18,6 +18,10 @@ from pymodaq_gui.parameter import utils as putils
 
 from pymodaq.extensions.data_mixer.model import get_models, DataMixerModel
 from pymodaq.extensions.data_mixer.utils import DataMixerConfig
+
+if TYPE_CHECKING:
+    from pymodaq.control_modules.daq_viewer import DAQ_Viewer
+
 
 logger = set_logger(get_module_name(__file__))
 
@@ -144,16 +148,17 @@ class DataMixer(CustomExt):
         self.modules_manager.grab_data(check_do_override=False)
 
     def create_computed_detectors(self):
-        try:
-            self.dashboard.add_det_from_extension('DataMixer', 'DAQ0D', 'DataMixer', self)
-            datamixer_mod = self.dashboard.modules_manager.get_mod_from_name('DataMixer', 'det')
-            datamixer_mod.settings.child(datamixer_mod._hw_settings_name, 'overridden_detectors').setOpts(
-                limits=self.modules_manager.selected_detectors_name)
-            self.set_action_enabled('create_computed_detectors', False)
-            #self.dashboard.override_det_from_extension(self.modules_manager.selected_detectors_name)
-        except Exception as e:
-            logger.exception(str(e))
-            pass
+        self.dashboard.add_det_from_extension('DataMixer', 'DAQ0D', 'DataMixer', self,
+                                              callback=self._on_detector_added)
+
+    def _on_detector_added(self, modules: list['DAQ_Viewer']):
+        self.dashboard.module_loader.all_instruments_added.disconnect(self._on_detector_added)
+        datamixer_mod = self.dashboard.modules_manager.get_mod_from_name('DataMixer', 'det')
+        datamixer_mod.settings.child(datamixer_mod._hw_settings_name, 'overridden_detectors').setOpts(
+            limits=self.modules_manager.selected_detectors_name)
+        self.set_action_enabled('create_computed_detectors', False)
+        #self.dashboard.override_det_from_extension(self.modules_manager.selected_detectors_name)
+
 
     def update_connect_detectors(self):
         try:
@@ -225,17 +230,16 @@ class DataMixer(CustomExt):
 def main():
     import sys
     from pymodaq_gui.qt_utils import mkQApp
-    from pymodaq.dashboard import create_load_dashboard
+    from pymodaq.dashboard import load_dashboard_with_arguments
     from pymodaq.utils.gui_utils.loader_utils import create_extension
 
     app = mkQApp('Data Mixer')
 
-    win, dashboard = create_load_dashboard()
+    win, dashboard, _ = load_dashboard_with_arguments(show_dashboard=False,
+                                                      load_extension=False,
+                                                      )
     win.mainwindow.setVisible(False)
-
-    win_ext, data_mixer = create_extension(dashboard, DataMixer)
-    win_ext.show()
-
+    win_ext, data_mixer = create_extension(dashboard, DataMixer, show_extension=True)
     sys.exit(app.exec())
 
 

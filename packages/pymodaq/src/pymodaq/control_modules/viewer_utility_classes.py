@@ -11,7 +11,8 @@ from pymodaq_utils.config import GlobalConfig, get_set_local_dir
 from pymodaq_utils.warnings import deprecation_msg
 from qtpy.QtCore import Signal
 
-from pymodaq.control_modules.utils import PluginBase, create_controller_param, create_remote_connection_params
+from pymodaq.control_modules.utils import create_controller_param, create_remote_connection_params
+from pymodaq.control_modules.plugin_base import PluginBase
 
 config = GlobalConfig()
 
@@ -83,7 +84,7 @@ def main(plugin_file=None, init=True, title='Testing'):
     from qtpy import QtWidgets
 
     from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
-    from pymodaq.control_modules.instruments import DAQTypesEnum
+    from pymodaq.control_modules.enums import DAQTypesEnum
     from pymodaq.utils.gui_utils import DockArea
     from pymodaq.utils.gui_utils.loader_utils import create_load_daq_viewer
 
