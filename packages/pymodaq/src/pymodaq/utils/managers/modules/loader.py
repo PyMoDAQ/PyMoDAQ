@@ -164,7 +164,10 @@ class ModuleLoader(QtCore.QObject):
 
     def _on_init_done(self, initialized: bool):
         self._init_timeout_timer.stop()
-        self._current_module.init_signal.disconnect(self._on_init_done)
+        try:
+            self._current_module.init_signal.disconnect(self._on_init_done)
+        except TypeError:
+            pass
 
         if self._current_plugin.is_master and initialized:
             # update the current plugin master with info on running thread and actual instrument controller
