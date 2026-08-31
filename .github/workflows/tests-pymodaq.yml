@@ -86,6 +86,8 @@ jobs:
       - name: Tests with ${{ matrix.os }} ${{ matrix.python-version }} ${{ matrix.qt-backend}}
         id: tests
         shell: bash
+        env:
+          QT_QPA_PLATFORM: offscreen  # Solution globale : force Qt à ne pas gérer de fenêtres réelles
         run: |
           # 1. Format workspace path properly
           workspace=$(echo "${{ github.workspace }}" | tr '\\' '/')
