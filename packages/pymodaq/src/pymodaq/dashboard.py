@@ -640,6 +640,61 @@ class DashBoard(CustomApp, LECOComponentMixin):
     def n_docks_viewer(self) -> int:
         return len(self._docks_viewer)
 
+    def add_det(self,
+                plug_name,
+                plug_type: DAQTypesEnum | str = DAQTypesEnum.DAQ0D,
+                plug_subtype: str = None) -> DAQ_Viewer:
+
+        det_mod_tmp = self.create_detector(plug_name, plug_type)
+
+        self.set_detector_type(det_mod_tmp, plug_type, plug_subtype)
+
+        self.add_detector(det_mod_tmp)
+        return  det_mod_tmp
+
+    def add_detector(self, detector: DAQ_Viewer):
+
+        # Create compact manager if needed
+        if self.compact_detector_manager is None:
+            self.compact_detector_manager = DetectorCompactDock(
+                "Detectors",
+                self.dockarea,
+                orientation=Qt.Orientation.Vertical,
+            )
+            self.compact_detector_manager.show("top")
+
+        # Create individual detector dock
+        self.docks_viewer.append(Dock(detector.title, size=(350, 350)))
+        if self.n_docks_viewer == 1:
+            self.dockarea.addDock(self.docks_viewer[-1], "bottom")
+            self.dockarea.moveDock(self.settings_dock, 'right', None)
+            self.settings_dock.setVisible(False)
+            self.dockarea.moveDock(self.rois_dock, 'right', None)
+            self.rois_dock.setVisible(False)
+            self.dockarea.moveDock(self.controls_dock, 'right', None)
+            self.controls_dock.setVisible(False)
+        else:
+            self.dockarea.addDock(self._docks_viewer[-1], "right", self._docks_viewer[-2])
+
+        self.compact_detector_manager.add_module(detector)
+        self._docks_viewer[-1].addWidget(detector.parent)
+        return detector
+
+    def create_detector(self, name: str, daq_type: DAQTypesEnum) -> DAQ_Viewer:
+        widget = QtWidgets.QWidget()
+
+        det_mod_tmp = DAQ_Viewer(
+            widget,
+            title=name,
+            daq_type=daq_type.name,
+            settings_dock=self.settings_dock,
+            rois_dock=self.rois_dock,
+        )
+        return det_mod_tmp
+
+    def set_detector_type(self, detector: DAQ_Viewer, daq_type: DAQTypesEnum, class_name: str):
+        detector.detector = SelectedModule(daq_type, class_name)  # will fire instrument_changed when done
+
     def move_utils_docks(self, position='right'):
         self.dockarea.moveDock(self.settings_dock, position, None)
         self.settings_dock.setVisible(False)
@@ -998,7 +1053,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
         super().update_status(txt, wait_time)
         self.status_signal.emit(txt)
         logger.info(txt)
-
 
 def load_dashboard_with_arguments(show_dashboard=True, load_extension=True):
 

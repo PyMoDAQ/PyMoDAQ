@@ -9,7 +9,7 @@ from typing import List, TYPE_CHECKING
 from qtpy import QtWidgets, QtCore
 from qtpy.QtCore import Signal
 
-from pymodaq.extensions.scan.scan_manager import ScanManager
+
 from pymodaq_gui.utils.shared_ui import MenuToolbarNames
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -21,6 +21,7 @@ from pymodaq_gui.utils.widgets import QLED
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerDispatcher
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
 from pymodaq_gui.parameter import ParameterTree
+
 
 if TYPE_CHECKING:
 
@@ -97,6 +98,7 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.settings_toolbox.addItem(self.scanner_widget, 'Scanner Settings')
 
     def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
+        from pymodaq.extensions.scan.manager.scan_manager import ScanManager
         self.add_menu(MenuToolbarNames.FILE, MenuToolbarNames.FILE.capitalize(), parent_menu=menubar)
         self.add_menu(MenuToolbarNames.TOOLS, MenuToolbarNames.TOOLS.capitalize(), parent_menu=menubar)
         self.add_menu('actions', 'Actions', parent_menu=menubar)

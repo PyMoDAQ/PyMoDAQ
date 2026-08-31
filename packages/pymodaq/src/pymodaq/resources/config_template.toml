@@ -30,7 +30,6 @@ timeout = 10000  # default duration in ms to wait for data to be acquirred
 allow_settings_edition = false  # during grab
 
 [scan]
-scan_in_thread = true
 show_popups = true
 default = "Scan2D"
 Naverage = 1  # minimum is 1

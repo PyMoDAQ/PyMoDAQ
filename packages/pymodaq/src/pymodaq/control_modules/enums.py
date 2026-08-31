@@ -1,5 +1,5 @@
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
-from pymodaq_utils.enums import BaseEnum
+from pymodaq_utils.enums import BaseEnum, StrEnum
 
 
 class DAQTypesEnum(BaseEnum):
@@ -36,3 +36,9 @@ class DAQTypesEnum(BaseEnum):
 
     def get_dim(self):
         return self.value.split('Viewer')[1].split('D')[0]
+
+
+class MoveType(StrEnum):
+    ABS = 'abs'
+    REL = 'rel'
+    HOME = 'home'
