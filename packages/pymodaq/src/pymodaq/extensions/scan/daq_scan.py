@@ -1533,9 +1533,7 @@ class DAQScanAcquisition(QObject):
         self.modules_manager.connect_detectors(False)
         self.modules_manager.enable_modules(True)
 
-        self.start_scan_flag = False
-        self.stop_scan_flag = False
-        self.pause_scan_flag = False
+        self.stop_scan_flag = True
 
         self._update_status("Acquisition has finished")
         self.status_sig.emit(utils.ThreadCommand("Scan_done"))
