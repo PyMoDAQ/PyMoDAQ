@@ -126,7 +126,7 @@ class DAQ_Viewer(ParameterControlModule):
         self.logger = set_logger(f'{logger.name}.{title}')
         self.logger.info(f'Initializing DAQ_Viewer: {title}')
 
-        super().__init__(listener_class=ViewerActorListener, **kwargs)
+        super().__init__(listener_class=ViewerActorListener, title=title, **kwargs)
 
         self.rois_dock: Dock = rois_dock
         daq_type = enum_checker(DAQTypesEnum, daq_type)
@@ -156,7 +156,6 @@ class DAQ_Viewer(ParameterControlModule):
 
         self.splash_sc = get_splash_sc()
 
-        self._title = title
 
         self._module_and_data_saver: Union[None,
                                           module_saving.DetectorSaver,
@@ -330,7 +329,7 @@ class DAQ_Viewer(ParameterControlModule):
         """
 
         if cmd.command == UiToMainViewer.INIT:
-            self.init_hardware(cmd.attribute[0])
+            self.do_init_hardware_signal.emit(cmd.attribute[0])  # usually connected to ini_hardware method, but could be bypassed (see Dashboard)
         elif cmd.command == UiToMainViewer.GRAB:
             self.grab_data(cmd.attribute, snap_state=False)
         elif cmd.command == UiToMainViewer.SNAP:
@@ -361,11 +360,6 @@ class DAQ_Viewer(ParameterControlModule):
 
     def _create_hardware(self):
         return DetectorWorker(self._title, self.settings, self.detector)
-
-    def _setup_hardware_thread(self, hardware):
-        if self.config('pymodaq', 'viewer', 'viewer_in_thread'):
-            hardware.moveToThread(self.controller_and_thread.thread)
-            self.controller_and_thread.thread.start()
 
     def _connect_hardware_signals(self, hardware):
         hardware.data_detector_sig[DataToExport].connect(self.show_data)
@@ -971,6 +965,9 @@ class DAQ_Viewer(ParameterControlModule):
 
             self._controller_and_thread.initialized = status.attribute["initialized"]
             self.init_signal.emit(self._controller_and_thread.initialized)
+
+            if self.ui is not None:
+                self.ui.set_init_color(self.get_color_from_status())
 
         elif status.command == ThreadStatusViewer.GRAB:
             self.grab_status.emit(True)

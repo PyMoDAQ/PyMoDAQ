@@ -132,29 +132,22 @@ def comon_parameters_fun(is_multiaxes=False, axes_names=None,
 
     Parameters
     ----------
-    is_multiaxes: bool
+    is_multiaxes: bool (deprecated, useless)
         If True, display the particular settings to define which axis the controller is driving
     axes_names: deprecated, use axis_names
-    axis_names: list of str or dictionnary of string as key and integer as value
+    axis_names: (deprecated, useless as the get_class_axis method is used now))
+        list of str or dictionnary of string as key and integer as value
         The string identifier of every axis the controller can drive
-    master: bool
+    master: bool (deprecated useless)
         If True consider this plugin has to init the controller, otherwise use an already initialized instance
     epsilon: float
         deprecated (< 5.0.0) no more used here
 
     """
-    if axes_names is not None and len(axis_names) == 0:
-        if len(axes_names) == 0:
-            axes_names = ['']
-        axis_names = axes_names
+    axis_names = DAQ_Move_base.get_class_axis_names(axis_names, axes_names)
 
-    is_multiaxes = len(axis_names) > 1 or is_multiaxes
     if isinstance(axis_names, list):
-        if len(axis_names) > 0:
-            axis_name = axis_names[0]
-        else:
-            axis_names = ['']
-            axis_name = ''
+        axis_name = axis_names[0]
     elif isinstance(axis_names, dict):
         axis_name = axis_names[list(axis_names.keys())[0]]
     else:
@@ -272,6 +265,31 @@ class DAQ_Move_base(PluginBase):
 
 
     data_shape = (1,)  # expected shape of the underlying actuator's value (in general a float so shape = (1, ))
+
+    @classmethod
+    def get_class_axis_names(cls, axis_names: list[str] = None,
+                             deprecated_names: list[str] = None) -> list[str]:
+        """ Convenience method to access the declared axis in a given plugin
+
+        Handles some old declaration style and eventual attribute as None or empty string
+        """
+        if axis_names is None:
+            axis_names = cls._axis_names
+        if deprecated_names is None:
+            deprecated_names = cls.stage_names
+
+        _axis_names = None
+        if axis_names is not None and len(deprecated_names) != 0:
+            #check for old and deprecated plugins
+            _axis_names = deprecated_names
+            deprecation_msg("using 'stage_names' class attribute in plugins is deprecated, please use"
+                            "'_axis_names' instead" )
+        if axis_names is not None and len(axis_names) != 0:
+            # this _axis_names attribute has priority hence eventual overwriting of stage_names
+            _axis_names = axis_names
+        else:
+            _axis_names = [''] if (_axis_names is None or _axis_names == []) else _axis_names
+        return _axis_names
 
     def __init__(self, parent: Optional['ActuatorWorker'] = None,
                  params_state: Optional[dict] = None,

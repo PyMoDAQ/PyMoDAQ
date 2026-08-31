@@ -1,3 +1,5 @@
+from typing import List, Union, TYPE_CHECKING, Optional, Sequence
+import numpy as np
 from typing import List, Union, TYPE_CHECKING, Optional, Sequence, Callable, Any
 
 from pymodaq.control_modules.enums import MoveType
@@ -48,6 +50,7 @@ class ModulesManager(QObject, ParameterManager):
         sublist of actuators
     """
     settings_name = 'ModulesManagerSettings'
+    modules_added_signal = Signal()
     detectors_changed = Signal(list)
     actuators_changed = Signal(list)
     det_done_signal = Signal(DataToExport)  # dte here contains DataWithAxes
@@ -105,7 +108,7 @@ class ModulesManager(QObject, ParameterManager):
 
         self.set_actuators(actuators, selected_actuators)
         self.set_detectors(detectors, selected_detectors)
-
+        
         self.detectors_timeout_timer = QTimer()
         self.detectors_timeout_timer.setSingleShot(True)
         self.detectors_timeout_timer.timeout.connect(self._on_detectors_timeout)
@@ -113,6 +116,24 @@ class ModulesManager(QObject, ParameterManager):
         self.actuators_timeout_timer = QTimer()
         self.actuators_timeout_timer.setSingleShot(True)
         self.actuators_timeout_timer.timeout.connect(self._on_actuators_timeout)
+
+    def on_hardware_initialization(self, do_init: bool, module: Union['DAQ_Move', 'DAQ_Viewer']):
+        """ Bypass method during initialization to assert whether a Master of some slave module already exists"""
+        if not module.master:
+            for other_module in self.modules_all:
+                if other_module.initialized_state and other_module.id == module.id and other_module.master:
+                    module.controller_and_thread.controller = other_module.controller_and_thread.controller
+                    module.controller_and_thread.thread = other_module.controller_and_thread.thread
+                    break
+        module.init_hardware(do_init)
+
+    def get_random_id(self) -> int:
+        """ get a random *id* not already used by a module"""
+        ids = [mod.id for mod in self.modules_all]
+        id = np.random.randint(1, 1000)
+        while id in ids:
+            id = np.random.randint(1, 1000)
+        return id
 
     @property
     def actuator_timeout(self):
@@ -196,6 +217,7 @@ class ModulesManager(QObject, ParameterManager):
         self.set_detectors(self.detectors_all + detectors, self.detectors)
         logger.debug(f"New modules added to the ModulesManager: {modules}"
                      f"Total list is: {self.modules_name}")
+        self.modules_added_signal.emit()
 
 
     def set_actuators(self, actuators: list['DAQ_Move'], selected_actuators: list['DAQ_Move']):
@@ -719,15 +741,6 @@ class ModulesManager(QObject, ParameterManager):
         self.move_done_flag = True
         self.det_done_flag = True
 
-    def poll_init(self, module: Union['DAQ_Move', 'DAQ_Viewer']):
-        tstart = time.perf_counter()
-        while not module.initialized_state:
-            QThread.msleep(1000)
-            QtWidgets.QApplication.processEvents()
-            if time.perf_counter() - tstart > config('pymodaq', 'control_modules', 'control_module_ini_polling'):  # timeout of 60sec
-                break
-        return module.initialized_state
-
     def order_positions(self, positions: DataToExport):
         """ Reorder the content of the DataToExport given the order of the selected actuators"""
         actuators = self.selected_actuators_name
@@ -787,3 +800,5 @@ if __name__ == '__main__':
     print(dashboard.modules_manager.get_probed_data_full_names())
 
     sys.exit(app.exec())
+
+
