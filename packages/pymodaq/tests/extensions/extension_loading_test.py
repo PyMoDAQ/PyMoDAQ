@@ -25,9 +25,6 @@ def dashboard(init_qt):
     # dashboard.preset_manager.execute_entry()
     yield dashboard, qtbot
     dashboard.quit_fun()
-    # CRITICAL: Let the main thread finish all deferred pyqtgraph signals
-    # block_signals=False ensures timers can still trigger
-    qtbot.wait_active(dashboard.parent)
 
     # Alternative: Flush the event loop multiple times to clear the queue
     for _ in range(10):
@@ -45,6 +42,8 @@ class TestExtensions:
         qtbot.addWidget(ext.tree)
         QtWidgets.QApplication.processEvents()
         ext.quit_fun()
+        # Let threads stop gracefully
+        QtWidgets.QApplication.processEvents()
 
 
 
