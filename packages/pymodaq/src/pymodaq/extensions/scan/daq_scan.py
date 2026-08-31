@@ -1284,34 +1284,17 @@ class DAQScanAcquisition(QObject):
         self.modules_manager = modules_manager
         self.scanner = scanner
 
-        self.stop_scan_flag = False
-        self.pause_scan_flag = False
+        self.start_scan_flag = False  # To assert the scan start command has been set
+        self.stop_scan_flag: bool = False  # To assert the scan stop command has been set
+        self.pause_scan_flag: bool = False  # To assert the scan pause command has been set
+        self.timeout_scan_flag = False  # for testing purpose in asserting timeout has been fired
 
         self.Naverage = self.scan_settings['scan_options', 'scan_average']
         self._ind_average: int = None
         self._ind_scan: int = None
 
-        self._current_done_positions: DataToExport = None
         self._current_dte_to_be_plotted: DataToExport = None
         self._current_indexes: tuple[int] = None
-
-        self.modules_manager.timeout_signal.connect(self.timeout)
-        self.h5_data_array_ready_signal.connect(self._on_h5data_ready)
-        self.scan_step_failed_signal.connect(self._on_scan_step_failed)
-
-
-        self.move_done_flag = False
-        self.det_done_flag = False
-        self._data_saved_flag = False
-
-        self.det_done_datas = data_mod.DataToExport('ScanData')
-
-        scan_shape = self.scanner.get_scan_shape()
-        if self.Naverage > 1:
-            self.scan_shape = [self.Naverage]
-            self.scan_shape.extend(scan_shape)
-        else:
-            self.scan_shape = scan_shape
 
     def queue_command(self, command: utils.ThreadCommand):
         """Process the commands sent by the main ui
@@ -1321,7 +1304,8 @@ class DAQScanAcquisition(QObject):
         command: utils.ThreadCommand
         """
         if command.command == "start_acquisition":
-            self.start_acquisition()
+            self.start_scan_flag = True
+            self.set_ini_positions()
 
         elif command.command == "stop_acquisition":
             self.stop_scan_flag = True
@@ -1341,35 +1325,34 @@ class DAQScanAcquisition(QObject):
             self.modules_manager.move_actuators(command.attribute, polling=False)
 
         elif command.command == "data_saved":
-            self._data_saved_flag = True
             self.h5_data_array_ready_signal.emit()
 
     def set_ini_positions(self):
-        """ Set the actuators's positions totheir initial value as defined in the scanner  """
-        try:
-            self.modules_manager.move_actuators_with_callback(
-                self.scanner.positions_at(0), mode=MoveType.ABS)
+        """ Set the actuators's positions to their initial value as defined in the scanner  """
+        self.modules_manager.move_actuators_with_callback(
+            self.scanner.positions_at(0), mode=MoveType.ABS, callback=self._on_ini_positions)
 
-        except Exception as e:
-            logger.exception(str(e))
+    def _on_ini_positions(self):
+        self._update_status("Initial values of actuators reached!")
 
-    def start_acquisition(self):
-
-        self.init_scan()
-
-        self.advance()
+        if self.start_scan_flag:
+            self.init_scan()
+            self.advance()
 
     def init_scan(self):
         try:
             self.modules_manager.connect_actuators(True)
             self.modules_manager.connect_detectors(True)
+            self.modules_manager.timeout_signal.connect(self.timeout)
+            self.h5_data_array_ready_signal.connect(self._on_h5data_ready)
+            self.scan_step_failed_signal.connect(self._on_scan_step_failed)
 
             self.stop_scan_flag = False
             self.pause_scan_flag = False
+            self.timeout_scan_flag = False
 
             self.modules_manager.enable_modules(False)
-            self.status_sig.emit(utils.ThreadCommand("Update_Status",
-                                                     attribute="Acquisition has started"))
+            self._update_status("Acquisition has started")
             self._ind_average = 0
             self._ind_scan = -1
 
@@ -1383,7 +1366,7 @@ class DAQScanAcquisition(QObject):
         else:
             message = "Acquisition resumed"
 
-        self.status_sig.emit(utils.ThreadCommand("Update_Status", attribute=message))
+        self._update_status(message)
         logger.info(message)
 
     def advance(self):
@@ -1434,7 +1417,7 @@ class DAQScanAcquisition(QObject):
             self.modules_manager.forget_callback(self._on_move_done,
                                                  module_type=ModuleType.Actuator,
                                                  disconnect_modules=False)
-            self._current_done_positions = self.modules_manager.order_positions(move_dte)
+            self.modules_manager.order_positions(move_dte)
 
             QTimer.singleShot(int(self.scan_settings['time_flow', 'wait_time_between']),
                               self.grab_data)
@@ -1473,16 +1456,12 @@ class DAQScanAcquisition(QObject):
         """
 
         """
-        self._data_saved_flag = False
-
         self._current_indexes = self.scanner.get_indexes_from_scan_index(self._ind_scan)
         if self.Naverage > 1:
             self._current_indexes = [self._ind_average] + list(self._current_indexes)
         self._current_indexes = tuple(self._current_indexes)
         if self._ind_scan == 0:
-            self.status_sig.emit(utils.ThreadCommand(
-                "Update_Status",
-                attribute=("Creating the arrays nodes in the h5file, please be patient", 0)))
+            self._update_status("Creating the arrays nodes in the h5file, please be patient")
             QThread.msleep(50)
             nav_axes = self.scanner.get_nav_axes()
             if self.Naverage > 1:
@@ -1502,7 +1481,6 @@ class DAQScanAcquisition(QObject):
             self._current_dte_to_be_plotted = self._current_dte_to_be_plotted.get_data_with_naxes_lower_than(n_nav_axis_selection)  # maximum Data2D included nav indexes
 
         # async saving command sent to all concerned detector control modules
-        # because async if the first initialization takes a long time, the next async move will timeout therefore wait for the _data_saved_flag to be run
         self.status_sig.emit(
             utils.ThreadCommand("add_data",
                                 dict(indexes=self._current_indexes, distribution=self.scanner.distribution,
@@ -1510,8 +1488,6 @@ class DAQScanAcquisition(QObject):
                                      extra_data=self._current_dte_to_be_plotted if self.scanner.scanner.do_process_data else None,)))
 
     def _on_h5data_ready(self):
-
-        self.det_done_flag = True
         self.scan_data_tmp.emit(ScanDataTemp(self._ind_scan,
                                              self._current_indexes,
                                              self._current_dte_to_be_plotted))
@@ -1541,7 +1517,8 @@ class DAQScanAcquisition(QObject):
             msg = f'Timeout during acquisition, no answer received from: {", ".join(missing_modules)}'
         else:
             msg = 'Timeout during acquisition'
-        self.status_sig.emit(utils.ThreadCommand("Update_Status", attribute=msg))
+        self._update_status(msg)
+        self.timeout_scan_flag = True
         self.status_sig.emit(utils.ThreadCommand("Timeout", attribute=msg))
         logger.warning(msg)
         if self.scan_settings['scan_options', 'stop_on_timeout']:
@@ -1549,15 +1526,25 @@ class DAQScanAcquisition(QObject):
         else:
             self.advance()
 
-    def finalize_scan(self):
+    def _update_status(self, msg: str):
+        """ convenience method to update the status signal """
+        self.status_sig.emit(utils.ThreadCommand("Update_Status", attribute=msg))
+        logger.info(msg)
 
-        self.modules_manager.timeout_signal.disconnect()
+    def finalize_scan(self):
+        self.h5_data_array_ready_signal.disconnect(self._on_h5data_ready)
+        self.scan_step_failed_signal.disconnect(self._on_scan_step_failed)
+
+        self.modules_manager.timeout_signal.disconnect(self.timeout)
         self.modules_manager.connect_actuators(False)
         self.modules_manager.connect_detectors(False)
         self.modules_manager.enable_modules(True)
 
-        self.status_sig.emit(utils.ThreadCommand("Update_Status",
-                                                 attribute="Acquisition has finished"))
+        self.start_scan_flag = False
+        self.stop_scan_flag = False
+        self.pause_scan_flag = False
+
+        self._update_status("Acquisition has finished")
         self.status_sig.emit(utils.ThreadCommand("Scan_done"))
 
     def _on_scan_step_failed(self, exception: ScanStepError):
