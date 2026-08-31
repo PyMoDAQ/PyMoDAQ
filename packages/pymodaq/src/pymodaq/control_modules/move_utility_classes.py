@@ -144,7 +144,7 @@ def comon_parameters_fun(is_multiaxes=False, axes_names=None,
         deprecated (< 5.0.0) no more used here
 
     """
-    axis_names = DAQ_Move_base.get_class_axis_names()
+    axis_names = DAQ_Move_base.get_class_axis_names(axis_names, axes_names)
 
     if isinstance(axis_names, list):
         axis_name = axis_names[0]
@@ -267,26 +267,29 @@ class DAQ_Move_base(PluginBase):
     data_shape = (1,)  # expected shape of the underlying actuator's value (in general a float so shape = (1, ))
 
     @classmethod
-    def get_class_axis_names(cls) -> list[str]:
+    def get_class_axis_names(cls, axis_names: list[str] = None,
+                             deprecated_names: list[str] = None) -> list[str]:
         """ Convenience method to access the declared axis in a given plugin
 
         Handles some old declaration style and eventual attribute as None or empty string
         """
-        axis_names = None
-        if cls.stage_names is not None and len(cls.stage_names) != []:
+        if axis_names is None:
+            axis_names = cls._axis_names
+        if deprecated_names is None:
+            deprecated_names = cls.stage_names
+
+        _axis_names = None
+        if axis_names is not None and len(deprecated_names) != 0:
             #check for old and deprecated plugins
-            axis_names = cls.stage_names
+            _axis_names = deprecated_names
             deprecation_msg("using 'stage_names' class attribute in plugins is deprecated, please use"
                             "'_axis_names' instead" )
-        if cls._axis_names is not None:
+        if axis_names is not None and len(axis_names) != 0:
             # this _axis_names attribute has priority hence eventual overwriting of stage_names
-            if cls._axis_names == []:
-                axis_names = ['']
-            else:
-                axis_names = cls._axis_names
+            _axis_names = axis_names
         else:
-            axis_names = [''] if axis_names is None else axis_names
-        return axis_names
+            _axis_names = [''] if (_axis_names is None or _axis_names == []) else _axis_names
+        return _axis_names
 
     def __init__(self, parent: Optional['ActuatorWorker'] = None,
                  params_state: Optional[dict] = None,
