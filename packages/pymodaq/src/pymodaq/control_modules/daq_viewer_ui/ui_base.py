@@ -267,6 +267,9 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
                                             [checked,
                                              self.selector.selected_module]))
 
+    def quit_fun(self):
+        self.command_sig.emit(ThreadCommand(UiToMainViewer.QUIT))
+
     def _enable_detchoices(self, enable=True):
         self.get_action('selector').widget.setEnabled(enable)
 

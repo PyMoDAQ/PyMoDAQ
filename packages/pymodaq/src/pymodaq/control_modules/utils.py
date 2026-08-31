@@ -108,6 +108,8 @@ class HardwareWorkerBase(QObject):
         status = self.close()
         self.status_sig.emit(ThreadCommand(ThreadStatus.CLOSE, [status]))
 
+    def close(self):
+        raise NotImplementedError
 
     def queue_command(self, command) -> bool:
         """Handle commands shared by all hardware workers.
