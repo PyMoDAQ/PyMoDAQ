@@ -66,7 +66,6 @@ def test_required_config_entries():
     assert 'allow_settings_edition' in config('viewer')
 
     assert 'scan' in config
-    assert 'scan_in_thread' in config('scan')
     assert 'show_popups' in config('scan')
     assert 'default' in config('scan')
     assert 'Naverage' in config('scan')

@@ -1289,7 +1289,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.status_signal.emit(txt)
         logger.info(txt)
 
-
 def load_dashboard_with_arguments(show_dashboard=True, load_extension=True):
 
     extensions_names = ExtensionEnum.values()
