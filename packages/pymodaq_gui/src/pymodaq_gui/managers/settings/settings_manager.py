@@ -76,7 +76,7 @@ class SettingsManager(ManagerBase):
                              manager=self,
                              handler_id=handler_id))
 
-
+        self.settings_to_apply: WidgetWithLabelTitle = None
 
     def get_entry_folder(self, **kwargs_to_entry_folder) -> Path:
         """Get the folder path where the managed entries are stored."""

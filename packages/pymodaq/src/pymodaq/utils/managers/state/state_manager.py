@@ -260,7 +260,12 @@ class StateManager(SettingsManager):
 
     def setup_actions(self):
         super().setup_actions()
-
+        self.add_action('sequential_execution', 'Sequential Execution',
+                        'format_list_numbered',
+                        tip='if green (unchecked) perform a sequential execution else parallel',
+                        checkable=True, icon_color=self.get_theme().green,
+                        icon_checked_color=self.get_theme().red,
+                        before=self.get_action(ManagerActions.EXECUTE),)
         self.create_dashboard_toolbar(add_dashboard=__name__ == '__main__',
                                       add_experiment=True, add_state=False, add_break=False)
         self.experiment_manager.enable_actions(True)
