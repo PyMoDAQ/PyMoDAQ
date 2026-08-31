@@ -25,20 +25,11 @@ if TYPE_CHECKING:
     from pymodaq.extensions.scan.manager.scan_manager import ScanManager
 
 
-@SerializableFactory.register_decorator()
-@dataclass
-class ScanSubEntry(SubEntry):
-    """ Depending on the module or modules this manager handles,
-    the attributes below should be completed as well as the serialization/deserialization
-    """
-    pass
-
-
 class SubEntryHandler(SubEntryHandler):
-    new_entry = QtCore.Signal(ScanSubEntry)
+    new_entry = QtCore.Signal(SubEntry)
 
     @staticmethod
-    def get_module(entry: ScanSubEntry, *args, **kwargs) -> ParameterManager:
+    def get_module(entry: SubEntry, *args, **kwargs) -> ParameterManager:
         """ Get the ParameterManager module on which the settings will be applied
 
         To be reimplemented
@@ -46,11 +37,11 @@ class SubEntryHandler(SubEntryHandler):
         raise NotImplementedError
 
     @classmethod
-    def create_subentry(cls, manager: 'ScanManager') -> ScanSubEntry:
+    def create_subentry(cls, manager: 'ScanManager') -> SubEntry:
         pass
 
     @classmethod
-    def update(cls, manager: 'ScanManager', entry: ScanSubEntry) -> None:
+    def update(cls, manager: 'ScanManager', entry: SubEntry) -> None:
         """ update the manager according to the loading of the SubEntry"""
         pass
 
@@ -61,7 +52,7 @@ class ScanSettingsEntryHandler(SubEntryHandler):
     handler_name = 'scan_settings'
     use_dialog = False
 
-    def execute_subentry(self, entry: ScanSubEntry,
+    def execute_subentry(self, entry: SubEntry,
                          manager: 'ScanManager', *args, **kwargs):
         """ Execute the given subentry
 
@@ -89,17 +80,17 @@ class ControlModulesEntryHandler(SubEntryHandler):
         super().__init__(*args, **kwargs)
 
     @classmethod
-    def create_subentry(cls, manager: 'ScanManager') -> ScanSubEntry:
+    def create_subentry(cls, manager: 'ScanManager') -> SubEntry:
         modules_settings = Parameter.create(name='modules', type='group', children=[
             manager.modules_manager.settings.child('detectors').saveState(),
             manager.modules_manager.settings.child('actuators').saveState(),
         ])
-        return ScanSubEntry(cls.handler_name,
+        return SubEntry(cls.handler_name,
                             'ModuleManager',
                             ParameterWithPath(modules_settings))
 
     @classmethod
-    def update(cls, manager: 'ScanManager', entry: ScanSubEntry):
+    def update(cls, manager: 'ScanManager', entry: SubEntry):
         """ update the manager according to the loading of the SubEntry"""
         module_from_daq_scan = manager.daq_scan.modules_manager
         module_from_manager = manager.modules_manager
@@ -109,7 +100,7 @@ class ControlModulesEntryHandler(SubEntryHandler):
                                  mod in value['all_items']]
             module_from_manager.settings[child.name()] = value
 
-    def execute_subentry(self, entry: ScanSubEntry,
+    def execute_subentry(self, entry: SubEntry,
                          manager: 'ScanManager', *args, **kwargs):
         """ Execute the given subentry
 
@@ -144,23 +135,23 @@ class ScannnerEntryHandler(SubEntryHandler):
         super().__init__(*args, **kwargs)
 
     @classmethod
-    def create_subentry(cls, manager: 'ScanManager') -> ScanSubEntry:
+    def create_subentry(cls, manager: 'ScanManager') -> SubEntry:
         scanner = manager.scanner
         scan_settings = Parameter.create(name='type_subtype', type='group', children=[
             scanner.settings.child('scan_type').saveState(),
             scanner.settings.child('scan_sub_type').saveState(),
             scanner.scanner.settings.saveState(),
         ])
-        return ScanSubEntry(cls.handler_name,
+        return SubEntry(cls.handler_name,
                             'Scanner',
                             ParameterWithPath(scan_settings))
 
     @classmethod
-    def update(cls, manager: 'ScanManager', entry: ScanSubEntry):
+    def update(cls, manager: 'ScanManager', entry: SubEntry):
         """ update the manager according to the loading of the SubEntry"""
         pass
 
-    def execute_subentry(self, entry: ScanSubEntry,
+    def execute_subentry(self, entry: SubEntry,
                          manager: 'ScanManager', *args, **kwargs):
         """ Execute the given subentry
 
@@ -202,18 +193,18 @@ class StartScanEntryHandler(SubEntryHandler):
         super().__init__(*args, **kwargs)
 
     @classmethod
-    def create_subentry(cls, manager: 'ScanManager') -> ScanSubEntry:
+    def create_subentry(cls, manager: 'ScanManager') -> SubEntry:
         start_settings = Parameter.create(name='start', type='bool',
                                          value=manager.is_action_checked('start_scan'))
-        return ScanSubEntry(cls.handler_name,
+        return SubEntry(cls.handler_name,
                             'StartScan',
                             ParameterWithPath(start_settings))
 
-    def update_subentry(self, manager: 'ScanManager', entry: ScanSubEntry):
+    def update_subentry(self, manager: 'ScanManager', entry: SubEntry):
         """ update the manager according to the loading of the SubEntry"""
         manager.set_action_checked('start_scan', entry.setting.value())
 
-    def execute_subentry(self, entry: ScanSubEntry,
+    def execute_subentry(self, entry: SubEntry,
                          manager: 'ScanManager', *args, **kwargs):
         """ Execute the given subentry
 

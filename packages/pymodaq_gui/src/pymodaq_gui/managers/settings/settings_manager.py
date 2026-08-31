@@ -12,6 +12,7 @@ from qtpy.QtCore import QModelIndex
 from pymodaq_gui.utils.widgets.widget_with_label_title import WidgetWithLabelTitle
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config, get_set_local_dir, get_set_config_dir
+from pymodaq_utils.utils import capitalize
 
 from pymodaq_gui.parameter import Parameter, ioxml
 from pymodaq_gui.parameter.utils import ParameterWithPath
@@ -23,7 +24,7 @@ from pymodaq_gui.managers.settings.subentries import (
 from pymodaq_gui.managers.settings.utils import (
     SettingsManagerParameterTree, SettingsManagerModel, SettingsManagerTableView,
     settings_manager_subentries_from_path, ParameterDelegate,
-    EntryActions, ModuleType)
+    EntryActions)
 
 
 from pymodaq_gui.managers.manager_base import ManagerBase, ManagerActions
@@ -65,19 +66,17 @@ class SettingsManager(ManagerBase):
 
     def __init__(self,
                  dashboard: 'DashBoard' = None,
-                 subentry_type: type[SubEntry]=None,
                  handler_id='settings'):
 
         self.subentry_handler: SubEntryHandler = None
-        if subentry_type is None:
-            subentry_type = SubEntry
         self.config_model = SettingsManagerModel(save_path=self.get_entry_folder())
 
         super().__init__(dashboard=dashboard,
                          tree=SettingsManagerParameterTree(
                              manager=self,
-                             subentry_type=subentry_type,
                              handler_id=handler_id))
+
+
 
     def get_entry_folder(self, **kwargs_to_entry_folder) -> Path:
         """Get the folder path where the managed entries are stored."""
@@ -88,7 +87,7 @@ class SettingsManager(ManagerBase):
 
     @staticmethod
     def format_subentries(entries: list[SubEntry]):
-        return [(f'{entry.entry_type.capitalize()} for '
+        return [(f'{capitalize(entry.entry_type)} for '
                  f'{entry.module_name} - '
                  f'{entry.setting.parameter.title()} '
                  f'{entry.setting.value()}') for entry in entries]
@@ -106,7 +105,7 @@ class SettingsManager(ManagerBase):
         config_subentries = settings_manager_subentries_from_path(entry_path)
 
         if len(config_subentries) > 0:
-            self.show_subentries(config_subentries, f'Loading {self.entry_type.capitalize()}: {self.entry}')
+            self.show_subentries(config_subentries, f'Loading {capitalize(self.entry_type)}: {self.entry}')
 
         for ind, entry in enumerate(config_subentries):
             subentry_handler = handler_factory.get_subentry_handler(entry.entry_type)(
@@ -313,7 +312,7 @@ class SettingsManager(ManagerBase):
             self.set_drag_mode_recursive(child, movable, drop_enabled)
 
     @staticmethod
-    def get_module_from_param(param: ParameterWithPath) -> Union[str]:
+    def get_module_from_param(param: ParameterWithPath) -> str:
         """ should return the module name from data bundled in the ParameterWithPath
 
         To be reimplemented
@@ -331,8 +330,9 @@ class SettingsManager(ManagerBase):
             try:
                 module = self.get_module_from_param(ParameterWithPath(current_setting))
             except KeyError:
-                module = ModuleType.NONE.value
-            entry = SubEntry(self.settings_handler, module,
+                module = 'None'
+            entry = SubEntry(self.settings_handler,
+                             module,
                              ParameterWithPath(current_setting))
             entries = self.config_model.split_entry(entry)
             for entry in entries:

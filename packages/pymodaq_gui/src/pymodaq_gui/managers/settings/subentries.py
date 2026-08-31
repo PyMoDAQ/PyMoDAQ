@@ -6,6 +6,7 @@ from typing import Callable, TYPE_CHECKING, Union, Tuple
 from qtpy import QtWidgets, QtCore
 from serializall import SerializableFactory
 
+from pymodaq.utils.managers.modules import ModuleType
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.abstract import abstract_attribute
@@ -46,6 +47,7 @@ class SubEntry:
 
     def __eq__(self, other: 'SubEntry'):
         return (self.entry_type == other.entry_type and
+                self.module_name == other.module_name and
                 self.setting == other.setting)
 
     def __repr__(self):
@@ -92,14 +94,13 @@ class SubEntryHandler(QtCore.QObject):
     def __init__(self,
                  model: 'SettingsManagerModel',
                  settings: Parameter,
-                 manager: 'SettingsManager',
+                 *args,
                  **kwargs
                  ):
 
         super().__init__()
         self.settings: Parameter = settings
         self.model: SettingsManagerModel = model
-        self.manager = manager
 
     @staticmethod
     def get_module(entry: SubEntry, *args, **kwargs) -> ParameterManager:

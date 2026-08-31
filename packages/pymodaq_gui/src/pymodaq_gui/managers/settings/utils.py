@@ -9,6 +9,7 @@ from qtpy.QtWidgets import QDialogButtonBox, QDialog
 
 from pymodaq_gui.managers.settings.subentries import SubEntryHandlerFactory, SubEntryHandlerTypes, \
     SubEntry
+from pymodaq_utils.utils import capitalize
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.array_manipulation import are_elements_contiguous
@@ -24,7 +25,7 @@ from pymodaq_gui import utils as gutils
 
 from serializall import SerializableFactory
 
-from pymodaq.utils.managers.modules import ModuleType
+
 import copy
 
 logger = set_logger(get_module_name(__file__))
@@ -186,7 +187,7 @@ class SettingsManagerModel(TableModel):
             if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
                 entry: SubEntry = self._data[index.row()]
                 if index.column() == 0:
-                    dat = entry.entry_type.capitalize()
+                    dat = capitalize(entry.entry_type)
                 elif index.column() == 1:
                     dat = entry.module_name
                 elif index.column() == 2:
@@ -432,13 +433,11 @@ class SettingsManagerTableView(QtWidgets.QTableView):
 
 class SettingsManagerParameterTree(ParameterTree):
     def __init__(self, manager:'SettingsManager', *args,
-                 subentry_type=SubEntry,
                  handler_id='Settings',
                  **kwargs):
 
         super().__init__(*args, **kwargs)
         self.manager = manager
-        self.subentry_type: SubEntry = subentry_type
         self.handler_id = handler_id
 
     def mimeTypes(self):
@@ -453,10 +452,11 @@ class SettingsManagerParameterTree(ParameterTree):
         try:
             module = self.manager.get_module_from_param(param_with_path)
         except KeyError:
-            module = ModuleType.NONE.value
+            module = 'None'
         if module is not None:
-            entry = self.subentry_type(self.handler_id,
-                                       module, param_with_path)
+            entry = SubEntry(self.handler_id,
+                             module,
+                             param_with_path)
             data.setData('pymodaq/settings_entry',
                          ser_factory.get_apply_serializer([entry]))
         return data

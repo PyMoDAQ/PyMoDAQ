@@ -16,11 +16,11 @@ from pymodaq_gui.parameter import ParameterTree
 from pymodaq_gui.managers.settings.utils import (
     SettingsManagerParameterTree, SettingsManagerModel, SettingsManagerTableView,
     settings_manager_subentries_from_path, ParameterDelegate,
-    EntryActions, ModuleType)
+    EntryActions, SubEntry)
 
 from pymodaq.extensions.scan.manager.subentries import (
     SubEntryHandlerFactory, SubEntryHandler, SubEntryError,
-    SubEntryHandlerTypes, ScanSubEntry, ParameterWithPath, ScanSettingsEntryHandler,
+    SubEntryHandlerTypes, ParameterWithPath, ScanSettingsEntryHandler,
     ControlModulesEntryHandler, ScannnerEntryHandler, StartScanEntryHandler)
 
 from pymodaq_gui.managers.settings.settings_manager import SettingsManager
@@ -73,14 +73,13 @@ class ScanManager(SettingsManager):
         ]
 
         super().__init__(dashboard=dashboard,
-                         subentry_type=ScanSubEntry,
                          handler_id=ScanSettingsEntryHandler.handler_name)
 
         self.update_settings(self.settings)
 
     def _update_entry(self, entry: Union[str, Path] = None, **kwargs):
         # read binary file content and return a list of SubEntry
-        data: list[ScanSubEntry] = settings_manager_subentries_from_path(Path(entry))
+        data: list[SubEntry] = settings_manager_subentries_from_path(Path(entry))
 
         # update control modules
         ControlModulesEntryHandler.update(self, data.pop(0))
@@ -166,8 +165,8 @@ class ScanManager(SettingsManager):
             try:
                 module = self.get_module_from_param(ParameterWithPath(current_setting))
             except KeyError:
-                module = ModuleType.NONE.value
-            entry = ScanSubEntry(
+                module = 'None'
+            entry = SubEntry(
                 SubEntryHandlerTypes.SETTINGS, module,
                 ParameterWithPath(current_setting))
             entries = self.config_model.split_entry(entry)
@@ -192,7 +191,7 @@ class ScanManager(SettingsManager):
 
         for ind, entry in enumerate(config_subentries):
             subentry_handler = handler_factory.get_subentry_handler(entry.entry_type)(
-                self.config_model, self.settings, self)
+                self.config_model, self.settings)
             try:
                 subentry_handler.execute_subentry(entry, manager=self)
                 self.subentries_model.set_status(ind, True)
