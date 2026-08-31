@@ -35,13 +35,13 @@ from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.enums import BaseEnum, StrEnum
 
 from pymodaq_gui.parameter import ParameterTree, Parameter
-from pymodaq_gui.utils import DockArea, Dock, select_file
+from pymodaq_gui.utils import DockArea, Dock
 import pymodaq_gui.utils.layout as layout_mod
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.managers.roi_viewer_manager import ROISaver
 from pymodaq_gui.utils.custom_app import CustomApp
 from pymodaq_gui.utils.shared_ui import MenuToolbarNames
-from pymodaq_gui.config import get_set_layout_path, get_set_roi_path
+from pymodaq_gui.config import get_set_layout_path
 from pymodaq_gui.utils.widgets.window import make_window
 
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager
@@ -888,7 +888,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
     def set_detector_type(self, detector: DAQ_Viewer, daq_type: DAQTypesEnum, class_name: str):
         detector.detector = SelectedModule(daq_type, class_name)  # will fire instrument_changed when done
-        
+
     def move_utils_docks(self, position='right'):
         self.dockarea.moveDock(self.settings_dock, position, None)
         self.settings_dock.setVisible(False)

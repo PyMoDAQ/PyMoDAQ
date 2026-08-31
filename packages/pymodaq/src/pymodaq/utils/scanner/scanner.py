@@ -2,10 +2,12 @@ from __future__ import annotations
 from typing import Tuple, List, TYPE_CHECKING
 from collections import OrderedDict
 
+from serializall import SerializableFactory, SerializableBase
 from qtpy.QtCore import QObject, Signal
 from qtpy import QtWidgets
 
 from pymodaq_gui.messenger import messagebox
+
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config
 import pymodaq_utils.utils as utils
@@ -17,13 +19,14 @@ from pymodaq.utils.scanner.scan_factory import ScannerFactory, ScannerBase
 from pymodaq.utils.scanner.utils import ScanInfo
 from pymodaq.utils.scanner.scan_selector import Selector
 from pymodaq.utils.data import DataToExport, DataActuator
+from pymodaq_utils.utils import find_objects_in_list_from_attr_name_val
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move
 
 
 logger = set_logger(get_module_name(__file__))
-
+ser_factory = SerializableFactory()
 config = Config()
 scanner_factory = ScannerFactory()
 
@@ -62,10 +65,14 @@ class Scanner(QObject, ParameterManager):
 
     ]
 
-    def __init__(self, parent_widget: QtWidgets.QWidget = None, scanner_items=OrderedDict([]),
-                 actuators: List[DAQ_Move] = []):
+    def __init__(self, parent_widget: QtWidgets.QWidget = None,
+                 actuators: List[DAQ_Move] = None):
+        if actuators is None:
+            actuators = []
+
         QObject.__init__(self)
         ParameterManager.__init__(self)
+
         if parent_widget is None:
             parent_widget = QtWidgets.QWidget()
         self.parent_widget = parent_widget
@@ -153,15 +160,18 @@ class Scanner(QObject, ParameterManager):
 
     @property
     def actuators(self) -> list[DAQ_Move]:
-        """list of str: Returns as a list the name of the selected actuators to describe the actual scan"""
+        """list of DAQ_Move: Returns as a list the name of the selected actuators to describe the actual scan"""
         return self._actuators
 
     @actuators.setter
-    def actuators(self, act_list):
+    def actuators(self, act_list: list[DAQ_Move]):
         self._actuators = act_list
         self.set_scanner()
 
-    def set_scan_type_and_subtypes(self, scan_type: str, scan_subtype: str):
+    def set_actuators(self, actuators: list[DAQ_Move]):
+        self.actuators = actuators
+
+    def set_scan_type_and_subtypes(self, scan_type: str, scan_subtype: str = None):
         """Convenience function to set the main scan type
 
         Parameters
@@ -177,6 +187,7 @@ class Scanner(QObject, ParameterManager):
         """
         if scan_type in scanner_factory.scan_types():
             self.settings.child('scan_type').setValue(scan_type)
+            QtWidgets.QApplication.processEvents()
 
             if scan_subtype is not None:
                 if scan_subtype in scanner_factory.scan_sub_types(scan_type):

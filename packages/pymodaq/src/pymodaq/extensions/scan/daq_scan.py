@@ -17,15 +17,15 @@ from qtpy import QtWidgets, QtCore
 from qtpy.QtWidgets import QDialogButtonBox
 from qtpy.QtCore import QObject, QThread, Signal, QDateTime, QDate, QTime
 
-from pymodaq.extensions.custom_ext import CustomExt
-from pymodaq.extensions.scan.scan_manager import ScanManager
+from pymodaq.utils.custom_ext import CustomExt
+
 from pymodaq_data.plotting.utils import PlotColors
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils import utils
 
-from pymodaq_data import data as data_mod, DataDistribution, DataDim, DataToExport
+from pymodaq_data import data as data_mod, DataDistribution, DataDim
 from pymodaq_data.h5modules import data_saving
 
 from pymodaq_gui.parameter import ioxml, Parameter
@@ -35,7 +35,6 @@ from pymodaq_gui.plotting.navigator import Navigator
 from pymodaq_gui.messenger import messagebox
 from pymodaq_gui import utils as gutils
 from pymodaq_gui.h5modules.saving import H5Saver
-from pymodaq_gui.utils.shared_ui import MenuToolbarNames
 
 from pymodaq.utils.scanner.scanner import Scanner
 from pymodaq.utils.managers.batchscan_manager import BatchScanner
@@ -45,7 +44,7 @@ from pymodaq.extensions.scan.daq_scan_ui import DAQScanUI
 from pymodaq.utils.h5modules import module_saving
 from pymodaq.utils.scanner.scan_selector import ScanSelector, SelectorItem
 from pymodaq.utils.data import DataActuator
-
+from pymodaq.extensions.scan.manager.scan_manager import ScanManager
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -139,7 +138,7 @@ class DAQScan(CustomExt):
                          add_toolbar_break=False)
 
         self.wait_time = 1000
-
+        self._show_popups: bool = SHOW_POPUPS # wether to show or not the popups
         self.navigator: Navigator = None
         self.scan_selector: ScanSelector = None
 
@@ -193,7 +192,7 @@ class DAQScan(CustomExt):
         self.live_timer = QtCore.QTimer(self)
         self.live_timer.timeout.connect(self.update_live_plots)
 
-        self.scan_manager = ScanManager(dashboard, self)
+        self.scan_manager = ScanManager(self)
         self.scan_manager.get_external_toolbar_menu(toolbar=self.ui.get_toolbar('scan_manager'),
                                                     menu=self.ui.get_menu('scan_manager'))
 
@@ -402,6 +401,12 @@ class DAQScan(CustomExt):
         self.modules_manager.selected_actuators_name = actuators
         QtWidgets.QApplication.processEvents()
 
+    def override_popups(self, override=True):
+        self._show_popups = override
+
+    def cancel_override_popups(self):
+        self._show_popups = SHOW_POPUPS
+
     def show_file_attributes(self, type_info='dataset'):
         """
             Switch the type_info value.
@@ -425,7 +430,7 @@ class DAQScan(CustomExt):
             --------
             custom_tree.parameter_to_xml_file, create_menu
         """
-        if SHOW_POPUPS:
+        if self._show_popups:
             dialog = QtWidgets.QDialog()
             vlayout = QtWidgets.QVBoxLayout()
             tree = ParameterTree()
