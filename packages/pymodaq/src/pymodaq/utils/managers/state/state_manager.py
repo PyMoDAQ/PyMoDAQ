@@ -149,7 +149,8 @@ class StateManager(SettingsManager):
             self.settings,
             actuators=self.actuators,
             detectors=self.detectors,
-            extensions=self.extensions)
+            extensions=self.extensions,
+            dashboard=self.dashboard)
         self.subentry_handler.show_dialog()
 
     @staticmethod
