@@ -51,6 +51,7 @@ class ScanManager(SettingsManager):
     entry_type = 'scans'
     entry_extension ='.scan'
     icon_name = 'qr_code_scanner'
+    settings_handler = 'scan_settings'
 
     def __init__(self, daq_scan: 'DAQScan'):
 

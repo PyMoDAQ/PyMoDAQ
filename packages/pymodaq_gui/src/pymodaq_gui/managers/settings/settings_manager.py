@@ -61,6 +61,7 @@ class SettingsManager(ManagerBase):
     entry_type = 'settings'
     entry_extension ='.settings'
     icon_name = 'settings'
+    settings_handler = SubEntryHandlerTypes.SETTINGS
 
     def __init__(self,
                  dashboard: 'DashBoard' = None,
@@ -331,7 +332,7 @@ class SettingsManager(ManagerBase):
                 module = self.get_module_from_param(ParameterWithPath(current_setting))
             except KeyError:
                 module = ModuleType.NONE.value
-            entry = SubEntry(SubEntryHandlerTypes.SETTINGS, module,
+            entry = SubEntry(self.settings_handler, module,
                              ParameterWithPath(current_setting))
             entries = self.config_model.split_entry(entry)
             for entry in entries:

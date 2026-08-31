@@ -58,7 +58,7 @@ class SubEntryHandler(SubEntryHandler):
 @SubEntryHandlerFactory.register_handler()
 class ScanSettingsEntryHandler(SubEntryHandler):
 
-    handler_name = 'ScanSettings'
+    handler_name = 'scan_settings'
     use_dialog = False
 
     def execute_subentry(self, entry: ScanSubEntry,
