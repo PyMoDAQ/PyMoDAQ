@@ -68,7 +68,7 @@ class TestTimeout:
 
     def test_message_without_missing_modules(self, qtbot, scan_acquisition):
         messages = []
-        scan_acquisition.init_scan() 
+        scan_acquisition.init_scan()
         def append_msg(msg: str):
             messages.append(msg)
 
