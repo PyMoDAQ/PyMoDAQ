@@ -64,8 +64,8 @@ class StateSubEntryHandler(SubEntryHandler):
         self.extensions: list[str] = extensions if extensions is not None else []
 
     @staticmethod
-    def get_module(entry: SubEntry, dashboard: 'DashBoard'):
-        """ Get the ParameterManager module on which the settings will be applied
+    def get_module(entry: SubEntry, dashboard: 'DashBoard') -> Union['DAQ_Move', 'DAQ_Viewer']:
+        """ Get the Module on which the settings will be applied
 
         To be reimplemented
         """
@@ -141,9 +141,12 @@ class ActuatorValueSubEntryHandler(StateSubEntryHandler):
         if not module.initialized_state:
             raise SubEntryError('Could not move an actuator that is not initialized')
         try:
+            units = entry.setting.parameter.opts.get('suffix', None)
+            if units is None or units == '':
+                units = module.units
             dte_actuators = DataToExport('actuators', data=[
                 DataActuator(entry.module_name, data=entry.setting.parameter.value(),
-                             units=entry.setting.parameter.opts.get('suffix', module.units))])
+                             units=units)])
 
             dashboard.modules_manager.connect_and_move_actuators(dte_actuators)
         except Exception as e:
