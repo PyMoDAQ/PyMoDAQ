@@ -87,17 +87,30 @@ jobs:
         id: tests
         shell: bash
         run: |
+          # 1. Format workspace path properly
           workspace=$(echo "${{ github.workspace }}" | tr '\\' '/')
           mkdir -p "${workspace}/coverage"
           
+          # 2. Run the test suite
           if [[ "${{ runner.os }}" == "Linux" ]]; then
-            # Utilisation de xvfb-run pour gérer l'affichage virtuel indispensable à Qt
             xvfb-run python -X faulthandler -m pytest --capture=no -vv --cov=pymodaq -m "not leco"
           else
-            pytest -vv --cov=pymodaq -m "not leco"
+            python -m pytest -vv --cov=pymodaq -m "not leco"
           fi
           
-          mv .coverage "${workspace}/coverage/coverage_${{ matrix.os }}_${{ matrix.python-version }}_${{ matrix.qt-backend }}"
+          # 3. Save pytest exit code to preserve test results
+          pytest_exit_code=$?
+          
+          # 4. Move coverage file safely using Python to avoid OS-specific 'mv' issues
+          if [ -f .coverage ]; then
+            echo "Moving .coverage file..."
+            python -c "import shutil; shutil.move('.coverage', '${workspace}/coverage/coverage_${{ matrix.os }}_${{ matrix.python-version }}_${{ matrix.qt-backend }}')"
+          else
+            echo "Warning: .coverage file not found in $(pwd)"
+          fi
+
+          # 5. Exit with the original pytest status code
+          exit $pytest_exit_code
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v7
