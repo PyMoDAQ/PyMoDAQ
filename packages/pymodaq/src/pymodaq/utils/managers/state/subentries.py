@@ -47,7 +47,6 @@ class StateSubEntryHandlerTypes(StrEnum):
 
 
 class StateSubEntryHandler(SubEntryHandler):
-    new_entry = QtCore.Signal(SubEntry)
 
     def __init__(self,
                  model: 'StateModel',
@@ -159,6 +158,8 @@ class ActuatorValueSubEntryHandler(StateSubEntryHandler):
             dashboard.modules_manager.connect_and_move_actuators(dte_actuators)
             # blocking call
             self.executed_signal.emit()
+
+            dashboard.modules_manager.move(dte_actuators)
 
         except Exception as e:
             self.execution_failed.emit(e)

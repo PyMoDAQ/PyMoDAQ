@@ -90,6 +90,7 @@ class SubEntryHandler(QtCore.QObject):
 
     handler_name: SubEntryHandlerTypes = abstract_attribute()  # to reimplement in real dialogs
     use_dialog = True
+    sub_entry_done = QtCore.Signal(bool)
 
     def __init__(self,
                  model: 'SettingsManagerModel',
@@ -155,7 +156,8 @@ class SubEntryHandler(QtCore.QObject):
 
     def execute_subentry(self, entry: SubEntry,
                          *args, **kwargs):
-        """ Execute the given subentry """
+        """ Execute the given subentry and emit the signal sub_entry_done when done
+        """
         raise NotImplementedError
 
 
