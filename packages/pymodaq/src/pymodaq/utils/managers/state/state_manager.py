@@ -5,7 +5,7 @@ import sys
 
 import toml
 from qtpy import QtWidgets, QtCore, QtGui
-
+from serializall import SerializableFactory, SerializableBase
 
 from pymodaq.utils.managers.modules import ModuleType
 from pymodaq.utils.managers.modules.module_settings_manager import ModulesSettingsManager
@@ -25,7 +25,6 @@ from pymodaq.utils.managers.state.subentries import (
     StateSettingsEntryHandler,
     SubEntry)
 from pymodaq.utils.managers.state.utils import (
-    state_subentries_from_path,
     get_module_from_param
     )
 
@@ -50,7 +49,7 @@ if TYPE_CHECKING:
 
 logger = set_logger(get_module_name(__file__))
 handler_factory = SubEntryHandlerFactory()
-
+ser_factory = SerializableFactory()
 config = Config()
 
 
@@ -173,8 +172,12 @@ class StateManager(SettingsManager):
         """
         if entry_path is None:
             entry_path = self.entry_filepath
-        self.config_subentries = state_subentries_from_path(entry_path)
+
+        self.config_subentries = settings_manager_subentries_from_path(entry_path)[1:]
+        # first element is the parallel/sequential boolean
+
         self.subentry_handlers: list[StateSubEntryHandler] = []
+
         if self.experiment_manager.applied_entry_name != self.experiment_filename:
             logger.warning(f'The current state is referring to the experiment: {self.experiment_filename} '
                            f'while the current applied experiment is: {self.experiment_manager.applied_entry_name}')
@@ -226,8 +229,8 @@ class StateManager(SettingsManager):
         self._processed_subentries += 1
 
         if not self.is_action_checked('parallel_execution'):
-            print(f'Index in loop {self._ind_subentry}\n'
-                  f'index from Signal: {ind_error}')
+            logger.debug(f'Index in loop {self._ind_subentry}\n'
+                         f'index from Signal: {ind_error}')
             self._advance()
         elif self._processed_subentries == len(self.config_subentries):
             self.finalize()
@@ -236,15 +239,15 @@ class StateManager(SettingsManager):
         self._processed_subentries += 1
         self.subentries_model.set_status(ind_subentry, True)
         if not self.is_action_checked('parallel_execution'):
-            print(f'Index in loop {self._ind_subentry}\n'
-                  f'index from Signal: {ind_subentry}\n'
-                  f'Total calls {self._processed_subentries}')
+            logger.debug(f'Index in loop {self._ind_subentry}\n'
+                         f'index from Signal: {ind_subentry}\n'
+                         f'Total calls {self._processed_subentries}')
             self._advance()
         elif self._processed_subentries == len(self.config_subentries):
             self.finalize()
 
     def finalize(self):
-        self.close_subentries_display(1000)
+        self.close_subentries_display(100)
         self.save_new_history_entry()
         self.set_entry_applied(True)
 
@@ -357,6 +360,36 @@ class StateManager(SettingsManager):
 
         with open(self.history_file_path, "w") as f:
             toml.dump(new_dict, f)
+
+    def _update_entry(self, entry: Union[str, Path] = None, **kwargs):
+        # read binary file content and return a list of Serializables
+        data: list[SerializableBase] = settings_manager_subentries_from_path(Path(entry))
+
+        try:
+            checked = data.pop(0)
+        except IndexError:
+            checked = False
+
+        self.set_action_checked('parallel_execution', checked)
+
+        #populate the Settings Table
+        self.config_model.load(data)
+
+
+    def save_entries(self, entry_path: Path = None):
+        # first save the sequential or parallel execution
+
+        try:
+            parallel_execution = self.is_action_checked('parallel_execution')
+        except KeyError:
+            parallel_execution = False
+
+        with open(entry_path, mode='wb') as file:
+            file.write(ser_factory.get_apply_serializer(parallel_execution))
+
+        # then save the various settings about the states
+        self.config_model.save(entry_path, mode='ab')
+
 
 
 if __name__ == "__main__":

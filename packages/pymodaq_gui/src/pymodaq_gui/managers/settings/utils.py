@@ -23,7 +23,7 @@ from pymodaq_gui.utils.widgets.table import TableModel
 
 from pymodaq_gui import utils as gutils
 
-from serializall import SerializableFactory
+from serializall import SerializableFactory, SerializableBase
 
 
 import copy
@@ -124,7 +124,7 @@ class ParameterDelegate(QtWidgets.QStyledItemDelegate):
         return super().sizeHint(option, index)
 
 
-def settings_manager_subentries_from_path(fname: Path) -> list[SubEntry]:
+def settings_manager_subentries_from_path(fname: Path) -> list[SerializableBase]:
     if not fname.exists():
         return []
     with open(fname, 'rb') as file:
@@ -134,7 +134,7 @@ def settings_manager_subentries_from_path(fname: Path) -> list[SubEntry]:
         all_lines += line
     data = []
     while len(all_lines) > 0:
-        entry, all_lines = SubEntry.deserialize(all_lines)
+        entry, all_lines = ser_factory.get_apply_deserializer(all_lines, only_object=False)
         data.append(entry)
     return data
 
@@ -345,7 +345,7 @@ class SettingsManagerModel(TableModel):
             if isinstance(fname, Path):
                 self.save_path = fname.parent
         with open(fname, mode) as file:
-            file.writelines([SubEntry.serialize(entry) for entry in self._data])
+            file.writelines([ser_factory.get_apply_serializer(entry) for entry in self._data])
 
 
 class SettingsManagerTableView(QtWidgets.QTableView):

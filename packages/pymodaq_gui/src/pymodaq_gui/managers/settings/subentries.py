@@ -106,7 +106,7 @@ class SubEntryHandler(QtCore.QObject):
         self.settings: Parameter = settings
         self.model: SettingsManagerModel = model
         self._ind_subentry = ind_subentry  # the current index with subentries, see _execute_entry
-        print(f'subhandler with index {ind_subentry}')
+        logger.debug(f'subhandler with index {ind_subentry}')
 
     @staticmethod
     def get_module(entry: SubEntry, *args, **kwargs) -> ParameterManager:
