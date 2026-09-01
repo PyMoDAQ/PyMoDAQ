@@ -21,8 +21,15 @@ from pymodaq_utils.config import GlobalConfig
 config = GlobalConfig()
 
 
-pytestmark = pytest.mark.skipif(False, reason='qtbot issues but tested locally')
 
+# Skip all tests in this module on headless Linux with PyQt6
+# The event loop execution in pytest-qt causes segfaults
+pytestmark = [
+    pytest.mark.skipif(
+        os.environ.get('CI') == 'true' and os.environ.get('RUNNER_OS') == 'Linux',
+        reason="PyQt6 event loop execution crashes on headless Linux"
+    )
+    ]
 
 @fixture
 def ini_daq_viewer_ui(qtbot):
@@ -119,10 +126,6 @@ def test_signals(ini_daq_viewer_ui):
     assert blocker.args[0].command == UiToMainViewer.TAKE_BKG
 
 
-@pytest.mark.skipif(
-    os.environ.get('CI') == 'true' and os.environ.get('RUNNER_OS') == 'Linux',
-    reason="PyQt6 event loop execution crashes on headless Linux"
-)
 def test_do_init(ini_daq_viewer_ui):
     IND_daq_type = 1
     IND_det_type = 1
