@@ -62,6 +62,7 @@ names = [
     'flip',
     'folder_data',
     'folder_open',
+    'format_list_numbered',
     'function',
     'gesture',
     'graphic_eq',

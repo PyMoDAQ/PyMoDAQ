@@ -51,19 +51,6 @@ def get_module_from_param(param: ParameterWithPath) -> Union[tuple[str, ModuleTy
     return module, module_type
 
 
-def state_subentries_from_path(fname: Path) -> list[SubEntry]:
-    if not fname.exists():
-        return []
-    with open(fname, 'rb') as file:
-        lines = file.readlines()
-    all_lines = b''
-    for line in lines:
-        all_lines += line
-    data = []
-    while len(all_lines) > 0:
-        entry, all_lines = SubEntry.deserialize(all_lines)
-        data.append(entry)
-    return data
 
 
 mock_list = ['elt1', 'elt2', 'elt3']
