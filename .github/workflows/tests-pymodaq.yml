@@ -28,9 +28,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: "ubuntu-latest"
+          - os: ["ubuntu-latest", "windows-latest"]
             python-version: "3.11"
-            qt-backend: "pyqt6"
+            qt-backend: ["pyqt6", "pyside6"]
     runs-on: ${{ matrix.os }}
     env:
       PYTEST_QT_API: ${{ matrix.qt-backend }}
@@ -69,8 +69,9 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y xvfb yaru-theme-icon libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-cursor0 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 x11-utils libgl1 libegl1
+          echo "QT_DEBUG_PLUGINS=0" >> $GITHUB_ENV  # Disable plugin debugging
+          echo "QT_QPA_PLATFORM_PLUGIN_PATH=" >> $GITHUB_ENV
 
-          echo "QT_DEBUG_PLUGINS=1" >> $GITHUB_ENV
           echo "XDG_CURRENT_DESKTOP=Unity" >> $GITHUB_ENV
           echo "XDG_DATA_DIRS=/usr/share:/usr/share/icons:/usr/local/share" >> $GITHUB_ENV
           echo "GTK_THEME=Yaru" >> $GITHUB_ENV
