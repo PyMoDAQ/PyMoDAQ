@@ -513,7 +513,7 @@ class ControlModule(QObject):
                         attr(value)
                     else:
                         attr = value
-class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule):
+class ParameterControlModule(ParameterManager, LECOComponentMixin, ControlModule):
     """Base class for a control module with parameters."""
 
     _update_settings_signal = Signal(edict)
@@ -671,6 +671,7 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
             QtWidgets.QApplication.processEvents()
 
         self._quit_cleanup()
+        self.disconnect_tree()
         try:
             if self.ui is not None:
                 self.ui.close()

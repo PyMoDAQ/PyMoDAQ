@@ -550,12 +550,10 @@ class DashBoard(CustomApp, LECOComponentMixin):
             for area in areas:
                 area.win.close()
 
-            if hasattr(self, "mainwindow"):
-                self.mainwindow.close()
-
             if self.pid_window is not None:
                 self.pid_window.close()
 
+            super().quit_fun()
 
         except Exception as e:
             logger.exception(str(e))

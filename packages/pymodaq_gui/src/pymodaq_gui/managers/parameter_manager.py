@@ -322,6 +322,12 @@ class ParameterManager:
         self._settings_tree.tree.itemExpanded.connect(lambda: self._settings_tree.tree.resizeColumnToContents(0))
         self._settings_tree.tree.itemCollapsed.connect(lambda: self._settings_tree.tree.resizeColumnToContents(0))
 
+    def disconnect_tree(self):
+        try:
+            self._settings.sigTreeStateChanged.disconnect(self.parameter_tree_changed)
+        except TypeError:
+            pass
+
     @staticmethod
     def create_parameter(
             settings: Union[Parameter, List[Dict[str, str]], Path],
