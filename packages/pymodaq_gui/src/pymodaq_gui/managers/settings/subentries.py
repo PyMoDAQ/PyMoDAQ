@@ -87,6 +87,8 @@ class SubEntry:
 
 class SubEntryHandler(QtCore.QObject):
     new_entry = QtCore.Signal(SubEntry)
+    executed_signal = QtCore.Signal() # to be emited when execution is done
+    execution_failed = QtCore.Signal(Exception)
 
     handler_name: SubEntryHandlerTypes = abstract_attribute()  # to reimplement in real dialogs
     use_dialog = True
