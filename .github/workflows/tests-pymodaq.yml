@@ -75,10 +75,12 @@ jobs:
           echo "XDG_CURRENT_DESKTOP=Unity" >> $GITHUB_ENV
           echo "XDG_DATA_DIRS=/usr/share:/usr/share/icons:/usr/local/share" >> $GITHUB_ENV
           echo "GTK_THEME=Yaru" >> $GITHUB_ENV
+          echo "QT_LOGGING_RULES=qt.qpa.plugin=false" >> $GITHUB_ENV  # Reduce plugin spam
 
           # Force XCB platform and use software GL for stability on CI
           echo "QT_QPA_PLATFORM=xcb" >> $GITHUB_ENV
-          echo "QT_OPENGL=software" >> $GITHUB_ENV
+          echo "QT_OPENGL=offscreen" >> $GITHUB_ENV
+          echo "QT_XCB_GL_INTEGRATION=xcb_glx" >> $GITHUB_ENV
           echo "QT_API=${{ matrix.qt-backend }}" >> $GITHUB_ENV
 
       - name: Export debug variables (Windows)
