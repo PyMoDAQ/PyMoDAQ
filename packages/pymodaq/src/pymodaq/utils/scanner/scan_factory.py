@@ -262,7 +262,7 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
         to be reimplemented"""
         return {}
 
-    def from_dict(self, adict: dict[str, Any]):
+    def from_dict(self, scanner_dict: dict[str, Any]):
         pass
 
 

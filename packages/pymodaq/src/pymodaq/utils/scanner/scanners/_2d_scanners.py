@@ -4,7 +4,7 @@ Created the 05/12/2022
 
 @author: Sebastien Weber
 """
-from typing import List, Tuple, TYPE_CHECKING
+from typing import List, Tuple, TYPE_CHECKING, Any
 
 import numpy as np
 from pymodaq_data.data import Axis, DataDistribution
@@ -65,6 +65,25 @@ class Scan2DLinear(Scan2DBase):
 
     def __init__(self, actuators: List['DAQ_Move'] = None, settings=None, **_ignored):
         super().__init__(actuators=actuators, settings=settings)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {'axis1': {'start': self.settings['axis1', 'start_axis1'],
+                          'stop': self.settings['axis1', 'stop_axis1'],
+                          'step': self.settings['axis1', 'step_axis1'],
+                          },
+                'axis2': {'start': self.settings['axis2', 'start_axis2'],
+                          'stop': self.settings['axis2', 'stop_axis2'],
+                          'step': self.settings['axis2', 'step_axis2'],
+                          },
+                }
+
+    def from_dict(self, scanner_dict: dict[str, Any]):
+        self.settings['axis1', 'start_axis1'] = scanner_dict['axis1']['start']
+        self.settings['axis1', 'stop_axis1'] = scanner_dict['axis1']['stop']
+        self.settings['axis1', 'step_axis1'] = scanner_dict['axis1']['step']
+        self.settings['axis2', 'start_axis2'] = scanner_dict['axis2']['start']
+        self.settings['axis2', 'stop_axis2'] = scanner_dict['axis2']['start']
+        self.settings['axis2', 'step_axis2'] = scanner_dict['axis2']['start']
 
     def set_units(self):
         """ Update settings units depending on the scanner type and the display_units boolean"""
@@ -228,6 +247,24 @@ class Scan2DSpiral(Scan2DLinear):
    
     def __init__(self, actuators: List['DAQ_Move'] = None, settings=None, **_ignored):
         super().__init__(actuators=actuators, settings=settings)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {'npts_by_axis': self.settings['npts_by_axis'],
+                'axis1': {'center': self.settings['axis1', 'center_axis1'],
+                          'rmax': self.settings['axis1', 'rmax_axis1'],
+                          },
+                'axis2': {'center': self.settings['axis2', 'center_axis2'],
+                          'rmax': self.settings['axis2', 'rmax_axis2'],
+                          },
+                }
+
+    def from_dict(self, scanner_dict: dict[str, Any]):
+        self.settings['npts_by_axis'] = scanner_dict['npts_by_axis']
+        self.settings['axis1', 'center_axis1'] = scanner_dict['axis1']['center']
+        self.settings['axis1', 'rmax_axis1'] = scanner_dict['axis1']['rmax']
+        self.settings['axis2', 'center_axis2'] = scanner_dict['axis2']['center']
+        self.settings['axis2', 'rmax_axis2'] = scanner_dict['axis2']['rmax']
+
 
     def set_settings_titles(self):
         if len(self.actuators) == 2:
