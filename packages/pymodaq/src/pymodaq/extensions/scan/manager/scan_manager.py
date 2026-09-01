@@ -13,11 +13,9 @@ from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config, get_set_config_dir
 
-from pymodaq_gui.parameter import ParameterTree
+
 from pymodaq_gui.managers.settings.utils import (
-    SettingsManagerParameterTree, SettingsManagerModel, SettingsManagerTableView,
-    settings_manager_subentries_from_path, ParameterDelegate,
-    EntryActions, SubEntry)
+    SettingsManagerModel, SubEntry)
 
 from pymodaq.extensions.scan.manager.subentries import (
     SubEntryHandlerFactory, SubEntryHandler, SubEntryError,
@@ -27,7 +25,7 @@ from pymodaq.extensions.scan.manager.subentries import (
 from pymodaq_gui.managers.settings.settings_manager import SettingsManager
 
 from pymodaq.utils.scanner.scanner import Scanner
-
+from pymodaq_utils.utils import read_binary_and_deserialize
 
 if TYPE_CHECKING:
     from pymodaq.extensions import DAQScan
@@ -80,7 +78,7 @@ class ScanManager(SettingsManager):
 
     def _update_entry(self, entry: Union[str, Path] = None, **kwargs):
         # read binary file content and return a list of SubEntry
-        data: list[SubEntry] = settings_manager_subentries_from_path(Path(entry))
+        data: list[SubEntry | SerializableBase] = read_binary_and_deserialize(Path(entry))
 
         # update control modules
         ControlModulesEntryHandler.update(self, data.pop(0))
@@ -138,9 +136,9 @@ class ScanManager(SettingsManager):
     def get_entry_folder(self, subfolder='', user=True) -> Path:
         """Get the folder path where the managed entries are stored."""
         if subfolder != '':
-            target_path = get_set_config_dir('settings', user=user).joinpath(subfolder)
+            target_path = get_set_config_dir('scans', user=user).joinpath(subfolder)
         else:
-            target_path = get_set_config_dir('settings', user=user)
+            target_path = get_set_config_dir('scans', user=user)
         target_path.mkdir(parents=True, exist_ok=True)
         return target_path
 
@@ -183,7 +181,7 @@ class ScanManager(SettingsManager):
         """
         if entry_path is None:
             entry_path = self.entry_filepath
-        config_subentries: list[SubEntry | SerializableBase] = settings_manager_subentries_from_path(entry_path)
+        config_subentries: list[SubEntry | SerializableBase] = read_binary_and_deserialize(entry_path)
 
         if len(config_subentries) > 0:
             self.show_subentries(config_subentries, f'Loading {self.entry_type.capitalize()}: {self.entry}')
