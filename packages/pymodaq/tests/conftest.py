@@ -23,12 +23,16 @@ def _cleanup_qt_core():
                 # Flush any pending events or delayed signals in the main event loop
                 app.processEvents()
 
+
                 # Attempt to safely close and destroy lingering UI widgets (ParameterTrees, Windows, etc.)
                 try:
                     widgets_mod = __import__(f"{backend}.QtWidgets", fromlist=["QApplication"])
                     for widget in widgets_mod.QApplication.topLevelWidgets():
                         if hasattr(widget, 'close'):
-                            widget.close()
+                            try:
+                                widget.close()
+                            except Exception:
+                                pass
                         if hasattr(widget, 'deleteLater'):
                             widget.deleteLater()  # Schedule full C++ memory deletion
 
