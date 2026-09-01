@@ -36,6 +36,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       PYTEST_QT_API: ${{ matrix.qt-backend }}
+      QT_API: ${{ matrix.qt-backend }}
     defaults:
       run:
         working-directory: packages/pymodaq_gui
