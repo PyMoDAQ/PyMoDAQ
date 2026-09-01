@@ -55,10 +55,22 @@ dev = [
 
     "pyqt5",
     "pyqt6",
-    "pyside6",
     "pytest-qt",
     "pytest-xvfb",
 ]
+
+pyside6 = [
+    "pyside6"
+]
+
+pyqt6 = [
+    "pyqt6"
+]
+
+pyqt5= [
+    "pyqt5"
+]
+
 
 [project.scripts]
 daq_logger = "pymodaq.extensions.daq_logger:main"

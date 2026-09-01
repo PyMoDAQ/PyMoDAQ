@@ -36,7 +36,15 @@ def parse_args():
         type=lambda value: value.lower(),
         choices=PYMODAQ_PACKAGES,
         default='pymodaq',
-        help="Select up to which package to install. (e.g. '-o pymodaq_data' will install utils and data packages but not gui and PyMoDAQ itself)",
+        help="Select up to which package to install. (e.g. '-u pymodaq_data' will install utils and data packages but not gui and PyMoDAQ itself)",
+    )
+
+    parser.add_argument(
+        "-qt", "--qt_backend",
+        type=lambda value: value.lower(),
+        choices=['pyside6', 'pyqt6', 'pyqt5'],
+        default='pyside6',
+        help="Select the qt backend to install (e.g. '-qt pyside6' will install the pyside6 backend",
     )
 
     return parser.parse_args()
