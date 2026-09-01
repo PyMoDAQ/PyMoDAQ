@@ -369,7 +369,6 @@ class StateManager(SettingsManager):
             checked = data.pop(0)
         except IndexError:
             checked = False
-
         self.set_action_checked('parallel_execution', checked)
 
         #populate the Settings Table

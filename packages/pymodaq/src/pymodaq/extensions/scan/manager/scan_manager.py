@@ -88,8 +88,6 @@ class ScanManager(SettingsManager):
         # update scanner
         ScannnerEntryHandler.update(self, data.pop(0))
 
-
-
         #populate the Settings Table
         self.config_model.load(data[:-1])
 
