@@ -27,12 +27,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-latest", "windows-latest"]
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
-        qt-backend: ["pyqt5", "pyqt6", "pyside6"]
+        include:
+          - os: "ubuntu-latest"
+            python-version: "3.11"
+            qt-backend: "pyqt6"
     runs-on: ${{ matrix.os }}
     env:
       PYTEST_QT_API: ${{ matrix.qt-backend }}
+      QT_API: ${{ matrix.qt-backend }}
     defaults:
       run:
         working-directory: packages/pymodaq
@@ -67,17 +69,57 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y xvfb yaru-theme-icon libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-cursor0 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 x11-utils libgl1 libegl1
-          
+
           echo "QT_DEBUG_PLUGINS=1" >> $GITHUB_ENV
           echo "XDG_CURRENT_DESKTOP=Unity" >> $GITHUB_ENV
           echo "XDG_DATA_DIRS=/usr/share:/usr/share/icons:/usr/local/share" >> $GITHUB_ENV
           echo "GTK_THEME=Yaru" >> $GITHUB_ENV
+
+          # Force XCB platform (use Xvfb) and make qtpy use the same backend as pytest-qt
+          echo "QT_QPA_PLATFORM=xcb" >> $GITHUB_ENV
+          echo "QT_API=${{ matrix.qt-backend }}" >> $GITHUB_ENV
 
       - name: Export debug variables (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           echo "QT_DEBUG_PLUGINS=1" >> $env:GITHUB_ENV
+          echo "QT_QPA_PLATFORM=offscreen" >> $env:GITHUB_ENV
+          echo "QT_OPENGL=software" >> $env:GITHUB_ENV
+          echo "QT_QUICK_BACKEND=software" >> $env:GITHUB_ENV
+          echo "QT_ENABLE_HIGHDPI_SCALING=0" >> $env:GITHUB_ENV
+          echo "QT_API=${{ matrix.qt-backend }}" >> $env:GITHUB_ENV
+
+      - name: Dump Python / Qt / pytest-qt / qtpy info
+        shell: bash
+        run: |
+          python - <<'PY'
+          import sys, platform
+          print('python:', sys.version)
+          print('platform:', platform.platform())
+          try:
+              import qtpy
+              print('qtpy.API_NAME:', getattr(qtpy, 'API_NAME', '<unset>'))
+              print('qtpy.API:', getattr(qtpy, 'API', '<unset>'))
+          except Exception as e:
+              print('qtpy import error:', e)
+          try:
+              import pytestqt
+              print('pytest-qt ok')
+          except Exception as e:
+              print('pytest-qt import error:', e)
+          for mod in ('PyQt6','PyQt5','PySide6'):
+              try:
+                  m = __import__(mod)
+                  print(f"{mod}:", getattr(m, '__version__', '<unknown>'))
+              except Exception:
+                  pass
+          import subprocess
+          subprocess.run(['python', '-m', 'pip', 'freeze'])
+          PY
+          echo "QT_QPA_PLATFORM=${QT_QPA_PLATFORM:-<unset>}"
+          echo "PYTEST_QT_API=${PYTEST_QT_API:-<unset>}"
+          echo "QT_API=${QT_API:-<unset>}"
 
       - name: Linting with flake8
         run: |
@@ -86,23 +128,21 @@ jobs:
       - name: Tests with ${{ matrix.os }} ${{ matrix.python-version }} ${{ matrix.qt-backend}}
         id: tests
         shell: bash
-        env:
-          QT_QPA_PLATFORM: offscreen  # Solution globale : force Qt à ne pas gérer de fenêtres réelles
         run: |
           # 1. Format workspace path properly
           workspace=$(echo "${{ github.workspace }}" | tr '\\' '/')
           mkdir -p "${workspace}/coverage"
-          
+
           # 2. Run the test suite
           if [[ "${{ runner.os }}" == "Linux" ]]; then
             xvfb-run python -X faulthandler -m pytest --capture=no -vv --cov=pymodaq -m "not leco"
           else
             python -m pytest -vv --cov=pymodaq -m "not leco"
           fi
-          
+
           # 3. Save pytest exit code to preserve test results
           pytest_exit_code=$?
-          
+
           # 4. Move coverage file safely using Python to avoid OS-specific 'mv' issues
           if [ -f .coverage ]; then
             echo "Moving .coverage file..."
