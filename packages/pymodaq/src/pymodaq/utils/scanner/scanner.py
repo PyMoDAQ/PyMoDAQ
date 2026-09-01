@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Tuple, List, TYPE_CHECKING
+from typing import Tuple, List, TYPE_CHECKING, Any
 from collections import OrderedDict
 
 from serializall import SerializableFactory, SerializableBase
@@ -85,6 +85,21 @@ class Scanner(QObject, ParameterManager):
         self.actuators = actuators
         if self._scanner is not None:
             self.settings.child('n_steps').setValue(self._scanner.evaluate_steps())
+
+    def to_dict(self) -> dict[str, Any]:
+        """ Dictionary representation of the scanner object"""
+        return dict(actuators=[act.title for act in self.actuators],
+                    scan_type=self.scan_type,
+                    scan_sub_type=self.scan_sub_type,
+                    display_units = self.settings['units_handling', 'display_units'],
+                    scanner=self.scanner.to_dict())
+
+    def from_dict(self, scanner_dict: dict):
+        self.actuators = scanner_dict['actuators']  # should DAQ_Move instances, this is not symmetric wrt to_dict()
+        self.set_scan_type_and_subtypes(scanner_dict['scan_type'], scanner_dict['scan_sub_type'])
+        self.settings['units_handling', 'display_units'] = scanner_dict['display_units']
+        self.set_scanner()
+        self.scanner.from_dict(scanner_dict['scanner'])
 
     def setup_ui(self):
         self.parent_widget.setLayout(QtWidgets.QVBoxLayout())
