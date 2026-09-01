@@ -5,6 +5,7 @@ import sys
 
 import toml
 from qtpy import QtWidgets, QtCore, QtGui
+from serializall import SerializableFactory, SerializableBase
 
 from pymodaq_data import DataDim
 from pymodaq_gui.utils.widgets.widget_with_label_title import WidgetWithLabelTitle
@@ -34,7 +35,7 @@ if TYPE_CHECKING:
 
 logger = set_logger(get_module_name(__file__))
 handler_factory = SubEntryHandlerFactory()
-
+ser_factory = SerializableFactory()
 config = Config()
 
 
@@ -98,22 +99,22 @@ class ScanManager(SettingsManager):
 
     def save_entries(self, entry_path: Path = None):
         # first save an entry corresponding to the selected detectors and actuators
-        modules_entry = ControlModulesEntryHandler.create_subentry(self)
+        modules_entry: SerializableBase | SubEntry = ControlModulesEntryHandler.create_subentry(self)
         with open(entry_path, mode='wb') as file:
-            file.write(modules_entry.serialize(modules_entry))
+            file.write(ser_factory.get_apply_serializer(modules_entry))
 
         # then save an entry corresponding to the scanner
-        scanner_entry = ScannnerEntryHandler.create_subentry(self)
+        scanner_entry: SerializableBase | SubEntry = ScannnerEntryHandler.create_subentry(self)
         with open(entry_path, mode='ab') as file:
-            file.write(scanner_entry.serialize(scanner_entry))
+            file.write(ser_factory.get_apply_serializer(scanner_entry))
 
         # then save the various settings about the scan flow or h5saver
         self.config_model.save(entry_path, mode='ab')
 
         # then save an entry corresponding to the start scan status
-        start_entry = StartScanEntryHandler.create_subentry(self)
+        start_entry: SerializableBase | SubEntry = StartScanEntryHandler.create_subentry(self)
         with open(entry_path, mode='ab') as file:
-            file.write(start_entry.serialize(start_entry))
+            file.write(ser_factory.get_apply_serializer(start_entry))
 
     def connect_things(self):
         super().connect_things()
@@ -184,16 +185,16 @@ class ScanManager(SettingsManager):
         """
         if entry_path is None:
             entry_path = self.entry_filepath
-        config_subentries = settings_manager_subentries_from_path(entry_path)
+        config_subentries: list[SubEntry | SerializableBase] = settings_manager_subentries_from_path(entry_path)
 
         if len(config_subentries) > 0:
             self.show_subentries(config_subentries, f'Loading {self.entry_type.capitalize()}: {self.entry}')
 
         for ind, entry in enumerate(config_subentries):
             subentry_handler = handler_factory.get_subentry_handler(entry.entry_type)(
-                self.config_model, self.settings)
+                self.config_model, self.settings, manager=self)
             try:
-                subentry_handler.execute_subentry(entry, manager=self)
+                subentry_handler.execute_subentry(entry)
                 self.subentries_model.set_status(ind, True)
                 QtWidgets.QApplication.processEvents()
                 QtCore.QThread.msleep(0)
