@@ -90,24 +90,31 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt update
-          sudo apt install -y xvfb mesa-utils libopengl0 yaru-theme-icon libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 \
-            libxcb-keysyms1 libxcb-cursor0 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 x11-utils \
-            libx11-xcb1 libxrender1 libxext6 libxi6 libxrandr2 libxinerama1 libsm6 libegl1 libgl1-mesa-dri libglx-mesa0 \
-            libglu1-mesa libfontconfig1 libfreetype6 libxcb-shape0 libxcb-shm0 libxcb-sync1 libxcomposite1 libxcursor1 \
-            libxdamage1 libxtst6 libxcb1
-          export QT_DEBUG_PLUGINS=1
-          
+          sudo apt install -y xvfb yaru-theme-icon libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-cursor0 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 x11-utils libgl1 libegl1
+
+          echo "QT_DEBUG_PLUGINS=1" >> $GITHUB_ENV
           echo "XDG_CURRENT_DESKTOP=Unity" >> $GITHUB_ENV
           echo "XDG_DATA_DIRS=/usr/share:/usr/share/icons:/usr/local/share" >> $GITHUB_ENV
           echo "GTK_THEME=Yaru" >> $GITHUB_ENV
 
+          # Force XCB platform and use software GL for stability on CI
+          echo "QT_QPA_PLATFORM=xcb" >> $GITHUB_ENV
+          echo "QT_OPENGL=software" >> $GITHUB_ENV
+          echo "QT_API=${{ matrix.qt-backend }}" >> $GITHUB_ENV
+          
           sudo mkdir -p /etc/.pymodaq
           sudo chmod uo+rw /etc/.pymodaq
 
       - name: Export debug variables (Windows)
         if: runner.os == 'Windows'
+        shell: pwsh
         run: |
-          set QT_DEBUG_PLUGINS=1
+          echo "QT_DEBUG_PLUGINS=1" >> $env:GITHUB_ENV
+          echo "QT_QPA_PLATFORM=offscreen" >> $env:GITHUB_ENV    # or minimal if offscreen fails
+          echo "QT_OPENGL=software" >> $env:GITHUB_ENV
+          echo "QT_QUICK_BACKEND=software" >> $env:GITHUB_ENV
+          echo "QT_ENABLE_HIGHDPI_SCALING=0" >> $env:GITHUB_ENV
+          echo "QT_API=${{ matrix.qt-backend }}" >> $env:GITHUB_ENV
 
       - name: Linting with flake8
         run: |

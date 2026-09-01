@@ -75,8 +75,9 @@ jobs:
           echo "XDG_DATA_DIRS=/usr/share:/usr/share/icons:/usr/local/share" >> $GITHUB_ENV
           echo "GTK_THEME=Yaru" >> $GITHUB_ENV
 
-          # Force XCB platform (use Xvfb) and make qtpy use the same backend as pytest-qt
+          # Force XCB platform and use software GL for stability on CI
           echo "QT_QPA_PLATFORM=xcb" >> $GITHUB_ENV
+          echo "QT_OPENGL=software" >> $GITHUB_ENV
           echo "QT_API=${{ matrix.qt-backend }}" >> $GITHUB_ENV
 
       - name: Export debug variables (Windows)
@@ -84,7 +85,7 @@ jobs:
         shell: pwsh
         run: |
           echo "QT_DEBUG_PLUGINS=1" >> $env:GITHUB_ENV
-          echo "QT_QPA_PLATFORM=offscreen" >> $env:GITHUB_ENV
+          echo "QT_QPA_PLATFORM=offscreen" >> $env:GITHUB_ENV    # or minimal if offscreen fails
           echo "QT_OPENGL=software" >> $env:GITHUB_ENV
           echo "QT_QUICK_BACKEND=software" >> $env:GITHUB_ENV
           echo "QT_ENABLE_HIGHDPI_SCALING=0" >> $env:GITHUB_ENV
@@ -135,7 +136,7 @@ jobs:
 
           # 2. Run the test suite
           if [[ "${{ runner.os }}" == "Linux" ]]; then
-            xvfb-run python -X faulthandler -m pytest --capture=no -vv --cov=pymodaq -m "not leco"
+            xvfb-run -a bash -c 'python -X faulthandler -m pytest --capture=no -vv --cov=pymodaq -m "not leco"'
           else
             python -m pytest -vv --cov=pymodaq -m "not leco"
           fi
