@@ -8,6 +8,7 @@ from typing import Callable, TYPE_CHECKING, Union, Tuple
 from qtpy import QtWidgets, QtCore
 from serializall import SerializableFactory
 
+from pymodaq_utils.config import GlobalConfig
 from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.abstract import abstract_attribute
 
@@ -27,8 +28,6 @@ from pymodaq_gui.managers.settings.subentries import (
     SubEntry, SubEntryHandlerFactory,
     SubEntryHandler)
 
-ser_factory = SerializableFactory()
-
 
 if TYPE_CHECKING:
     from pymodaq.utils.managers.state.utils import StateModel
@@ -36,6 +35,9 @@ if TYPE_CHECKING:
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
     from pymodaq.dashboard import DashBoard
 
+
+ser_factory = SerializableFactory()
+config = GlobalConfig()
 
 
 class StateSubEntryHandlerTypes(StrEnum):
@@ -53,13 +55,15 @@ class StateSubEntryHandler(SubEntryHandler):
     def __init__(self,
                  model: 'StateModel',
                  settings: Parameter,
+                 ind_subentry: int = None,
                  actuators: list[str] = None,
                  detectors: list[str] = None,
                  extensions: list[str] = None,
-                 dashboard: 'DashBoard' = None
+                 dashboard: 'DashBoard' = None,
+                 **kwargs,
                  ):
 
-        super().__init__(model, settings)
+        super().__init__(model, settings, ind_subentry=ind_subentry, **kwargs)
         self.actuators: list[str] = actuators if actuators is not None else []
         self.detectors: list[str] = detectors if detectors is not None else []
         self.extensions: list[str] = extensions if extensions is not None else []
@@ -81,7 +85,7 @@ class StateSettingsEntryHandler(StateSubEntryHandler):
     handler_name = StateSubEntryHandlerTypes.SETTINGS
     use_dialog = False
 
-    def _execute_subentry(self, entry: SubEntry, dashboard: 'DashBoard'):
+    def execute_subentry(self, entry: SubEntry, dashboard: 'DashBoard'):
         """ Execute the given subentry
 
         In general, should get first the module on which the settings will be applied
@@ -101,6 +105,14 @@ class StateSettingsEntryHandler(StateSubEntryHandler):
 class ActuatorValueSubEntryHandler(StateSubEntryHandler):
 
     handler_name = StateSubEntryHandlerTypes.ACTUATOR_VALUE
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.actuator_timeout_timer = QtCore.QTimer()
+        self.actuator_timeout_timer.setSingleShot(True)
+
+        self.module: Union['DAQ_Move', 'DAQ_Viewer'] = None
 
     def setup_widgets(self):
         self.actuator_cb = QtWidgets.QComboBox()
@@ -140,7 +152,7 @@ class ActuatorValueSubEntryHandler(StateSubEntryHandler):
                     suffix=self.value_sb.opts['suffix']),
             path=()))
 
-    def _execute_subentry(self, entry: SubEntry, dashboard: 'DashBoard'):
+    def execute_subentry(self, entry: SubEntry, dashboard: 'DashBoard'):
         """ Execute the given subentry """
         self._dashboard = dashboard
         module = self.get_module(entry, dashboard)
@@ -150,15 +162,18 @@ class ActuatorValueSubEntryHandler(StateSubEntryHandler):
             units = entry.setting.parameter.opts.get('suffix', None)
             if units is None or units == '':
                 units = module.units
-            dte_actuators = DataToExport('actuators', data=[
-                DataActuator(entry.module_name, data=entry.setting.parameter.value(),
-                             units=units)])
 
-            dashboard.modules_manager.timeout_signal.connect(self._on_timeout)
-            dashboard.modules_manager.move_actuators_with_callback(dte_actuators,
-                                                                   mode=MoveType.ABS,
-                                                                   callback=self._on_move_done,
-                                                                   do_connect_modules=True)
+            dwa = DataActuator(entry.module_name, data=entry.setting.parameter.value(),
+                             units=units)
+
+            self.module = dashboard.modules_manager.get_mod_from_name(entry.module_name, ModuleType.Actuator)
+
+            self.module.move_done_signal.connect(self._on_move_done)
+            self.actuator_timeout_timer.timeout.connect(self._on_timeout)
+
+            self.actuator_timeout_timer.setInterval(config('pymodaq', 'actuator', 'polling_timeout_s') * 1000)
+            self.actuator_timeout_timer.start()
+            self.module.move_abs(dwa)
 
         except Exception as e:
             self.execution_failed.emit(SubEntryError(str(e),
@@ -166,12 +181,14 @@ class ActuatorValueSubEntryHandler(StateSubEntryHandler):
             dashboard.modules_manager.timeout_signal.disconnect(self._on_timeout)
 
     def _on_move_done(self):
-        self._dashboard.modules_manager.timeout_signal.disconnect(self._on_timeout)
-        self._dashboard.modules_manager.forget_callback(self._on_move_done, disconnect_modules=True)
+        self.actuator_timeout_timer.stop()
+        self.module.move_done_signal.disconnect(self._on_move_done)
+
         self.executed_signal.emit(self._ind_subentry)
 
     def _on_timeout(self):
-        self._dashboard.modules_manager.timeout_signal.disconnect(self._on_timeout)
+        self.actuator_timeout_timer.stop()
+        self.module.move_done_signal.disconnect(self._on_move_done)
         self.execution_failed.emit(SubEntryError('Timeout while waiting for actuators to be moved',
                               self._ind_subentry))
 
@@ -203,7 +220,7 @@ class InitSubEntryHandler(StateSubEntryHandler):
                                                          QtCore.Qt.CheckState.Checked else False,
                                                    )))
 
-    def _execute_subentry(self, entry: SubEntry, dashboard: 'DashBoard'):
+    def execute_subentry(self, entry: SubEntry, dashboard: 'DashBoard'):
         """ Execute the given subentry """
         self._entry = entry
         self._dashboard = dashboard
@@ -255,9 +272,9 @@ class WaitSubEntryHandler(StateSubEntryHandler):
                                            siPrefix=True,
                                            )))
 
-    def _execute_subentry(self, entry: SubEntry, dashboard: 'DashBoard'):
+    def execute_subentry(self, entry: SubEntry, dashboard: 'DashBoard'):
         """ Execute the given subentry """
-        QtCore.QTimer.singleShot(int(entry.setting.value()),
+        QtCore.QTimer.singleShot(int(entry.setting.value() * 1000),
                                  self._on_wait_time_done)
 
     def _on_wait_time_done(self):
@@ -290,7 +307,7 @@ class StopSubEntryHandler(StateSubEntryHandler):
                     value=self.stop_bool.checkState() == QtCore.Qt.CheckState.Checked),
             path=()))
 
-    def _execute_subentry(self, entry: SubEntry,
+    def execute_subentry(self, entry: SubEntry,
                          dashboard: 'DashBoard'):
         """ Execute the given subentry """
         module = self.get_module(entry, dashboard)
@@ -330,7 +347,7 @@ class StopAllSubEntryHandler(StateSubEntryHandler):
                     value=self.stop_bool.checkState() == QtCore.Qt.CheckState.Checked),
             path=()))
 
-    def _execute_subentry(self, entry: SubEntry,
+    def execute_subentry(self, entry: SubEntry,
                          dashboard: 'DashBoard'):
         """ Execute the given subentry """
         try:
@@ -370,7 +387,7 @@ class StopExtensionSubEntryHandler(StateSubEntryHandler):
                     value=self.stop_bool.checkState() == QtCore.Qt.CheckState.Checked),
             path=()))
 
-    def _execute_subentry(self, entry: SubEntry,
+    def execute_subentry(self, entry: SubEntry,
                          dashboard: 'DashBoard'):
         """ Execute the given subentry """
         try:

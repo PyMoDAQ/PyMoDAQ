@@ -73,6 +73,7 @@ class StateManager(SettingsManager):
                  dashboard: 'DashBoard' = None):
 
         self.subentry_handler: StateSubEntryHandler = None
+        self.subentry_handlers: list[StateSubEntryHandler] = []
         self.config_model = SettingsManagerModel()
 
         if dashboard is None:
@@ -173,7 +174,7 @@ class StateManager(SettingsManager):
         if entry_path is None:
             entry_path = self.entry_filepath
         self.config_subentries = state_subentries_from_path(entry_path)
-
+        self.subentry_handlers: list[StateSubEntryHandler] = []
         if self.experiment_manager.applied_entry_name != self.experiment_filename:
             logger.warning(f'The current state is referring to the experiment: {self.experiment_filename} '
                            f'while the current applied experiment is: {self.experiment_manager.applied_entry_name}')
@@ -191,20 +192,23 @@ class StateManager(SettingsManager):
     def _advance(self):
         self._ind_subentry += 1
         if self._ind_subentry == len(self.config_subentries):
-            if self.is_action_checked('sequential_execution'):
+            if not self.is_action_checked('parallel_execution'):
                 self.finalize()
             return
 
         entry = self.config_subentries[self._ind_subentry]
-        self.subentry_handler = handler_factory.get_subentry_handler(entry.entry_type)(
-            self.config_model, self.settings, self.actuators, self.detectors)
+        self.subentry_handlers.append(handler_factory.get_subentry_handler(entry.entry_type)(
+            self.config_model,
+            self.settings,
+            actuators=self.actuators,
+            detectors=self.detectors,
+            ind_subentry=self._ind_subentry))
         try:
-            self.subentry_handler.executed_signal.connect(self._on_executed)
-            self.subentry_handler.execution_failed.connect(self._on_execution_failed)
-            self.subentry_handler.execute_subentry(entry, dashboard=self.dashboard,
-                                                   ind_subentry=self._ind_subentry)
+            self.subentry_handlers[-1].executed_signal.connect(self._on_executed)
+            self.subentry_handlers[-1].execution_failed.connect(self._on_execution_failed)
+            self.subentry_handlers[-1].execute_subentry(entry, dashboard=self.dashboard)
 
-            if not self.is_action_checked('sequential_execution'):
+            if self.is_action_checked('parallel_execution'):
                 self._advance()
 
         except SubEntryError as e:
@@ -220,7 +224,10 @@ class StateManager(SettingsManager):
         logger.warning(msg)
         self.subentries_model.set_status(ind_error, False)
         self._processed_subentries += 1
-        if self.is_action_checked('sequential_execution'):
+
+        if not self.is_action_checked('parallel_execution'):
+            print(f'Index in loop {self._ind_subentry}\n'
+                  f'index from Signal: {ind_error}')
             self._advance()
         elif self._processed_subentries == len(self.config_subentries):
             self.finalize()
@@ -228,7 +235,10 @@ class StateManager(SettingsManager):
     def _on_executed(self, ind_subentry):
         self._processed_subentries += 1
         self.subentries_model.set_status(ind_subentry, True)
-        if self.is_action_checked('sequential_execution'):
+        if not self.is_action_checked('parallel_execution'):
+            print(f'Index in loop {self._ind_subentry}\n'
+                  f'index from Signal: {ind_subentry}\n'
+                  f'Total calls {self._processed_subentries}')
             self._advance()
         elif self._processed_subentries == len(self.config_subentries):
             self.finalize()
@@ -281,7 +291,7 @@ class StateManager(SettingsManager):
 
     def setup_actions(self):
         super().setup_actions()
-        self.add_action('sequential_execution', 'Sequential Execution',
+        self.add_action('parallel_execution', 'Sequential/parallel Execution',
                         'format_list_numbered',
                         tip='if green (unchecked) perform a sequential execution else parallel',
                         checkable=True, icon_color=self.get_theme().green,
