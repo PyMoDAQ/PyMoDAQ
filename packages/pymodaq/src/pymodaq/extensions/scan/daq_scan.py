@@ -18,7 +18,7 @@ from qtpy.QtWidgets import QDialogButtonBox
 from qtpy.QtCore import QObject, QThread, Signal, QDateTime, QDate, QTime, QTimer
 
 from pymodaq.control_modules.enums import MoveType
-from pymodaq.extensions.custom_ext import CustomExt
+from pymodaq.utils.custom_ext import CustomExt
 from pymodaq.utils.managers.modules import ModuleType
 from pymodaq_data.plotting.utils import PlotColors
 
@@ -44,7 +44,7 @@ from pymodaq.post_treatment.load_and_plot import LoaderPlotter
 from pymodaq.extensions.scan.daq_scan_ui import DAQScanUI
 from pymodaq.utils.h5modules import module_saving
 from pymodaq.utils.scanner.scan_selector import ScanSelector, SelectorItem
-from pymodaq.utils.data import DataActuator, DataToActuators
+from pymodaq.utils.data import DataActuator
 from pymodaq.extensions.scan.manager.scan_manager import ScanManager
 
 if TYPE_CHECKING:
