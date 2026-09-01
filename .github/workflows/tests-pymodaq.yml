@@ -27,10 +27,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: ["ubuntu-latest", "windows-latest"]
-            python-version: "3.11"
-            qt-backend: ["pyqt6", "pyside6"]
+        os: ["ubuntu-latest", "windows-latest",]
+        python-version: ["3.11",]
+        qt-backend: ["pyqt6", "pyside6",]
     runs-on: ${{ matrix.os }}
     env:
       PYTEST_QT_API: ${{ matrix.qt-backend }}
