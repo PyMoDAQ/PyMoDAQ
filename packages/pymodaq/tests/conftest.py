@@ -3,9 +3,6 @@ import os
 import gc
 import pytest
 
-# Force Qt to use the offscreen/headless backend globally.
-# This prevents random GUI rendering and window manager crashes on CI runners (Windows, Linux, macOS).
-os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
 
 def _cleanup_qt_core():
