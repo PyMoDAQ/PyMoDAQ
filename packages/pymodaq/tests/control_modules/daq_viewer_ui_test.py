@@ -4,6 +4,7 @@ Created the 03/10/2022
 
 @author: Sebastien Weber
 """
+import os
 import pytest
 from pytest import fixture
 
@@ -118,7 +119,10 @@ def test_signals(ini_daq_viewer_ui):
     assert blocker.args[0].command == UiToMainViewer.TAKE_BKG
 
 
-@pytestmark
+@pytest.mark.skipif(
+    os.environ.get('CI') == 'true' and os.environ.get('RUNNER_OS') == 'Linux',
+    reason="PyQt6 event loop execution crashes on headless Linux"
+)
 def test_do_init(ini_daq_viewer_ui):
     IND_daq_type = 1
     IND_det_type = 1
