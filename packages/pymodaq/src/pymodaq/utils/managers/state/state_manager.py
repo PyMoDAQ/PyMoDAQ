@@ -82,6 +82,8 @@ class StateManager(SettingsManager):
         super().__init__(dashboard=dashboard,
                          handler_id=StateSettingsEntryHandler.handler_name)
 
+        self._processed_subentries = 0
+
         self.history_file_path: str = HISTORY_FILE_PATH
         self.config_model.save_path = self.get_entry_folder()
 
@@ -181,6 +183,7 @@ class StateManager(SettingsManager):
             self.show_subentries(self.config_subentries, f'Loading State: {self.entry}')
 
         self._ind_subentry = -1
+        self._processed_subentries = 0
 
         self._advance()
         return None
@@ -188,7 +191,8 @@ class StateManager(SettingsManager):
     def _advance(self):
         self._ind_subentry += 1
         if self._ind_subentry == len(self.config_subentries):
-            self.finalize()
+            if self.is_action_checked('sequential_execution'):
+                self.finalize()
             return
 
         entry = self.config_subentries[self._ind_subentry]
@@ -197,20 +201,37 @@ class StateManager(SettingsManager):
         try:
             self.subentry_handler.executed_signal.connect(self._on_executed)
             self.subentry_handler.execution_failed.connect(self._on_execution_failed)
-            self.subentry_handler.execute_subentry(entry, dashboard=self.dashboard)
+            self.subentry_handler.execute_subentry(entry, dashboard=self.dashboard,
+                                                   ind_subentry=self._ind_subentry)
+
+            if not self.is_action_checked('sequential_execution'):
+                self._advance()
+
         except SubEntryError as e:
+            self._processed_subentries += 1
             logger.exception(str(e))
             self.subentries_model.set_status(self._ind_subentry, False)
             self._advance()
 
-    def _on_execution_failed(self, exception: Exception | SubEntryError):
-        logger.warning(str(exception))
-        self.subentries_model.set_status(self._ind_subentry, False)
-        self._advance()
+    def _on_execution_failed(self, exception: SubEntryError):
+        msg = exception.args[0]
+        ind_error = exception.args[1]
 
-    def _on_executed(self):
-        self.subentries_model.set_status(self._ind_subentry, True)
-        self._advance()
+        logger.warning(msg)
+        self.subentries_model.set_status(ind_error, False)
+        self._processed_subentries += 1
+        if self.is_action_checked('sequential_execution'):
+            self._advance()
+        elif self._processed_subentries == len(self.config_subentries):
+            self.finalize()
+
+    def _on_executed(self, ind_subentry):
+        self._processed_subentries += 1
+        self.subentries_model.set_status(ind_subentry, True)
+        if self.is_action_checked('sequential_execution'):
+            self._advance()
+        elif self._processed_subentries == len(self.config_subentries):
+            self.finalize()
 
     def finalize(self):
         self.close_subentries_display(1000)

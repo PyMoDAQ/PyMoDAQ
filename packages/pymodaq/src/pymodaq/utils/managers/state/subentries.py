@@ -81,7 +81,7 @@ class StateSettingsEntryHandler(StateSubEntryHandler):
     handler_name = StateSubEntryHandlerTypes.SETTINGS
     use_dialog = False
 
-    def execute_subentry(self, entry: SubEntry, dashboard: 'DashBoard'):
+    def _execute_subentry(self, entry: SubEntry, dashboard: 'DashBoard'):
         """ Execute the given subentry
 
         In general, should get first the module on which the settings will be applied
@@ -94,7 +94,7 @@ class StateSettingsEntryHandler(StateSubEntryHandler):
         """
         module = self.get_module(entry, dashboard)
         module.settings.child(*entry.setting.path[3:]).setValue(entry.setting.value())
-        self.executed_signal.emit()
+        self.executed_signal.emit(self._ind_subentry)
 
 
 @SubEntryHandlerFactory.register_handler()
@@ -140,7 +140,7 @@ class ActuatorValueSubEntryHandler(StateSubEntryHandler):
                     suffix=self.value_sb.opts['suffix']),
             path=()))
 
-    def execute_subentry(self, entry: SubEntry, dashboard: 'DashBoard'):
+    def _execute_subentry(self, entry: SubEntry, dashboard: 'DashBoard'):
         """ Execute the given subentry """
         self._dashboard = dashboard
         module = self.get_module(entry, dashboard)
@@ -160,20 +160,20 @@ class ActuatorValueSubEntryHandler(StateSubEntryHandler):
                                                                    callback=self._on_move_done,
                                                                    do_connect_modules=True)
 
-            dashboard.modules_manager.move(dte_actuators)
-
         except Exception as e:
-            self.execution_failed.emit(e)
+            self.execution_failed.emit(SubEntryError(str(e),
+                              self._ind_subentry))
             dashboard.modules_manager.timeout_signal.disconnect(self._on_timeout)
 
     def _on_move_done(self):
         self._dashboard.modules_manager.timeout_signal.disconnect(self._on_timeout)
         self._dashboard.modules_manager.forget_callback(self._on_move_done, disconnect_modules=True)
-        self.executed_signal.emit()
+        self.executed_signal.emit(self._ind_subentry)
 
     def _on_timeout(self):
         self._dashboard.modules_manager.timeout_signal.disconnect(self._on_timeout)
-        self.execution_failed.emit(SubEntryError('Timeout while waiting for actuators to be moved'))
+        self.execution_failed.emit(SubEntryError('Timeout while waiting for actuators to be moved',
+                              self._ind_subentry))
 
 
 @SubEntryHandlerFactory.register_handler()
@@ -203,7 +203,7 @@ class InitSubEntryHandler(StateSubEntryHandler):
                                                          QtCore.Qt.CheckState.Checked else False,
                                                    )))
 
-    def execute_subentry(self, entry: SubEntry, dashboard: 'DashBoard'):
+    def _execute_subentry(self, entry: SubEntry, dashboard: 'DashBoard'):
         """ Execute the given subentry """
         self._entry = entry
         self._dashboard = dashboard
@@ -216,15 +216,17 @@ class InitSubEntryHandler(StateSubEntryHandler):
             module.init_signal.connect(self._on_module_initialization)
             module.init_hardware_ui(entry.setting.value())
         except Exception as e:
-            self.execution_failed.emit(e)
+            self.execution_failed.emit(SubEntryError(str(e),
+                              self._ind_subentry))
 
     def _on_module_initialization(self, initialized: bool):
         module = self.get_module(self._entry, self._dashboard)
         module.init_signal.disconnect(self._on_module_initialization)
         if initialized != self._entry.setting.value():
-            self.execution_failed.emit(ValueError('Could not initialize the module'))
+            self.execution_failed.emit(SubEntryError('Could not initialize the module',
+                              self._ind_subentry))
         else:
-            self.executed_signal.emit()
+            self.executed_signal.emit(self._ind_subentry)
 
 
 @SubEntryHandlerFactory.register_handler()
@@ -253,13 +255,13 @@ class WaitSubEntryHandler(StateSubEntryHandler):
                                            siPrefix=True,
                                            )))
 
-    def execute_subentry(self, entry: SubEntry, dashboard: 'DashBoard'):
+    def _execute_subentry(self, entry: SubEntry, dashboard: 'DashBoard'):
         """ Execute the given subentry """
         QtCore.QTimer.singleShot(int(entry.setting.value()),
                                  self._on_wait_time_done)
 
     def _on_wait_time_done(self):
-        self.executed_signal.emit()
+        self.executed_signal.emit(self._ind_subentry)
 
 
 @SubEntryHandlerFactory.register_handler()
@@ -288,18 +290,21 @@ class StopSubEntryHandler(StateSubEntryHandler):
                     value=self.stop_bool.checkState() == QtCore.Qt.CheckState.Checked),
             path=()))
 
-    def execute_subentry(self, entry: SubEntry,
+    def _execute_subentry(self, entry: SubEntry,
                          dashboard: 'DashBoard'):
         """ Execute the given subentry """
         module = self.get_module(entry, dashboard)
         if not module.initialized_state:
             self.execution_failed.emit(
-                SubEntryError('Could not stop an actuator that is not initialized'))
+                SubEntryError('Could not stop an actuator that is not initialized',
+                              self._ind_subentry))
         try:
             dashboard.modules_manager.stop_module(entry.module_name)
-            self.executed_signal.emit()
+            self.executed_signal.emit(self._ind_subentry)
         except Exception as e:
-            self.execution_failed.emit(e)
+            self.execution_failed.emit(SubEntryError(str(e),
+                                       self._ind_subentry
+                                       ))
 
 
 @SubEntryHandlerFactory.register_handler()
@@ -325,7 +330,7 @@ class StopAllSubEntryHandler(StateSubEntryHandler):
                     value=self.stop_bool.checkState() == QtCore.Qt.CheckState.Checked),
             path=()))
 
-    def execute_subentry(self, entry: SubEntry,
+    def _execute_subentry(self, entry: SubEntry,
                          dashboard: 'DashBoard'):
         """ Execute the given subentry """
         try:
@@ -333,9 +338,10 @@ class StopAllSubEntryHandler(StateSubEntryHandler):
                module = dashboard.modules_manager.get_mod_from_name(mod_name, ModuleType.Control)
                if module.initialized_state:
                    module.stop_module()
-            self.executed_signal.emit()
+            self.executed_signal.emit(self._ind_subentry)
         except Exception as e:
-            self.execution_failed.emit(e)
+            self.execution_failed.emit(SubEntryError(str(e),
+                                                     self._ind_subentry))
 
 
 @SubEntryHandlerFactory.register_handler()
@@ -364,15 +370,16 @@ class StopExtensionSubEntryHandler(StateSubEntryHandler):
                     value=self.stop_bool.checkState() == QtCore.Qt.CheckState.Checked),
             path=()))
 
-    def execute_subentry(self, entry: SubEntry,
+    def _execute_subentry(self, entry: SubEntry,
                          dashboard: 'DashBoard'):
         """ Execute the given subentry """
         try:
             if ExtensionEnum(entry.module_name) in dashboard.extensions:
                 dashboard.extensions[ExtensionEnum(entry.module_name)].stop()
-            self.executed_signal.emit()
+            self.executed_signal.emit(self._ind_subentry)
         except Exception as e:
-            self.execution_failed.emit(e)
+            self.execution_failed.emit(SubEntryError(str(e),
+                              self._ind_subentry))
 
 
 if __name__ == '__main__':

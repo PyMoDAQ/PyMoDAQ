@@ -52,7 +52,7 @@ class ScanSettingsEntryHandler(SubEntryHandler):
     handler_name = 'scan_settings'
     use_dialog = False
 
-    def execute_subentry(self, entry: SubEntry,
+    def _execute_subentry(self, entry: SubEntry,
                          manager: 'ScanManager', *args, **kwargs):
         """ Execute the given subentry
 
@@ -100,7 +100,7 @@ class ControlModulesEntryHandler(SubEntryHandler):
                                  mod in value['all_items']]
             module_from_manager.settings[child.name()] = value
 
-    def execute_subentry(self, entry: SubEntry,
+    def _execute_subentry(self, entry: SubEntry,
                          manager: 'ScanManager', *args, **kwargs):
         """ Execute the given subentry
 
@@ -151,7 +151,7 @@ class ScannnerEntryHandler(SubEntryHandler):
         """ update the manager according to the loading of the SubEntry"""
         pass
 
-    def execute_subentry(self, entry: SubEntry,
+    def _execute_subentry(self, entry: SubEntry,
                          manager: 'ScanManager', *args, **kwargs):
         """ Execute the given subentry
 
@@ -204,7 +204,7 @@ class StartScanEntryHandler(SubEntryHandler):
         """ update the manager according to the loading of the SubEntry"""
         manager.set_action_checked('start_scan', entry.setting.value())
 
-    def execute_subentry(self, entry: SubEntry,
+    def _execute_subentry(self, entry: SubEntry,
                          manager: 'ScanManager', *args, **kwargs):
         """ Execute the given subentry
 
