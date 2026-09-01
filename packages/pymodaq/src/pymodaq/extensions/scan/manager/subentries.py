@@ -130,7 +130,7 @@ class ControlModulesEntryHandler(ScanSubEntryHandler):
             else:
                 module_from_daq_scan.selected_detectors_name = value['selected']
             module_from_manager.settings[child.name()] = value
-            
+
         self.manager.daq_scan.plot_from()
         # trigger the listing of the available data to be plotted.
         # The right ones will be selected next subentry
