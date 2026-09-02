@@ -1531,8 +1531,14 @@ class DAQScanAcquisition(QObject):
         logger.info(msg)
 
     def finalize_scan(self):
-        self.h5_data_array_ready_signal.disconnect(self._on_h5data_ready)
-        self.scan_step_failed_signal.disconnect(self._on_scan_step_failed)
+        try:
+            self.h5_data_array_ready_signal.disconnect(self._on_h5data_ready)
+        except TypeError:
+            pass
+        try:
+            self.scan_step_failed_signal.disconnect(self._on_scan_step_failed)
+        except TypeError:
+            pass
 
         self.modules_manager.timeout_signal.disconnect(self.timeout)
         self.modules_manager.connect_actuators(False)

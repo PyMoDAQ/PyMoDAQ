@@ -550,12 +550,10 @@ class DashBoard(CustomApp, LECOComponentMixin):
             for area in areas:
                 area.win.close()
 
-            if hasattr(self, "mainwindow"):
-                self.mainwindow.close()
-
             if self.pid_window is not None:
                 self.pid_window.close()
 
+            super().quit_fun()
 
         except Exception as e:
             logger.exception(str(e))
@@ -992,11 +990,13 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.rois_dock = Dock('ROIs', )
         self.rois_dock.label.setDim(True)
         self.dockarea.addDock(self.rois_dock, position='right')
+        self.rois_dock.setParent(self.parent)
         self.rois_dock.setVisible(False)
 
         self.controls_dock = Dock('Controls', )
         self.controls_dock.label.setDim(True)
         self.dockarea.addDock(self.controls_dock, position='right')
+        self.controls_dock.setParent(self.parent)
         self.controls_dock.setVisible(False)
 
     def value_changed(self, param: Parameter):
