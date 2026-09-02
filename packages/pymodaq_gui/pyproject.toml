@@ -87,7 +87,3 @@ include = [
     "/src",
 ]
 
-[tool.coverage.run]
-omit = [
-    "*/examples/*",
-]
