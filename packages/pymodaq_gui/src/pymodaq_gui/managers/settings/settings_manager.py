@@ -12,7 +12,7 @@ from qtpy.QtCore import QModelIndex
 from pymodaq_gui.utils.widgets.widget_with_label_title import WidgetWithLabelTitle
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config, get_set_local_dir, get_set_config_dir
-from pymodaq_utils.utils import capitalize
+from pymodaq_utils.utils import capitalize, read_binary_and_deserialize
 
 from pymodaq_gui.parameter import Parameter, ioxml
 from pymodaq_gui.parameter.utils import ParameterWithPath
@@ -23,8 +23,7 @@ from pymodaq_gui.managers.settings.subentries import (
     SubEntryHandlerFactory, SubEntryHandler, SubEntryError, SubEntryHandlerTypes, SubEntry)
 from pymodaq_gui.managers.settings.utils import (
     SettingsManagerParameterTree, SettingsManagerModel, SettingsManagerTableView,
-    settings_manager_subentries_from_path, ParameterDelegate,
-    EntryActions)
+    ParameterDelegate, EntryActions)
 
 
 from pymodaq_gui.managers.manager_base import ManagerBase, ManagerActions
@@ -102,7 +101,7 @@ class SettingsManager(ManagerBase):
         """
         if entry_path is None:
             entry_path = self.entry_filepath
-        config_subentries = settings_manager_subentries_from_path(entry_path)
+        config_subentries = read_binary_and_deserialize(entry_path)
 
         if len(config_subentries) > 0:
             self.show_subentries(config_subentries, f'Loading {capitalize(self.entry_type)}: {self.entry}')

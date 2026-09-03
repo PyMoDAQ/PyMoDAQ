@@ -38,11 +38,8 @@ from pymodaq.launcher import HISTORY_FILE_NAME, HISTORY_FILE_PATH
 
 from datetime import datetime
 
-from pymodaq_gui.managers.settings.utils import (
-    SettingsManagerParameterTree, SettingsManagerModel, SettingsManagerTableView,
-    settings_manager_subentries_from_path, ParameterDelegate,
-    EntryActions, )
-
+from pymodaq_gui.managers.settings.utils import SettingsManagerModel
+from pymodaq_utils.utils import read_binary_and_deserialize
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -173,7 +170,7 @@ class StateManager(SettingsManager):
         if entry_path is None:
             entry_path = self.entry_filepath
 
-        self.config_subentries = settings_manager_subentries_from_path(entry_path)[1:]
+        self.config_subentries = read_binary_and_deserialize(entry_path)[1:]
         # first element is the parallel/sequential boolean
 
         self.subentry_handlers: list[StateSubEntryHandler] = []
@@ -363,7 +360,7 @@ class StateManager(SettingsManager):
 
     def _update_entry(self, entry: Union[str, Path] = None, **kwargs):
         # read binary file content and return a list of Serializables
-        data: list[SerializableBase] = settings_manager_subentries_from_path(Path(entry))
+        data: list[SerializableBase] = read_binary_and_deserialize(Path(entry))
 
         try:
             checked = data.pop(0)

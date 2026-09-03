@@ -19,10 +19,8 @@ from qtpy.QtWidgets import (
 )
 
 from pymodaq.utils.managers.modules.module_creator import ModuleCreator
-from pymodaq.utils.managers.modules import ModuleType
-from pymodaq.utils.managers.modules.loader import ModuleLoader, PluginInfo
+from pymodaq.utils.managers.modules.loader import PluginInfo
 from pymodaq.control_modules.enums import DAQTypesEnum
-from pymodaq.control_modules.utils import ControllerAndThread
 from pymodaq.utils.managers.roi_manager.roi_manager import ROIManager
 
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -64,7 +62,7 @@ from pymodaq_gui.managers.manager_base import ManagerActions # should be importe
 
 
 if TYPE_CHECKING:
-    from pymodaq.extensions.custom_ext import CustomExt
+    from pymodaq.utils.custom_ext import CustomExt
 
 logger = set_logger(get_module_name(__file__))
 
