@@ -53,7 +53,6 @@ class Scanner(QObject, ParameterManager):
     ScanSelector, ScannerBase, TableModelSequential, TableModelTabular, pymodaq_types.TableViewCustom
     """
     scanner_updated_signal = Signal()
-    settings_updated_signal = Signal()
     settings_name = 'scanner'
 
     params = [
@@ -204,8 +203,6 @@ class Scanner(QObject, ParameterManager):
 
         if self._scanner is not None:
             self.settings.child('n_steps').setValue(self._scanner.evaluate_steps())
-
-        self.settings_updated_signal.emit()
 
     @property
     def actuators_all(self) -> list[DAQ_Move]:
