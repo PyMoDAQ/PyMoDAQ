@@ -7,6 +7,7 @@ from qtpy.QtCore import QObject, Signal
 from qtpy import QtWidgets
 
 from pymodaq_gui.messenger import messagebox
+from pymodaq_utils.enums import StrEnum
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config
@@ -29,6 +30,11 @@ logger = set_logger(get_module_name(__file__))
 ser_factory = SerializableFactory()
 config = Config()
 scanner_factory = ScannerFactory()
+
+
+class Orientation(StrEnum):
+    VERTICAl = 'vertical'
+    HORIZONTAL = 'horizontal'
 
 
 class Scanner(QObject, ParameterManager):
@@ -68,7 +74,8 @@ class Scanner(QObject, ParameterManager):
 
     def __init__(self, parent_widget: QtWidgets.QWidget = None,
                  actuators: List[DAQ_Move] = None,
-                 selected_actuators: list[DAQ_Move] = None):
+                 selected_actuators: list[DAQ_Move] = None,
+                 orientation: Orientation = Orientation.VERTICAl):
         if actuators is None:
             actuators = []
         if selected_actuators is None:
@@ -79,6 +86,8 @@ class Scanner(QObject, ParameterManager):
 
         self._actuators: list[DAQ_Move] = selected_actuators
         self._actuators_all: list[DAQ_Move] = actuators
+
+        self.orientation: Orientation = orientation
 
         if parent_widget is None:
             parent_widget = QtWidgets.QWidget()
@@ -92,6 +101,9 @@ class Scanner(QObject, ParameterManager):
         self.actuators = actuators
         if self._scanner is not None:
             self.settings.child('n_steps').setValue(self._scanner.evaluate_steps())
+
+    def __repr__(self):
+        return f'Scanner {self.scan_type}/{self.scan_sub_type} of {self.actuators}'
 
     def to_dict(self) -> dict[str, Any]:
         """ Dictionary representation of the scanner object"""
@@ -109,7 +121,8 @@ class Scanner(QObject, ParameterManager):
         self.scanner.from_dict(scanner_dict['scanner'])
 
     def setup_ui(self):
-        self.parent_widget.setLayout(QtWidgets.QVBoxLayout())
+        self.parent_widget.setLayout(QtWidgets.QVBoxLayout() if self.orientation == Orientation.VERTICAl
+                                     else QtWidgets.QHBoxLayout())
         self.parent_widget.layout().setContentsMargins(0, 0, 0, 0)
         self.parent_widget.layout().addWidget(self.settings_tree)
         self._scanner_settings_widget = QtWidgets.QWidget()
@@ -117,7 +130,6 @@ class Scanner(QObject, ParameterManager):
         self._scanner_settings_widget.layout().setContentsMargins(0, 0, 0, 0)
         self.parent_widget.layout().addWidget(self._scanner_settings_widget)
         self.settings_tree.setMinimumHeight(110)
-        self.settings_tree.header().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
 
     def set_scanner(self):
         try:
