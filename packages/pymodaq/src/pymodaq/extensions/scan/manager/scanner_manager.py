@@ -34,6 +34,7 @@ config = Config()
 
 
 
+
 class ScannerManager(ManagerBase):
     """
     Main class managing settings values to be restored in the Scanner part of a DAQScan (or elsewhere)

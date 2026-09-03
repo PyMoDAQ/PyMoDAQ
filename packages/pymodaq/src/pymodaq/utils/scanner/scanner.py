@@ -50,6 +50,7 @@ class Scanner(QObject, ParameterManager):
     settings_name = 'scanner'
 
     params = [
+        {'title': 'Actuators:', 'name': 'actuators', 'type': 'itemselect', 'checkbox': True, 'visible': False},
         {'title': 'Calculate positions:', 'name': 'calculate_positions', 'type': 'bool_push',
          'label': 'Calculate positions'},
         {'title': 'N steps:', 'name': 'n_steps', 'type': 'int', 'value': 0, 'readonly': True},
@@ -72,6 +73,9 @@ class Scanner(QObject, ParameterManager):
 
         QObject.__init__(self)
         ParameterManager.__init__(self)
+
+        self._actuators: list[DAQ_Move] = actuators
+        self._actuators_all: list[DAQ_Move] = actuators
 
         if parent_widget is None:
             parent_widget = QtWidgets.QWidget()
@@ -170,8 +174,22 @@ class Scanner(QObject, ParameterManager):
             else:
                 self.settings.child('units_handling', 'common_units').show(False)
             self.set_scanner()
+        elif param.name() == 'actuators':
+            self.actuators = [act for act in self.actuators_all if act.title in param.value()['selected']]
 
-        self.settings.child('n_steps').setValue(self._scanner.evaluate_steps())
+        if self._scanner is not None:
+            self.settings.child('n_steps').setValue(self._scanner.evaluate_steps())
+
+    @property
+    def actuators_all(self) -> list[DAQ_Move]:
+        """list of DAQ_Move: Returns as a list the name of the selected actuators to describe the actual scan"""
+        return self._actuators_all
+
+    @actuators_all.setter
+    def actuators_all(self, actuators: list[DAQ_Move]):
+        self._actuators_all = actuators
+        self.settings.child('actuators').setValue({'all_items': [actuator.title for actuator in actuators],
+                                                   'selected': [actuator.title for actuator in actuators]})
 
     @property
     def actuators(self) -> list[DAQ_Move]:
@@ -181,6 +199,8 @@ class Scanner(QObject, ParameterManager):
     @actuators.setter
     def actuators(self, act_list: list[DAQ_Move]):
         self._actuators = act_list
+        self.settings.child('actuators').setValue({'all_items': [actuator.title for actuator in self._actuators_all],
+                                                   'selected': [actuator.title for actuator in act_list]})
         self.set_scanner()
 
     def set_actuators(self, actuators: list[DAQ_Move]):
@@ -322,12 +342,13 @@ def main():
     settings_tree.setParameters(settings)
 
     widget_main = QtWidgets.QWidget()
-    widget_main.setLayout(QtWidgets.QVBoxLayout())
+    widget_main.setLayout(QtWidgets.QHBoxLayout())
     #widget_main.layout().setContentsMargins(0, 0, 0, 0)
     widget_scanner = QtWidgets.QWidget()
     widget_main.layout().addWidget(settings_tree)
     widget_main.layout().addWidget(widget_scanner)
     scanner = Scanner(widget_scanner, actuators=actuators)
+    scanner.settings.child('actuators').show()
 
     def update_actuators(param):
         scanner.actuators = [utils.find_objects_in_list_from_attr_name_val(actuators, 'title', act_str,
