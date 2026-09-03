@@ -67,14 +67,17 @@ class Scanner(QObject, ParameterManager):
     ]
 
     def __init__(self, parent_widget: QtWidgets.QWidget = None,
-                 actuators: List[DAQ_Move] = None):
+                 actuators: List[DAQ_Move] = None,
+                 selected_actuators: list[DAQ_Move] = None):
         if actuators is None:
             actuators = []
+        if selected_actuators is None:
+            selected_actuators = []
 
         QObject.__init__(self)
         ParameterManager.__init__(self)
 
-        self._actuators: list[DAQ_Move] = actuators
+        self._actuators: list[DAQ_Move] = selected_actuators
         self._actuators_all: list[DAQ_Move] = actuators
 
         if parent_widget is None:
@@ -199,6 +202,9 @@ class Scanner(QObject, ParameterManager):
     @actuators.setter
     def actuators(self, act_list: list[DAQ_Move]):
         self._actuators = act_list
+        for act in act_list:
+            if act not in self.actuators_all:
+                self._actuators_all.append(act)
         self.settings.child('actuators').setValue({'all_items': [actuator.title for actuator in self._actuators_all],
                                                    'selected': [actuator.title for actuator in act_list]})
         self.set_scanner()

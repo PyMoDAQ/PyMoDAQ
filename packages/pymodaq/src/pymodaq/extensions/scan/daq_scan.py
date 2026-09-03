@@ -172,7 +172,8 @@ class DAQScan(CustomExt):
         self.h5temp: H5Saver = None
         self.temp_path: tempfile.TemporaryDirectory = None
 
-        self.scanner = Scanner(actuators=self.modules_manager.actuators)
+        self.scanner = Scanner(actuators=self.modules_manager.actuators_all,
+                               selected_actuators=self.modules_manager.actuators)
         self.scan_parameters = None
 
         self.batcher: BatchScanner = None
