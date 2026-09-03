@@ -53,6 +53,7 @@ class Scanner(QObject, ParameterManager):
     ScanSelector, ScannerBase, TableModelSequential, TableModelTabular, pymodaq_types.TableViewCustom
     """
     scanner_updated_signal = Signal()
+    settings_updated_signal = Signal()
     settings_name = 'scanner'
 
     params = [
@@ -103,20 +104,29 @@ class Scanner(QObject, ParameterManager):
             self.settings.child('n_steps').setValue(self._scanner.evaluate_steps())
 
     def __repr__(self):
-        return f'Scanner {self.scan_type}/{self.scan_sub_type} of {self.actuators}'
+        return f'Scanner {self.scan_type}/{self.scan_sub_type} {self.n_steps} steps of {self.actuators}'
 
-    def to_dict(self) -> dict[str, Any]:
-        """ Dictionary representation of the scanner object"""
-        return dict(actuators=[act.title for act in self.actuators],
+    def to_dict(self, use_real_actuators = False) -> dict[str, Any]:
+        """ Dictionary representation of the scanner object
+
+        if use_real_actuators is True, populate the dictionary with real actuator objects else their title
+
+        This distinction allows to simply serialize Scanner when using strings while serializing DAQ_Move is not that simple
+        """
+        return dict(actuators=self.actuators_all if use_real_actuators else [act.title for act in self.actuators_all],
+                    selected=self.actuators if use_real_actuators else [act.title for act in self.actuators],
                     scan_type=self.scan_type,
                     scan_sub_type=self.scan_sub_type,
                     display_units = self.settings['units_handling', 'display_units'],
+                    n_steps = self.settings['n_steps'],
                     scanner=self.scanner.to_dict())
 
     def from_dict(self, scanner_dict: dict):
-        self.actuators = scanner_dict['actuators']  # should DAQ_Move instances, this is not symmetric wrt to_dict()
+        self.actuators_all = scanner_dict['actuators']
+        self.actuators = scanner_dict['selected']  # should DAQ_Move instances, this is not symmetric wrt to_dict() except if you use the real_actuators argument in to_dict()
         self.set_scan_type_and_subtypes(scanner_dict['scan_type'], scanner_dict['scan_sub_type'])
         self.settings['units_handling', 'display_units'] = scanner_dict['display_units']
+        self.settings['n_steps'] = scanner_dict['n_steps']
         self.set_scanner()
         self.scanner.from_dict(scanner_dict['scanner'])
 
@@ -194,6 +204,8 @@ class Scanner(QObject, ParameterManager):
 
         if self._scanner is not None:
             self.settings.child('n_steps').setValue(self._scanner.evaluate_steps())
+
+        self.settings_updated_signal.emit()
 
     @property
     def actuators_all(self) -> list[DAQ_Move]:
