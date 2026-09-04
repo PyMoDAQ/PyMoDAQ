@@ -10,7 +10,7 @@ from qtpy import QtWidgets, QtCore
 from qtpy.QtCore import Signal
 
 from pymodaq.extensions.scan.scan_manager import ScanManager
-from pymodaq_gui.utils.shared_ui import MenuToolbarNames
+from pymodaq_gui.utils.enums import MenuToolbarNames
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.logger import set_logger, get_module_name
 
@@ -34,7 +34,7 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
 
     """
     command_sig = Signal(ThreadCommand)
-    _show_h5file_statusbar_widgets = True
+    show_h5file_statusbar_widgets = True
 
     def __init__(self, parent, toolbar=None):
         CustomApp.__init__(self, parent, toolbar=toolbar, add_toolbar_break=False)

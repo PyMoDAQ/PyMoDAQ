@@ -31,7 +31,7 @@ class CustomExt(CustomApp):
     config_changed = QtCore.Signal()  # will be emitted when the user changed anything in the configuration files (emitted from SharedUI)
 
     icon_name = 'extension' # change this icon name if needed
-    _h5_base_group_name = 'AGroupName' #scan for DAQScan, Ramp for ramping...
+    h5_base_group_name = 'AGroupName' #scan for DAQScan, Ramp for ramping...
 
     def __init__(self, parent: Union[DockArea, QtWidgets.QWidget, QtWidgets.QMainWindow],
                  dashboard: 'DashBoard', module_manager_class=ModulesManager, **kwargs):

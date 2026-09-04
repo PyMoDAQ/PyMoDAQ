@@ -21,28 +21,17 @@ from pymodaq_utils.packages import get_pypi_pymodaq
 
 from pymodaq_gui.utils.widgets.window import make_window
 from pymodaq_gui.utils import DockArea
-from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import get_version
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.utils import get_module_path
 from pymodaq_gui.utils.custom_app import CustomApp
 from pymodaq_gui.utils.menu_utils import StickyMenu
-
+from pymodaq_gui.utils.enums import MenuToolbarNames
 
 logger = set_logger(get_module_name(__file__))
 
 config = Config()
-
-
-class MenuToolbarNames(StrEnum):
-    FILE = 'file'
-    SETTINGS = 'settings'
-    VIEW = 'view'
-    TOOLS = 'tools'
-    TOOLBARS = 'toolbars'
-    HELP = 'help'
-    RUNTIME = 'runtime'
 
 
 class PymodaqUpdateTableWidget(QTableWidget):

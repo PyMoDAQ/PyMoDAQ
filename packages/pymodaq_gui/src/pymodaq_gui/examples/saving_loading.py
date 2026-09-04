@@ -3,7 +3,6 @@ from pathlib import Path
 from time import perf_counter
 from typing import Iterable, TYPE_CHECKING, Union, Mapping
 
-from PyQt6.QtCore import QObject
 from qtpy import QtWidgets, QtCore
 
 from pymodaq_gui.plotting.data_viewers import ViewerDispatcher, ViewersEnum
@@ -19,7 +18,8 @@ from pymodaq_data.h5modules.data_saving import DataToExportTimedSaver, Node, GRO
 from pymodaq_gui import utils as gutils
 from pymodaq_gui.h5modules.saving import H5Saver
 from pymodaq_gui.utils import DockArea, Dock
-from pymodaq_gui.utils.shared_ui import MenuToolbarNames, SharedUI
+from pymodaq_gui.utils.shared_ui import SharedUI
+from pymodaq_gui.utils.enums import MenuToolbarNames
 from pymodaq_gui.utils.custom_app import CustomApp
 
 
@@ -92,7 +92,7 @@ class SaverWorker(QtCore.QObject):
         self.n_saved.emit(self._n_saved)
 
 
-class Plotter(QObject):
+class Plotter(QtCore.QObject):
     def __init__(self, h5saver: H5Saver, viewer: ViewerDispatcher, parent=None):
         super().__init__(parent)
         self.h5saver = h5saver
@@ -114,8 +114,8 @@ class MySaverLoader(CustomApp):
     send_data_signal = QtCore.Signal(DataToExport)
     _worker_done = QtCore.Signal()
 
-    _h5_base_group_name = 'SaverExample'
-    _show_h5file_statusbar_widgets = True
+    h5_base_group_name = 'SaverExample'
+    show_h5file_statusbar_widgets = True
     params = [
         {'title': 'Refresh Grab:', 'name': 'refresh_grab', 'type': 'int', 'value': 50, 'suffix': 'ms',
          'siPrefix': False},
@@ -138,7 +138,6 @@ class MySaverLoader(CustomApp):
 
         self.plotter_timer = QtCore.QTimer()
         self.plotter_timer.timeout.connect(self.update_plotter)
-
 
         self._saver = DataToExportTimedSaver(self.h5saver)
 
