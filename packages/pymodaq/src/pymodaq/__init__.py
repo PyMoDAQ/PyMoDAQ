@@ -1,18 +1,18 @@
 import importlib.util
 import os
 import sys
-from pint import UnitRegistry
+
 from pathlib import Path
 
 import warnings
 
-import pymodaq_utils  # to init stuff related to pymodaq_utils  # necessary, leave it there
-import pymodaq_data  # to init stuff related to pymodaq_data  # necessary, leave it there
-import pymodaq_gui  # to init stuff related to pymodaq_gui  # necessary, leave it there
+import pymodaq_utils  # to init stuff related to pymodaq_utils  # noqa necessary, leave it there
+import pymodaq_data  # to init stuff related to pymodaq_data  # noqa  necessary, leave it there
+import pymodaq_gui  # to init stuff related to pymodaq_gui  # noqa  necessary, leave it there
 
-from pymodaq_data import Q_, Unit, ureg  # necessary, leave it there
+from pymodaq_data import Q_, Unit, ureg  # noqa necessary, leave it there
 
-from pymodaq.utils.config import Config  # Necessary for registration
+from pymodaq.utils.config import Config  # noqa  Necessary for registration
 from pymodaq_utils.config import GlobalConfig as Config
 try:
     # with open(str(Path(__file__).parent.joinpath('resources/VERSION')), 'r') as fvers:
