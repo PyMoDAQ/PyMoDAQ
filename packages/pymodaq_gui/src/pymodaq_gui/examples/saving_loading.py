@@ -45,7 +45,7 @@ class DataGenerator(QtCore.QObject):
         self.refresh_time = 100  #ms
         self._show_thread = True
 
-        self.command_signal.connect(self.queue_command)
+        self.command_signal.connect(self.queue_command, Qt.ConnectionType.QueuedConnection)
 
     def queue_command(self, command: ThreadCommand):
         if self.timer is None:
@@ -134,6 +134,13 @@ class DataProcessor(QtCore.QObject):
 
     @QtCore.Slot(str)
     def _do_process_data(self, where: str):
+        """ Process data here, Be aware that load_all try to load multiple nodes from the h5file but not at the same
+        time (sequentially). In this multithreaded application, the saving could add data to a node in between the
+        reading. What you expect to be data with same shape/size may not be True!
+
+        If you want to avoid that effect, do the reading in the same thread that is saving the data, eventually sending
+        then the loaded dte to this processor
+        """
         try:
             if self._show_thread:
                 print(f'Processing data in Qthread{self.thread()}')
