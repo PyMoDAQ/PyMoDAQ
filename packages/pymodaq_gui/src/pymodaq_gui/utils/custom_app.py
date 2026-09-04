@@ -1,15 +1,16 @@
+import inspect
 from pathlib import Path
 from typing import Union, TYPE_CHECKING, Dict, Optional
-
-from pymodaq_utils.config import GlobalConfig as Config
-
-config = Config()
 
 import qt_themes
 from qt_themes import Theme
 from qtpy.QtCore import QObject, QLocale
 from qtpy import QtCore, QtWidgets
 
+from pymodaq_gui.managers.runner_thread_manager import WorkerThreadManager
+from pymodaq_gui.managers.h5manager import FileStatus, H5Manager
+from pymodaq_utils.config import GlobalConfig as Config
+from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import get_set_path, get_set_local_dir
 from pymodaq_utils.warnings import deprecation_msg
 
@@ -19,6 +20,8 @@ from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_gui.parameter import ParameterTree
 from pymodaq_gui.utils.splash import get_splash_sc
 
+logger = set_logger(get_module_name(__file__))
+config = Config()
 
 
 class CustomApp(QObject, ActionManager, ParameterManager):
@@ -105,12 +108,15 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     """
 
     log_signal = QtCore.Signal(str)
+    show_h5file_statusbar_widgets = False
+    h5_base_group_name = 'AppData'  # rename that in your app/extension to give a meaningful name to your base group
     params = []
 
     def __init__(self, parent: Union[DockArea, QtWidgets.QMainWindow, QtWidgets.QWidget] = None,
                  tree: ParameterTree = None, title: str = None, toolbar: QtWidgets.QToolBar=None,
                  create_app_toolbar: bool = True, add_toolbar_break=True,
                  create_app_menu: bool = False):
+
 
         QObject.__init__(self)
         ActionManager.__init__(self)
@@ -136,6 +142,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         self._title: str = ''
         self.title = title
 
+        # then call self.h5saver property
         self.docks: Dict[str, Dock] = dict([])
 
         self._menubar: QtWidgets.QMenuBar = None
@@ -162,6 +169,44 @@ class CustomApp(QObject, ActionManager, ParameterManager):
                           self.__class__.__name__,
                           self.menubar if self.mainwindow is not None else None)
 
+        self._h5_manager = H5Manager(self)
+        self._worker_thread_manager = WorkerThreadManager(parent=self)
+
+        self._delegates = [self._h5_manager, self._worker_thread_manager]  # to deal with eventual other composed objects
+
+    @property
+    def thread_manager(self) -> WorkerThreadManager:
+        return self._worker_thread_manager
+
+    @property
+    def h5_manager(self) -> H5Manager:
+        return self._h5_manager
+
+    def __getattr__(self, name):
+        """ To access composed objects attributes and methods"""
+        delegates = self.__dict__.get("_delegates", [])
+        for delegate in delegates:
+            if name in dir(delegate) or hasattr(type(delegate), name):  # to prevent executing some code and check for errors
+                try:
+                    return getattr(delegate, name)
+                except AttributeError as e:
+                    raise e
+
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
+    def __dir__(self):
+        """ to expose the composed objects attributes and methods to autocompletion tools"""
+        attributes = set(super().__dir__())
+
+        # Add public attributes
+        delegates = self.__dict__.get("_delegates", [])
+        for delegate in delegates:
+            for attr in dir(delegate):
+                if not attr.startswith('_'):  # skip private and dunder methods
+                    attributes.add(attr)
+        return sorted(list(attributes))
+
+
     @classmethod
     def get_local_folder(cls, user=False) -> Path:
         """ Create a local User or system wide folder to store things about this extension"""
@@ -174,6 +219,38 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     @property
     def statusbar(self) -> QtWidgets.QStatusBar | None:
         return self.mainwindow.statusBar() if self.mainwindow is not None else self._statusbar
+
+    def populate_status_bar(self):
+        """Generic method to populate the Status Bar
+
+        for customization, reimplement insert_custom_status_widgets method
+        """
+        self._status_message_label = QtWidgets.QLabel('')
+        self.statusbar.addPermanentWidget(self._status_message_label)
+
+        self.insert_custom_status_widgets()
+
+        if self.show_h5file_statusbar_widgets:
+            self.insert_h5stuff_status()
+
+    def set_permanent_status(self, status: str):
+        """ Display a permanent status message
+
+        Method populate_status_bar should have been called beforehand
+
+        """
+        self._status_message_label.setText(status)
+
+    def insert_custom_status_widgets(self):
+        """ create here Widgets to be added to the StatusBar
+        To be reimplemented
+
+        Examples
+        --------
+        self._file_open_LED = QLED()
+        self.statusbar.addPermanentWidget(self._file_open_LED)
+        """
+        pass
 
     def update_status(self, message: str, wait_time: Optional[int] = None):
         """Show the message in the status bar with a delay of wait_time ms.
@@ -214,11 +291,14 @@ class CustomApp(QObject, ActionManager, ParameterManager):
 
         self.do_things_after_ui_setup()
 
-    def quit_fun(self):
+    def quit_fun(self) -> bool | None:
         """Method to be reimplemented in order to define a custom quit function
         """
+        if len(self.thread_manager.worker_threads) > 0:
+            self.thread_manager.exit_worker_threads()
         if self.mainwindow is not None:
             self.mainwindow.close()
+        return True
 
     def do_things_after_ui_setup(self):
         """ Method to be reimplemented in order to do things after the UI setup
@@ -294,4 +374,3 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         To be reimplemented
         """
         pass
-

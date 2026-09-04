@@ -91,9 +91,6 @@ class ModuleSaver(metaclass=ABCMeta):
         ----------
         where: Union[Node, str]
            the path of a given node or the node itself
-        new: bool
-           if True force the creation of a new indexed node of this class type
-           if False return the last node (or create one if None)
 
         Returns
         -------

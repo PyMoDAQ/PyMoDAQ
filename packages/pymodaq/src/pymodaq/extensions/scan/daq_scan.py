@@ -36,6 +36,7 @@ from pymodaq_gui.plotting.navigator import Navigator
 from pymodaq_gui.messenger import messagebox
 from pymodaq_gui import utils as gutils
 from pymodaq_gui.h5modules.saving import H5Saver
+from pymodaq_gui.utils.enums import MenuToolbarNames
 
 from pymodaq.utils.scanner.scanner import Scanner
 from pymodaq.utils.managers.batchscan_manager import BatchScanner

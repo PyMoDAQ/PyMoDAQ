@@ -297,12 +297,17 @@ class DataSaverLoader(DataManagement):
     data_type = DataType['data']
 
     def __init__(self, h5saver: Union[H5SaverLowLevel, Path],
-                 new_file: bool = False, metadata: dict = None, save_type=SaveType.custom):
+                 new_file: bool = False,
+                 metadata: dict = None,
+                 save_type=SaveType.custom,
+                 swmr_mode=False):
         self.data_type = enum_checker(DataType, self.data_type)
 
         if isinstance(h5saver, (Path, str)):
             h5saver = H5SaverLowLevel.from_file(h5saver, save_type,
-                                                new_file=new_file, metadata=metadata)
+                                                new_file=new_file,
+                                                metadata=metadata,
+                                                swmr_mode=swmr_mode)
 
         self._h5saver = h5saver
         self._axis_saver = AxisSaverLoader(self._h5saver)
@@ -1095,7 +1100,7 @@ class DataToExportExtendedSaver(DataToExportSaver):
 
 
 class DataLoader:
-    """Specialized Object to load DataWithAxes object from a h5file
+    """Specialized Object to load DataWithAxes / DataToExport objects from a h5file
 
     On the contrary to DataSaverLoader, does include navigation axes stored elsewhere in the h5file
     (for instance if saved from the DAQ_Scan)
@@ -1105,12 +1110,15 @@ class DataLoader:
     h5saver: H5SaverLowLevel or Path
     """
 
-    def __init__(self, h5saver: Union[H5SaverLowLevel, Path]):
+    def __init__(self, h5saver: Union[H5SaverLowLevel, Path],
+                 swmr_mode = False):
         self._axis_loader: AxisSaverLoader = None
         self._data_loader: DataSaverLoader = None
 
         if isinstance(h5saver, (Path, str)):
-            h5saver = H5SaverLowLevel.from_file(h5saver)
+            h5saver = H5SaverLowLevel.from_file(h5saver,
+                                                swmr_mode=swmr_mode,
+                                                mode='r')
 
         self.h5saver = h5saver
 
@@ -1129,8 +1137,8 @@ class DataLoader:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close_file()
-    @property
 
+    @property
     def raw_group(self) -> Node:
         """ Get the base RawGroup where raw data should be saved
 
@@ -1200,17 +1208,25 @@ class DataLoader:
             if nav_group is not None:
                 nav_axes = self._axis_loader.get_axes(nav_group)
                 axes = data.axes[:]
+                # in swmr mode, if at the time where the axis is read, a writer added stuff
+                # then the axis and the data may not be consistent. Below is an attempt to correct this
+                for ind_nav, nav_axe in enumerate(nav_axes):
+                    if nav_axe.size > data.shape[data.nav_indexes[ind_nav]]:
+                        nav_axe.data = nav_axe.get_data()[:data.shape[data.nav_indexes[ind_nav]]]
                 axes.extend(nav_axes)
                 data.axes = axes
                 data.get_dim_from_data_axes()
         data.create_missing_axes()
         return data
 
-    def load_all(self, where: GROUP, data: DataToExport = None, with_bkg=False) -> DataToExport:
+    def load_all(self, where: GROUP | str, data: DataToExport = None, with_bkg=False) -> DataToExport:
         if data is None:
             data = DataToExport('Loaded data')
         where = self._h5saver.get_node(where)
-        children_dict = where.children()
+        try:
+            children_dict = where.children()
+        except AttributeError:
+            children_dict = {where.name: where}
         data_list = []
         for child in children_dict:
             if isinstance(children_dict[child], GROUP):
