@@ -7,6 +7,7 @@ from qt_themes import Theme
 from qtpy.QtCore import QObject, QLocale
 from qtpy import QtCore, QtWidgets
 
+from pymodaq_gui.managers.runner_thread_manager import WorkerThreadManager
 from pymodaq_gui.managers.h5manager import FileStatus, H5Manager
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -137,7 +138,6 @@ class CustomApp(QObject, ActionManager, ParameterManager):
             self.dockarea: DockArea = None
             self.mainwindow: QtWidgets.QMainWindow = None
 
-        self.runner_thread: QtCore.QThread = None
 
         self._title: str = ''
         self.title = title
@@ -170,8 +170,17 @@ class CustomApp(QObject, ActionManager, ParameterManager):
                           self.menubar if self.mainwindow is not None else None)
 
         self._h5_manager = H5Manager(self)
+        self._worker_thread_manager = WorkerThreadManager(parent=self)
 
-        self._delegates = [self._h5_manager,]  # to deal with eventual other composed objects
+        self._delegates = [self._h5_manager, self._worker_thread_manager]  # to deal with eventual other composed objects
+
+    @property
+    def thread_manager(self) -> WorkerThreadManager:
+        return self._worker_thread_manager
+
+    @property
+    def h5_manager(self) -> H5Manager:
+        return self._h5_manager
 
     def __getattr__(self, name):
         """ To access composed objects attributes and methods"""
@@ -282,23 +291,14 @@ class CustomApp(QObject, ActionManager, ParameterManager):
 
         self.do_things_after_ui_setup()
 
-    def quit_fun(self):
+    def quit_fun(self) -> bool | None:
         """Method to be reimplemented in order to define a custom quit function
         """
-        if self.runner_thread is not None:
-            self.exit_runner_thread()
+        if len(self.thread_manager.worker_threads) > 0:
+            self.thread_manager.exit_worker_threads()
         if self.mainwindow is not None:
             self.mainwindow.close()
-
-    def exit_runner_thread(self, duration : int = 5000):
-        if self.runner_thread is not None:
-            self.runner_thread.quit()
-            terminated = self.runner_thread.wait(duration)
-            if not terminated:
-                self.runner_thread.terminate()
-                self.runner_thread.wait()
-            self.runner_thread.deleteLater()
-            self.runner_thread = None
+        return True
 
     def do_things_after_ui_setup(self):
         """ Method to be reimplemented in order to do things after the UI setup
