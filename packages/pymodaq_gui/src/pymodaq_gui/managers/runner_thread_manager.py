@@ -30,7 +30,8 @@ class WorkerThreadManager(QtCore.QObject):
     def create_thread_for_worker(self, name: str,
                                  worker: QtCore.QObject,
                                  delete_if_exists=True,
-                                 start_thread=False) -> QtCore.QObject:
+                                 start_thread=False,
+                                 thread: QtCore.QThread = None) -> QtCore.QObject:
         """ Create a new thread (or return an existing one) for a worker, and move the worker to it
         I
         t is up to you to connect the worker methods with your main app using Signal/Slot connections
@@ -43,7 +44,9 @@ class WorkerThreadManager(QtCore.QObject):
                 self.exit_worker_thread(name)
 
         if name not in self.worker_threads:
-            self.worker_threads[name] = QtCore.QThread()
+            if thread is None:
+                thread = QtCore.QThread()
+            self.worker_threads[name] = thread
             self.workers[name] = worker
             self.workers[name].moveToThread(self.worker_threads[name])
 
@@ -60,6 +63,18 @@ class WorkerThreadManager(QtCore.QObject):
     def exit_runner_thread(self, duration: int = 5000):
         """ for back compatibility """
         self.exit_worker_thread(self.current_name, duration)
+
+    @property
+    def runner_thread(self) -> QtCore.QThread:
+        """ for back compatibility """
+        return self.get_thread(self.get_last_name())
+
+    @runner_thread.setter
+    def runner_thread(self, runner: QtCore.QThread):
+        self.create_thread_for_worker('default', None,
+                                      delete_if_exists=False,
+                                      start_thread=False,
+                                      thread=runner)
 
     def exit_worker_thread(self,
                            runner_name: str = None,
