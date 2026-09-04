@@ -1,9 +1,13 @@
 from typing import List, Union, TYPE_CHECKING, Optional, Sequence
+import numpy as np
+from typing import List, Union, TYPE_CHECKING, Optional, Sequence, Callable, Any
+
+from pymodaq.control_modules.enums import MoveType
 from pymodaq.control_modules.viewer_utility_classes import HW_SETTINGS_KEY as DETECTOR_SETTINGS_KEY
 
-from qtpy.QtCore import QObject, Signal, Slot
+from qtpy.QtCore import QObject, Signal, Slot, QThread, QTimer
 from qtpy import QtWidgets
-from qtpy.QtCore import QThread
+
 import time
 
 from pymodaq.utils.managers.modules.utils import ModuleType
@@ -18,8 +22,8 @@ from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.utils import Dock
 
-from pymodaq.utils.data import DataActuator
-from pymodaq.control_modules.thread_commands import ControlToHardwareViewer
+from pymodaq.utils.data import DataActuator, DataToActuators
+from pymodaq.control_modules.thread_commands import ControlToHardwareMove, ControlToHardwareViewer
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
@@ -27,6 +31,8 @@ if TYPE_CHECKING:
 
 logger = set_logger(get_module_name(__file__))
 config = Config()
+
+
 
 
 class ModulesManager(QObject, ParameterManager):
@@ -44,6 +50,7 @@ class ModulesManager(QObject, ParameterManager):
         sublist of actuators
     """
     settings_name = 'ModulesManagerSettings'
+    modules_added_signal = Signal()
     detectors_changed = Signal(list)
     actuators_changed = Signal(list)
     det_done_signal = Signal(DataToExport)  # dte here contains DataWithAxes
@@ -101,14 +108,44 @@ class ModulesManager(QObject, ParameterManager):
 
         self.set_actuators(actuators, selected_actuators)
         self.set_detectors(detectors, selected_detectors)
+        
+        self.detectors_timeout_timer = QTimer()
+        self.detectors_timeout_timer.setSingleShot(True)
+        self.detectors_timeout_timer.timeout.connect(self._on_detectors_timeout)
+
+        self.actuators_timeout_timer = QTimer()
+        self.actuators_timeout_timer.setSingleShot(True)
+        self.actuators_timeout_timer.timeout.connect(self._on_actuators_timeout)
+
+    def on_hardware_initialization(self, do_init: bool, module: Union['DAQ_Move', 'DAQ_Viewer']):
+        """ Bypass method during initialization to assert whether a Master of some slave module already exists"""
+        if not module.master:
+            for other_module in self.modules_all:
+                if other_module.initialized_state and other_module.id == module.id and other_module.master:
+                    module.controller_and_thread.controller = other_module.controller_and_thread.controller
+                    module.controller_and_thread.thread = other_module.controller_and_thread.thread
+                    break
+        module.init_hardware(do_init)
+
+    def get_random_id(self) -> int:
+        """ get a random *id* not already used by a module"""
+        ids = [mod.id for mod in self.modules_all]
+        id = np.random.randint(1, 1000)
+        while id in ids:
+            id = np.random.randint(1, 1000)
+        return id
 
     @property
     def actuator_timeout(self):
-        return config('pymodaq', 'actuator', 'timeout')
+        return config('pymodaq', 'actuator', 'polling_timeout_s')
 
     @property
     def detector_timeout(self):
         return config('pymodaq', 'viewer', 'timeout')
+
+    def enable_modules(self, enable=True):
+        for module in self.modules_all:
+            module.ui.toolbar.setEnabled(enable)
 
     def __repr__(self):
         return f'ModulesManager of "{self.parent_name}" with control modules: {self.get_names(self.modules_all)}'
@@ -171,12 +208,23 @@ class ModulesManager(QObject, ParameterManager):
             logger.warning(f'No detector with this name: {name}')
             return None
 
+    def add_modules(self, modules: list[Union['DAQ_Move', 'DAQ_Viewer']]):
+        """ Add new modules to the manager keeping the initial set of selected actuators or detectors"""
+        actuators = [act for act in modules if act.__class__.__name__ == 'DAQ_Move']
+        detectors = [det for det in modules if det.__class__.__name__ == 'DAQ_Viewer']
+
+        self.set_actuators(self.actuators_all + actuators, self.actuators)
+        self.set_detectors(self.detectors_all + detectors, self.detectors)
+        logger.debug(f"New modules added to the ModulesManager: {modules}"
+                     f"Total list is: {self.modules_name}")
+        self.modules_added_signal.emit()
+
+
     def set_actuators(self, actuators: list['DAQ_Move'], selected_actuators: list['DAQ_Move']):
         """Populates actuators and the subset to be selected in the UI"""
         self._actuators = actuators
         self.settings.child('actuators').setValue(dict(all_items=self.get_names(actuators),
                                                        selected=self.get_names(selected_actuators)))
-
     def set_actuators_from_names(self, actuators: list[str], selected_actuators: list[str]):
         """Populates actuators and the subset to be selected in the UI from their names"""
         for act in actuators:
@@ -238,6 +286,10 @@ class ModulesManager(QObject, ParameterManager):
     def modules_all(self):
         """Get the list of all detectors and actuators"""
         return self.detectors_all + self.actuators_all
+
+    @property
+    def modules_name(self) -> list[str]:
+        return [mod.title for mod in self.modules_all]
 
     @property
     def Ndetectors(self):
@@ -339,23 +391,12 @@ class ModulesManager(QObject, ParameterManager):
                 names.extend([child.name() for child in det_param.children()])
         return names
 
-    def grab_data(self, check_do_override=True, Naverage: Optional[int] = None, **kwargs):
-        """Do a single grab of connected and selected detectors
-
-        Parameter
-        ---------
-        check_do_override: bool
-            If this is True the signal emission to the DAQ_Viewers will be conditionned to the status of their internal
-            override_grab_from_extension attribute
-        Naverage: int, optional
-            If provided, overrides each detector's own Naverage setting. Useful for probing data shape without averaging.
-        """
+    def _grab_data(self, check_do_override=True, Naverage: Optional[int] = None, **kwargs):
         self.det_done_datas = DataToExport(name=__class__.__name__, control_module='DAQ_Viewer')
         self._received_data = 0
         self.det_done_flag = False
         self.settings.child('probe_data').setValue(self.det_done_flag)
-        tzero = time.perf_counter()
-        
+
         if check_do_override and 'DataMixer' in self.selected_detectors_name:
             overridden_detectors = self.get_mod_from_name(
                 'DataMixer', ModuleType.Detector).settings.child(
@@ -368,23 +409,77 @@ class ModulesManager(QObject, ParameterManager):
                 kwargs.update(dict(Naverage=Naverage if Naverage is not None else mod.Naverage))
                 mod.command_hardware.emit(utils.ThreadCommand(ControlToHardwareViewer.SINGLE, kwargs))
 
+    def grab_data_with_callback(self,
+                                check_do_override=True,
+                                Naverage: Optional[int] = None,
+                                callback: Callable[[DataToExport], Any] = None,
+                                do_connect_modules=True,
+                                **kwargs):
+
+        if callback is not None:
+            self.detectors_timeout_timer.setInterval(int(self.detector_timeout))
+            self.detectors_timeout_timer.start()
+            self.det_done_signal.connect(callback)
+            if do_connect_modules:
+                self.connect_detectors(True)
+        self._grab_data(check_do_override, Naverage, **kwargs)
+
+    def _on_detectors_timeout(self):
+        missing_detectors = self.get_missing_detectors()
+        self.timeout_signal.emit(missing_detectors)
+        logger.error('Timeout Fired during waiting for data to be acquired from: '
+                     f'{", ".join(missing_detectors)}')
+
+    def _on_actuators_timeout(self):
+        missing_actuators = self.get_missing_actuators()
+        self.timeout_signal.emit(missing_actuators)
+        logger.error('Timeout Fired during waiting for data to be acquired from: '
+                     f'{", ".join(missing_actuators)}')
+
+    def grab_data(self, check_do_override=True, Naverage: Optional[int] = None, **kwargs) -> DataToExport:
+        """Do a single grab of connected and selected detectors
+
+        Parameter
+        ---------
+        check_do_override: bool
+            If this is True the signal emission to the DAQ_Viewers will be conditionned to the status of their internal
+            override_grab_from_extension attribute
+        Naverage: int, optional
+            If provided, overrides each detector's own Naverage setting. Useful for probing data shape without averaging.
+        """
+
+        self._grab_data(check_do_override=check_do_override, Naverage=Naverage, **kwargs)
+
+        tzero = time.perf_counter()
         while not self.det_done_flag:
             # wait for grab done signals to end
             QtWidgets.QApplication.processEvents()  # mandatory for the det_done_flag boolean to be modified in the corresponding method
             if time.perf_counter() - tzero > self.detector_timeout / 1000:
-                # match on origin (stable per-module id) rather than name, since a single
-                # detector emits one DataWithAxes per channel, each possibly named differently
-                received_origins = {dwa.origin for dwa in self.det_done_datas}
-                missing_detectors = [det_title for det_title in self.selected_detectors_name
-                                      if det_title not in received_origins]
-                self.timeout_signal.emit(missing_detectors)
+                missing_detectors = self.get_missing_detectors()
+                self.timeout_signal.emit(self.get_missing_detectors())
                 logger.error('Timeout Fired during waiting for data to be acquired from: '
                               f'{", ".join(missing_detectors)}')
                 break
             QThread.msleep(10)
 
-        self.det_done_signal.emit(self.det_done_datas)
         return self.det_done_datas
+
+    def get_missing_detectors(self) -> list[str]:
+        """match on origin (stable per-module id) rather than name, since a single
+        detector emits one DataWithAxes per channel, each possibly named differently
+        """
+        received_origins = {dwa.origin for dwa in self.det_done_datas}
+        return [det_title for det_title in self.selected_detectors_name
+                if det_title not in received_origins]
+
+    def get_missing_actuators(self) -> list[str]:
+        """ match on origin (stable per-module id) rather than name: dte_act's
+         `.name` holds the requested actuator's title, which is what gets
+         stamped as `.origin` on the DataActuator the actuator reports back
+        """
+        received_origins = {dwa.origin for dwa in self.move_done_positions}
+        return [act_title for act_title in self.selected_actuators_name
+                if act_title not in received_origins]
 
     def grab_datas(self, **kwargs):
         """ For back compatibility but use self.grab_data"""
@@ -507,9 +602,11 @@ class ModulesManager(QObject, ParameterManager):
                  'type': 'float', 'value': dact.value(), 'readonly': True},
             )
 
-
-    def connect_and_move_actuators(self, dte_act: DataToExport, mode='abs', polling=True,
-                                   slot=None, signal='move_done') -> DataToExport:
+    def connect_and_move_actuators(self, dte_act: DataToExport,
+                                   mode=MoveType.ABS,
+                                   polling=True,
+                                   slot=None,
+                                   signal='move_done') -> DataToExport:
         """ Connect Actuators specified in the dte object and move them either absolute or relative to the
         given value
         """
@@ -520,32 +617,65 @@ class ModulesManager(QObject, ParameterManager):
         self.connect_actuators(False)
         return dte
 
-    def move_actuators(self, dte_act: DataToExport, mode='abs', polling=True) -> DataToExport:
-        """will apply positions to each currently selected actuators. By Default the mode is absolute but can be
+    def move_actuators_with_callback(self, dte_act: DataToExport | DataToActuators,
+                                     mode: MoveType = MoveType.REL,
+                                     callback: Callable[[DataToExport], Any] = None,
+                                     do_connect_modules=True):
+        """ Move actuators defined within a DataToExport to the value included in the DatActuators within
 
-        Parameters
-        ----------
-        dte_act: DataToExport
-            the DataToExport of position to apply. Its length must be equal to the number of selected actuators
-        mode: str
-            either 'abs' for absolute positionning or 'rel' for relative
-        polling: bool
-            if True will wait for the selected actuators to reach their target positions (they have to be
-            connected to a method checking for the position and letting the programm know the move is done (default
-            connection is this object `move_done` method)
+        This method will emit a signal to a given callback with a DataToExport containing
+        DataActuators when the moves are done"""
 
-        Returns
-        -------
-        DataToExport with the selected actuators's name as key and current actuators's value as value
+        if isinstance(dte_act, DataToActuators):
+            mode = dte_act.mode
+
+        self.selected_actuators_name = [dwa.name for dwa in dte_act]
+        if callback is not None:
+            self.actuators_timeout_timer.setInterval(int(self.actuator_timeout * 1000))
+            self.actuators_timeout_timer.start()
+            self.move_done_signal.connect(callback)
+            if do_connect_modules:
+                self.connect_actuators(True)
+        self._move_actuators(dte_act, mode=mode,)
+
+    def forget_callback(self,
+                        callback : Callable,
+                        module_type=ModuleType.Detector,
+                        disconnect_modules=True):
+        """ to be called by the caller of self.move_actuators_with_callback or self.grab_data_with_callback
+        in order to disconnect properly the callback
+
+
+        Optionaly also disconnect each selected actuaor and/or detector to the inner method checking when each move/grab
+        is done
         """
+        if module_type == ModuleType.Detector or module_type==ModuleType.Control:
+            if disconnect_modules:
+                self.connect_detectors(False)
+            try:
+                self.det_done_signal.disconnect(callback)
+            except TypeError:
+                pass
+
+        if module_type == ModuleType.Actuator or module_type == ModuleType.Control:
+            if disconnect_modules:
+                self.connect_actuators(False)
+            try:
+                self.move_done_signal.disconnect(callback)
+            except TypeError:
+                pass
+
+
+    def _move_actuators(self, dte_act: DataToExport | DataToActuators,
+                        mode: MoveType = MoveType.ABS,):
         self.move_done_positions = DataToExport(name=__class__.__name__, control_module='DAQ_Move')
         self.move_done_flag = False
         self.settings.child('test_actuator').setValue(self.move_done_flag)
 
-        if mode == 'abs':
-            command = 'move_abs'
-        elif mode == 'rel':
-            command = 'move_rel'
+        if mode == MoveType.ABS:
+            command = ControlToHardwareMove.MOVE_ABS
+        elif mode == MoveType.REL:
+            command = ControlToHardwareMove.MOVE_REL
         else:
             logger.error(f'Invalid positioning mode: {mode}')
             return self.move_done_positions
@@ -555,23 +685,46 @@ class ModulesManager(QObject, ParameterManager):
                 act = self.get_mod_from_name(dact.name, ModuleType.Actuator)
                 if act is not None:
                     act.command_hardware.emit(
-                        utils.ThreadCommand(command=command, attribute=[dact, polling]))
+                        utils.ThreadCommand(command=command, attribute=[dact, True]))
         else:
             logger.error('Invalid number of positions compared to selected actuators')
             return self.move_done_positions
 
-        tzero = time.perf_counter()
+
+    def move_actuators(self, dte_act: DataToExport,
+                       mode=MoveType.ABS,
+                       polling=True,
+                       ) -> DataToExport:
+        """will apply positions to each currently selected actuators. By Default the mode is absolute but can be
+
+        Deprecated, you should use move_actuators_with_callback to avoid using a polling mechanism which uses Qt event loop
+        processevents in a while loop
+
+        Parameters
+        ----------
+        dte_act: DataToExport
+            the DataToExport of position to apply. Its length must be equal to the number of selected actuators
+        mode: str
+            either MoveType.ABS ('abs') for absolute positioning or MoveType.REL ('rel') for relative
+        polling: bool (should not be used, prefer the callback version)
+            if True will wait for the selected actuators to reach their target positions (they have to be
+            connected to a method checking for the position and letting the programm know the move is done (default
+            connection is this object `move_done` method)
+
+        Returns
+        -------
+        DataToExport with the selected actuators's name as key and current actuators's value as value
+        """
+
+        self._move_actuators(dte_act, mode)
+
         if polling:
+            tzero = time.perf_counter()
             while not self.move_done_flag:  # polling move done
 
                 QtWidgets.QApplication.processEvents()  # mandatory for the det_done_flag boolean to be modified in the corresponding method
-                if time.perf_counter() - tzero > self.actuator_timeout / 1000:  # timeout in seconds
-                    # match on origin (stable per-module id) rather than name: dte_act's
-                    # `.name` holds the requested actuator's title, which is what gets
-                    # stamped as `.origin` on the DataActuator the actuator reports back
-                    received_origins = {dact.origin for dact in self.move_done_positions}
-                    missing_actuators = [dact.name for dact in dte_act
-                                          if dact.name not in received_origins]
+                if time.perf_counter() - tzero > self.actuator_timeout:  # timeout in seconds
+                    missing_actuators = self.get_missing_actuators()
                     self.timeout_signal.emit(missing_actuators)
                     logger.error('Timeout Fired during waiting for actuators to be moved: '
                                   f'{", ".join(missing_actuators)}')
@@ -581,18 +734,12 @@ class ModulesManager(QObject, ParameterManager):
         self.move_done_signal.emit(self.move_done_positions)
         return self.move_done_positions
 
+    def raise_actuator_timeout(self, module_name: str):
+        pass
+
     def reset_signals(self):
         self.move_done_flag = True
         self.det_done_flag = True
-
-    def poll_init(self, module):
-        tstart = time.perf_counter()
-        while not module.initialized_state:
-            QThread.msleep(1000)
-            QtWidgets.QApplication.processEvents()
-            if time.perf_counter() - tstart > config('pymodaq', 'control_module_ini_polling'):  # timeout of 60sec
-                break
-        return module.initialized_state
 
     def order_positions(self, positions: DataToExport):
         """ Reorder the content of the DataToExport given the order of the selected actuators"""
@@ -610,8 +757,11 @@ class ModulesManager(QObject, ParameterManager):
                 self.move_done_positions.append(data_act)
 
             if len(self.move_done_positions) == len(self.actuators):
+                self.actuators_timeout_timer.stop()
                 self.move_done_flag = True
                 self.settings.child('test_actuator').setValue(self.move_done_flag)
+                self.move_done_signal.emit(self.move_done_positions)
+
         except Exception as e:
             logger.exception(str(e))
 
@@ -622,8 +772,10 @@ class ModulesManager(QObject, ParameterManager):
                 self.det_done_datas.append(data)
 
             if self._received_data == len(self.detectors):
+                self.detectors_timeout_timer.stop()
                 self.det_done_flag = True
                 self.settings.child('probe_data').setValue(self.det_done_flag)
+                self.det_done_signal.emit(self.det_done_datas)
 
 
 if __name__ == '__main__':
@@ -648,3 +800,5 @@ if __name__ == '__main__':
     print(dashboard.modules_manager.get_probed_data_full_names())
 
     sys.exit(app.exec())
+
+

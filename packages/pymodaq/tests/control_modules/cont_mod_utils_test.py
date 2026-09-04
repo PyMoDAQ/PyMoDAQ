@@ -8,7 +8,7 @@ import pytest
 
 from pymodaq.control_modules import utils
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
-from pymodaq.control_modules.instruments import DAQTypesEnum
+from pymodaq.control_modules.enums import DAQTypesEnum
 
 
 class TestDAQType:

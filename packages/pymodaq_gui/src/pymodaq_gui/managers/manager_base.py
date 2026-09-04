@@ -9,7 +9,7 @@ from qtpy.QtGui import QKeySequence
 from pymodaq_gui.utils.styling import create_icon
 
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq.extensions.custom_ext import CustomExt
+from pymodaq.utils.custom_ext import CustomExt
 
 from pymodaq_utils.enums import StrEnum
 
@@ -322,6 +322,11 @@ class ManagerBase(CustomExt):
         self.affect_to(ManagerActions.EXECUTE, toolbar)
         return toolbar, menu
 
+    def get_sync_combo_entry(self) -> ComboBox:
+        combo = ComboBox()
+        self.sync_entries_with(combo)
+        return combo
+
     def connect_things_base(self):
         self.connect_action(ManagerActions.COPY, lambda: self.copy_entry())
         self.connect_action(ManagerActions.NEW, lambda: self.create_entry())
@@ -362,6 +367,10 @@ class ManagerBase(CustomExt):
                 },
             },
         )
+
+    def quit_fun(self):
+        self.entries_sync.unbind_all()
+        super().quit_fun()
 
     def create_entry(self, entry: str = None, bypass_dialog=False):
         if entry is not None:
@@ -461,6 +470,10 @@ class ManagerBase(CustomExt):
             self._applied_entry_name = self.entry
             self.applied_entry.emit(self._applied_entry_name)
 
+    @QtCore.Slot(bool)
+    def set_entry_applied(self, value: bool):
+        self.entry_applied = value
+
     @property
     def applied_entry_name(self) -> str | None:
         """ Get the name of the last entry that has been successfully applied/executed """
@@ -481,7 +494,11 @@ class ManagerBase(CustomExt):
             logger.info(f"Cannot Load {self.entry_type.capitalize()} file: {entry_path.stem} as no Dashboard is initialized")
             return
 
-        self.entry_applied = self._execute_entry(entry_path, **kwargs)
+        res = self._execute_entry(entry_path, **kwargs)
+        if isinstance(res, bool):
+            # covers the cases where _execute_entry is async and return None, while the async
+            # execution will trigger set_entry_applied method (qt slot or manual call)
+            self.entry_applied = res
 
     def _execute_entry(self, entry_path: Path = None, **kwargs) -> bool:
         """Particular implementation of the entry execution for this manager
@@ -537,6 +554,10 @@ class ManagerBase(CustomExt):
             self.mainwindow.raise_()
         else:
             self.mainwindow.hide()
+
+    def force_show(self, show: bool = True):
+        self.set_action_checked(ManagerActions.OPEN, show)
+        self.show()
 
     def update_action_list(self):
         with QtCore.QSignalBlocker(self.get_action_list()) as blocker:

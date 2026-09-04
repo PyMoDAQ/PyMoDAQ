@@ -9,7 +9,7 @@ from pathlib import Path
 from qtpy import QtWidgets
 from pymodaq.utils.managers.state.state_manager import StateManager
 from pymodaq.utils.managers.state.subentries import (
-    SubEntryHandlerFactory, SubEntryHandlerTypes)
+    SubEntryHandlerFactory, StateSubEntryHandlerTypes)
 
 
 factory = SubEntryHandlerFactory()
@@ -55,5 +55,5 @@ class TestStateManager:
 class TestSpecialEntryFactory:
 
     def test_registered_entries(self):
-        for entry in SubEntryHandlerTypes.values():
+        for entry in StateSubEntryHandlerTypes.values():
             assert entry in factory.entries

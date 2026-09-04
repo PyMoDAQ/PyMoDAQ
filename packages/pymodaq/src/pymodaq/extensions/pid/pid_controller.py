@@ -1,24 +1,27 @@
 import time
 from pymodaq.control_modules.move_utility_classes import HW_SETTINGS_KEY as ACTUATOR_SETTINGS_KEY
 from functools import partial  # needed for the button to sync setpoint with currpoint
+from pymodaq.control_modules.utils import ControllerAndThread, QThreadProxy
 from typing import Dict, List, TYPE_CHECKING
 from collections import deque
 import numpy as np
 
-from qtpy import QtGui, QtWidgets
+from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, QThread, Signal
 
 from simple_pid import PID
 
+from pymodaq.utils.managers.modules import ModuleType
+from pymodaq.utils.managers.modules.loader import PluginInfo
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import ThreadCommand, find_dict_in_list_from_key_val
-from pymodaq.utils.exceptions import DetectorError, ActuatorError, PIDError
+from pymodaq.utils.exceptions import PIDError
 
 from pymodaq_gui.parameter import utils as putils
-from pymodaq_gui.parameter import Parameter, ParameterTree
+from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.plotting.data_viewers.viewer0D import Viewer0D
 from pymodaq_gui.utils.widgets import QLED, LabelWithFont, SpinBox
-from pymodaq_gui.utils.dock import DockArea, Dock
+from pymodaq_gui.utils.dock import Dock
 
 
 from pymodaq_data.data import DataToExport, DataCalculated, DataRaw
@@ -30,10 +33,10 @@ from pymodaq.utils.data import DataActuator, DataToActuators
 from pymodaq.extensions.pid.actuator_controller import PIDController
 from pymodaq.extensions.pid.utils import PIDModelGeneric
 
-from pymodaq.extensions.custom_ext import CustomExt
+from pymodaq.utils.custom_ext import CustomExt
 
 if TYPE_CHECKING:
-    from pymodaq.control_modules.daq_move import DAQ_Move
+    pass
 
 
 config = Config()
@@ -513,8 +516,24 @@ class DAQ_PID(CustomExt):
     def create_setp_actuators(self):
         # Now that we have the module manager, load PID if it is checked in managers
         try:
+            modules: list[PluginInfo] = []
             for setp in self.model_class.setpoints_names:
-                self.dashboard.add_move_from_extension(setp, "PID", PIDController(self, setp))
+                id = self.dashboard.modules_manager.get_random_id()
+                modules.append(
+                    PluginInfo(
+                        id,
+                        setp,
+                        'PID',
+                        type=ModuleType.Actuator,
+                        is_master=False,
+                        controller=ControllerAndThread(
+                            name=setp,
+                            id=id,
+                            thread=QThreadProxy(thread=self.thread()),
+                            controller=PIDController(self, setp),
+                            is_master=False,)
+                      ))
+            self.dashboard.module_creator.add_move_from_extension(modules=modules)
             self.set_action_enabled("create_setp_actuators", False)
 
         except Exception as e:
@@ -714,17 +733,7 @@ class DAQ_PID(CustomExt):
     def quit_fun(self):
         """ """
         try:
-            try:
-                self.exit_runner_thread()
-            except Exception as e:
-                print(e)
 
-            areas = self.dock_area.tempAreas[:]
-            for area in areas:
-                area.win.close()
-                QtWidgets.QApplication.processEvents()
-                QThread.msleep(1000)
-                QtWidgets.QApplication.processEvents()
 
             self.dashboard.remove_modules([setp for setp in self.model_class.setpoints_names])
             super().quit_fun()
@@ -972,12 +981,15 @@ class PIDRunner(QObject):
 if __name__ == "__main__":
     import sys
     from pymodaq_gui.qt_utils import mkQApp
-    from pymodaq.dashboard import create_load_dashboard
+    from pymodaq.dashboard import load_dashboard_with_arguments
     from pymodaq.utils.gui_utils.loader_utils import create_extension
 
     app = mkQApp("DAQ_PID")
 
-    win, dashboard = create_load_dashboard(show_dashboard=False)
+    win, dashboard, _ = load_dashboard_with_arguments(show_dashboard=False,
+                                                      load_extension=False,
+                                                      )
+    win.mainwindow.setVisible(False)
 
     win_ext, scan = create_extension(dashboard, DAQ_PID,
                                      show_extension=True)

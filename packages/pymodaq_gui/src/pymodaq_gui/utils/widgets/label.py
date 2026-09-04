@@ -19,4 +19,7 @@ class LabelWithFont(QtWidgets.QLabel):
         font = create_font(font_name, font_size, isbold, isitalic)
         self.setFont(font)
         if color is not None:
-            self.setStyleSheet(f'color: #{hex(color.rgb())[2:]}')
+            self.set_color(color)
+
+    def set_color(self, color: QtGui.QColor):
+        self.setStyleSheet(f'color: #{hex(color.rgb())[2:]}')

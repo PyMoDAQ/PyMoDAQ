@@ -47,8 +47,8 @@ from pymodaq_gui.utils import DockArea, Dock
 
 from pymodaq.utils.gui_utils import get_splash_sc
 from pymodaq.control_modules.daq_viewer_ui.ui_base import DAQ_Viewer_UI
-from pymodaq.control_modules.instruments import (DET_TYPES, DAQTypesEnum,
-                                           DetectorError, get_viewer_plugins)
+from pymodaq.control_modules.instruments import (DET_TYPES, DetectorError, get_viewer_plugins)
+from pymodaq.control_modules.enums import DAQTypesEnum
 from pymodaq.control_modules.thread_commands import (ThreadStatus, ThreadStatusViewer, ControlToHardware,
                                                      ControlToHardwareViewer, UiToMainViewer)
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerBase
@@ -126,10 +126,11 @@ class DAQ_Viewer(ParameterControlModule):
         self.logger = set_logger(f'{logger.name}.{title}')
         self.logger.info(f'Initializing DAQ_Viewer: {title}')
 
-        super().__init__(listener_class=ViewerActorListener, **kwargs)
+        super().__init__(listener_class=ViewerActorListener, title=title, **kwargs)
 
         self.rois_dock: Dock = rois_dock
-        self._detector = SelectedModule(daq_type=DAQTypesEnum[daq_type])
+        daq_type = enum_checker(DAQTypesEnum, daq_type)
+        self._detector = SelectedModule(daq_type=daq_type)
 
         self._viewer_types: List[ViewersEnum] = []
         self._viewers: List[ViewerBase] = []
@@ -155,7 +156,6 @@ class DAQ_Viewer(ParameterControlModule):
 
         self.splash_sc = get_splash_sc()
 
-        self._title = title
 
         self._module_and_data_saver: Union[None,
                                           module_saving.DetectorSaver,
@@ -189,7 +189,6 @@ class DAQ_Viewer(ParameterControlModule):
         self.detector = self._detector
 
         self.grab_done_signal.connect(self._save_export_data)
-        self.update_plugin_config()
 
     def __repr__(self):
         return f'{self.__class__.__name__}: {self.title} {self.detector}'
@@ -216,19 +215,6 @@ class DAQ_Viewer(ParameterControlModule):
         return self.viewer_docks
 
     @property
-    def daq_type(self) -> DAQTypesEnum:
-        """Get/Set the daq_type as a DAQTypesEnum
-
-        Update the detector property with the list of available detectors of a given daq_type
-        """
-        return self.detector.daq_type
-
-    @property
-    def daq_types(self) -> List[str]:
-        """List of available DAQ_TYPES as keys of the DAQTypesEnum"""
-        return DAQTypesEnum.names()
-
-    @property
     def grab_state(self):
         """:obj:`bool`: Get the current grabbing status"""
         return self._grabing
@@ -253,7 +239,7 @@ class DAQ_Viewer(ParameterControlModule):
         for viewer in self._viewers:
             try:
                 viewer.data_to_export_signal.disconnect()
-            except:
+            except TypeError as e:
                 pass
         for ind_viewer, viewer in enumerate(viewers):
             viewer.data_to_export_signal.connect(self._get_data_from_viewer)
@@ -271,6 +257,7 @@ class DAQ_Viewer(ParameterControlModule):
 
 
         self._viewers = viewers
+        self.instrument_changed.emit()
 
     @property
     def Naverage(self):
@@ -287,12 +274,31 @@ class DAQ_Viewer(ParameterControlModule):
         return self._detector
 
     @detector.setter
-    def detector(self, det: SelectedModule):
+    def detector(self, det: SelectedModule | str):
+        if isinstance(det, str):
+            det = SelectedModule(self._detector.daq_type, det)
         self._detector = det
-        self.update_plugin_config()
+        self._reload_plugin_settings()
         if self.ui is not None:
             self.ui.detector = det
-        self._reload_plugin_settings()
+
+    @property
+    def daq_type(self) -> DAQTypesEnum:
+        """Get/Set the daq_type as a DAQTypesEnum
+
+        Update the detector property with the list of available detectors of a given daq_type
+        """
+        return self.detector.daq_type
+
+    @daq_type.setter
+    def daq_type(self, daq_type: DAQTypesEnum | str):
+        daq_type = enum_checker(DAQTypesEnum, daq_type)
+        self.detector = SelectedModule(daq_type=daq_type)
+
+    @property
+    def daq_types(self) -> List[str]:
+        """List of available DAQ_TYPES as keys of the DAQTypesEnum"""
+        return DAQTypesEnum.names()
 
     @property
     def current_data(self) -> DataToExport:
@@ -323,7 +329,7 @@ class DAQ_Viewer(ParameterControlModule):
         """
 
         if cmd.command == UiToMainViewer.INIT:
-            self.init_hardware(cmd.attribute[0])
+            self.do_init_hardware_signal.emit(cmd.attribute[0])  # usually connected to ini_hardware method, but could be bypassed (see Dashboard)
         elif cmd.command == UiToMainViewer.GRAB:
             self.grab_data(cmd.attribute, snap_state=False)
         elif cmd.command == UiToMainViewer.SNAP:
@@ -346,7 +352,6 @@ class DAQ_Viewer(ParameterControlModule):
     def detector_changed_from_ui(self, detector: SelectedModule):
         self._detector = detector
         self.settings.child('main_settings', 'DAQ_type').setValue(detector.daq_type.name)
-        self.update_plugin_config()
         self._reload_plugin_settings()
 
     # -------------------------------------------------------------------------
@@ -355,11 +360,6 @@ class DAQ_Viewer(ParameterControlModule):
 
     def _create_hardware(self):
         return DetectorWorker(self._title, self.settings, self.detector)
-
-    def _setup_hardware_thread(self, hardware):
-        if self.config('pymodaq', 'viewer', 'viewer_in_thread'):
-            hardware.moveToThread(self._hardware_thread)
-            self._hardware_thread.start()
 
     def _connect_hardware_signals(self, hardware):
         hardware.data_detector_sig[DataToExport].connect(self.show_data)
@@ -850,10 +850,6 @@ class DAQ_Viewer(ParameterControlModule):
             'name', detector.module_name)['module']
         return detector_module
 
-    def update_plugin_config(self):
-        parent_module = self.get_detector_module(self.detector)
-        mod = import_module(parent_module.__package__.split('.')[0])
-
     def _load_plugin_params(self):
         det_params, _class = get_viewer_plugins(self.detector.daq_type.name,
                                                 self.detector.module_name)
@@ -965,12 +961,13 @@ class DAQ_Viewer(ParameterControlModule):
             if self.ui is not None:
                 self.ui.detector_init = status.attribute['initialized']
             if status.attribute['initialized']:
-                self.controller = status.attribute['controller']
-                self._initialized_state = True
-            else:
-                self._initialized_state = False
+                self._controller_and_thread.controller = status.attribute["controller"]
 
-            self.init_signal.emit(self._initialized_state)
+            self._controller_and_thread.initialized = status.attribute["initialized"]
+            self.init_signal.emit(self._controller_and_thread.initialized)
+
+            if self.ui is not None:
+                self.ui.set_init_color(self.get_color_from_status())
 
         elif status.command == ThreadStatusViewer.GRAB:
             self.grab_status.emit(True)

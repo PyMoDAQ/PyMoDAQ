@@ -70,7 +70,7 @@ class ScalableGroupOverShoot(GroupParameter):
 registerParameterType('group_overshoot', ScalableGroupOverShoot, override=True)
 
 
-class ModulesManager(ModulesManager):  # noqa imported from Overshooter
+class ModulesManagerOvershoot(ModulesManager):  # noqa imported from Overshooter
     """ Customized version of the ModulesManager """
 
     def __init__(self, *args, **kwargs):

@@ -16,7 +16,7 @@ from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 from pymodaq_gui.messenger import messagebox
 from pymodaq_utils import utils
 
-from pymodaq_utils.enums import BaseEnum, StrEnum
+from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.logger import set_logger, get_module_name
 try:
     from pymodaq_gui.config_saver_loader import ConfigSaverLoader
@@ -37,13 +37,13 @@ from pymodaq_gui.h5modules.saving import H5Saver
 
 from pymodaq.utils.data import DataToExport, DataToActuators, DataCalculated, DataActuator
 from pymodaq.post_treatment.load_and_plot import LoaderPlotter
-from pymodaq.extensions.custom_ext import CustomExt
+from pymodaq.utils.custom_ext import CustomExt
 
 from pymodaq.utils.h5modules import module_saving
 
 from pymodaq.extensions.optimizers_base.utils import (
     StopType, StoppingParameters,
-    OptimizerConfig, individual_as_dta, individual_as_dte)
+    OptimizerConfig, individual_as_dte)
 from pymodaq.extensions.optimizers_base.algorithm import GenericAlgorithm
 from pymodaq.extensions.optimizers_base.models import OptimizerModelGeneric, get_optimizer_models
 from pymodaq.extensions.optimizers_base.thread_commands import OptimizerToRunner, OptimizerThreadStatus

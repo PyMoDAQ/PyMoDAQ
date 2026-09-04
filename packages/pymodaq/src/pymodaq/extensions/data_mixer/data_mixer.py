@@ -1,18 +1,19 @@
-import sys
-
 from qtpy import QtWidgets, QtCore
-import numpy as np
 from pathlib import Path
 
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
+from pymodaq.control_modules.enums import DAQTypesEnum
+from pymodaq.control_modules.utils import ControllerAndThread, QThreadProxy
+from pymodaq.utils.managers.modules import ModuleType
+from pymodaq.utils.managers.modules.loader import PluginInfo
 from pymodaq_gui import utils as gutils
-from pymodaq_utils.config import ConfigError, GlobalConfig as Config
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import find_dict_in_list_from_key_val
-from pymodaq_data.data import DataToExport, DataWithAxes
+from pymodaq_data.data import DataToExport
 
-from pymodaq.extensions.custom_ext import CustomExt
+from pymodaq.utils.custom_ext import CustomExt
 
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerDispatcher
 from pymodaq_gui.utils.widgets.qled import QLED
@@ -20,7 +21,11 @@ from pymodaq_gui.parameter import utils as putils
 
 
 from pymodaq.extensions.data_mixer.model import get_models, DataMixerModel
-from pymodaq.extensions.data_mixer.utils import DataMixerConfig, find_key_in_nested_dict
+from pymodaq.extensions.data_mixer.utils import DataMixerConfig
+
+if TYPE_CHECKING:
+    from pymodaq.control_modules.daq_viewer import DAQ_Viewer
+
 
 logger = set_logger(get_module_name(__file__))
 
@@ -147,16 +152,31 @@ class DataMixer(CustomExt):
         self.modules_manager.grab_data(check_do_override=False)
 
     def create_computed_detectors(self):
-        try:
-            self.dashboard.add_det_from_extension('DataMixer', 'DAQ0D', 'DataMixer', self)
-            datamixer_mod = self.dashboard.modules_manager.get_mod_from_name('DataMixer', 'det')
-            datamixer_mod.settings.child(datamixer_mod._hw_settings_name, 'overridden_detectors').setOpts(
-                limits=self.modules_manager.selected_detectors_name)
-            self.set_action_enabled('create_computed_detectors', False)
-            #self.dashboard.override_det_from_extension(self.modules_manager.selected_detectors_name)
-        except Exception as e:
-            logger.exception(str(e))
-            pass
+        id = self.dashboard.modules_manager.get_random_id()
+        plugin = PluginInfo(
+            id=id,
+            name=f'DataMixer',
+            class_name='DataMixer',
+            type=ModuleType.Detector,
+            daq_type=DAQTypesEnum.DAQ0D,
+            controller=ControllerAndThread(name='DataMixer',
+                                           thread=QThreadProxy(thread=self.thread()),
+                                           controller=self,
+                                           is_master=False,
+                                           id=id)
+        )
+
+
+        self.dashboard.module_creator.add_det_from_extension(
+            modules=[plugin],
+            callback=self._on_detector_added)
+
+    def _on_detector_added(self, modules: list['DAQ_Viewer']):
+        self.dashboard.module_creator.forget_callback(self._on_detector_added)
+        datamixer_mod = self.dashboard.modules_manager.get_mod_from_name('DataMixer', 'det')
+        datamixer_mod.settings.child(datamixer_mod._hw_settings_name, 'overridden_detectors').setOpts(
+            limits=self.modules_manager.selected_detectors_name)
+        self.set_action_enabled('create_computed_detectors', False)
 
     def update_connect_detectors(self):
         try:
@@ -228,12 +248,15 @@ class DataMixer(CustomExt):
 def main():
     import sys
     from pymodaq_gui.qt_utils import mkQApp
-    from pymodaq.dashboard import create_load_dashboard
+    from pymodaq.dashboard import load_dashboard_with_arguments
     from pymodaq.utils.gui_utils.loader_utils import create_extension
 
     app = mkQApp('Data Mixer')
 
-    win, dashboard = create_load_dashboard(show_dashboard=False)
+    win, dashboard, _ = load_dashboard_with_arguments(show_dashboard=False,
+                                                      load_extension=False,
+                                                      )
+    win.mainwindow.setVisible(False)
     win_ext, data_mixer = create_extension(dashboard, DataMixer, show_extension=True)
     sys.exit(app.exec())
 

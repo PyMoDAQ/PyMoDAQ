@@ -246,7 +246,8 @@ class H5Browser(CustomApp):
         if h5file is None:
             self._file_is_external = False
             if h5file_path is None:
-                h5file_path = select_file(save=False, ext=['h5', 'hdf5'])
+                filter = "Standard Data files (*.h5 *.hdf5);;Custom Data files (*.*h5*);;All files (*.*)"
+                h5file_path = select_file(save=False, filter=filter)
             if Path(h5file_path).is_file():
                 if self.h5utils.isopen():
                     self.h5utils.close_file()

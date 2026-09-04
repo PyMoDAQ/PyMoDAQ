@@ -5,6 +5,7 @@ import copy
 
 from typing import List
 
+from pymodaq.control_modules.enums import MoveType
 from pymodaq_utils.warnings import deprecation_msg, user_warning
 
 from pymodaq_data.data import (DataRaw, DataWithAxes, DataToExport, DataCalculated, DataDim,
@@ -111,16 +112,16 @@ class DataToActuators(DataToExport):
 
     Parameters
     ---------
-    mode: str
+    mode: str | MoveType
         either 'rel' or 'abs' for a relative or absolute change of the actuator's values
     """
     mode: str
 
-    def __init__(self, *args, mode='rel', **kwargs):
-        if mode not in ['rel', 'abs']:
+    def __init__(self, *args, mode: MoveType=MoveType.REL, **kwargs):
+        if mode not in [MoveType.REL, MoveType.ABS]:
             user_warning('Incorrect mode for the actuators, '
                          'switching to default relative mode: rel')
-            mode = 'rel'
+            mode = MoveType.REL
         kwargs.update({'mode': mode})
         super().__init__(*args, **kwargs)
 

@@ -48,7 +48,6 @@ def test_required_config_entries():
     assert 'polling_interval_ms' in config('actuator')
     assert 'polling_timeout_s' in config('actuator')
     assert 'refresh_timeout_ms' in config('actuator')
-    assert 'timeout' in config('actuator')
     assert 'siprefix' in config('actuator')
     assert 'siprefix_even_without_units' in config('actuator')
     assert 'display_units' in config('actuator')
@@ -67,7 +66,6 @@ def test_required_config_entries():
     assert 'allow_settings_edition' in config('viewer')
 
     assert 'scan' in config
-    assert 'scan_in_thread' in config('scan')
     assert 'show_popups' in config('scan')
     assert 'default' in config('scan')
     assert 'Naverage' in config('scan')

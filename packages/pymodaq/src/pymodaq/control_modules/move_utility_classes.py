@@ -1,5 +1,7 @@
 import numbers
 
+from pymodaq.control_modules.daq_move_ui.utils import UiType
+from pymodaq.control_modules.enums import MoveType
 
 HW_KIND = 'actuator'
 HW_SETTINGS_KEY = f'{HW_KIND}_settings'
@@ -10,33 +12,28 @@ from typing import Union, List, Dict, TYPE_CHECKING, Optional, TypeVar
 
 from easydict import EasyDict as edict
 import numpy as np
-from qtpy import QtWidgets
-from qtpy.QtCore import QObject, Slot, Signal, QTimer
+from qtpy.QtCore import Slot, Signal, QTimer
 from pint.errors import OffsetUnitCalculusError
 
 
 from pymodaq_utils.utils import ThreadCommand, find_keys_from_val
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_utils.enums import BaseEnum, enum_checker, StrEnum
-from pymodaq_utils.serialize.mysocket import Socket
-from pymodaq_utils.serialize.serializer_legacy import DeSerializer, Serializer
+from pymodaq_utils.enums import BaseEnum
 
 from pymodaq_data.data import DataUnitError, Q_, Unit
 
-import pymodaq_gui.parameter.utils as putils
 from pymodaq_gui.parameter import Parameter
-from pymodaq_gui.parameter import ioxml
 from pymodaq_gui.qt_utils import mkQApp
 
-from pymodaq.utils.messenger import deprecation_msg
+from pymodaq_utils.warnings import deprecation_msg
+
 from pymodaq.utils.data import DataActuator
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusMove
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 from pymodaq.control_modules.utils import (create_controller_param, create_remote_connection_params,
-                                            ControllerStatus, PluginBase)
-from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
-
+                                           ControllerStatus)
+from pymodaq.control_modules.plugin_base import PluginBase
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import ActuatorWorker
@@ -77,12 +74,6 @@ class DataActuatorType(BaseEnum):
     float = 0
     DataActuator = 1
 
-class UiType(StrEnum):
-    NONE = 'None'
-    SIMPLE = 'Simple'
-    BINARY = 'Binary'
-    RELATIVE = 'Relative'
-
 
 def comon_parameters(epsilon=config('pymodaq', 'actuator', 'epsilon_default'),
                      epsilons=None):
@@ -110,28 +101,25 @@ def comon_parameters(epsilon=config('pymodaq', 'actuator', 'epsilon_default'),
                 {'title': 'Offset factor:', 'name': 'offset', 'type': 'float', 'value': 0., 'default': 0.}]}]
 
 
-MOVE_COMMANDS = ['abs', 'rel', 'home']
-
-
 class MoveCommand:
     """Utility class to contain a given move type and value
 
     Attributes
     ----------
-    move_type: str
+    move_type: pymodaq.control_modules.enums.MoveType | str
         either:
 
-        * 'abs': performs an absolute action
-        * 'rel': performs a relative action
-        * 'home': find the actuator's home
+        * 'abs' or MoveType.ABS: performs an absolute action
+        * 'rel' or MoveType.REL: performs a relative action
+        * 'home or MoveType.HOME': find the actuator's home
     value: float
         the value the move should reach
 
     """
 
-    def __init__(self, move_type, value=0):
-        if move_type not in MOVE_COMMANDS:
-            raise ValueError(f'The allowed move types fro an actuator are {MOVE_COMMANDS}')
+    def __init__(self, move_type: MoveType | str, value=0):
+        if move_type not in MoveType.names():
+            raise ValueError(f'The allowed move types for an actuator are {MoveType.names()}')
         self.move_type = move_type
         self.value = value
 
@@ -144,29 +132,22 @@ def comon_parameters_fun(is_multiaxes=False, axes_names=None,
 
     Parameters
     ----------
-    is_multiaxes: bool
+    is_multiaxes: bool (deprecated, useless)
         If True, display the particular settings to define which axis the controller is driving
     axes_names: deprecated, use axis_names
-    axis_names: list of str or dictionnary of string as key and integer as value
+    axis_names: (deprecated, useless as the get_class_axis method is used now))
+        list of str or dictionnary of string as key and integer as value
         The string identifier of every axis the controller can drive
-    master: bool
+    master: bool (deprecated useless)
         If True consider this plugin has to init the controller, otherwise use an already initialized instance
     epsilon: float
         deprecated (< 5.0.0) no more used here
 
     """
-    if axes_names is not None and len(axis_names) == 0:
-        if len(axes_names) == 0:
-            axes_names = ['']
-        axis_names = axes_names
+    axis_names = DAQ_Move_base.get_class_axis_names(axis_names, axes_names)
 
-    is_multiaxes = len(axis_names) > 1 or is_multiaxes
     if isinstance(axis_names, list):
-        if len(axis_names) > 0:
-            axis_name = axis_names[0]
-        else:
-            axis_names = ['']
-            axis_name = ''
+        axis_name = axis_names[0]
     elif isinstance(axis_names, dict):
         axis_name = axis_names[list(axis_names.keys())[0]]
     else:
@@ -229,34 +210,6 @@ def main(plugin_file, init=True, title='test'):
     sys.exit(app.exec())
 
 
-##########################
-# this below is a patch to the Parameter class to enable the use of back-compatible 'multiaxes' Parameter name
-
-from pyqtgraph.parametertree.parameterTypes import GroupParameter, registerParameterType
-
-class GroupParameterPatch(GroupParameter):
-
-    def __getitem__(self, names: Union[str, tuple[str,]]):
-        if isinstance(names, str):
-            names = (names)
-        try:
-            return super().__getitem__(names)
-        except KeyError:
-            if 'multiaxes' in names:
-                names = list(names)
-                names[names.index('multiaxes')] = 'controller'
-                names = tuple(names)
-            if 'multi_status' in names:
-                names = list(names)
-                names[names.index('multi_status')] = 'controller_status'
-                names = tuple(names)
-            return super().__getitem__(names)
-
-
-registerParameterType('group', GroupParameterPatch, override=True)
-###########################################
-
-
 
 class DAQ_Move_base(PluginBase):
     """ The base class to be inherited by all actuator modules
@@ -305,9 +258,38 @@ class DAQ_Move_base(PluginBase):
     params = []
 
     data_actuator_type = DataActuatorType.float  # for backcompatibility, but new plugins should have DataActuatorType.DataActuator
-    ui_type = UiType.NONE  # should precise/force what should be the ui type to be used with this actuator
-    has_encoder = True
+    ui_type = UiType.NONE  # should precise (force if possible) what should be the ui type to be used with this
+    # actuator. If NONE, PyMoDAQ will use the default ui type (see preferences).
+    has_encoder = True  # tell PyMoDAQ if this actuator is able to set an absolute position and read the controller
+    # value. If False, you should consider having ui_type = UiType.RELATIVE
+
+
     data_shape = (1,)  # expected shape of the underlying actuator's value (in general a float so shape = (1, ))
+
+    @classmethod
+    def get_class_axis_names(cls, axis_names: list[str] = None,
+                             deprecated_names: list[str] = None) -> list[str]:
+        """ Convenience method to access the declared axis in a given plugin
+
+        Handles some old declaration style and eventual attribute as None or empty string
+        """
+        if axis_names is None:
+            axis_names = cls._axis_names
+        if deprecated_names is None:
+            deprecated_names = cls.stage_names
+
+        _axis_names = None
+        if axis_names is not None and len(deprecated_names) != 0:
+            #check for old and deprecated plugins
+            _axis_names = deprecated_names
+            deprecation_msg("using 'stage_names' class attribute in plugins is deprecated, please use"
+                            "'_axis_names' instead" )
+        if axis_names is not None and len(axis_names) != 0:
+            # this _axis_names attribute has priority hence eventual overwriting of stage_names
+            _axis_names = axis_names
+        else:
+            _axis_names = [''] if (_axis_names is None or _axis_names == []) else _axis_names
+        return _axis_names
 
     def __init__(self, parent: Optional['ActuatorWorker'] = None,
                  params_state: Optional[dict] = None,
@@ -338,7 +320,6 @@ class DAQ_Move_base(PluginBase):
 
         self.poll_timer = QTimer(self)
         self.poll_timer.setInterval(config('pymodaq', 'actuator', 'polling_interval_ms'))
-        self._poll_timeout = config('pymodaq', 'actuator', 'polling_timeout_s')
         self.poll_timer.timeout.connect(self.check_target_reached)
 
         self.ini_attributes()
@@ -434,8 +415,8 @@ class DAQ_Move_base(PluginBase):
 
         The property controller_units is deprecated please use the axis_unit property
         """
-        deprecation_msg('The property controller_units is deprecated please use the'
-                        'axis_unit property.')
+        deprecation_msg(f'The property controller_units is deprecated please use the'
+                        f'axis_unit property.')
         return self.axis_unit
 
     @controller_units.setter
@@ -806,7 +787,12 @@ class DAQ_Move_base(PluginBase):
             if self.move_is_done:
                 self.emit_status(ThreadCommand(ThreadStatus.UPDATE_STATUS, 'Move has been stopped'))
                 logger.info('Move has been stopped')
-            self.current_value = self.get_actuator_value()
+            try:
+                self.current_value = self.get_actuator_value()
+            except Exception as e:
+                logger.error(str(e))
+                self.poll_timer.stop()
+
             self.emit_value(self._current_value)
             logger.debug(f'Current value: {self._current_value}')
 

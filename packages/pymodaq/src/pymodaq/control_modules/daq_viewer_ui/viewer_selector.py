@@ -1,8 +1,9 @@
 from dataclasses import dataclass, field
 
 from qtpy import QtCore
-from pymodaq.control_modules.instruments import DAQTypesEnum
+from ..enums import DAQTypesEnum
 from ..control_module_selector import ModuleSelector
+
 
 @dataclass
 class SelectedModule:
@@ -16,6 +17,7 @@ class SelectedModule:
 
     def __repr__(self):
         return f'{self.daq_type.name}/{self.module_name}'
+
 
 class ViewerSelector(ModuleSelector):
 

@@ -2,6 +2,8 @@ import collections
 
 import numpy as np
 import pyqtgraph as pg
+
+from pymodaq_gui import foreground_color
 from pymodaq_gui.plotting.utils.plot_utils import makeAlphaTriangles, makePolygons
 from pyqtgraph import debug as debug, Point, functions as fn
 from pyqtgraph.util.cupy_helper import getCupy
@@ -9,13 +11,12 @@ from qtpy import QtCore, QtGui
 
 
 class PymodaqImage(pg.ImageItem):
-    def __init__(self, image=None, pen='r', **kargs):
+    def __init__(self, image=None, **kargs):
         super().__init__(image, **kargs)
         self.flipud = False
         self.fliplr = False
         self.rotate90 = False
         self.rescale = None
-        self.opts = {'pen': pen}
 
     def get_val_at(self, xy):
         """
@@ -185,7 +186,7 @@ class SpreadImageItem(PymodaqImage):
         self.qimage = None
         self.triangulation = None
         self.tri_data = None
-        self.mesh_pen = [255, 255, 255]
+        self.mesh_pen = foreground_color
 
     def width(self):
         if self.image is None:

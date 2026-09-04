@@ -11,7 +11,7 @@ from .utils import get_extensions
 from .pid.utils import get_models
 
 
-from pymodaq.extensions.scan.daq_scan import DAQScan
+from .scan.daq_scan import DAQScan
 from .daq_logger.daq_logger import DAQ_Logger
 from .pid.pid_controller import DAQ_PID
 
