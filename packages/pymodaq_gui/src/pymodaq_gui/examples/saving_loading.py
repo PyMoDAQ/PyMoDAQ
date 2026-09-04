@@ -4,7 +4,10 @@ from time import perf_counter
 from typing import Iterable, TYPE_CHECKING, Union, Mapping
 
 from qtpy import QtWidgets, QtCore
+from qtpy.QtCore import Qt
 
+from messenger import messagebox
+from pymodaq_data.h5modules.backends import NodeError
 from pymodaq_gui.plotting.data_viewers import ViewerDispatcher, ViewersEnum
 from pymodaq_gui.utils.widgets.window import make_window
 from pymodaq_utils.config import GlobalConfig
@@ -30,22 +33,41 @@ config = GlobalConfig()
 class DataGenerator(QtCore.QObject):
     data_signal = QtCore.Signal(DataToExport)
     stopped = QtCore.Signal()
+    command_signal = QtCore.Signal(ThreadCommand)
 
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.timer = QtCore.QTimer()
-        self.timer.timeout.connect(self.generate_data)
+        self.timer:  QtCore.QTimer = None
+
 
         self._refresh_time: int = None  # ms
         self.refresh_time = 100  #ms
+        self._show_thread = True
+
+        self.command_signal.connect(self.queue_command)
+
+    def queue_command(self, command: ThreadCommand):
+        if self.timer is None:
+            self.timer = QtCore.QTimer()
+            self.timer.setInterval(self._refresh_time)
+            self.timer.timeout.connect(self.generate_data)
+
+        if command.command == 'start':
+            self.start()
+        elif command.command == 'stop':
+            self.stop()
+        elif command.command == 'refresh_time':
+            self.refresh_time = command.attribute
 
     def start(self):
-        self.timer.start()
+        if self.timer is not None:
+            self.timer.start()
 
     def stop(self):
-        self.timer.stop()
-        self.stopped.emit()
+        if self.timer is not None:
+            self.timer.stop()
+            self.stopped.emit()
 
     @property
     def refresh_time(self) -> int:
@@ -54,13 +76,18 @@ class DataGenerator(QtCore.QObject):
     @refresh_time.setter
     def refresh_time(self, value: int):
         self._refresh_time = value
-        is_active = self.timer.isActive()
-        self.timer.stop()
-        self.timer.setInterval(value)
-        if is_active:
-            self.timer.start()
+        if self.timer is not None:
+            is_active = self.timer.isActive()
+            self.timer.stop()
+            self.timer.setInterval(value)
+            if is_active:
+                self.timer.start()
 
+    @QtCore.Slot()
     def generate_data(self) -> DataToExport:
+        if self._show_thread:
+            print(f'Generating data in Qthread{self.thread()}')
+            self._show_thread = False
         dte = DataToExport('data', data=[
             DataRaw('data_random_0', data=[np.atleast_1d(np.random.random())], origin='generator'),
             DataRaw('data_random_1', data=[np.atleast_1d(np.random.random())], origin='generator')
@@ -81,33 +108,43 @@ class SaverWorker(QtCore.QObject):
         super().__init__()
         self.saver: DataToExportTimedSaver  = saver
         self._n_saved = 0
-
+        self._show_thread = True
         self.where = where
 
     @QtCore.Slot(DataToExport)
     def save_data(self, dte: DataToExport):
-
+        if self._show_thread:
+            print(f'Saving data in Qthread{self.thread()}')
+            self._show_thread = False
         self.saver.add_data(self.where, dte)
         self._n_saved += 1
         self.n_saved.emit(self._n_saved)
 
 
-class Plotter(QtCore.QObject):
-    def __init__(self, h5saver: H5Saver, viewer: ViewerDispatcher, parent=None):
+class DataProcessor(QtCore.QObject):
+    data_processed = QtCore.Signal(DataToExport)
+    process_data = QtCore.Signal(str)
+
+    def __init__(self, h5saver: H5Saver, parent=None):
         super().__init__(parent)
         self.h5saver = h5saver
-        self.viewer = viewer
         self.data_loader = DataLoader(self.h5saver, swmr_mode=True)
+        self.process_data.connect(self._do_process_data, Qt.ConnectionType.QueuedConnection)
+        self._show_thread = True
 
-    def update_file(self, h5saver: H5Saver):
-        """ To be called after the H5file has been closed/reopened"""
-        self.data_loader.h5saver = h5saver
-
-    def plot_data(self, where: str):
-        #QtCore.QThread.msleep(500)  # simulate some heavy work/computation
-        dte = self.data_loader.load_all(where)
-        self.viewer.show_data(dte)
-
+    @QtCore.Slot(str)
+    def _do_process_data(self, where: str):
+        try:
+            if self._show_thread:
+                print(f'Processing data in Qthread{self.thread()}')
+                self._show_thread = False
+            print(f'Processing data')
+            dte = self.data_loader.load_all(where)
+            if dte is not None and len(dte) == 2:
+                QtCore.QThread.msleep(2000) # simulate heavy-duty calculation
+                self.data_processed.emit(dte)
+        except NodeError:
+            pass
 
 
 class MySaverLoader(CustomApp):
@@ -119,7 +156,7 @@ class MySaverLoader(CustomApp):
     params = [
         {'title': 'Refresh Grab:', 'name': 'refresh_grab', 'type': 'int', 'value': 50, 'suffix': 'ms',
          'siPrefix': False},
-        {'title': 'Refresh Plot:', 'name': 'refresh_plot', 'type': 'int', 'value': 500, 'suffix': 'ms',
+        {'title': 'Refresh Plot:', 'name': 'refresh_plot', 'type': 'int', 'value': 1000, 'suffix': 'ms',
          'siPrefix': False},
         {'title': 'Worker:', 'name': 'worker', 'type': 'group', 'children': [
             {'title': 'Worker Running:', 'name': 'worker_running', 'type': 'led', 'value': False, 'readonly': True},
@@ -131,19 +168,16 @@ class MySaverLoader(CustomApp):
 
         super().__init__(parent, add_toolbar_break=False)
 
-        self.data_generator = DataGenerator()
-        self.data_generator.refresh_time = self.settings['refresh_grab']
-
         self._n_emitted = 0
-
-        self.plotter_timer = QtCore.QTimer()
-        self.plotter_timer.timeout.connect(self.update_plotter)
+        self._running = False
 
         self._saver = DataToExportTimedSaver(self.h5saver)
 
         self.viewer: ViewerDispatcher = None
-        self.plotter: Plotter = None
-        self.worker: SaverWorker = None
+
+        self.data_processor: DataProcessor = None
+        self.saver_worker: SaverWorker = None
+        self.data_generator: DataGenerator =None
 
         self.current_node: GROUP | str = None
         self.setup_ui()
@@ -166,9 +200,6 @@ class MySaverLoader(CustomApp):
         self.plotting_dock.addWidget(self.area_plotter)
 
         self.viewer = ViewerDispatcher(self.area_plotter, 'Plotter', rois_dock=self.rois_dock)
-        self.viewer.update_viewers([ViewersEnum.Viewer1D for _ in range(2)],
-                                   ['Dwa1', 'Dwa2'])
-        self.plotter = Plotter(self.h5saver, self.viewer)
 
         self.dockarea.addDock(self.settings_dock, 'left')
         self.dockarea.addDock(self.saving_dock, 'right', self.settings_dock)
@@ -229,43 +260,57 @@ class MySaverLoader(CustomApp):
 
         self.connect_action('show_saving', lambda show: self.saving_dock.setVisible(show))
 
-    def update_plotter(self):
-        self.plotter.plot_data(self.current_node)
+    def process_data(self):
+        self.data_processor.process_data.emit('/RawData/mydata')
 
     def start(self):
-
+        self._running = True
+        print(f'Main Qthread: {self.thread()}')
         try:
             self._worker_done.disconnect(self.terminate_worker)
         except TypeError:
             pass
 
         self.setup_saving()
-        self.plotter_timer.setInterval(int(self.settings['refresh_plot']))
         self._n_emitted = 0
-
-        if self.runner_thread is not None and self.runner_thread.isRunning():
-            self.exit_runner_thread()
 
         self.open_file()
         self.current_node: GROUP | str = self.h5saver.get_set_group('/RawData', 'mydata')
-        self.plotter.update_file(self.h5saver)
 
-        self.runner_thread = QtCore.QThread()
-        self.worker = SaverWorker(saver=self._saver, where=self.current_node)
-        self.worker.n_saved.connect(self.update_worker_ntask)
-        self.send_data_signal.connect(self.worker.save_data)
-        self.worker.moveToThread(self.runner_thread)
+        self.data_generator = DataGenerator(parent=None)
+        self.data_generator.refresh_time = self.settings['refresh_grab']
 
-        self.runner_thread.start()
-        self.settings['worker', 'worker_running'] = True
+        self.data_processor = DataProcessor(self.h5saver, parent=None)
 
-        # connect data signals to the event loop of the worker thread
+        # managing saver worker
+        self.saver_worker = SaverWorker(saver=self._saver, where=self.current_node)
+        self.thread_manager.create_thread_for_worker('saver', self.saver_worker)
+        self.saver_worker.n_saved.connect(self.update_worker_ntask)
+        self.send_data_signal.connect(self.saver_worker.save_data)
+        self.thread_manager.start_thread('saver')
+
+
+        # managing data generator worker
+        self.thread_manager.create_thread_for_worker('data', self.data_generator)
         self.data_generator.data_signal.connect(self.send_data)
+        self.thread_manager.start_thread('data')
 
-        self.data_generator.start()
-        self.plotter_timer.start()
+        self.data_generator.command_signal.emit(ThreadCommand('start'))
 
+
+        #managing processor worker
+        self.thread_manager.create_thread_for_worker('processor', self.data_processor)
+        self.data_processor.data_processed.connect(self.show_data)
+        self.thread_manager.start_thread('processor')
+
+        self.settings['worker', 'worker_running'] = True
+        QtCore.QTimer.singleShot(int(self.settings['refresh_plot']), self.process_data)
         self.enable_runflow_actions(False, excepted=('pause', 'stop'))
+
+    def show_data(self, dte: DataToExport):
+        self.viewer.show_data(dte)
+        if self._running:
+            QtCore.QTimer.singleShot(int(self.settings['refresh_plot']), self.process_data)
 
     def enable_runflow_actions(self, enable=True, excepted: Iterable[str] = ()):
         for action in ('start', 'pause', 'stop'):
@@ -278,7 +323,18 @@ class MySaverLoader(CustomApp):
         (_worker_done signal connect to terminate_worker)
 
         """
-        self.data_generator.stop()
+        self._running = False
+        self.data_generator.command_signal.emit(ThreadCommand('stop'))
+        self.set_action_checked('pause', False)
+
+        try:
+            self.data_generator.data_signal.disconnect()
+        except (TypeError, AttributeError):
+            pass
+        try:
+            self.data_processor.data_processed.disconnect()
+        except (TypeError, AttributeError):
+            pass
 
         if self.settings['worker', 'worker_tasks'] == 0:
             self.terminate_worker()
@@ -288,13 +344,14 @@ class MySaverLoader(CustomApp):
     def terminate_worker(self):
         """ Will terminete/close/stops a few things when the worker is done working"""
         # stopping the plotting before flushing/closing the file
-        self.plotter_timer.stop()
+        try:
+            self._worker_done.disconnect(self.terminate_worker)
+        except TypeError:
+            pass
 
-        # delete the worker and quit/delete the thread
-        if self.worker is not None:
-            self.worker.deleteLater()
-            self.worker = None
-        self.exit_runner_thread() # stopping deleting the thread
+        self.thread_manager.exit_worker_thread('data', delete_worker=True)
+        self.thread_manager.exit_worker_thread('processor', delete_worker=True)
+        self.thread_manager.exit_worker_thread('saver', delete_worker=True)
 
         # flushing/closing the file to be able to create new groups...
         self.h5saver.flush()
@@ -307,13 +364,13 @@ class MySaverLoader(CustomApp):
 
     def pause(self, do_pause=True):
         if do_pause:
-            self.data_generator.stop()
-            self.plotter_timer.stop()
+            self._running = False  # will stop the processing loop
+            self.data_generator.command_signal.emit(ThreadCommand('stop'))
 
         else:
-            self.data_generator.start()
-            self.plotter_timer.start()
-
+            self._running = True
+            self.data_generator.command_signal.emit(ThreadCommand('start'))
+            self.process_data() # restart the processing loop!
 
     def value_changed(self, param):
         """ Actions to perform when one of the param's value in self.settings is changed from the
@@ -332,9 +389,9 @@ class MySaverLoader(CustomApp):
         if param.name() == 'refresh_grab':
             self.data_generator.refresh_time = param.value()
         elif param.name() == 'refresh_plot':
-            self.plotter_timer.stop()
-            self.plotter_timer.setInterval(int(self.settings['refresh_plot']))
-            self.plotter_timer.start()
+            self.processor_timer.stop()
+            self.processor_timer.setInterval(int(self.settings['refresh_plot']))
+            self.processor_timer.start()
 
     def send_data(self, dte: DataToExport):
         self.send_data_signal.emit(dte)
@@ -349,9 +406,24 @@ class MySaverLoader(CustomApp):
             self._worker_done.emit()
 
     def quit_fun(self):
+        """ Do things to clean your app and return True if ok or False (or None) if not.
+
+        If your custom app is wrapped in a SharedUI,
+        the sharedUI will handle the main window closing
+        """
+
+        if self._running:
+            messagebox(title='Running',
+                       text='The Acquisition is running, first stop it')
+            return
+        elif self.settings['worker', 'worker_tasks'] > 0:
+            messagebox(title='Running',
+                       text='The Saver is finishing the savings')
+            self.stop()
+            return
+
         self.h5saver.flush()
         self.h5saver.close()
-        self.plotter_timer.stop()
 
         super().quit_fun()
 
@@ -368,8 +440,9 @@ def main():
     from pymodaq_gui.qt_utils import mkQApp
 
     app = mkQApp('SaverLoader')
-    area = DockArea()
-    shared_ui = SharedUI(widget=area, title='SaverLoader')
+    win, area = make_window(title='SaverLoaderProcessor',)
+
+    shared_ui = SharedUI(widget=win, title='SaverLoader')
     my_app = MySaverLoader(parent=area)
     shared_ui.affect_application(my_app)
 
