@@ -1165,7 +1165,7 @@ class DataLoader:
         data.create_missing_axes()
         return data
 
-    def load_all(self, where: GROUP, data: DataToExport = None, with_bkg=False) -> DataToExport:
+    def load_all(self, where: GROUP | str, data: DataToExport = None, with_bkg=False) -> DataToExport:
         if data is None:
             data = DataToExport('Loaded data')
         where = self._h5saver.get_node(where)
