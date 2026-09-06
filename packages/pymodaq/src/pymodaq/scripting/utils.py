@@ -345,16 +345,16 @@ class LECODashboardWrapper(LECOBaseWrapper):
         self._experiments_future = future
 
         self.set_remote_name()
-        self._director.ask_rpc("get_presets")
+        self._director.ask_rpc("get_experiments")
 
         return future
 
-    def apply_experiment(self, preset: str) -> Future[bool]:
+    def apply_experiment(self, experiment: str) -> Future[bool]:
         future = Future()
         self._applied_experiment_future = future
 
         self.set_remote_name()
-        self._director.ask_rpc("apply_preset", preset=preset)
+        self._director.ask_rpc("apply_experiment", experiment=experiment)
 
         return future
 
@@ -373,9 +373,9 @@ class LECODashboardWrapper(LECOBaseWrapper):
         except (InvalidStateError, AttributeError):
             pass
 
-    def send_experiments(self, presets: list[str]):
+    def send_experiments(self, experiments: list[str]):
         try:
-            self._experiments_future.set_result(presets)
+            self._experiments_future.set_result(experiments)
             self._experiments_future = None
         except (InvalidStateError, AttributeError):
             pass
