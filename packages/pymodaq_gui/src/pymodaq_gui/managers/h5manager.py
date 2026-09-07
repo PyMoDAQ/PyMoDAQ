@@ -131,7 +131,7 @@ class H5Manager(QtCore.QObject, ActionManager):
         self._swmr_label = QtWidgets.QLabel('')
         self._swmr_label.setToolTip('SWMR mode status')
         self._swmr_label.setVisible(False)
-
+        self.statusbar.addPermanentWidget(StatuBarSeparator())
         self.statusbar.addPermanentWidget(QtWidgets.QLabel('File:'))
         self.statusbar.addPermanentWidget(self._file_open_LED)
         self.statusbar.addPermanentWidget(self._swmr_label)
