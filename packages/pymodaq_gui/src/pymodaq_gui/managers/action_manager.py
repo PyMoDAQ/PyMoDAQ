@@ -723,7 +723,7 @@ class ActionManager:
             toolbar = self.get_toolbar(toolbar)
         self._toolbar = toolbar
 
-    def set_menu(self, menu):
+    def set_menu(self, menu: QtWidgets.QMenu | str):
         """Set the default menu
 
         Parameters
@@ -731,6 +731,8 @@ class ActionManager:
         menu: QtWidgets.QMenu
             The menu to set as default
         """
+        if isinstance(menu, str):
+            menu = self.get_menu(menu)
         self._menu = menu
 
     def set_action_text(self, action_name: str, text: str):
