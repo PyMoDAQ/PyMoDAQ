@@ -7,6 +7,7 @@ import toml
 from qtpy import QtWidgets, QtCore, QtGui
 from serializall import SerializableFactory, SerializableBase
 
+from h5modules.saving import H5Saver
 from pymodaq_data import DataDim
 from pymodaq_gui.utils.widgets.widget_with_label_title import WidgetWithLabelTitle
 from pymodaq_utils.enums import StrEnum
@@ -62,17 +63,19 @@ class ScanManager(SettingsManager):
         self.scanner: Scanner = Scanner(actuators=dashboard.actuators_modules)
 
         self.daq_scan = daq_scan
-        self.h5saver = daq_scan.h5saver
-        self.h5saver.settings.child('do_save').hide()
-        self.h5saver.settings.child('custom_name').hide()
 
-        self.params = [
-            {'title': 'Options', 'name': 'daq_scan', 'type': 'group', 'children': daq_scan.params},
-            {'title': 'Saver', 'name': 'h5saver', 'type': 'group', 'children': self.h5saver.params},
-        ]
+
 
         super().__init__(dashboard=dashboard,
                          handler_id=ScanSettingsEntryHandler.handler_name)
+        self.params = [
+            {'title': 'Options', 'name': 'daq_scan', 'type': 'group', 'children': daq_scan.params},
+            {'title': 'Saver', 'name': 'h5saver', 'type': 'group', 'children': H5Saver.params},
+        ]
+
+        self._h5saver = daq_scan.h5saver
+        self.h5saver.settings.child('do_save').hide()
+        self.h5saver.settings.child('custom_name').hide()
 
         self.update_settings(self.settings)
 
