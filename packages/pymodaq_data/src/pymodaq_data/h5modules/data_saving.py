@@ -713,7 +713,7 @@ class DataExtendedSaver(DataSaverLoader):
     Parameters
     ----------
     h5saver: H5SaverLowLevel
-    extended_shape: Tuple[int]
+    extended_shape: Iterable[int]
         the extra shape compared to the data the h5array will have
 
     Attributes
@@ -723,7 +723,9 @@ class DataExtendedSaver(DataSaverLoader):
     """
     data_type = DataType['data']
 
-    def __init__(self, h5saver: H5SaverLowLevel, extended_shape: Tuple[int], fill_value=None):
+    def __init__(self, h5saver: H5SaverLowLevel,
+                 extended_shape: Iterable[int],
+                 fill_value=None):
         super().__init__(h5saver)
         self.extended_shape = extended_shape
         self.fill_value = fill_value
@@ -789,7 +791,9 @@ class DataExtendedSaver(DataSaverLoader):
                     # because there will be len(self.extended_shape) extra navigation axes
                     self._axis_saver.add_axis(where, axis)
 
-    def add_data(self, where: Union[Node, str], data: DataWithAxes, indexes: List[int],
+    def add_data(self, where: Union[Node, str],
+                 data: DataWithAxes,
+                 indexes: Iterable[int],
                  distribution=DataDistribution['uniform']):
         """Adds given DataWithAxes at a location within the initialized h5 array
 
@@ -1040,7 +1044,10 @@ class DataToExportExtendedSaver(DataToExportSaver):
         the extra shape compared to the data the h5array will have
     """
 
-    def __init__(self, h5saver: H5SaverLowLevel, extended_shape: Tuple[int], fill_value=None):
+    def __init__(self,
+                 h5saver: H5SaverLowLevel,
+                 extended_shape: Iterable[int],
+                 fill_value=None):
         super().__init__(h5saver)
         self._data_saver = DataExtendedSaver(h5saver, extended_shape, fill_value=fill_value)
         self._nav_axis_saver = AxisSaverLoader(h5saver)
@@ -1059,7 +1066,9 @@ class DataToExportExtendedSaver(DataToExportSaver):
             for axis in axes:
                 self._nav_axis_saver.add_axis(nav_group, axis)
 
-    def add_data(self, where: Union[Node, str], data: DataToExport, indexes: Iterable[int],
+    def add_data(self, where: Union[Node, str],
+                 data: DataToExport,
+                 indexes: Iterable[int],
                  distribution=DataDistribution.uniform,
                  settings_as_xml='', **kwargs):
 

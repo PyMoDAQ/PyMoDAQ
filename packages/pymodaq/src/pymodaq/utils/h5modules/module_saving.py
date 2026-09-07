@@ -311,18 +311,19 @@ class DetectorExtendedSaver(DetectorSaver):
     """
     group_type = GroupModuleType.DETECTOR
 
-    def __init__(self, module: DAQ_Viewer, extended_shape: Tuple[int]):
+    def __init__(self, module: DAQ_Viewer, extended_shape: Iterable[int]):
         super().__init__(module)
         self._extended_shape = extended_shape
         self._datatoexport_saver: DataToExportExtendedSaver = None
 
     def update_after_h5changed(self):
-        self._datatoexport_saver = DataToExportExtendedSaver(self.h5saver, self._extended_shape)
+        self._datatoexport_saver = DataToExportExtendedSaver(self.h5saver,
+                                                             self._extended_shape)
 
     def add_data(self,
                  where: Union[Node, str],
                  data: DataToExport,
-                 indexes: list[int],
+                 indexes: Iterable[int],
                  distribution=DataDistribution.uniform):
         self._datatoexport_saver.add_data(where,
                                           data,
@@ -451,14 +452,14 @@ class TimeModuleSaver(ModuleSaver):
         self._h5saver.set_attr(group, 'settings', ET.tostring(settings_xml))
         return group
 
-    def initialize(self, extended_shape: Tuple[int]):
+    def initialize(self, extended_shape: Iterable[int]):
         """Set up the extended saver and start the internal clock."""
         self._extended_shape = extended_shape
         self._start_time = time.perf_counter()
         self._datatoexport_saver = DataToExportExtendedSaver(
             self._h5saver, extended_shape, fill_value=np.nan)
 
-    def add_time(self, indexes: Tuple[int]):
+    def add_time(self, indexes: Iterable[int]):
         """Record elapsed seconds since initialize() was called at the given scan indexes."""
         if self._datatoexport_saver is not None:
             elapsed_time = float(np.float32(time.perf_counter() - self._start_time))
@@ -543,10 +544,10 @@ class ExtensionSaver(ModuleSaver):
             self._time_saver.get_set_node(self._module_group)
         return self._module_group
 
-    def initialize_time_array(self, extended_shape: Tuple[int]):
+    def initialize_time_array(self, extended_shape: Iterable[int]):
         self._time_saver.initialize(extended_shape)
 
-    def add_time(self, indexes: Tuple[int]):
+    def add_time(self, indexes: Iterable[int]):
         self._time_saver.add_time(indexes)
 
     def _add_module(self, where: Union[Node, str] = None, metadata=None) -> Node:
@@ -597,16 +598,16 @@ class ScanSaver(ExtensionSaver):
         self.detectors : dict[str, DetectorExtendedSaver] = {}
         self.actuators : dict[str, ActuatorSaver] = {}
 
-        self._scan_shape: tuple[int] = None
+        self._scan_shape: Iterable[int] = None
 
-    def set_scan_shape(self, scan_shape: tuple):
+    def set_scan_shape(self, scan_shape: Iterable[int]):
         self._scan_shape = scan_shape
 
     def add_nav_axes(self, axes: List[Axis]):
         for det_name in self.detectors:
             self.detectors[det_name].add_nav_axes(self._module_group, axes)
 
-    def add_data(self, dte: DataToExport = None, indexes: Tuple[int] = None,
+    def add_data(self, dte: DataToExport = None, indexes: Iterable[int] = None,
                  distribution=DataDistribution.uniform, **kwargs):
 
         self.detectors[dte.name].add_data(self.current_nodes[dte.name],
