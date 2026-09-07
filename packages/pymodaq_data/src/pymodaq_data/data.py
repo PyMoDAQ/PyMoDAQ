@@ -3763,8 +3763,15 @@ class DataToExport(DataLowLevel, SerializableBase):
         data, _ = find_objects_in_list_from_attr_name_val(self.data, 'name', name, return_first=True)
         return data
 
-    def get_data_from_names(self, names: List[str]) -> DataToExport:
+    def get_data_from_names(self, names: List[str] | str) -> DataToExport:
+        if isinstance(names, str):
+            names = [names]
         return DataToExport(self.name, data=[dwa for dwa in self if dwa.name in names])
+
+    def get_data_from_origins(self, origins: list[str] | str) -> DataToExport:
+        if isinstance(origins, str):
+            origins = [origins]
+        return DataToExport(self.name, data=[dwa for dwa in self if dwa.origin in origins])
 
     def get_data_from_name_origin(self, name: str, origin: str = '') -> DataWithAxes:
         """Get the data matching the given name and the given origin"""
