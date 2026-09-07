@@ -2249,7 +2249,7 @@ class DataWithAxes(DataBase, SerializableBase):
                 is_equal = is_equal and other.errors is None
             else:
                 for ind_error in range(len(self.errors)):
-                    if not np.allclose(self.errors[ind_error], other.errors[ind_error]):
+                    if not np.allclose(self.errors[ind_error], other.errors[ind_error], equal_nan=True):
                         return False
         return is_equal
 
