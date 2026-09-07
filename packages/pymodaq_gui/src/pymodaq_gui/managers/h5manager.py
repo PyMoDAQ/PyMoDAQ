@@ -8,14 +8,14 @@ from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_gui.utils.enums import MenuToolbarNames
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_utils.enums import BaseEnum
-
+from pymodaq_utils.enums import BaseEnum, StrEnum
 
 from pymodaq_gui.h5modules.saving import H5Saver
 from pymodaq_gui.utils import select_file
 
 from pymodaq_gui.utils.widgets import QLED
-
+from pymodaq_utils.utils import ThreadCommand
+from utils.widgets.statusbar_separator import StatuBarSeparator
 
 logger = set_logger(get_module_name(__file__))
 config = Config()
@@ -33,11 +33,19 @@ class FileStatus(BaseEnum):
     NO_FILE = 4
 
 
+class FileAction(StrEnum):
+    NEW_FILE = 'new_file'
+    LOAD = 'load'
+    SAVE = 'save'
+    SHOW_FILE = 'show_file'
+    OPEN_FILE = 'open_file'
+    CLOSE_FILE = 'close_file'
 
-class H5Manager(ActionManager):
 
+class H5Manager(QtCore.QObject, ActionManager):
+    command_sig = QtCore.Signal(ThreadCommand)
 
-    def __init__(self, app: 'CustomApp'):
+    def __init__(self, app: 'CustomApp', parent=None):
         """ Create a H5Saver manager to handle display of info in a MainWindow and expose h5 file and h5Saver
         manipulation. The CustomApp it applies to should have a mainwindow attribute pointing to a QMainWindow
 
@@ -46,7 +54,8 @@ class H5Manager(ActionManager):
         app: CustomApp
             An app composed of this H5Manager
         """
-        super().__init__(toolbar=QtWidgets.QToolBar())
+        QtCore.QObject.__init__(self, parent)
+        ActionManager.__init__(self, toolbar=QtWidgets.QToolBar())
 
         self._h5saver: H5Saver = None  #  call self.h5saver property
         self._app = app
@@ -54,30 +63,64 @@ class H5Manager(ActionManager):
         self.main_window = app.mainwindow
 
         self._h5_base_group_name = getattr(app, 'h5_base_group_name', 'Data')
-        self._show_h5file_statusbar_widgets = getattr(app, '.show_h5file_statusbar_widgets', True)
 
         self._file_open_LED: QLED = None
         self._swmr_label: QtWidgets.QLabel = None
+
+        self._show_h5file_statusbar_widgets = getattr(app, '.show_h5file_statusbar_widgets', True)
+
+        self.create_file_toolbar_and_menu()
 
     @property
     def statusbar(self) -> QtWidgets.QStatusBar:
         return self.main_window.statusBar()
 
-    def get_file_toolbar(self) -> QtWidgets.QToolBar:
-        self.add_action('show_file', 'Show file content', 'folder_data',
-                        tip='Browse the content of the current HDF5 file')
+    def create_file_toolbar_and_menu(self) -> tuple[QtWidgets.QToolBar, QtWidgets.QMenu]:
 
-        self.add_action('new_file', 'New file', 'add_circle', menu=MenuToolbarNames.FILE, auto_toolbar=False)
-        self.add_action('load', 'Open file to append...', 'file_open', menu=MenuToolbarNames.FILE, auto_toolbar=False)
+        self.add_toolbar(MenuToolbarNames.FILE, 'FileActions')
+        self.add_menu(MenuToolbarNames.FILE, 'FileActions')
+        self.set_toolbar(MenuToolbarNames.FILE)
+        self.set_menu(MenuToolbarNames.FILE)
+
+        self.add_action(FileAction.SHOW_FILE, 'Show file content', 'folder_data',
+                        tip='Browse the content of the current HDF5 file',
+                        toolbar=self.toolbar,
+                        menu=self.menu)
+
+        self.add_action(FileAction.NEW_FILE, 'New file', 'add_circle',
+                        toolbar=self.toolbar,
+                        menu=self.menu,)
+
+        self.add_action(FileAction.LOAD, 'Open file to append...', 'file_open',
+                        toolbar=self.toolbar,
+                        menu=self.menu,)
         self.get_menu(MenuToolbarNames.FILE).addSeparator()
-        self.add_action('save', 'Save copy as...', 'save', menu=MenuToolbarNames.FILE, auto_toolbar=False)
+        self.add_action(FileAction.SAVE, 'Save copy as...', 'save',
+                        toolbar=self.toolbar,
+                        menu=self.menu,)
+
         # Debug-only actions: registered but not in any menu so they stay hidden from regular users.
         # A developer can access them programmatically or add them back to a menu as needed.
-        self.add_action('open_file', 'Open current file', '', auto_toolbar=False)
-        self.add_action('close_file', 'Close current file', '', auto_toolbar=False)
+        self.add_action(FileAction.OPEN_FILE, 'Open current file', '', auto_toolbar=False, auto_menu=False)
+        self.add_action(FileAction.CLOSE_FILE, 'Close current file', '', auto_toolbar=False, auto_menu=False)
 
-        self.connect_action('show_file', self.show_file_content)
-        return self.toolbar
+
+        self.connect_action(FileAction.SHOW_FILE, self.show_file_content)
+        self.connect_action(FileAction.NEW_FILE, lambda: self.create_new_file(True))
+        self.connect_action(FileAction.NEW_FILE, lambda: self.command_sig.emit(ThreadCommand(FileAction.NEW_FILE)))
+
+        self.connect_action(FileAction.LOAD, self.load_file)
+        self.connect_action(FileAction.LOAD, lambda: self.command_sig.emit(ThreadCommand(FileAction.LOAD)))
+
+        self.connect_action(FileAction.SAVE, self.save_file)
+        self.connect_action(FileAction.SAVE, lambda: self.command_sig.emit(ThreadCommand(FileAction.SAVE)))
+
+        self.connect_action(FileAction.OPEN_FILE, self.open_file)
+        self.connect_action(FileAction.OPEN_FILE, lambda: self.command_sig.emit(ThreadCommand(FileAction.OPEN_FILE)))
+
+        self.connect_action(FileAction.CLOSE_FILE, self.close_file)
+        self.connect_action(FileAction.CLOSE_FILE, lambda: self.command_sig.emit(ThreadCommand(FileAction.CLOSE_FILE)))
+
 
     def insert_h5stuff_status(self):
         self._file_open_LED = QLED()
@@ -92,6 +135,8 @@ class H5Manager(ActionManager):
         self.statusbar.addPermanentWidget(QtWidgets.QLabel('File:'))
         self.statusbar.addPermanentWidget(self._file_open_LED)
         self.statusbar.addPermanentWidget(self._swmr_label)
+
+        self.statusbar.addPermanentWidget(StatuBarSeparator())
 
     @property
     def h5saver(self) -> H5Saver:
@@ -110,7 +155,7 @@ class H5Manager(ActionManager):
 
     @QtCore.Slot(bool)
     def create_new_file(self, new_file):
-        """ Slot of the New File button in the H5Saver settings Tree"""
+        """ Slot of the New File button in the H5Saver settings Tree and the new file action"""
 
         if new_file:
             self.close_file()
@@ -215,7 +260,7 @@ class H5Manager(ActionManager):
         is_open:
             True (green) if the h5 file is open and accessible, False (red) otherwise.
         """
-        if self._show_h5file_statusbar_widgets:
+        if self._show_h5file_statusbar_widgets and self._file_open_LED is not None:
             self._file_open_LED.set_as(is_open)
 
     def show_file_content(self):
@@ -232,7 +277,7 @@ class H5Manager(ActionManager):
         compatible:
             True if the file was created with SWMR support.
         """
-        if self._show_h5file_statusbar_widgets:
+        if self._show_h5file_statusbar_widgets and self._swmr_label is not None:
             if active:
                 self._swmr_label.setText('SWMR')
                 self._swmr_label.setToolTip('SWMR mode active')
