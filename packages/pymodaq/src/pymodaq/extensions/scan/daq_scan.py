@@ -1251,12 +1251,12 @@ class SaverWorker(QtCore.QObject):
         self._n_saved = 0
         self._show_thread = True
 
-    @QtCore.Slot(DataToExport)
-    def save_data(self, dte: DataToExport):
+    @QtCore.Slot(ScanData)
+    def save_data(self, data: ScanData):
         if self._show_thread:
             print(f'Saving data in Qthread{self.thread()}')
             self._show_thread = False
-        self.saver.add_data(dte, )
+        self.saver.add_data(data.dte, indexes=data.indexes, distribution=data.distribution,)
         self._n_saved += 1
         self.n_saved.emit(self._n_saved)
 
