@@ -38,21 +38,30 @@ class H5Manager(ActionManager):
 
 
     def __init__(self, app: 'CustomApp'):
+        """ Create a H5Saver manager to handle display of info in a MainWindow and expose h5 file and h5Saver
+        manipulation. The CustomApp it applies to should have a mainwindow attribute pointing to a QMainWindow
+
+        Parameters
+        ----------
+        app: CustomApp
+            An app composed of this H5Manager
+        """
         super().__init__(toolbar=QtWidgets.QToolBar())
 
         self._h5saver: H5Saver = None  #  call self.h5saver property
         self._app = app
 
-        self._h5_base_group_name = app.h5_base_group_name
-        self._show_h5file_statusbar_widgets = app.show_h5file_statusbar_widgets
+        self.main_window = app.mainwindow
+
+        self._h5_base_group_name = getattr(app, 'h5_base_group_name', 'Data')
+        self._show_h5file_statusbar_widgets = getattr(app, '.show_h5file_statusbar_widgets', True)
 
         self._file_open_LED: QLED = None
         self._swmr_label: QtWidgets.QLabel = None
-        self.main_window = app.mainwindow
 
     @property
     def statusbar(self) -> QtWidgets.QStatusBar:
-        return self._app.statusbar
+        return self.main_window.statusBar()
 
     def get_file_toolbar(self) -> QtWidgets.QToolBar:
         self.add_action('show_file', 'Show file content', 'folder_data',
@@ -121,10 +130,12 @@ class H5Manager(ActionManager):
                 return self._try_open_existing_file(current_file)
             else:
                 return FileStatus.NO_FILE
+        self.update_file_status_led()
         return FileStatus.REOPENED
 
     def close_file(self):
         self._h5saver.close_file()
+        self.update_file_status_led()
 
     def _try_open_existing_file(self, current_file: str | Path) -> FileStatus:
         """Try to open an existing file, asking user what to do if locked.

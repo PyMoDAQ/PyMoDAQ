@@ -115,7 +115,8 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     def __init__(self, parent: Union[DockArea, QtWidgets.QMainWindow, QtWidgets.QWidget] = None,
                  tree: ParameterTree = None, title: str = None, toolbar: QtWidgets.QToolBar=None,
                  create_app_toolbar: bool = True, add_toolbar_break=True,
-                 create_app_menu: bool = False):
+                 create_app_menu: bool = False,
+                 h5manager_class=H5Manager):
 
 
         QObject.__init__(self)
@@ -169,7 +170,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
                           self.__class__.__name__,
                           self.menubar if self.mainwindow is not None else None)
 
-        self._h5_manager = H5Manager(self)
+        self._h5_manager = h5manager_class(self)
         self._worker_thread_manager = WorkerThreadManager(parent=self)
 
         self._delegates = [self._h5_manager, self._worker_thread_manager]  # to deal with eventual other composed objects
