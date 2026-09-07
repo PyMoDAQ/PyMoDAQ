@@ -918,7 +918,8 @@ class DAQScan(CustomExt):
 
         elif status.command == 'add_data':
             ind_scan = status.attribute.pop('ind_scan')
-            self.module_and_data_saver.add_data(dte=status.attribute.pop('extra_data', None), **status.attribute)
+            self.module_and_data_saver.add_data(dte=status.attribute.pop('extra_data', None),
+                                                **status.attribute)
             self.module_and_data_saver.add_time(status.attribute['indexes'])
             self.command_daq_signal.emit(utils.ThreadCommand("data_saved"))
 
@@ -1111,10 +1112,9 @@ class DAQScan(CustomExt):
             else:
                 scan_shape = self.scanner.get_scan_shape()
 
-            for det in self.modules_manager.detectors:
-                det.module_and_data_saver = (
-                    module_saving.DetectorExtendedSaver(det, scan_shape))
-            self.module_and_data_saver.h5saver = self.h5saver  # force the update as the h5saver will also be set on each detectors
+            self.module_and_data_saver.set_scan_shape(scan_shape)
+            self.module_and_data_saver.h5saver = self.h5saver
+            # force the update to all submodules and to take into consideration the scan shape
             self.module_and_data_saver.initialize_time_array(scan_shape)
 
             if self.h5saver.swmr_mode:
@@ -1454,7 +1454,8 @@ class DAQScanAcquisition(QObject):
         # async saving command sent to all concerned detector control modules
         self.status_sig.emit(
             utils.ThreadCommand("add_data",
-                                dict(indexes=self._current_indexes, distribution=self.scanner.distribution,
+                                dict(indexes=self._current_indexes,
+                                     distribution=self.scanner.distribution,
                                      ind_scan=self._ind_scan,
                                      extra_data=self._current_dte_to_be_plotted if self.scanner.scanner.do_process_data else None,)))
 
