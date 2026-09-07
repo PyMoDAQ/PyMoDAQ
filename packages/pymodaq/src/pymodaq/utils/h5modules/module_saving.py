@@ -610,11 +610,12 @@ class ScanSaver(ExtensionSaver):
     def add_data(self, dte: DataToExport = None, indexes: Iterable[int] = None,
                  distribution=DataDistribution.uniform, **kwargs):
 
-        self.detectors[dte.name].add_data(self.current_nodes[dte.name],
-                                          dte,
-                                          indexes=indexes,
-                                          distribution=distribution,
-                                          )
+        for origin in dte.get_origins():
+            self.detectors[origin].add_data(self.current_nodes[origin],
+                                            dte.get_data_from_origins([origin]),
+                                            indexes=indexes,
+                                            distribution=distribution,
+                                            )
 
 
 class LoggerSaver(ExtensionSaver):
