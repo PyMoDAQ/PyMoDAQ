@@ -7,6 +7,7 @@ from qt_themes import Theme
 from qtpy.QtCore import QObject, QLocale
 from qtpy import QtCore, QtWidgets
 
+from h5modules.saving import H5Saver
 from pymodaq_gui.managers.runner_thread_manager import WorkerThreadManager
 from pymodaq_gui.managers.h5manager import FileStatus, H5Manager
 from pymodaq_utils.config import GlobalConfig as Config
@@ -115,8 +116,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     def __init__(self, parent: Union[DockArea, QtWidgets.QMainWindow, QtWidgets.QWidget] = None,
                  tree: ParameterTree = None, title: str = None, toolbar: QtWidgets.QToolBar=None,
                  create_app_toolbar: bool = True, add_toolbar_break=True,
-                 create_app_menu: bool = False,
-                 h5manager_class=H5Manager):
+                 create_app_menu: bool = False):
 
 
         QObject.__init__(self)
@@ -165,12 +165,14 @@ class CustomApp(QObject, ActionManager, ParameterManager):
             parent.setWindowTitle(self.title)
             self._statusbar = QtWidgets.QStatusBar()
 
+        self._status_message_label: QtWidgets.QLabel = None
+
         if create_app_menu:
             self.add_menu(self.__class__.__name__.lower(),
                           self.__class__.__name__,
                           self.menubar if self.mainwindow is not None else None)
 
-        self._h5_manager = h5manager_class(self)
+        self._h5_manager = H5Manager(self)
         self._worker_thread_manager = WorkerThreadManager(parent=self)
 
         self._delegates = [self._h5_manager, self._worker_thread_manager]  # to deal with eventual other composed objects
@@ -182,6 +184,11 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     @property
     def h5_manager(self) -> H5Manager:
         return self._h5_manager
+
+    @property
+    def h5saver(self) -> H5Saver:
+        """ Convenience method to access the h5saver and for backcompatibility"""
+        return self.h5_manager.h5saver
 
     def __getattr__(self, name):
         """ To access composed objects attributes and methods"""
