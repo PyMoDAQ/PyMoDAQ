@@ -138,8 +138,7 @@ class H5Manager(QtCore.QObject, ActionManager):
 
         self.statusbar.addPermanentWidget(StatuBarSeparator())
 
-    @property
-    def h5saver(self) -> H5Saver:
+    def _init_h5_saver(self) -> H5Saver:
         if self._h5saver is None:
             self._h5saver = H5Saver()
             self._h5saver.settings.child('do_save').hide()
@@ -147,9 +146,24 @@ class H5Manager(QtCore.QObject, ActionManager):
             self._h5saver.settings['base_name'] = self._h5_base_group_name
             self._h5saver.new_file_sig.connect(self.create_new_file)
             self._h5saver.file_changed_sig.connect(self.update_file_status_led)
+        return self._h5saver
+
+    @property
+    def h5saver(self) -> H5Saver:
+        self._init_h5_saver()
 
         status = self.open_file()
         if status == FileStatus.NO_FILE:
+            self.create_new_file(True)
+        return self._h5saver
+
+    def get_h5saver(self, create_new_file=False) -> H5Saver:
+        """ Return a H5Saver instance with more control than when using the h5saver property, in particular,
+        the property will attempt to create a new file if it doesn't exist."""
+        self._init_h5_saver()
+        status = self.open_file()
+
+        if status == FileStatus.NO_FILE and create_new_file:
             self.create_new_file(True)
         return self._h5saver
 

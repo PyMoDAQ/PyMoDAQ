@@ -225,9 +225,8 @@ class DAQScan(CustomExt):
         self.modules_manager.detectors_changed.connect(self.clear_plot_from)
 
 
-        self.h5saver.file_changed_sig.connect(self._on_file_changed)
-        self.h5_manager.module_and_data_saver = module_saving.ScanSaver(self)
-
+        self.h5_manager.get_h5saver(create_new_file=False).file_changed_sig.connect(self._on_file_changed)
+        self._module_and_data_saver = module_saving.ScanSaver(self)
 
         self.extended_saver: data_saving.DataToExportExtendedSaver = None
         self.h5temp: H5Saver = None
@@ -271,11 +270,6 @@ class DAQScan(CustomExt):
 
         logger.info('DAQScan Initialized')
 
-
-    @property
-    def module_and_data_saver(self) -> module_saving.ScanSaver:
-        """ Convenience method to access the module saver and to properly type hint it"""
-        return super().module_and_data_saver
 
     def ini_scan_manager(self):
         self.scan_manager.enable_actions()
@@ -359,7 +353,7 @@ class DAQScan(CustomExt):
         self.create_dashboard_toolbar(add_break=False)
 
         self.populate_toolbox_widget([self.settings_tree,
-                                      self.h5saver.settings_tree],
+                                      self.h5_manager.get_h5saver().settings_tree],
                                      ['General Settings', 'Save Settings'])
 
         self.set_scanner_settings(self.scanner.parent_widget)
@@ -412,9 +406,6 @@ class DAQScan(CustomExt):
         """
         if cmd.command == FileAction.LOAD:
             self.load_file()
-        elif cmd.command == 'viewers_changed':
-            ...
-
 
     def do_things_after_scanner_changed(self):
         self.set_action_enabled('ini_positions',
@@ -435,7 +426,7 @@ class DAQScan(CustomExt):
         super().do_things_after_experiment_set(experiment_name)
 
         # set the module saver type and applies its h5saver to submodules
-        self.h5_manager.module_and_data_saver = module_saving.ScanSaver(self)
+        self._module_and_data_saver = module_saving.ScanSaver(self)
 
         self.enable_start_stop(True)
 

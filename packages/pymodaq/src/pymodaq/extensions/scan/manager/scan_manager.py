@@ -73,9 +73,9 @@ class ScanManager(SettingsManager):
             {'title': 'Saver', 'name': 'h5saver', 'type': 'group', 'children': H5Saver.params},
         ]
 
-        self._h5saver = daq_scan.h5saver
-        self.h5saver.settings.child('do_save').hide()
-        self.h5saver.settings.child('custom_name').hide()
+        self._h5saver = daq_scan.h5_manager.get_h5saver()
+        self._h5saver.settings.child('do_save').hide()
+        self._h5saver.settings.child('custom_name').hide()
 
         self.update_settings(self.settings)
 

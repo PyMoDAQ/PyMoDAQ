@@ -67,7 +67,8 @@ class CustomExt(CustomApp):
     @module_and_data_saver.setter
     def module_and_data_saver(self, mod: ModuleSaver):
         self._module_and_data_saver = mod
-        self._module_and_data_saver.h5saver = self.h5saver
+        if self.h5saver is not None:
+            self._module_and_data_saver.h5saver = self.h5saver
 
     def stop(self):
         """ Programmatic method to stop any action in the extension
@@ -172,12 +173,3 @@ class CustomExt(CustomApp):
             self.dashboard.mainwindow.setWindowTitle('Dashboard')
             self.dashboard.mainwindow.closeEvent = lambda event: self.set_action_checked(DashBoardToolbarActions.SHOW,
                                                                                          False)
-
-    @property
-    def module_and_data_saver(self):
-        """ Convenience method pointing to the real one in the H5ManagerExt"""
-        return self.h5_manager.module_and_data_saver
-
-    @module_and_data_saver.setter
-    def module_and_data_saver(self, mod: ModuleSaver):
-        self.h5_manager.module_and_data_saver = mod
