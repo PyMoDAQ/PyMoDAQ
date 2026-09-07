@@ -5,7 +5,9 @@
 
 Contains all objects related to the DAQScan module, to do automated scans, saving data...
 """
+
 from __future__ import annotations
+import dataclasses
 import logging
 import os
 from pathlib import Path
@@ -70,12 +72,13 @@ class ScanStepError(Exception):
     """Raised when an error occurs during a scan step"""
 
 
-class ScanDataTemp:
-    """Convenience class to hold temporary data to be plotted in the live plots"""
-    def __init__(self, scan_index: int, indexes: Tuple[int], data: DataToExport):
-        self.scan_index = scan_index
-        self.indexes = indexes
-        self.data = data
+@dataclasses.dataclass
+class ScanData:
+    """Convenience class to hold data to be saved or plotted"""
+    dte: DataToExport
+    indexes: list[int]
+    distribution: DataDistribution
+    scan_index: int
 
 
 class ScanStatusBarManager:
@@ -432,6 +435,10 @@ class DAQScan(CustomExt):
 
         if hasattr(self, 'scan_manager'):
             self.ini_scan_manager()
+
+    @property
+    def module_and_data_saver(self) -> module_saving.ScanSaver:
+        return super().module_and_data_saver
 
     ################
     #  CONFIG/SETUP UI / EXIT
@@ -917,10 +924,14 @@ class DAQScan(CustomExt):
             self.status_manager.set_permanent_status(status.attribute or 'Timeout occurred')
 
         elif status.command == 'add_data':
-            ind_scan = status.attribute.pop('ind_scan')
-            self.module_and_data_saver.add_data(dte=status.attribute.pop('extra_data', None),
-                                                **status.attribute)
-            self.module_and_data_saver.add_time(status.attribute['indexes'])
+            attribute: ScanData = status.attribute
+            ind_scan = attribute.scan_index
+            self.module_and_data_saver.add_data(
+                dte=attribute.dte,
+                indexes=attribute.indexes,
+                distribution=attribute.distribution,)
+
+            self.module_and_data_saver.add_time(attribute.indexes)
             self.command_daq_signal.emit(utils.ThreadCommand("data_saved"))
 
         elif status.command == 'add_nav_axes':
@@ -929,11 +940,11 @@ class DAQScan(CustomExt):
     ############
     #  PLOTTING
 
-    def save_temp_live_data(self, scan_data: ScanDataTemp):
+    def save_temp_live_data(self, scan_data: ScanData):
         if scan_data.scan_index == 0:
             if self.scanner.scanner.do_process_data:
                 viewers_enum, data_names, _ = self.check_number_type_viewers()
-                for dwa in scan_data.data:
+                for dwa in scan_data.dte:
                     if dwa.get_full_name() not in data_names:
                         viewer_enum = ViewersEnum.get_viewers_enum_from_data(dwa).increase_dim(self.scanner.n_axes)
 
@@ -958,7 +969,9 @@ class DAQScan(CustomExt):
 
             self.extended_saver.add_nav_axes(self.h5temp.raw_group, nav_axes)
 
-        self.extended_saver.add_data(self.h5temp.raw_group, scan_data.data, scan_data.indexes,
+        self.extended_saver.add_data(self.h5temp.raw_group,
+                                     scan_data.dte,
+                                     scan_data.indexes,
                                      distribution=self.scanner.distribution)
         if self.settings['plot_options', 'plot_at_each_step']:
             self.update_live_plots()
@@ -1139,7 +1152,7 @@ class DAQScan(CustomExt):
         self.scan_acquisition = DAQScanAcquisition(self.settings, self.scanner, self.modules_manager,
                                                    )
         self.command_daq_signal[utils.ThreadCommand].connect(self.scan_acquisition.queue_command)
-        self.scan_acquisition.scan_data_tmp[ScanDataTemp].connect(self.save_temp_live_data)
+        self.scan_acquisition.scan_data_tmp[ScanData].connect(self.save_temp_live_data)
         self.scan_acquisition.status_sig[utils.ThreadCommand].connect(self.thread_status)
 
     def _init_live(self):
@@ -1223,6 +1236,33 @@ class DAQScan(CustomExt):
             self.get_action('stop').trigger()
 
 
+
+
+class SaverWorker(QtCore.QObject):
+    """ Worker in separated thread receiving the data from a DataGenerator
+    and adding them into the enlargeable arrays with the H5file using the
+     DataToExportTimedSaver """
+
+    n_saved = QtCore.Signal(int)
+
+    def __init__(self, saver: module_saving.ScanSaver):
+        super().__init__()
+        self.saver: module_saving.ScanSaver  = saver
+        self._n_saved = 0
+        self._show_thread = True
+
+    @QtCore.Slot(DataToExport)
+    def save_data(self, dte: DataToExport):
+        if self._show_thread:
+            print(f'Saving data in Qthread{self.thread()}')
+            self._show_thread = False
+        self.saver.add_data(dte, )
+        self._n_saved += 1
+        self.n_saved.emit(self._n_saved)
+
+
+
+
 class DAQScanAcquisition(QObject):
     """
         =========================== ========================================
@@ -1230,7 +1270,7 @@ class DAQScanAcquisition(QObject):
         =========================== ========================================
 
     """
-    scan_data_tmp = Signal(ScanDataTemp)
+    scan_data_tmp = Signal(ScanData)
     status_sig = Signal(utils.ThreadCommand)
     h5_data_array_ready_signal = Signal()
     scan_step_failed_signal = Signal(ScanStepError)
@@ -1443,26 +1483,30 @@ class DAQScanAcquisition(QObject):
             self.status_sig.emit(utils.ThreadCommand("add_nav_axes", nav_axes))
 
         if self.scanner.scanner.do_process_data:
-            self._current_dte_to_be_plotted = self.scanner.scanner.process_data(dte_grabbed)
+            # extra data to be saved at the same time!
+            dte_grabbed.append(self.scanner.scanner.process_data(dte_grabbed))
         else:
             full_names: list = self.scan_settings['plot_options', 'plot_0d']['selected'][:]
             full_names.extend(self.scan_settings['plot_options', 'plot_1d']['selected'][:])
-            self._current_dte_to_be_plotted = dte_grabbed.get_data_from_full_names(full_names, deepcopy=False)
+            self._current_dte_to_be_plotted = dte_grabbed.get_data_from_full_names(full_names, deepcopy=True)
             n_nav_axis_selection = 2-len(self._current_indexes) + 1 if self.Naverage > 1 else 2-len(self._current_indexes)
             self._current_dte_to_be_plotted = self._current_dte_to_be_plotted.get_data_with_naxes_lower_than(n_nav_axis_selection)  # maximum Data2D included nav indexes
 
-        # async saving command sent to all concerned detector control modules
         self.status_sig.emit(
             utils.ThreadCommand("add_data",
-                                dict(indexes=self._current_indexes,
-                                     distribution=self.scanner.distribution,
-                                     ind_scan=self._ind_scan,
-                                     extra_data=self._current_dte_to_be_plotted if self.scanner.scanner.do_process_data else None,)))
+                                ScanData(
+                                    indexes=list(self._current_indexes),
+                                    distribution=self.scanner.distribution,
+                                    scan_index=self._ind_scan,
+                                    dte=dte_grabbed,)))
 
     def _on_h5data_ready(self):
-        self.scan_data_tmp.emit(ScanDataTemp(self._ind_scan,
-                                             self._current_indexes,
-                                             self._current_dte_to_be_plotted))
+        self.scan_data_tmp.emit(
+            ScanData(dte=self._current_dte_to_be_plotted,
+                     scan_index=self._ind_scan,
+                     indexes=list(self._current_indexes),
+                     distribution=self.scanner.distribution,
+                     ))
 
         QTimer.singleShot(int(self.scan_settings['time_flow', 'wait_time']),
                           self._on_scan_step_done)
