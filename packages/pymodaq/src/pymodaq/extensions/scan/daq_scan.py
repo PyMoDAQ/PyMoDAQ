@@ -44,7 +44,7 @@ from pymodaq.utils.scanner.scanner import Scanner
 from pymodaq.utils.managers.batchscan_manager import BatchScanner
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 from pymodaq.post_treatment.load_and_plot import LoaderPlotter
-from pymodaq.extensions.scan.daq_scan_ui import DAQScanUI
+
 from pymodaq.utils.h5modules import module_saving
 from pymodaq.utils.scanner.scan_selector import ScanSelector, SelectorItem
 from pymodaq.utils.data import DataActuator
@@ -76,6 +76,66 @@ class ScanDataTemp:
         self.scan_index = scan_index
         self.indexes = indexes
         self.data = data
+
+
+class ScanStatusBarManager:
+
+    def __init__(self, scan: DAQScan):
+        self.scan = scan
+
+        self._n_scan_steps_sb: QSpinBox_ro = None
+        self._indice_scan_sb: QSpinBox_ro = None
+        self._indice_average_sb: QSpinBox_ro = None
+
+        self._scan_done_LED: QLED = None
+
+    @property
+    def statusbar(self):
+        return self.scan.statusbar
+
+    def set_permanent_status(self, status: str):
+        self.scan.set_permanent_status(status)
+
+    def create_permanent_widgets(self):
+
+        #custom app already creates a permanent label one can access with set_permanent_status
+        self._n_scan_steps_sb = QSpinBox_ro()
+        self._n_scan_steps_sb.setToolTip('Total number of steps')
+        self._indice_scan_sb = QSpinBox_ro()
+        self._indice_scan_sb.setToolTip('Current step value')
+        self._indice_average_sb = QSpinBox_ro()
+        self._indice_average_sb.setToolTip('Current average value')
+
+        self._scan_done_LED = QLED()
+        self._scan_done_LED.set_as_false()
+        self._scan_done_LED.clickable = False
+        self._scan_done_LED.setToolTip('Scan done state')
+
+        self.statusbar.insertPermanentWidget(1, self._n_scan_steps_sb) # 1 because there is already the permanent label
+        self.statusbar.insertPermanentWidget(2, self._indice_scan_sb)
+        self.statusbar.insertPermanentWidget(3, self._indice_average_sb)
+        self._indice_average_sb.setVisible(False)
+        self.statusbar.insertPermanentWidget(4, self._scan_done_LED)
+
+    @property
+    def n_scan_steps(self):
+        return self._n_scan_steps_sb.value()
+
+    @n_scan_steps.setter
+    def n_scan_steps(self, nsteps: int):
+        self._n_scan_steps_sb.setValue(nsteps)
+
+    def set_scan_step(self, step_ind: int):
+        self._indice_scan_sb.setValue(step_ind)
+
+    def show_average_step(self, show: bool = True):
+        self._indice_average_sb.setVisible(show)
+
+    def set_scan_step_average(self, step_ind: int):
+        self._indice_average_sb.setValue(step_ind)
+
+    def set_scan_done(self, done=True):
+        self._scan_done_LED.set_as(done)
 
 
 class DAQScan(CustomExt):
@@ -185,8 +245,11 @@ class DAQScan(CustomExt):
 
         self.dock_command: gutils.Dock = None
 
+        self.status_manager = ScanStatusBarManager(self)
 
         self.setup_ui()
+
+
 
         self.h5_manager.command_sig.connect(self.process_cmds)
 
@@ -303,8 +366,6 @@ class DAQScan(CustomExt):
         self.set_modules_settings(self.modules_manager.settings_tree)
 
         self.plotting_settings_tree.setParameters(self.settings.child('plot_options'))
-
-
 
 
     def setup_actions(self):
@@ -575,45 +636,8 @@ class DAQScan(CustomExt):
 
     def populate_status_bar(self):
         super().populate_status_bar()
-        self.set_permanent_status('Initializing')
-
-        self._n_scan_steps_sb = QSpinBox_ro()
-        self._n_scan_steps_sb.setToolTip('Total number of steps')
-        self._indice_scan_sb = QSpinBox_ro()
-        self._indice_scan_sb.setToolTip('Current step value')
-        self._indice_average_sb = QSpinBox_ro()
-        self._indice_average_sb.setToolTip('Current average value')
-
-        self._scan_done_LED = QLED()
-        self._scan_done_LED.set_as_false()
-        self._scan_done_LED.clickable = False
-        self._scan_done_LED.setToolTip('Scan done state')
-
-        self.statusbar.insertPermanentWidget(1, self._n_scan_steps_sb)
-        self.statusbar.insertPermanentWidget(2, self._indice_scan_sb)
-        self.statusbar.insertPermanentWidget(3, self._indice_average_sb)
-        self._indice_average_sb.setVisible(False)
-        self.statusbar.insertPermanentWidget(4, self._scan_done_LED)
-
-    @property
-    def n_scan_steps(self):
-        return self._n_scan_steps_sb.value()
-
-    @n_scan_steps.setter
-    def n_scan_steps(self, nsteps: int):
-        self._n_scan_steps_sb.setValue(nsteps)
-
-    def set_scan_step(self, step_ind: int):
-        self._indice_scan_sb.setValue(step_ind)
-
-    def show_average_step(self, show: bool = True):
-        self._indice_average_sb.setVisible(show)
-
-    def set_scan_step_average(self, step_ind: int):
-        self._indice_average_sb.setValue(step_ind)
-
-    def set_scan_done(self, done=True):
-        self._scan_done_LED.set_as(done)
+        self.status_manager.create_permanent_widgets()
+        self.status_manager.set_permanent_status('Initializing')
 
     def enable_start_stop(self, enable=True):
         """If True enable main buttons to launch/stop scan"""
@@ -701,9 +725,9 @@ class DAQScan(CustomExt):
         file_name = Path(file_path).name
         scan_name = self.h5saver.settings['current_scan_name']
         if scan_name:
-            self.set_permanent_status(f'{file_name} | {scan_name}')
+            self.status_manager.set_permanent_status(f'{file_name} | {scan_name}')
         else:
-            self.set_permanent_status(file_name)
+            self.status_manager.set_permanent_status(file_name)
 
     def update_file_settings(self):
         try:
@@ -719,9 +743,9 @@ class DAQScan(CustomExt):
             file_name = Path(self.h5saver.settings['current_h5_file']).name
             scan_name = self.h5saver.settings['current_scan_name']
             if scan_name:
-                self.set_permanent_status(f'{file_name} | {scan_name}')
+                self.status_manager.set_permanent_status(f'{file_name} | {scan_name}')
             else:
-                self.set_permanent_status(file_name)
+                self.status_manager.set_permanent_status(file_name)
 
             return res
 
@@ -746,7 +770,7 @@ class DAQScan(CustomExt):
         self.h5saver.settings.child('current_scan_name').setValue(scan_name)
 
         file_name = Path(self.h5saver.settings['current_h5_file']).name
-        self.set_permanent_status(f'{file_name} | {scan_name}')
+        self.status_manager.set_permanent_status(f'{file_name} | {scan_name}')
 
         res = self.set_metadata_about_current_scan()
         return res
@@ -780,7 +804,7 @@ class DAQScan(CustomExt):
 
         """
         if param.name() == 'scan_average':
-            self.show_average_step(param.value() > 1)
+            self.status_manager.show_average_step(param.value() > 1)
         elif param.name() == 'prepare_viewers':
             self.prepare_viewers()
         elif param.name() == 'plot_probe':
@@ -861,15 +885,15 @@ class DAQScan(CustomExt):
         elif status.command == "Update_scan_index":
             # status[1] = [ind_scan,ind_average]
             self.ind_scan = status.attribute[0]
-            self.set_scan_step(status.attribute[0] + 1)
+            self.status_manager.set_scan_step(status.attribute[0] + 1)
             self.ind_average = status.attribute[1]
-            self.set_scan_step_average(status.attribute[1] + 1)
+            self.status_manager.set_scan_step_average(status.attribute[1] + 1)
 
         elif status.command == "Scan_done":
 
             self.modules_manager.reset_signals()
             self.live_timer.stop()
-            self.set_scan_done()
+            self.status_manager.set_scan_done()
             self.scan_done_signal.emit()
             try:
                 self.module_and_data_saver.flush()
@@ -899,7 +923,7 @@ class DAQScan(CustomExt):
                 self.loop_scan_batch()
 
         elif status.command == "Timeout":
-            self.set_permanent_status(status.attribute or 'Timeout occurred')
+            self.status_manager.set_permanent_status(status.attribute or 'Timeout occurred')
 
         elif status.command == 'add_data':
             ind_scan = status.attribute.pop('ind_scan')
@@ -1004,7 +1028,7 @@ class DAQScan(CustomExt):
                     text="There are not enough or too much selected move modules for this scan")
                 return False
 
-            self.n_scan_steps = self.scanner.n_steps
+            self.status_manager.n_scan_steps = self.scanner.n_steps
 
             # check if the modules are initialized
             for module in self.modules_manager.actuators:
@@ -1113,11 +1137,11 @@ class DAQScan(CustomExt):
             self.set_action_enabled('start', False)
             self.set_action_enabled('pause', True)
             self.set_action_checked('pause', False)
-            self.set_scan_done(False)
+            self.status_manager.set_scan_done(False)
             if not self.settings['plot_options', 'plot_at_each_step']:
                 self.live_timer.start(self.settings['plot_options', 'refresh_live'])
             self.command_daq_signal.emit(utils.ThreadCommand('start_acquisition'))
-            self.set_permanent_status('Running acquisition')
+            self.status_manager.set_permanent_status('Running acquisition')
             logger.info('Running acquisition')
 
     def ini_scan_acquisition(self):
@@ -1173,7 +1197,7 @@ class DAQScan(CustomExt):
             --------
             set_ini_positions
         """
-        self.set_permanent_status('Stoping acquisition')
+        self.status_manager.set_permanent_status('Stoping acquisition')
         self.command_daq_signal.emit(utils.ThreadCommand("stop_acquisition"))
 
         if self.settings['scan_options', 'go_to_ini_positions']:
@@ -1181,7 +1205,7 @@ class DAQScan(CustomExt):
         status = 'Data Acquisition has been stopped by user'
 
         self.update_status(status)
-        self.set_permanent_status('')
+        self.status_manager.set_permanent_status('')
 
         self.set_action_enabled('ini_positions', True)
         self.set_action_enabled('start', True)
@@ -1193,9 +1217,9 @@ class DAQScan(CustomExt):
         paused = self.is_action_checked('pause')
         self.command_daq_signal.emit(utils.ThreadCommand('pause_acquisition', attribute=paused))
         if paused:
-            self.set_permanent_status('Acquisition paused')
+            self.status_manager.set_permanent_status('Acquisition paused')
         else:
-            self.set_permanent_status('Running acquisition')
+            self.status_manager.set_permanent_status('Running acquisition')
 
     def do_scan(self, start_scan=True):
         """Public method to start the scan programmatically"""
