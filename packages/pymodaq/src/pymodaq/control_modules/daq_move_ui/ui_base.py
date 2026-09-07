@@ -555,6 +555,9 @@ class DAQMoveUI(ControlModuleUI):
         self.control_widget.close()
         super().close()
 
+    def quit_fun(self):
+        self.command_sig.emit(ThreadCommand(UiToMainMove.QUIT))
+
 
 if __name__ == '__main__':
 

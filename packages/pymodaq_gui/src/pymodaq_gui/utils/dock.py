@@ -58,7 +58,7 @@ class DockArea(DockArea):
     dock_signal = Signal()
 
     def __init__(self, parent=None, temporary=False, home=None):
-        super(DockArea, self).__init__(parent, temporary, home)
+        super().__init__(parent, temporary, home)
 
     def moveDock(self, dock, position, neighbor):
         """

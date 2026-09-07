@@ -52,9 +52,14 @@ class TestTimeout:
 
     def test_message_includes_missing_modules(self, qtbot, scan_acquisition):
         messages = []
-        scan_acquisition.status_sig.connect(lambda cmd: messages.append(cmd))
+        scan_acquisition.init_scan()
+        def append_msg(msg: str):
+            messages.append(msg)
 
-        scan_acquisition.timeout(['Det1', 'X_axis'])
+        scan_acquisition.status_sig.connect(append_msg)
+
+        with qtbot.waitSignal(scan_acquisition.status_sig, timeout=500):
+            scan_acquisition.timeout(['Det1', 'X_axis'])
 
         timeout_cmds = [cmd for cmd in messages if cmd.command == 'Timeout']
         assert len(timeout_cmds) == 1
@@ -63,9 +68,14 @@ class TestTimeout:
 
     def test_message_without_missing_modules(self, qtbot, scan_acquisition):
         messages = []
-        scan_acquisition.status_sig.connect(lambda cmd: messages.append(cmd))
+        scan_acquisition.init_scan()
+        def append_msg(msg: str):
+            messages.append(msg)
 
-        scan_acquisition.timeout()
+        scan_acquisition.status_sig.connect(append_msg)
+
+        with qtbot.waitSignal(scan_acquisition.status_sig, timeout=500):
+            scan_acquisition.timeout()
 
         timeout_cmds = [cmd for cmd in messages if cmd.command == 'Timeout']
         assert len(timeout_cmds) == 1

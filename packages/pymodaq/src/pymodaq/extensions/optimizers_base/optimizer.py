@@ -857,7 +857,7 @@ class GenericOptimization(CustomExt):
                 self.ini_temp_file()
                 self.ini_live_plot()
 
-                self.runner_thread = QtCore.QThread()
+                self.runner_thread = QtCore.QThread(self)
                 runner = self.runner(self.model_class, self.modules_manager, self.algorithm,
                                      self.get_stopping_parameters())
                 self.runner_thread.runner = runner

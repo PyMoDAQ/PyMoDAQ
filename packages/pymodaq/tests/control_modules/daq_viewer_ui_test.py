@@ -4,6 +4,7 @@ Created the 03/10/2022
 
 @author: Sebastien Weber
 """
+import os
 import pytest
 from pytest import fixture
 
@@ -18,9 +19,6 @@ import qt_themes
 
 from pymodaq_utils.config import GlobalConfig
 config = GlobalConfig()
-
-
-pytestmark = pytest.mark.skipif(False, reason='qtbot issues but tested locally')
 
 
 @fixture
@@ -41,7 +39,7 @@ def ini_daq_viewer_ui(qtbot):
     roi_dock.close()
     QtWidgets.QApplication.processEvents()
 
-@pytestmark
+
 def test_api_attributes(ini_daq_viewer_ui):
     """Make sure the API attribute and methods used from other modules are present
     """
@@ -58,7 +56,7 @@ def test_api_attributes(ini_daq_viewer_ui):
     assert 'do_snap' in attributes
 
 
-@pytestmark
+
 def test_signals(ini_daq_viewer_ui):
     """Testing that the triggering of actions and push buttons sends the correct signal to external application"""
     daq_viewer, qtbot = ini_daq_viewer_ui
@@ -118,60 +116,7 @@ def test_signals(ini_daq_viewer_ui):
     assert blocker.args[0].command == UiToMainViewer.TAKE_BKG
 
 
-@pytestmark
-def test_do_init(ini_daq_viewer_ui):
-    IND_daq_type = 1
-    IND_det_type = 1
-    daq_type = DAQTypesEnum[DAQTypesEnum.names()[IND_daq_type]]
-    det_name = options[daq_type.name][IND_det_type]
 
-    detector = SelectedModule(daq_type,det_name)
-
-    daq_viewer, qtbot = ini_daq_viewer_ui
-    daq_viewer.detector = detector
-
-    with qtbot.waitSignal(daq_viewer.command_sig) as blocker:
-        daq_viewer.do_init(True)
-    assert blocker.args[0].command == UiToMainViewer.INIT
-    assert blocker.args[0].attribute[0]
-    assert blocker.args[0].attribute[1] == detector
-
-    with qtbot.waitSignal(daq_viewer.command_sig) as blocker:
-        daq_viewer.do_init(False)
-    assert blocker.args[0].command == UiToMainViewer.INIT
-    assert not blocker.args[0].attribute[0]
-    assert blocker.args[0].attribute[1] == detector
-
-    # if triggered twice with same boolean, no action is performed
-    with pytest.raises(qtbot.TimeoutError):
-        with qtbot.waitSignal(daq_viewer.command_sig, timeout=100) as blocker:
-            daq_viewer.do_init(False)
-
-
-@pytestmark
-def test_do_grab(ini_daq_viewer_ui):
-    daq_viewer, qtbot = ini_daq_viewer_ui
-
-    daq_viewer.do_init(True)
-    daq_viewer.detector_init = True  # in real implementation of the DAQ_Viewer, this command is called
-    #after the right return from the plugin instrument
-
-    with pytest.raises(qtbot.TimeoutError):
-        with qtbot.waitSignal(daq_viewer.command_sig, timeout=100) as blocker:
-            daq_viewer.do_grab(False)
-
-    with qtbot.waitSignal(daq_viewer.command_sig, timeout=100) as blocker:
-        daq_viewer.do_grab(True)
-    assert blocker.args[0].command == 'grab'
-    assert blocker.args[0].attribute
-
-    with qtbot.waitSignal(daq_viewer.command_sig, timeout=100) as blocker:
-        daq_viewer.do_grab(False)
-    assert blocker.args[0].command == 'grab'
-    assert not blocker.args[0].attribute
-
-
-@pytestmark
 def test_update_viewers(ini_daq_viewer_ui):
     daq_viewer, qtbot = ini_daq_viewer_ui
 

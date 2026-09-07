@@ -326,6 +326,7 @@ class DAQ_Viewer(ParameterControlModule):
                 * do_bkg
                 * take_bkg
                 * viewers_changed
+                * quit
         """
 
         if cmd.command == UiToMainViewer.INIT:
@@ -348,6 +349,8 @@ class DAQ_Viewer(ParameterControlModule):
         elif cmd.command == UiToMainViewer.VIEWERS_CHANGED:
             self._viewer_types: List[ViewersEnum] = cmd.attribute['viewer_types']
             self.viewers = cmd.attribute['viewers']
+        elif cmd.command == UiToMainViewer.QUIT:
+            self.quit_fun()
 
     def detector_changed_from_ui(self, detector: SelectedModule):
         self._detector = detector
@@ -1304,6 +1307,7 @@ def main(init_qt=True, init_det=False):
 
     shared_ui, daq_viewer = create_load_daq_viewer()
     shared_ui.show()
+    daq_viewer.shared_ui = shared_ui
 
     if init_det:
         daq_viewer.init_hardware_ui(init_det)

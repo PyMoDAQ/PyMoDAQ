@@ -512,12 +512,13 @@ class ModulesManager(QObject, ParameterManager):
                 sig.connect(slot)
 
         else:
-            try:
-                for sig in [mod.move_done_signal if signal == 'move_done' else mod.current_value_signal
-                            for mod in self.actuators]:
+
+            for sig in [mod.move_done_signal if signal == 'move_done' else mod.current_value_signal
+                        for mod in self.actuators]:
+                try:
                     sig.disconnect(slot)
-            except Exception as e:
-                logger.error(str(e))
+                except TypeError as e:
+                    logger.error(str(e))
 
         self.actuators_connected = connect
 

@@ -108,6 +108,8 @@ class HardwareWorkerBase(QObject):
         status = self.close()
         self.status_sig.emit(ThreadCommand(ThreadStatus.CLOSE, [status]))
 
+    def close(self):
+        raise NotImplementedError
 
     def queue_command(self, command) -> bool:
         """Handle commands shared by all hardware workers.
@@ -132,9 +134,9 @@ class QThreadProxy:
     Could not use inheritance as sometime, we have to use the main thread where methods cannot
     be added. Here inherits from Generic to let the type checker believe we are faced with a real QThread
     """
-    def __init__(self, thread: QThread = None):
+    def __init__(self, thread: QThread = None, parent=None):
         super().__init__()
-        self.thread: QThread = thread if thread is not None else QThread()
+        self.thread: QThread = thread if thread is not None else QThread(parent)
 
         self._hardwares = {}
         if thread.__doc__:
@@ -511,7 +513,7 @@ class ControlModule(QObject):
                         attr(value)
                     else:
                         attr = value
-class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule):
+class ParameterControlModule(ParameterManager, LECOComponentMixin, ControlModule):
     """Base class for a control module with parameters."""
 
     _update_settings_signal = Signal(edict)
@@ -669,6 +671,7 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
             QtWidgets.QApplication.processEvents()
 
         self._quit_cleanup()
+        self.disconnect_tree()
         try:
             if self.ui is not None:
                 self.ui.close()
@@ -760,7 +763,7 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
         try:
             hardware = self._create_hardware()
             if self.controller_and_thread.is_master:
-                self.controller_and_thread.thread = QThreadProxy()
+                self.controller_and_thread.thread = QThreadProxy(parent=self)
             else:
                 if self.controller_and_thread.thread is None or not self.controller_and_thread.thread.isRunning():
                     if self.ui is not None:
