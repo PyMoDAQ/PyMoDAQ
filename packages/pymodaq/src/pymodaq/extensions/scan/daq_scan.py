@@ -1262,6 +1262,9 @@ class SaverWorker(QtCore.QObject):
 
     @QtCore.Slot(list)
     def add_nav_axes(self, axes: list[Axis]):
+        if self._show_thread:
+            print(f'Saving data in Qthread{self.thread()}')
+            self._show_thread = False
         self.saver.add_nav_axes(axes)
 
 
@@ -1322,7 +1325,7 @@ class DAQScanAcquisition(QObject):
     
     @property
     def settings(self) -> Parameter:
-        return self.settings
+        return self.daq_scan.settings
 
     @property
     def module_and_data_saver(self) -> module_saving.ScanSaver:
@@ -1344,13 +1347,14 @@ class DAQScanAcquisition(QObject):
             self.stop(msg='User has stopped the acquisition')
 
         elif command.command == "pause_acquisition":
-            self.pause()
+            self.pause(command.attribute)
 
         elif command.command == "move_stages":
             self.modules_manager.move_actuators(command.attribute, polling=False)
 
     def start(self):
         self._running = True
+        self._n_emitted = 0
         self.set_ini_positions()
 
     def pause(self, do_pause: bool = True):
@@ -1429,7 +1433,7 @@ class DAQScanAcquisition(QObject):
             self.thread_manager.create_thread_for_worker('saver', self.saver_worker)
             self.saver_worker.n_saved.connect(self.update_worker_ntask)
             self.thread_manager.start_thread('saver')
-
+            self.settings['worker', 'worker_running'] = True
 
             self.modules_manager.connect_actuators(True)
             self.modules_manager.connect_detectors(True)
@@ -1581,7 +1585,7 @@ class DAQScanAcquisition(QObject):
 
         if self._ind_scan == 0:
             self._update_status("Creating the arrays nodes in the h5file, please be patient")
-            QThread.msleep(50)
+
             nav_axes = self.scanner.get_nav_axes()
             if self.Naverage > 1:
                 for nav_axis in nav_axes:
@@ -1607,8 +1611,8 @@ class DAQScanAcquisition(QObject):
                 distribution=self.scanner.distribution,
                 scan_index=self._ind_scan,
                 dte=dte_grabbed,))
+        self._n_emitted += 1
 
-    def _on_h5data_ready(self):
         self.scan_data_tmp.emit(
             ScanData(dte=self._current_dte_to_be_plotted,
                      scan_index=self._ind_scan,
