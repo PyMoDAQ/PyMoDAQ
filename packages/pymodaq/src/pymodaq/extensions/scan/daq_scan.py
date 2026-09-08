@@ -472,12 +472,12 @@ class DAQScan(CustomExt):
         if self.scan_acquisition.is_running:
             messagebox(title='Running',
                        text='The Acquisition is running, first stop it')
-            return
+            return False
         elif self.settings['worker', 'worker_tasks'] > 0:
             messagebox(title='Running',
                        text='The Saver is finishing the savings')
             self.scan_acquisition.stop("User prompted a quit of the Application, Stopping the Acquisition")
-            return
+            return False
 
         if self.temp_path is not None:
             try:
@@ -487,7 +487,7 @@ class DAQScan(CustomExt):
                 logger.exception(str(e))
 
 
-        super().quit_fun()
+        return super().quit_fun()
 
     def create_dataset_settings(self):
         # params about dataset attributes and scan attibutes
