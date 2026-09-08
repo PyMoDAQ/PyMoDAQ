@@ -19,10 +19,10 @@ from qtpy import QtWidgets, QtCore
 from qtpy.QtWidgets import QDialogButtonBox
 from qtpy.QtCore import QObject, QThread, Signal, QDateTime, QDate, QTime, QTimer
 
-from managers.h5manager import FileAction, H5Manager
-from managers.runner_thread_manager import WorkerThreadManager
-from managers.settings.settings_manager import SettingsManager
-from plotting.data_viewers import ViewerDispatcher
+from pymodaq_gui.managers.h5manager import FileAction, H5Manager
+from pymodaq_gui.managers.runner_thread_manager import WorkerThreadManager
+from pymodaq_gui.managers.settings.settings_manager import SettingsManager
+from pymodaq_gui.plotting.data_viewers import ViewerDispatcher
 from pymodaq.control_modules.enums import MoveType
 from pymodaq.utils.custom_ext import CustomExt
 from pymodaq.utils.managers.modules import ModuleType
@@ -1241,7 +1241,7 @@ class DAQScan(CustomExt):
 class SaverWorker(QtCore.QObject):
     """ Worker in separated thread receiving the data from a DataGenerator
     and adding them into the enlargeable arrays with the H5file using the
-     DataToExportTimedSaver """
+     ScanModuleSaver """
 
     n_saved = QtCore.Signal(int)
     data_to_save_signal = QtCore.Signal(ScanData)
@@ -1500,7 +1500,6 @@ class DAQScanAcquisition(QObject):
             message = "Acquisition resumed"
 
         self._update_status(message)
-        logger.info(message)
 
     def advance(self):
         try:

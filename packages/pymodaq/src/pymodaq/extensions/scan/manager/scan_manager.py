@@ -7,7 +7,7 @@ import toml
 from qtpy import QtWidgets, QtCore, QtGui
 from serializall import SerializableFactory, SerializableBase
 
-from h5modules.saving import H5Saver
+from pymodaq_gui.h5modules.saving import H5Saver
 from pymodaq_data import DataDim
 from pymodaq_gui.utils.widgets.widget_with_label_title import WidgetWithLabelTitle
 from pymodaq_utils.enums import StrEnum

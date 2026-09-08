@@ -3,7 +3,7 @@ from typing import Union, TYPE_CHECKING
 
 from qtpy import QtCore, QtWidgets
 
-from h5modules.saving import H5Saver
+from pymodaq_gui.h5modules.saving import H5Saver
 from pymodaq_utils.enums import StrEnum
 
 from pymodaq_gui.utils import CustomApp, DockArea

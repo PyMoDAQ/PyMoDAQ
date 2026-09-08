@@ -488,7 +488,7 @@ class ExtensionSaver(ModuleSaver):
         self._module: DAQScan = module
 
         self._h5saver = None
-        self._time_saver = TimeModuleSaver()
+
 
         self.detectors : dict[str, DetectorSaver |
                                    DetectorExtendedSaver |
@@ -499,16 +499,16 @@ class ExtensionSaver(ModuleSaver):
                                     ActuatorTimeSaver ] = {}
 
         self.current_nodes: dict[str, Node] = {}
+        self._time_saver: TimeModuleSaver = None
 
     def update_after_h5changed(self):
+        """ To be updated depending on the actual Saver you want to use"""
         for module in self._module.modules_manager.detectors_all:
-            self.detectors[module.title] = DetectorExtendedSaver(module, self._scan_shape)
+            self.detectors[module.title] = DetectorSaver(module)
             self.detectors[module.title].h5saver = self.h5saver
         for module in self._module.modules_manager.actuators_all:
             self.actuators[module.title] = ActuatorSaver(module)
             self.actuators[module.title].h5saver = self.h5saver
-
-        self._time_saver.h5saver = self.h5saver
 
     def create_module_group(self, where: str | Node = None):
         if where is None:
@@ -541,7 +541,8 @@ class ExtensionSaver(ModuleSaver):
         if new:
             self._module_group = self._add_module(where)
             self.create_module_group(self._module_group)
-            self._time_saver.get_set_node(self._module_group)
+            if self._time_saver is not None:
+                self._time_saver.get_set_node(self._module_group)
         return self._module_group
 
     def initialize_time_array(self, extended_shape: Iterable[int]):
@@ -598,10 +599,23 @@ class ScanSaver(ExtensionSaver):
         self.detectors : dict[str, DetectorExtendedSaver] = {}
         self.actuators : dict[str, ActuatorSaver] = {}
 
-        self._scan_shape: Iterable[int] = None
+        self._scan_shape: Iterable[int] = ()
+        self._time_saver = TimeModuleSaver()
 
     def set_scan_shape(self, scan_shape: Iterable[int]):
         self._scan_shape = scan_shape
+
+    def update_after_h5changed(self):
+        """ To be updated depending on the actual Saver you want to use"""
+        for module in self._module.modules_manager.detectors_all:
+            self.detectors[module.title] = DetectorExtendedSaver(module, self._scan_shape)
+            self.detectors[module.title].h5saver = self.h5saver
+        for module in self._module.modules_manager.actuators_all:
+            self.actuators[module.title] = ActuatorSaver(module)
+            self.actuators[module.title].h5saver = self.h5saver
+
+        self._time_saver.h5saver = self.h5saver
+
 
     def add_nav_axes(self, axes: List[Axis]):
         for det_name in self.detectors:
@@ -637,21 +651,25 @@ class LoggerSaver(ExtensionSaver):
 
     def update_after_h5changed(self):
         for module in self._module.modules_manager.detectors_all:
-            module.module_and_data_saver = DetectorTimeSaver(module)
-            module.module_and_data_saver.h5saver = self.h5saver
+            self.detectors[module.title] = DetectorTimeSaver(module)
+            self.detectors[module.title].h5saver = self.h5saver
         for module in self._module.modules_manager.actuators_all:
-            module.module_and_data_saver = ActuatorTimeSaver(module)
-            module.module_and_data_saver.h5saver = self.h5saver
+            self.actuators[module.title] = ActuatorTimeSaver(module)
+            self.actuators[module.title].h5saver = self.h5saver
 
     def add_data(self, dte: DataToExport):
         """Add data to it's corresponding control module
 
         The name of the control module is the DataToExport name attribute
         """
-
-        self.detectors[dte.name].add_data(self.current_nodes[dte.name],
-                                          dte,)
-
+        if dte.name in self.detectors:
+            self.detectors[dte.name].add_data(self.current_nodes[dte.name],
+                                              dte,)
+        elif dte.name in self.actuators:
+            self.actuators[dte.name].add_data(self.current_nodes[dte.name],
+                                              dte, )
+        else:
+            raise NameError("Cannot save this DataToExport to one of the named saver")
 
 class OptimizerSaver(ExtensionSaver):
     """Implementation of the ModuleSaver class dedicated to Optimizer based modules

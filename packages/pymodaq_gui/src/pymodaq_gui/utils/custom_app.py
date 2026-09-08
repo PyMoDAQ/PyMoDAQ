@@ -7,7 +7,7 @@ from qt_themes import Theme
 from qtpy.QtCore import QObject, QLocale
 from qtpy import QtCore, QtWidgets
 
-from h5modules.saving import H5Saver
+from pymodaq_gui.h5modules.saving import H5Saver
 from pymodaq_gui.managers.runner_thread_manager import WorkerThreadManager
 from pymodaq_gui.managers.h5manager import FileStatus, H5Manager
 from pymodaq_utils.config import GlobalConfig as Config
