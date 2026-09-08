@@ -15,7 +15,7 @@ from pymodaq_gui.utils import select_file
 
 from pymodaq_gui.utils.widgets import QLED
 from pymodaq_utils.utils import ThreadCommand
-from utils.widgets.statusbar_separator import StatuBarSeparator
+from pymodaq_gui.utils.widgets.statusbar_separator import StatuBarSeparator
 
 logger = set_logger(get_module_name(__file__))
 config = Config()
