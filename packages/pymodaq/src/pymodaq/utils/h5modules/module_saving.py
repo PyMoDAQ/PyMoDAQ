@@ -194,7 +194,7 @@ class DetectorSaver(ModuleSaver):
                  data: DataToExport,
                  *args,
                  **kwargs):
-        self._datatoexport_saver.add_data(where, data, **kwargs)
+        self._datatoexport_saver.add_data(where, self.filter_data(data), **kwargs)
 
     def filter_data(self, dte: DataToExport) -> DataToExport:
         """ Filter Data to be saved depending on first the presence of the extra_attribute: *do_save* and then on
@@ -297,7 +297,7 @@ class DetectorEnlargeableSaver(DetectorSaver):
                  axis_values: list[float | np.ndarray] = None,
                  **kwargs):
         self._datatoexport_saver.add_data(where,
-                                          data,
+                                          self.filter_data(data),
                                           axis_values,
                                           **kwargs)
 
@@ -326,7 +326,7 @@ class DetectorExtendedSaver(DetectorSaver):
                  indexes: Iterable[int],
                  distribution=DataDistribution.uniform):
         self._datatoexport_saver.add_data(where,
-                                          data,
+                                          self.filter_data(data),
                                           indexes,
                                           distribution=distribution)
 
