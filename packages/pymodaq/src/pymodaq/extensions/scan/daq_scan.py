@@ -20,6 +20,8 @@ from qtpy.QtWidgets import QDialogButtonBox
 from qtpy.QtCore import QObject, QThread, Signal, QDateTime, QDate, QTime, QTimer
 
 from managers.h5manager import FileAction, H5Manager
+from managers.runner_thread_manager import WorkerThreadManager
+from managers.settings.settings_manager import SettingsManager
 from plotting.data_viewers import ViewerDispatcher
 from pymodaq.control_modules.enums import MoveType
 from pymodaq.utils.custom_ext import CustomExt
@@ -1264,7 +1266,7 @@ class SaverWorker(QtCore.QObject):
 
 
 
-class DAQScanAcquisition(CustomApp):
+class DAQScanAcquisition(QObject):
     """
         =========================== ========================================
 
@@ -1277,7 +1279,7 @@ class DAQScanAcquisition(CustomApp):
     scan_step_failed_signal = Signal(ScanStepError)
     _worker_done = QtCore.Signal()
 
-    def __init__(self, daq_scan: DAQScan):
+    def __init__(self, daq_scan: DAQScan, parent=None):
 
         """
         DAQScanAcquisition deal with the acquisition part of daq_scan, that is transferring commands to modules,
@@ -1285,8 +1287,10 @@ class DAQScanAcquisition(CustomApp):
 
         """
 
-        super().__init__()
+        super().__init__(parent)
         self.daq_scan = daq_scan
+
+        self.thread_manager = WorkerThreadManager(parent=self)
 
         self.saver_worker: SaverWorker = None
         self._n_emitted = 0
@@ -1294,7 +1298,7 @@ class DAQScanAcquisition(CustomApp):
         self._running = False
         self.timeout_scan_flag = False  # for testing purpose in asserting timeout has been fired
 
-        self.Naverage = self.daq_scan.settings['scan_options', 'scan_average']
+        self.Naverage = self.settings['scan_options', 'scan_average']
         self._ind_average: int = None
         self._ind_scan: int = None
 
@@ -1302,27 +1306,26 @@ class DAQScanAcquisition(CustomApp):
         self._current_indexes: tuple[int] = None
 
     @property
-    def _h5_manager(self) -> H5Manager:
+    def h5_manager(self) -> H5Manager:
         """ Convenience property"""
         return self.daq_scan.h5_manager
 
     @property
-    def _modules_manager(self) -> ModulesManager:
+    def modules_manager(self) -> ModulesManager:
         """ Convenience property"""
         return self.daq_scan.modules_manager
 
     @property
-    def _settings(self) -> Parameter:
-        """ Convenience property"""
-        return self.daq_scan.settings
-
-    @property
-    def _scanner(self) -> Scanner:
+    def scanner(self) -> Scanner:
         """ Convenience property"""
         return self.daq_scan.scanner
+    
+    @property
+    def settings(self) -> Parameter:
+        return self.settings
 
     @property
-    def _module_and_data_saver(self) -> module_saving.ScanSaver:
+    def module_and_data_saver(self) -> module_saving.ScanSaver:
         """ Convenience property"""
         return self.daq_scan.module_and_data_saver
 
@@ -1344,7 +1347,7 @@ class DAQScanAcquisition(CustomApp):
             self.pause()
 
         elif command.command == "move_stages":
-            self._modules_manager.move_actuators(command.attribute, polling=False)
+            self.modules_manager.move_actuators(command.attribute, polling=False)
 
     def start(self):
         self._running = True
@@ -1356,7 +1359,7 @@ class DAQScanAcquisition(CustomApp):
         else:
             self._running = True
 
-        self._modules_manager.enable_modules(do_pause)
+        self.modules_manager.enable_modules(do_pause)
         self._on_scan_pausing(do_pause)
         if not do_pause:
             self.advance()
@@ -1376,15 +1379,15 @@ class DAQScanAcquisition(CustomApp):
         except (TypeError, AttributeError):
             pass
         try:
-            self._modules_manager.timeout_signal.disconnect(self.timeout)
+            self.modules_manager.timeout_signal.disconnect(self.timeout)
         except (TypeError, AttributeError):
             pass
-        self._modules_manager.connect_actuators(False)
-        self._modules_manager.connect_detectors(False)
-        self._modules_manager.enable_modules(True)
+        self.modules_manager.connect_actuators(False)
+        self.modules_manager.connect_detectors(False)
+        self.modules_manager.enable_modules(True)
 
         #3 terminate the saver worker once its queue is empty
-        if self._settings['worker', 'worker_tasks'] == 0:
+        if self.settings['worker', 'worker_tasks'] == 0:
             self.terminate_worker()
         else:
             self._worker_done.connect(self.terminate_worker)
@@ -1396,14 +1399,14 @@ class DAQScanAcquisition(CustomApp):
 
     def set_ini_positions(self):
         """ Set the actuators's positions to their initial value as defined in the scanner  """
-        self._modules_manager.move_actuators_with_callback(
-            self._scanner.positions_at(0),
+        self.modules_manager.move_actuators_with_callback(
+            self.scanner.positions_at(0),
             mode=MoveType.ABS,
             callback=self._on_ini_positions)
 
     def _on_ini_positions(self, dte: DataToExport):
         self._update_status("Initial values of actuators reached!")
-        self._modules_manager.forget_callback(self._on_ini_positions,
+        self.modules_manager.forget_callback(self._on_ini_positions,
                                              module_type=ModuleType.Actuator,
                                              disconnect_modules=True)
         if self._running:
@@ -1421,20 +1424,20 @@ class DAQScanAcquisition(CustomApp):
                 pass
 
             # managing saver worker
-            self._module_and_data_saver.h5saver = self.daq_scan.h5saver
+            self.module_and_data_saver.h5saver = self.daq_scan.h5saver
             self.saver_worker = SaverWorker(saver=self.module_and_data_saver,)
             self.thread_manager.create_thread_for_worker('saver', self.saver_worker)
             self.saver_worker.n_saved.connect(self.update_worker_ntask)
             self.thread_manager.start_thread('saver')
 
 
-            self._modules_manager.connect_actuators(True)
-            self._modules_manager.connect_detectors(True)
-            self._modules_manager.timeout_signal.connect(self.timeout)
+            self.modules_manager.connect_actuators(True)
+            self.modules_manager.connect_detectors(True)
+            self.modules_manager.timeout_signal.connect(self.timeout)
 
             self.scan_step_failed_signal.connect(self._on_scan_step_failed)
 
-            self._modules_manager.enable_modules(False)
+            self.modules_manager.enable_modules(False)
             self._update_status("Acquisition has started")
             self._ind_average = 0
             self._ind_scan = -1
@@ -1446,7 +1449,7 @@ class DAQScanAcquisition(CustomApp):
     @QtCore.Slot(int)
     def update_worker_ntask(self, n_saved: int):
         n_tasks = self._n_emitted - n_saved
-        self._settings['worker', 'worker_tasks'] = n_tasks
+        self.settings['worker', 'worker_tasks'] = n_tasks
 
         if n_tasks == 0:
             self._worker_done.emit()
@@ -1468,13 +1471,13 @@ class DAQScanAcquisition(CustomApp):
         self.thread_manager.exit_worker_thread('saver', delete_worker=True)
 
         #4 flushing/closing the file to be able to create new groups...
-        self._module_and_data_saver.h5saver.flush()
-        self._module_and_data_saver.h5saver.close_file()
+        self.module_and_data_saver.h5saver.flush()
+        self.module_and_data_saver.h5saver.close_file()
         self.h5_manager.update_file_status_led()
 
         #5 updating GUI info
         self.daq_scan.enable_start_stop(True)
-        self._settings['worker', 'worker_running'] = False
+        self.settings['worker', 'worker_running'] = False
 
     def _on_scan_pausing(self, pausing=True):
         if pausing:
@@ -1490,10 +1493,10 @@ class DAQScanAcquisition(CustomApp):
             if not self._running:
                 return
 
-            if self._ind_average == self.Naverage-1 and self._ind_scan == self._scanner.n_steps-1:
+            if self._ind_average == self.Naverage-1 and self._ind_scan == self.scanner.n_steps-1:
                 self.stop('The acquisition has finished')
                 return
-            elif self._ind_scan == self._scanner.n_steps-1:
+            elif self._ind_scan == self.scanner.n_steps-1:
                 self._ind_average += 1
                 self._ind_scan = -1
 
@@ -1502,7 +1505,7 @@ class DAQScanAcquisition(CustomApp):
 
             positions = self.get_next_position()
 
-            self._modules_manager.move_actuators_with_callback(
+            self.modules_manager.move_actuators_with_callback(
                 positions,
                 mode=MoveType.ABS,
                 callback=self._on_move_done,
@@ -1520,7 +1523,7 @@ class DAQScanAcquisition(CustomApp):
             self.status_sig.emit(
                 utils.ThreadCommand("Update_scan_index",
                                     attribute=[self._ind_scan, self._ind_average]))
-            return self._scanner.positions_at(self._ind_scan)  # get positions
+            return self.scanner.positions_at(self._ind_scan)  # get positions
         except Exception as e:
             self.scan_step_failed_signal.emit(ScanStepError(f"Error when getting next step position:\n"
                                                             f"ind_step: {self._ind_scan}:\n"
@@ -1529,12 +1532,12 @@ class DAQScanAcquisition(CustomApp):
 
     def _on_move_done(self, move_dte: DataToExport):
         try:
-            self._modules_manager.forget_callback(self._on_move_done,
+            self.modules_manager.forget_callback(self._on_move_done,
                                                  module_type=ModuleType.Actuator,
                                                  disconnect_modules=False)
-            self._modules_manager.order_positions(move_dte)
+            self.modules_manager.order_positions(move_dte)
 
-            QTimer.singleShot(int(self._settings['time_flow', 'wait_time_between']),
+            QTimer.singleShot(int(self.settings['time_flow', 'wait_time_between']),
                               self.grab_data)
         except Exception as e:
             self.scan_step_failed_signal.emit(ScanStepError(f"Error at move_done step:\n"
@@ -1544,7 +1547,7 @@ class DAQScanAcquisition(CustomApp):
 
     def grab_data(self):
         try:
-            self._modules_manager.grab_data_with_callback(check_do_override=True,
+            self.modules_manager.grab_data_with_callback(check_do_override=True,
                                                          Naverage=None,
                                                          callback=self._on_grab_done,
                                                          do_connect_modules=False)
@@ -1556,7 +1559,7 @@ class DAQScanAcquisition(CustomApp):
 
     def _on_grab_done(self, dte_grabed: DataToExport):
         try:
-            self._modules_manager.forget_callback(self._on_grab_done,
+            self.modules_manager.forget_callback(self._on_grab_done,
                                                  module_type=ModuleType.Detector,
                                                  disconnect_modules=False)
             self.det_done(dte_grabed)
@@ -1571,7 +1574,7 @@ class DAQScanAcquisition(CustomApp):
         """
 
         """
-        self._current_indexes = self._scanner.get_indexes_from_scan_index(self._ind_scan)
+        self._current_indexes = self.scanner.get_indexes_from_scan_index(self._ind_scan)
         if self.Naverage > 1:
             self._current_indexes = [self._ind_average] + list(self._current_indexes)
         self._current_indexes = tuple(self._current_indexes)
@@ -1579,7 +1582,7 @@ class DAQScanAcquisition(CustomApp):
         if self._ind_scan == 0:
             self._update_status("Creating the arrays nodes in the h5file, please be patient")
             QThread.msleep(50)
-            nav_axes = self._scanner.get_nav_axes()
+            nav_axes = self.scanner.get_nav_axes()
             if self.Naverage > 1:
                 for nav_axis in nav_axes:
                     nav_axis.index += 1
@@ -1588,12 +1591,12 @@ class DAQScanAcquisition(CustomApp):
                                               index=0))
             self.saver_worker.nav_axes_signal.emit(nav_axes)
 
-        if self._scanner.scanner.do_process_data:
+        if self.scanner.scanner.do_process_data:
             # extra data to be saved at the same time!
-            dte_grabbed.append(self._scanner.scanner.process_data(dte_grabbed))
+            dte_grabbed.append(self.scanner.scanner.process_data(dte_grabbed))
         else:
-            full_names: list = self._settings['plot_options', 'plot_0d']['selected'][:]
-            full_names.extend(self._settings['plot_options', 'plot_1d']['selected'][:])
+            full_names: list = self.settings['plot_options', 'plot_0d']['selected'][:]
+            full_names.extend(self.settings['plot_options', 'plot_1d']['selected'][:])
             self._current_dte_to_be_plotted = dte_grabbed.get_data_from_full_names(full_names, deepcopy=True)
             n_nav_axis_selection = 2-len(self._current_indexes) + 1 if self.Naverage > 1 else 2-len(self._current_indexes)
             self._current_dte_to_be_plotted = self._current_dte_to_be_plotted.get_data_with_naxes_lower_than(n_nav_axis_selection)  # maximum Data2D included nav indexes
@@ -1601,7 +1604,7 @@ class DAQScanAcquisition(CustomApp):
         self.saver_worker.data_to_save_signal.emit(
             ScanData(
                 indexes=list(self._current_indexes),
-                distribution=self._scanner.distribution,
+                distribution=self.scanner.distribution,
                 scan_index=self._ind_scan,
                 dte=dte_grabbed,))
 
@@ -1610,10 +1613,10 @@ class DAQScanAcquisition(CustomApp):
             ScanData(dte=self._current_dte_to_be_plotted,
                      scan_index=self._ind_scan,
                      indexes=list(self._current_indexes),
-                     distribution=self._scanner.distribution,
+                     distribution=self.scanner.distribution,
                      ))
 
-        QTimer.singleShot(int(self._settings['time_flow', 'wait_time']),
+        QTimer.singleShot(int(self.settings['time_flow', 'wait_time']),
                           self._on_scan_step_done)
 
     def _on_scan_step_done(self):
@@ -1642,7 +1645,7 @@ class DAQScanAcquisition(CustomApp):
         self.timeout_scan_flag = True
         self.status_sig.emit(utils.ThreadCommand("Timeout", attribute=msg))
         logger.warning(msg)
-        if self._settings['scan_options', 'stop_on_timeout']:
+        if self.settings['scan_options', 'stop_on_timeout']:
             self.stop(msg=f'Scan stopped due to a Timeout')
         else:
             self.advance()
