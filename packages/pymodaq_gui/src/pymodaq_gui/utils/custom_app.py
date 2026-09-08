@@ -175,8 +175,6 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         self._h5_manager = H5Manager(self)
         self._worker_thread_manager = WorkerThreadManager(parent=self)
 
-        self._delegates = [self._h5_manager, self._worker_thread_manager]  # to deal with eventual other composed objects
-
     @property
     def thread_manager(self) -> WorkerThreadManager:
         return self._worker_thread_manager
