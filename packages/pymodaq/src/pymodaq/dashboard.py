@@ -517,12 +517,13 @@ class DashBoard(CustomApp, LECOComponentMixin):
         quit_fun
         """
         try:
-            self.connect_leco(connect=False)
-            self.remote_timer.stop()
-
             for ext in self.extensions:
                 if hasattr(self.extensions[ext], "quit_fun"):
                     self.extensions[ext].quit_fun()
+
+            self.connect_leco(connect=False)
+            self.remote_timer.stop()
+
             for mov in self.actuators_modules:
                 try:
                     mov.init_signal.disconnect(self.update_init_tree)

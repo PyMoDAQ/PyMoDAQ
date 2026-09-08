@@ -77,13 +77,15 @@ class CustomExt(CustomApp):
         """
         raise NotImplementedError
 
-    def quit_fun(self):
+    def quit_fun(self) -> bool:
         """Method to be subclassed in order to define a custom quit function
+        if returned True, one can proceed with other quit mechanisms otherwise do not quit
         """
-        super().quit_fun()
+        res = super().quit_fun()
 
         if self.dashboard is not None:
             self.show_dashboard(True)  #make sure to show it if it was hidden
+        return res
 
     def get_app_toolbars(self) -> list[QtWidgets.QToolBar]:
         """ Get the main toolbars widget to be eventually added in the main window toolbararea
