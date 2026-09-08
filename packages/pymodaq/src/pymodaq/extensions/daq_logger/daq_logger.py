@@ -356,7 +356,6 @@ class Logging(QObject):
         """
         self._update_status('Initializing')
         if self._init_logging():
-            logger.addHandler(self.logger.get_handler())
             self.logger.status_manager.set_permanent_status('Starting logging')
             self.logger.status_manager.is_logging = True
 
@@ -402,11 +401,10 @@ class Logging(QObject):
             self._worker_done.disconnect(self.terminate_worker)
         except TypeError:
             pass
-
+        self.logger.logger.update_app(self.logger)
         status_backend = self.set_logging()
         if status_backend:
             # managing saver worker
-            self.logger.logger.update_app(self.logger)
             self.saver_worker = SaverWorker(saver=self.logger.logger,)
             self.thread_manager.create_thread_for_worker('saver', self.saver_worker)
             self.saver_worker.n_saved.connect(self.update_worker_ntask)
@@ -529,7 +527,6 @@ class Logging(QObject):
         #1 Stop the emission of data immediately
         self._disconnect_control_modules()
 
-        logger.removeHandler(self.logger.get_handler())
         #2 terminate the saver worker once its queue is empty
         if self.logger.settings['worker', 'worker_tasks'] == 0:
             self.terminate_worker()

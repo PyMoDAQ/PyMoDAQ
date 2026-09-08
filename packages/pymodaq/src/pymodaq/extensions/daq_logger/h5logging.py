@@ -47,6 +47,7 @@ class H5Logger(AbstractLogger):
         self.module_and_data_saver.h5saver = self.h5saver  # will update its h5saver and all submodules's h5saver
 
     def close(self):
+        self.h5saver.flush()
         self.h5saver.close_file()
 
     @property
