@@ -73,7 +73,6 @@ class H5Logger(AbstractLogger):
 
     def add_data(self, dte: DataToExport):
         self.module_and_data_saver.add_data(dte)
-
         self.settings.child('N_saved').setValue(self.settings.child('N_saved').value() + 1)
 
     def stop_logger(self):

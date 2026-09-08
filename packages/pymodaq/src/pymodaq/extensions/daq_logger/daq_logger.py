@@ -104,7 +104,7 @@ class DAQ_Logger(CustomExt):
     def setup_docks_and_widgets(self):
         logger.debug('setting docks')
         self.docks['detectors'] = Dock("Detectors")
-        splitter = QtWidgets.QSplitter(Qt.Vertical)
+        splitter = QtWidgets.QSplitter(Qt.Orientation.Vertical)
         self.docks['detectors'].addWidget(splitter)
         splitter.addWidget(self.settings_tree)
         splitter.addWidget(self.modules_manager.settings_tree)
@@ -161,7 +161,7 @@ class DAQ_Logger(CustomExt):
 
         self.docks['logger_settings'].addWidget(self.logger.settings_tree)
 
-    def quit_fun(self):
+    def quit_fun(self) -> bool:
         """
             Quit the current instance of DAQ_scan and close on cascade move and detector modules.
 
@@ -174,7 +174,7 @@ class DAQ_Logger(CustomExt):
         except Exception as e:
             logger.exception(str(e))
 
-        super().quit_fun()
+        return super().quit_fun()
 
     def set_continuous_save(self):
         """
@@ -283,23 +283,14 @@ class DAQ_Logger(CustomExt):
         self.overshoot = False
         res = self.set_logging()
 
-        # mandatory to deal with multithreads
-        if self.runner_thread is not None:
-            self.command_DAQ_signal.disconnect()
-            self.exit_runner_thread()
-            self.runner_thread = None
 
-        self.runner_thread = QThread()
 
         log_acquisition = DAQ_Logging(self.settings, self.logger, self.modules_manager)
 
-        log_acquisition.moveToThread(self.runner_thread)
 
         self.command_DAQ_signal[list].connect(log_acquisition.queue_command)
         log_acquisition.status_sig[list].connect(self.thread_status)
 
-        self.runner_thread.log_acquisition = log_acquisition
-        self.runner_thread.start()
 
         self._actions['start'].setEnabled(False)
         QtWidgets.QApplication.processEvents()
@@ -420,7 +411,7 @@ class DAQ_Logging(QObject):
             self.stop_scan_flag = True
             self.stop_logging()
 
-    def do_save_continuous(self, data):
+    def do_save_continuous(self, data: DataToExport):
         """
 
         """
