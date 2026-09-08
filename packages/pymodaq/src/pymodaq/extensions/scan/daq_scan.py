@@ -468,20 +468,26 @@ class DAQScan(CustomExt):
             --------
             quit_fun
         """
-        try:
-            if self.temp_path is not None:
-                try:
-                    self.h5temp.close()
-                    self.temp_path.cleanup()
-                except Exception as e:
-                    logger.exception(str(e))
 
-            self.h5_manager.close_file()
+        if self.scan_acquisition.is_running:
+            messagebox(title='Running',
+                       text='The Acquisition is running, first stop it')
+            return
+        elif self.settings['worker', 'worker_tasks'] > 0:
+            messagebox(title='Running',
+                       text='The Saver is finishing the savings')
+            self.scan_acquisition.stop("User prompted a quit of the Application, Stopping the Acquisition")
+            return
 
-            super().quit_fun()
+        if self.temp_path is not None:
+            try:
+                self.h5temp.close()
+                self.temp_path.cleanup()
+            except Exception as e:
+                logger.exception(str(e))
 
-        except Exception as e:
-            logger.exception(str(e))
+
+        super().quit_fun()
 
     def create_dataset_settings(self):
         # params about dataset attributes and scan attibutes
@@ -1309,6 +1315,10 @@ class DAQScanAcquisition(QObject):
         self._current_indexes: tuple[int] = None
 
     @property
+    def is_running(self) -> bool:
+        return self._running
+
+    @property
     def h5_manager(self) -> H5Manager:
         """ Convenience property"""
         return self.daq_scan.h5_manager
@@ -1604,6 +1614,9 @@ class DAQScanAcquisition(QObject):
             self._current_dte_to_be_plotted = dte_grabbed.get_data_from_full_names(full_names, deepcopy=True)
             n_nav_axis_selection = 2-len(self._current_indexes) + 1 if self.Naverage > 1 else 2-len(self._current_indexes)
             self._current_dte_to_be_plotted = self._current_dte_to_be_plotted.get_data_with_naxes_lower_than(n_nav_axis_selection)  # maximum Data2D included nav indexes
+
+        #filtering the data to be saved:
+
 
         self.saver_worker.data_to_save_signal.emit(
             ScanData(
