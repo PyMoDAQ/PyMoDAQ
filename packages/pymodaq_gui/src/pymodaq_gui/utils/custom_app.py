@@ -190,31 +190,6 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         """ Convenience method to access the h5saver and for backcompatibility"""
         return self.h5_manager.h5saver
 
-    def __getattr__(self, name):
-        """ To access composed objects attributes and methods"""
-        delegates = self.__dict__.get("_delegates", [])
-        for delegate in delegates:
-            if name in dir(delegate) or hasattr(type(delegate), name):  # to prevent executing some code and check for errors
-                try:
-                    return getattr(delegate, name)
-                except AttributeError as e:
-                    raise e
-
-        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
-
-    def __dir__(self):
-        """ to expose the composed objects attributes and methods to autocompletion tools"""
-        attributes = set(super().__dir__())
-
-        # Add public attributes
-        delegates = self.__dict__.get("_delegates", [])
-        for delegate in delegates:
-            for attr in dir(delegate):
-                if not attr.startswith('_'):  # skip private and dunder methods
-                    attributes.add(attr)
-        return sorted(list(attributes))
-
-
     @classmethod
     def get_local_folder(cls, user=False) -> Path:
         """ Create a local User or system wide folder to store things about this extension"""
@@ -239,7 +214,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         self.insert_custom_status_widgets()
 
         if self.show_h5file_statusbar_widgets:
-            self.insert_h5stuff_status()
+            self.h5_manager.insert_h5stuff_status()
 
     def set_permanent_status(self, status: str):
         """ Display a permanent status message
