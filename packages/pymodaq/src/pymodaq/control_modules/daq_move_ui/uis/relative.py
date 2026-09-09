@@ -35,7 +35,7 @@ class DAQ_Move_UI_Relative(DAQ_Move_UI_Base):
         self.populate_control_ui(self.control_widget)
 
     def setup_actions(self):
-        self.setup_actions_in_toolbar(self.move_toolbar)
+        self.setup_actions_in_toolbar(self.toolbar)
 
     def _setup_move_actions(self, toolbar: QtWidgets.QToolBar):
         self._setup_relative_actions(toolbar)
