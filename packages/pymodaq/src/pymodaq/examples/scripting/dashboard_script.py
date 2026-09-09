@@ -9,11 +9,11 @@ print(dashboard.get_experiments().result())
 # Could make it so that it returns a future that completes when it's finished loading
 dashboard.apply_experiment('default')
 
-print(dashboard.get_configurations().result())
+print(dashboard.get_states().result())
 # >>> ['default', 'my_custom_config']
 
 # Same remark as dashboard.apply_preset
-dashboard.apply_configuration('default')
+dashboard.apply_state('default')
 
 print(dashboard.get_devices().result())  # returns the names
 # >>> {'actuators': ['Theta', 'Temperature', 'Power', 'Xaxis'], 'detectors': ['Det2D', 'Det0D', 'Det1D']}

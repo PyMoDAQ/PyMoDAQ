@@ -63,10 +63,10 @@ class LECOViewerCommands(StrEnum):
 class LECODashboardCommands(StrEnum):
     GET_DEVICES = 'get_devices'
     SEND_DEVICES = 'send_devices'
-    GET_CONFIGURATIONS = 'get_configurations'
-    SEND_CONFIGURATIONS = 'send_configurations'
-    APPLY_CONFIGURATION = 'apply_configuration'
-    APPLIED_CONFIGURATION_DONE = 'applied_configuration_done'
+    GET_STATES = 'get_states'
+    SEND_STATES = 'send_states'
+    APPLY_STATE = 'apply_state'
+    APPLIED_STATE_DONE = 'applied_state_done'
     GET_EXPERIMENTS = 'get_experiments'
     SEND_EXPERIMENTS = 'send_experiments'
     APPLY_EXPERIMENT = 'apply_experiment'
@@ -131,8 +131,8 @@ class ActorHandler(PymodaqPipeHandler):
         self.register_rpc_method(self.stop_grab, name=ViewerMethods.STOP)
         self.register_rpc_method(self.get_settings, name=GenericMethods.GET_SETTINGS)
         self.register_rpc_method(self.get_devices, name=DashboardMethods.GET_DEVICES)
-        self.register_rpc_method(self.get_configurations, name=DashboardMethods.GET_CONFIGURATIONS)
-        self.register_rpc_method(self.apply_configuration, name=DashboardMethods.APPLY_CONFIGURATION)
+        self.register_rpc_method(self.get_states, name=DashboardMethods.GET_STATES)
+        self.register_rpc_method(self.apply_state, name=DashboardMethods.APPLY_STATE)
         self.register_rpc_method(self.get_experiments, name=DashboardMethods.GET_EXPERIMENTS)
         self.register_rpc_method(self.apply_experiment, name=DashboardMethods.APPLY_EXPERIMENT)
     @staticmethod
@@ -164,11 +164,11 @@ class ActorHandler(PymodaqPipeHandler):
     def get_devices(self):
         self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.GET_DEVICES))
 
-    def get_configurations(self):
-        self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.GET_CONFIGURATIONS))
+    def get_states(self):
+        self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.GET_STATES))
 
-    def apply_configuration(self, configuration : str):
-        self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.APPLY_CONFIGURATION, attribute=configuration))
+    def apply_state(self, state : str):
+        self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.APPLY_STATE, attribute=state))
 
     def get_experiments(self):
         self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.GET_EXPERIMENTS))
@@ -386,10 +386,10 @@ class ActorListener(PymodaqListener):
                     method=DashboardDirectorMethods.SEND_DEVICES,
                     **binary_serialization_to_kwargs(command.attribute, data_key="data"),
                 )
-            elif command.command == LECODashboardCommands.SEND_CONFIGURATIONS:
+            elif command.command == LECODashboardCommands.SEND_STATES:
                 self.send_rpc_message_to_remote(
                     method=DashboardDirectorMethods.SEND_CONFIGURATIONS,
-                    configurations=command.attribute,
+                    states=command.attribute,
                 )
             elif command.command == LECODashboardCommands.SEND_EXPERIMENTS:
                 self.send_rpc_message_to_remote(
@@ -401,7 +401,7 @@ class ActorListener(PymodaqListener):
                     method=DashboardDirectorMethods.APPLIED_EXPERIMENT_DONE,
                     done=command.attribute,
                 )
-            elif command.command == LECODashboardCommands.APPLIED_CONFIGURATION_DONE:
+            elif command.command == LECODashboardCommands.APPLIED_STATE_DONE:
                 self.send_rpc_message_to_remote(
                     method=DashboardDirectorMethods.APPLIED_CONFIGURATION_DONE,
                     done=command.attribute,
@@ -444,6 +444,7 @@ class LECOComponentMixin:
     """
 
     _leco_commands_signal = Signal(ThreadCommand)
+    _connect_leco_request = Signal(bool)
 
     def __init__(self, listener_class: Type[ActorListener], **kwargs):
         """Initialize the mixin.
@@ -453,6 +454,7 @@ class LECOComponentMixin:
         """
         self._leco_client: Optional[ActorListener] = None
         self._listener_class: Type[ActorListener] = listener_class
+        self._connected = False
 
     def connect_leco(self, connect: bool) -> None:
         """Connect to or disconnect from the LECO network.
@@ -482,12 +484,14 @@ class LECOComponentMixin:
                 self._leco_client.cmd_signal.connect(self.process_leco_commands)
             self._leco_commands_signal.connect(self._leco_client.queue_command)
             self._leco_client.start_listen()
+            self._connected = True
         else:
-            self._leco_client.stop_listen()
             try:
+                self._leco_client.stop_listen()
                 self._leco_commands_signal.disconnect(self._leco_client.queue_command)
-            except TypeError:
-                pass  # already disconnected
+                self._connected = False
+            except (TypeError,AttributeError):
+                pass  # already disconnected or never connected
 
     def get_leco_name(self) -> str:
         """Return the LECO component name used to register on the network.

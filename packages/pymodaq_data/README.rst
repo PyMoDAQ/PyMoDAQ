@@ -11,11 +11,11 @@ PyMoDAQ Data
    :target: https://pypi.org/project/pymodaq_data/
    :alt: Latest Version
 
-.. image:: https://readthedocs.org/projects/pymodaq/badge/?version=malik-irain-patch-2
-   :target: https://pymodaq.readthedocs.io/en/stable/?badge=malik-irain-patch-2
+.. image:: https://readthedocs.org/projects/pymodaq/badge/?version=dev
+   :target: https://pymodaq.readthedocs.io/en/stable/?badge=dev
    :alt: Documentation Status
 
-.. image:: https://codecov.io/gh/PyMoDAQ/PyMoDAQ/branch/malik-irain-patch-2/graph/badge.svg?token=IQNJRCQDM2 
+.. image:: https://codecov.io/gh/PyMoDAQ/PyMoDAQ/branch/dev/graph/badge.svg?token=IQNJRCQDM2 
  :target: https://codecov.io/gh/PyMoDAQ/PyMoDAQ
 
 +-------------+-------------+---------------+
@@ -34,28 +34,28 @@ PyMoDAQ Data
 
 
 
-.. |310-linux| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_data/malik-irain-patch-2/tests_Linux_3.10.svg
+.. |310-linux| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_data/dev/tests_Linux_3.10.svg
     :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-data.yml
 
-.. |311-linux| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_data/malik-irain-patch-2/tests_Linux_3.11.svg
+.. |311-linux| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_data/dev/tests_Linux_3.11.svg
     :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-data.yml
 
-.. |312-linux| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_data/malik-irain-patch-2/tests_Linux_3.12.svg
+.. |312-linux| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_data/dev/tests_Linux_3.12.svg
     :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-data.yml
 
-.. |313-linux| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_data/malik-irain-patch-2/tests_Linux_3.13.svg
+.. |313-linux| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_data/dev/tests_Linux_3.13.svg
     :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-data.yml
 
-.. |310-windows| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_data/malik-irain-patch-2/tests_Windows_3.10.svg
+.. |310-windows| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_data/dev/tests_Windows_3.10.svg
     :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-data.yml
 
-.. |311-windows| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_data/malik-irain-patch-2/tests_Windows_3.11.svg
+.. |311-windows| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_data/dev/tests_Windows_3.11.svg
     :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-data.yml
 
-.. |312-windows| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_data/malik-irain-patch-2/tests_Windows_3.12.svg
+.. |312-windows| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_data/dev/tests_Windows_3.12.svg
     :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-data.yml
 
-.. |313-windows| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_data/malik-irain-patch-2/tests_Windows_3.13.svg
+.. |313-windows| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_data/dev/tests_Windows_3.13.svg
     :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-data.yml
 
 

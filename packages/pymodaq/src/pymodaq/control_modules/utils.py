@@ -562,7 +562,6 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
             self._hardware_thread.hardware = hardware
             self.command_hardware.emit(self._ini_hardware_command())
             self._post_hardware_init()
-            self.connect_leco(True)
         except Exception as e:
             self.logger.exception(str(e))
 

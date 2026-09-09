@@ -100,11 +100,11 @@ class FunctionPlotter(CustomApp):
         """
         logger.debug('setting actions')
 
-        self.add_action('show', 'Show/hide', 'read2', "Show Hide Viewer",
+        self.add_action('show', 'Show/hide', 'visibility', "Show Hide Viewer",
                         checkable=True, checked=True)
-        self.add_action('plot', 'Plot', 'snap', "Plot", checkable=False)
-        self.add_action('plot_seq', 'Plot Sequence', 'camera', "Plot functions", checkable=True)
-        self.add_action('save', 'Save', 'SaveAs', "Save current function", checkable=False)
+        self.add_action('plot', 'Plot', 'looks_one', "Plot", checkable=False)
+        self.add_action('plot_seq', 'Plot Sequence', 'repeat_one_on', "Plot functions", checkable=True)
+        self.add_action('save', 'Save', 'save', "Save current function", checkable=False)
         logger.debug('actions set')
 
     def connect_things(self):
@@ -112,6 +112,15 @@ class FunctionPlotter(CustomApp):
         self.connect_action('show', lambda show: self.dock_viewer.setVisible(show))
 
         self.connect_action('plot_seq', self.plot_all)
+
+    def value_changed(self, param):
+        if param.name() == 'add_function':
+            function_list = [self.settings['function']]
+            old_functions = self.functions
+            function_list.extend(old_functions)
+            function_list = list(np.unique(function_list))
+            self.settings.child('functions').setLimits(function_list)
+            param.setValue(False)
 
     def plot(self):
         function_str = self.settings['functions']
@@ -127,15 +136,6 @@ class FunctionPlotter(CustomApp):
                                           data=x, label='An axis', units='arb. units')],
                                       ),
                               )
-
-    def value_changed(self, param):
-        if param.name() == 'add_function':
-            function_list = [self.settings['function']]
-            old_functions = self.functions
-            function_list.extend(old_functions)
-            function_list = list(np.unique(function_list))
-            self.settings.child('functions').setLimits(function_list)
-            param.setValue(False)
 
     @property
     def functions(self):

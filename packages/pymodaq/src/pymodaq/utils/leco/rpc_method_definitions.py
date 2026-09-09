@@ -28,8 +28,8 @@ class ViewerMethods(StrEnum):
 
 class DashboardMethods(StrEnum):
     GET_DEVICES = "get_devices"
-    GET_CONFIGURATIONS = "get_configurations"
-    APPLY_CONFIGURATION = "apply_configuration"
+    GET_STATES = "get_states"
+    APPLY_STATE = "apply_state"
     GET_EXPERIMENTS = "get_experiments"
     APPLY_EXPERIMENT = "apply_experiment"
 
@@ -49,7 +49,7 @@ class ViewerDirectorMethods(StrEnum):
 
 class DashboardDirectorMethods(StrEnum):
     SEND_DEVICES = "send_devices"
-    SEND_CONFIGURATIONS = "send_configurations"
+    SEND_CONFIGURATIONS = "send_states"
     SEND_EXPERIMENTS = "send_experiments"
-    APPLIED_CONFIGURATION_DONE = "applied_configuration_done"
+    APPLIED_CONFIGURATION_DONE = "applied_state_done"
     APPLIED_EXPERIMENT_DONE = "applied_experiment_done"

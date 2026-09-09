@@ -60,7 +60,6 @@ class CustomExt(CustomApp):
         if self.dashboard is not None:
             self.show_dashboard(True)  #make sure to show it if it was hidden
 
-
     def get_app_toolbars(self) -> list[QtWidgets.QToolBar]:
         """ Get the main toolbars widget to be eventually added in the main window toolbararea
 

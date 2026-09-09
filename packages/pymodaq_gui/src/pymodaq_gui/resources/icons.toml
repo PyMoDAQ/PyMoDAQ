@@ -32,7 +32,9 @@ names = [
     'cancel',
     'check_box',
     'check_box_outline_blank',
+    'circle',
     'close',
+    'code_blocks',
     'compare_arrows',
     'deblur',
     'description',
@@ -62,6 +64,7 @@ names = [
     'ink_eraser',
     'ink_eraser_off',
     'input',
+    'jump_to_element',
     'keyboard_arrow_left',
     'keyboard_arrow_right',
     'language',
@@ -113,5 +116,7 @@ names = [
     'videocam',
     'videocam_off',
     'visibility',
-    'visibility_off'
+    'visibility_off',
+    'zoom_in',
+    'zoom_out',
 ]

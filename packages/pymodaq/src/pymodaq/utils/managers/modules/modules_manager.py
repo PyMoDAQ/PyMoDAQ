@@ -48,7 +48,8 @@ class ModulesManager(QObject, ParameterManager):
     actuators_changed = Signal(list)
     det_done_signal = Signal(DataToExport)  # dte here contains DataWithAxes
     move_done_signal = Signal(DataToExport)  # dte here contains DataActuators
-    timeout_signal = Signal(bool)
+    timeout_signal = Signal(list)  # list of titles of the modules whose origin wasn't found among
+                                    # the received responses (see grab_data/move_actuators)
 
     params = [
         {'title': 'Detectors', 'name': 'detectors', 'type': 'itemselect', 'checkbox': True},
@@ -371,8 +372,14 @@ class ModulesManager(QObject, ParameterManager):
             # wait for grab done signals to end
             QtWidgets.QApplication.processEvents()  # mandatory for the det_done_flag boolean to be modified in the corresponding method
             if time.perf_counter() - tzero > self.detector_timeout / 1000:
-                self.timeout_signal.emit(True)
-                logger.error('Timeout Fired during waiting for data to be acquired')
+                # match on origin (stable per-module id) rather than name, since a single
+                # detector emits one DataWithAxes per channel, each possibly named differently
+                received_origins = {dwa.origin for dwa in self.det_done_datas}
+                missing_detectors = [det_title for det_title in self.selected_detectors_name
+                                      if det_title not in received_origins]
+                self.timeout_signal.emit(missing_detectors)
+                logger.error('Timeout Fired during waiting for data to be acquired from: '
+                              f'{", ".join(missing_detectors)}')
                 break
             QThread.msleep(10)
 
@@ -559,8 +566,15 @@ class ModulesManager(QObject, ParameterManager):
 
                 QtWidgets.QApplication.processEvents()  # mandatory for the det_done_flag boolean to be modified in the corresponding method
                 if time.perf_counter() - tzero > self.actuator_timeout / 1000:  # timeout in seconds
-                    self.timeout_signal.emit(True)
-                    logger.error('Timeout Fired during waiting for actuators to be moved')
+                    # match on origin (stable per-module id) rather than name: dte_act's
+                    # `.name` holds the requested actuator's title, which is what gets
+                    # stamped as `.origin` on the DataActuator the actuator reports back
+                    received_origins = {dact.origin for dact in self.move_done_positions}
+                    missing_actuators = [dact.name for dact in dte_act
+                                          if dact.name not in received_origins]
+                    self.timeout_signal.emit(missing_actuators)
+                    logger.error('Timeout Fired during waiting for actuators to be moved: '
+                                  f'{", ".join(missing_actuators)}')
                     break
                 QThread.msleep(10)
 
@@ -591,7 +605,8 @@ class ModulesManager(QObject, ParameterManager):
     @Slot(DataActuator)
     def move_done(self, data_act: DataActuator):
         try:
-            if data_act.name not in self.move_done_positions.get_names():
+            # match on origin, not name, for the same reason as in move_actuators above
+            if data_act.origin not in {dact.origin for dact in self.move_done_positions}:
                 self.move_done_positions.append(data_act)
 
             if len(self.move_done_positions) == len(self.actuators):
