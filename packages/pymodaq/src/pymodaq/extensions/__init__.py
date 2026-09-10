@@ -28,6 +28,7 @@ from .console import Console
 class ExtensionEnum(StrEnum):
     SCANNER = 'Scanner'
     LOGGER = 'Logger'
+    LOGGER_LEGACY = 'LoggerLegacy'
     PID = 'PID'
     BAYESIAN = 'Bayesian'
     ADAPTIVE = 'Adaptive'
@@ -37,7 +38,8 @@ class ExtensionEnum(StrEnum):
 
 internal_extensions = {
     ExtensionEnum.SCANNER.value: DAQScan,
-    ExtensionEnum.LOGGER.value: DAQ_Logger,
+    ExtensionEnum.LOGGER.value: DAQLogger,
+    ExtensionEnum.LOGGER_LEGACY.value: DAQ_Logger,
     ExtensionEnum.PID.value: DAQ_PID,
     ExtensionEnum.BAYESIAN.value: BayesianOptimization,
     ExtensionEnum.ADAPTIVE.value: AdaptiveOptimisation,

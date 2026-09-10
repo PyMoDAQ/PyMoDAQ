@@ -9,8 +9,10 @@ Contains all objects related to the DAQScan module, to do automated scans, savin
 from collections import OrderedDict
 from typing import TYPE_CHECKING, Union
 
+from pymodaq.control_modules.daq_viewer_ui.ui_base import ActionIconNames
 from pymodaq.utils.h5modules.module_saving import LoggerSaver
 from pymodaq_gui.managers.runner_thread_manager import WorkerThreadManager
+from pymodaq_gui.messenger import messagebox
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_gui.utils.dock import Dock, DockArea
@@ -50,6 +52,10 @@ class LoggerStatusBarManager:
     @property
     def log_time(self) -> QtCore.QDateTime:
         return self._start_log_time.dateTime()
+
+    @log_time.setter
+    def log_time(self, date_time: QtCore.QDateTime):
+        self._start_log_time.setDateTime(date_time)
 
     @property
     def is_logging(self) -> bool:
@@ -114,10 +120,14 @@ class DAQLogger(CustomExt):
                          add_toolbar_break=False)
 
         self.status_manager = LoggerStatusBarManager(self)
-
+        self._module_and_data_saver = LoggerSaver(self)
         self.logging = Logging(self)
 
         self.setup_ui()
+
+    def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: bool = None):
+        self.enable_start_stop(True)
+        super().do_things_after_experiment_set(experiment_name, show_dashboard)
 
     def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
         """
@@ -169,12 +179,14 @@ class DAQLogger(CustomExt):
                         checkable=True, icon_checked_color=self.get_theme().green)
 
         self.toolbar.addSeparator()
-        self.add_action('grab_all', 'Grab All', 'run_all', "Grab all selected detectors's data and actuators's value",
-                        checkable=False, toolbar=self.toolbar)
-        self.add_action('stop_all', 'Stop All', 'stop_all', "Stop all selected detectors and actuators",
-                        checkable=False, toolbar=self.toolbar)
-
+        self.add_action('grab_all', 'Grab All', ActionIconNames.GRAB,
+                        "Grab/Stop all selected detectors's data and actuators's value",
+                        checkable=True,
+                        icon_checked=ActionIconNames.GRAB_STOP,
+                        icon_checked_color=self.get_theme().green)
         logger.debug('actions set')
+
+        self.enable_start_stop(False)
 
     def enable_start_stop(self, enable=True):
         """If True enable main buttons to launch/stop scan"""
@@ -190,8 +202,7 @@ class DAQLogger(CustomExt):
         self.connect_action('start', self.logging.start_logging)
         self.connect_action('pause', self.logging.pause_logging)
         self.connect_action('stop', lambda: self.logging.stop_logging('Logging Stopped by the User'))
-        self.connect_action('grab_all', self.start_all)
-        self.connect_action('stop_all', self.stop_all)
+        self.connect_action('grab_all', self.start_stop_all)
 
         self.connect_action('settings', self.show_dock_settings)
 
@@ -206,24 +217,26 @@ class DAQLogger(CustomExt):
             --------
             quit_fun
         """
-        try:
-            self.logger.close()
-        except Exception as e:
-            logger.exception(str(e))
+        if self.logging.is_running:
+            messagebox(title='Running',
+                       text='The Logging is running, first stop it')
+            return False
+        elif self.settings['worker', 'worker_tasks'] > 0:
+            messagebox(title='Running',
+                       text='The Saver is finishing the savings')
+            self.logging.stop_logging("User prompted a quit of the Application,"
+                                      " Stopping the Logging")
+            return False
 
+        self.h5_manager.close_file()
         return super().quit_fun()
 
-    def start_all(self):
+    def start_stop_all(self, start=True):
         for det in self.modules_manager.detectors:
-            det.grab()
+            det.grab() if start else det.stop_grab()
         for act in self.modules_manager.actuators:
-            act.grab()
+            act.grab() if start else act.stop_grab()
 
-    def stop_all(self):
-        for det in self.modules_manager.detectors:
-            det.stop_grab()
-        for act in self.modules_manager.actuators:
-            act.stop_grab()
 
     @property
     def module_and_data_saver(self) -> LoggerSaver:
@@ -308,8 +321,10 @@ class Logging(QObject):
         self._update_status('Initializing')
         self._init_logging()
 
+        self.logger.set_action_enabled('start', False)
+        self.logger.status_manager.log_time = QtCore.QDateTime.currentDateTime()
         self.logger.status_manager.set_permanent_status('Starting logging')
-        self.logger.status_manager.is_logging = True
+        self.is_running = True
 
         self._connect_control_modules()
         self._n_emitted = 0
@@ -324,7 +339,7 @@ class Logging(QObject):
         for detector in self.logger.modules_manager.detectors:
             detector.grab_done_signal.connect(self.save_detector)
         for actuator in self.logger.modules_manager.actuators:
-            actuator.move_done_signal.connect(self.format_and_save_actuator)
+            actuator.current_value_signal.connect(self.format_and_save_actuator)
 
     def _disconnect_control_modules(self):
         """ Disconnect all the Control Modules """
@@ -405,7 +420,6 @@ class Logging(QObject):
             self.is_running = True
             self._connect_control_modules()
 
-        self.modules_manager.enable_modules(do_pause)
         self._on_scan_pausing(do_pause)
 
     def stop_logging(self, msg: str = None):
@@ -424,9 +438,10 @@ class Logging(QObject):
 
         #3 update the GUI
         self.logger.set_action_checked('pause', False)
+        self.logger.set_action_enabled('start', True)
         if msg is not None:
             self._update_status(msg)
-
+            self.logger.status_manager.set_permanent_status(msg)
 
     @staticmethod
     def format_actuators_data(data_act: DataActuator) -> DataToExport:
@@ -439,6 +454,8 @@ class Logging(QObject):
             message = "Logging resumed"
 
         self._update_status(message)
+        self.logger.status_manager.set_permanent_status(message)
+        self.logger.status_manager.is_logging = not pausing
 
 
 
@@ -454,7 +471,7 @@ def main():
                                                       load_extension=False,
                                                       )
     win.mainwindow.setVisible(False)
-    win_ext, logger = create_extension(dashboard, DAQ_Logger, show_extension=True)
+    win_ext, logger = create_extension(dashboard, DAQLogger, show_extension=True)
     sys.exit(app.exec())
 
 
