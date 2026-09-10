@@ -730,13 +730,11 @@ class DAQ_PID(CustomExt):
         self.setpoints_sb[i].setValue(self.curr_points[i])
         self.update_runner_setpoints()
 
-    def quit_fun(self):
+    def quit_fun(self) -> bool:
         """ """
         try:
-
-
             self.dashboard.remove_modules([setp for setp in self.model_class.setpoints_names])
-            super().quit_fun()
+            return super().quit_fun()
 
         except Exception as e:
             print(e)

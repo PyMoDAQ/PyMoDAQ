@@ -14,6 +14,7 @@ from pymodaq_data.data import DataToExport
 
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 from pymodaq.utils.h5modules import module_saving
+from pymodaq_gui.utils.custom_app import CustomApp
 from .abstract import AbstractLogger
 
 
@@ -34,17 +35,19 @@ class H5LogHandler(logging.StreamHandler):
 
 
 class H5Logger(AbstractLogger):
-    def __init__(self, modules_manager, *args, **kwargs):
+    def __init__(self, modules_manager: ModulesManager,
+                 app: CustomApp, *args, **kwargs):
 
         self.title = self.__class__.__name__
 
         self.modules_manager: ModulesManager = modules_manager
-        self.h5saver = H5Saver(*args, save_type='logger', **kwargs)
-
+        self.h5saver = app.h5saver
+        self.app = app
         self.module_and_data_saver = module_saving.LoggerSaver(self)
         self.module_and_data_saver.h5saver = self.h5saver  # will update its h5saver and all submodules's h5saver
 
     def close(self):
+        self.h5saver.flush()
         self.h5saver.close_file()
 
     @property
@@ -56,11 +59,17 @@ class H5Logger(AbstractLogger):
         return self.h5saver.settings
 
     def init_logger(self, settings):
-        self.h5saver.init_file(update_h5=True, metadata=dict(settings=settings))
         self.h5saver.flush()
         self.module_and_data_saver.h5saver = self.h5saver
         logger_node = self.module_and_data_saver.get_set_node(new=True)
         return True
+
+    def update_app(self, app: CustomApp):
+        self.app = app
+        self.h5saver = app.h5saver
+        self.module_and_data_saver.h5saver = self.h5saver
+        self.module_and_data_saver.create_module_group(
+            self.module_and_data_saver.module_group)
 
     def get_handler(self):
         return H5LogHandler(self.h5saver)
@@ -73,7 +82,6 @@ class H5Logger(AbstractLogger):
 
     def add_data(self, dte: DataToExport):
         self.module_and_data_saver.add_data(dte)
-
         self.settings.child('N_saved').setValue(self.settings.child('N_saved').value() + 1)
 
     def stop_logger(self):

@@ -6,7 +6,7 @@ import datetime
 import subprocess
 from pathlib import Path
 
-from typing import Union, List, TYPE_CHECKING, Sequence, Callable
+from typing import Union, List, TYPE_CHECKING, Sequence, Callable, Any
 import argparse
 
 from qtpy import QtWidgets, QtCore
@@ -35,8 +35,8 @@ import pymodaq_gui.utils.layout as layout_mod
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.managers.roi_viewer_manager import ROISaver
 from pymodaq_gui.utils.custom_app import CustomApp
-from pymodaq_gui.utils.shared_ui import MenuToolbarNames
-from pymodaq_gui.config import get_set_layout_path
+from pymodaq_gui.utils.enums import MenuToolbarNames
+from pymodaq_gui.config import get_set_layout_path, get_set_roi_path
 from pymodaq_gui.utils.widgets.window import make_window
 
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager
@@ -371,7 +371,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
         self.add_menu(MenuToolbarNames.VIEW, 'View', menubar)
 
-
         self.add_menu('docked', 'Docked', MenuToolbarNames.VIEW)
 
         self.add_menu(MenuToolbarNames.TOOLS, 'Tools', menubar)
@@ -518,12 +517,13 @@ class DashBoard(CustomApp, LECOComponentMixin):
         quit_fun
         """
         try:
-            self.connect_leco(connect=False)
-            self.remote_timer.stop()
-
             for ext in self.extensions:
                 if hasattr(self.extensions[ext], "quit_fun"):
                     self.extensions[ext].quit_fun()
+
+            self.connect_leco(connect=False)
+            self.remote_timer.stop()
+
             for mov in self.actuators_modules:
                 try:
                     mov.init_signal.disconnect(self.update_init_tree)

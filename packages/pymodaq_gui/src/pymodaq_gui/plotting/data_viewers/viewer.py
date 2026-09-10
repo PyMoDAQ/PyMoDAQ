@@ -120,6 +120,16 @@ class ViewerDispatcher:
         self._viewers = []
 
     @property
+    def next_to_dock(self):
+        return self._next_to_dock
+
+    @next_to_dock.setter
+    def next_to_dock(self, dock: Dock):
+        self._next_to_dock = dock
+
+
+
+    @property
     def viewers(self) -> List[ViewerBase]:
         return self._viewers
 
@@ -176,7 +186,7 @@ class ViewerDispatcher:
         self.viewer_types.append(viewer_type)
 
         self.viewer_docks[-1].addWidget(self._viewer_widgets[-1])
-        self.dockarea.addDock(self.viewer_docks[-1], self._direction)
+        self.dockarea.addDock(self.viewer_docks[-1], self._direction, self._next_to_dock)
 
     def update_viewers(self, viewers_type: List[Union[str, ViewersEnum]],
                        viewers_name: List[str] = None, force=False):

@@ -5,7 +5,9 @@
 
 Contains all objects related to the DAQScan module, to do automated scans, saving data...
 """
+
 from __future__ import annotations
+import dataclasses
 import logging
 import os
 from pathlib import Path
@@ -17,6 +19,10 @@ from qtpy import QtWidgets, QtCore
 from qtpy.QtWidgets import QDialogButtonBox
 from qtpy.QtCore import QObject, QThread, Signal, QDateTime, QDate, QTime, QTimer
 
+from pymodaq_gui.managers.h5manager import FileAction, H5Manager
+from pymodaq_gui.managers.runner_thread_manager import WorkerThreadManager
+from pymodaq_gui.managers.settings.settings_manager import SettingsManager
+from pymodaq_gui.plotting.data_viewers import ViewerDispatcher
 from pymodaq.control_modules.enums import MoveType
 from pymodaq.utils.custom_ext import CustomExt
 from pymodaq.utils.managers.modules import ModuleType
@@ -36,16 +42,20 @@ from pymodaq_gui.plotting.navigator import Navigator
 from pymodaq_gui.messenger import messagebox
 from pymodaq_gui import utils as gutils
 from pymodaq_gui.h5modules.saving import H5Saver
+from pymodaq_gui.utils.enums import MenuToolbarNames
 
 from pymodaq.utils.scanner.scanner import Scanner
 from pymodaq.utils.managers.batchscan_manager import BatchScanner
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 from pymodaq.post_treatment.load_and_plot import LoaderPlotter
-from pymodaq.extensions.scan.daq_scan_ui import DAQScanUI
+
 from pymodaq.utils.h5modules import module_saving
 from pymodaq.utils.scanner.scan_selector import ScanSelector, SelectorItem
 from pymodaq.utils.data import DataActuator
 from pymodaq.extensions.scan.manager.scan_manager import ScanManager
+from pymodaq_gui.utils.widgets.spinbox import QSpinBox_ro
+from pymodaq_gui.utils.widgets import QLED
+from pymodaq_gui.utils.custom_app import CustomApp
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -65,12 +75,73 @@ class ScanStepError(Exception):
     """Raised when an error occurs during a scan step"""
 
 
-class ScanDataTemp:
-    """Convenience class to hold temporary data to be plotted in the live plots"""
-    def __init__(self, scan_index: int, indexes: Tuple[int], data: DataToExport):
-        self.scan_index = scan_index
-        self.indexes = indexes
-        self.data = data
+@dataclasses.dataclass
+class ScanData:
+    """Convenience class to hold data to be saved or plotted"""
+    dte: DataToExport
+    indexes: list[int]
+    distribution: DataDistribution
+    scan_index: int
+
+
+class ScanStatusBarManager:
+
+    def __init__(self, scan: DAQScan):
+        self.scan = scan
+
+        self._n_scan_steps_sb: QSpinBox_ro = None
+        self._indice_scan_sb: QSpinBox_ro = None
+        self._indice_average_sb: QSpinBox_ro = None
+
+        self._scan_done_LED: QLED = None
+
+    @property
+    def statusbar(self):
+        return self.scan.statusbar
+
+    def set_permanent_status(self, status: str):
+        self.scan.set_permanent_status(status)
+
+    def create_permanent_widgets(self):
+
+        #custom app already creates a permanent label one can access with set_permanent_status
+        self._n_scan_steps_sb = QSpinBox_ro()
+        self._n_scan_steps_sb.setToolTip('Total number of steps')
+        self._indice_scan_sb = QSpinBox_ro()
+        self._indice_scan_sb.setToolTip('Current step value')
+        self._indice_average_sb = QSpinBox_ro()
+        self._indice_average_sb.setToolTip('Current average value')
+
+        self._scan_done_LED = QLED()
+        self._scan_done_LED.set_as_false()
+        self._scan_done_LED.clickable = False
+        self._scan_done_LED.setToolTip('Scan done state')
+
+        self.statusbar.insertPermanentWidget(1, self._n_scan_steps_sb) # 1 because there is already the permanent label
+        self.statusbar.insertPermanentWidget(2, self._indice_scan_sb)
+        self.statusbar.insertPermanentWidget(3, self._indice_average_sb)
+        self._indice_average_sb.setVisible(False)
+        self.statusbar.insertPermanentWidget(4, self._scan_done_LED)
+
+    @property
+    def n_scan_steps(self):
+        return self._n_scan_steps_sb.value()
+
+    @n_scan_steps.setter
+    def n_scan_steps(self, nsteps: int):
+        self._n_scan_steps_sb.setValue(nsteps)
+
+    def set_scan_step(self, step_ind: int):
+        self._indice_scan_sb.setValue(step_ind)
+
+    def show_average_step(self, show: bool = True):
+        self._indice_average_sb.setVisible(show)
+
+    def set_scan_step_average(self, step_ind: int):
+        self._indice_average_sb.setValue(step_ind)
+
+    def set_scan_done(self, done=True):
+        self._scan_done_LED.set_as(done)
 
 
 class DAQScan(CustomExt):
@@ -78,13 +149,18 @@ class DAQScan(CustomExt):
     Main class initializing a DAQScan module with its dashboard and scanning control panel
     """
     settings_name = 'daq_scan_settings'
-    command_daq_signal = Signal(utils.ThreadCommand)
+    show_h5file_statusbar_widgets = True
 
+    command_daq_signal = Signal(utils.ThreadCommand)
     scan_done_signal = QtCore.Signal()
 
     icon_name = 'qr_code_scanner'
 
     params = [
+        {'title': 'Worker:', 'name': 'worker', 'type': 'group', 'children': [
+            {'title': 'Worker Running:', 'name': 'worker_running', 'type': 'led', 'value': False, 'readonly': True},
+            {'title': 'Worker tasks:', 'name': 'worker_tasks', 'type': 'int', 'value': 0, 'readonly': True},
+        ]},
         {'title': 'Time Flow:', 'name': 'time_flow', 'type': 'group', 'expanded': False,
          'children': [
             {'title': 'Wait time step (ms)', 'name': 'wait_time', 'type': 'int', 'value': 0,
@@ -135,7 +211,6 @@ class DAQScan(CustomExt):
         """
         
         logger.info('Initializing DAQScan')
-        self.ui: DAQScanUI = None  #important to be here before super is called , see do_things_after_experiment_set
 
         super().__init__(parent=dockarea,
                          dashboard=dashboard,
@@ -160,13 +235,10 @@ class DAQScan(CustomExt):
         self.modules_manager.detectors_changed.connect(self.clear_plot_from)
 
 
-        self._h5saver = H5Saver()
-        self._h5saver.settings.child('do_save').hide()
-        self._h5saver.settings.child('custom_name').hide()
-        self._h5saver.new_file_sig.connect(self.create_new_file)
-        self._h5saver.file_changed_sig.connect(self._on_file_changed)
+        self.h5_manager.get_h5saver(create_new_file=False).file_changed_sig.connect(self._on_file_changed)
 
-        self._module_and_data_saver: module_saving.ScanSaver = module_saving.ScanSaver(self)
+        self._module_and_data_saver = module_saving.ScanSaver(self)
+
 
         self.extended_saver: data_saving.DataToExportExtendedSaver = None
         self.h5temp: H5Saver = None
@@ -182,11 +254,15 @@ class DAQScan(CustomExt):
 
         self.modules_manager.actuators_changed[list].connect(self.update_actuators)
 
-        self.ui: DAQScanUI = DAQScanUI(dockarea, toolbar=self.toolbar)
-        self.ui.command_sig.connect(self.process_ui_cmds)
-        self.ui.finalize_ui(self)
+        self.dock_command: gutils.Dock = None
+
+        self.status_manager = ScanStatusBarManager(self)
 
         self.setup_ui()
+
+
+
+        self.h5_manager.command_sig.connect(self.process_cmds)
 
         self.create_dataset_settings()
 
@@ -197,14 +273,15 @@ class DAQScan(CustomExt):
         self.live_timer.timeout.connect(self.update_live_plots)
 
         self.scan_manager = ScanManager(self)
-        self.scan_manager.get_external_toolbar_menu(toolbar=self.ui.get_toolbar('scan_manager'),
-                                                    menu=self.ui.get_menu('scan_manager'))
+        self.scan_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('scan_manager'),
+                                                    menu=self.get_menu('scan_manager'))
 
         if self.dashboard.experiment_manager.entry_applied:
-            self.ui.enable_start_stop(True)
+            self.enable_start_stop(True)
             self.ini_scan_manager()
 
         logger.info('DAQScan Initialized')
+
 
     def ini_scan_manager(self):
         self.scan_manager.enable_actions()
@@ -216,7 +293,7 @@ class DAQScan(CustomExt):
 
         Default is the default toolbar. To be reimplemented if needed
         """
-        return [self.ui.toolbar, self.ui.get_toolbar('scan_manager')]
+        return [self.toolbar, self.get_toolbar('scan_manager')]
 
     def plot_from(self):
         self.modules_manager.get_det_data_list()
@@ -228,23 +305,126 @@ class DAQScan(CustomExt):
             dict(all_items=data1D_names, selected=data1D_names))
 
     ####
-    def setup_docks_and_widgets(self):
-        """ Mandatory even if empty"""
-        pass
 
     def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
         """ Mandatory even if empty"""
+        self.add_toolbar(MenuToolbarNames.FILE, MenuToolbarNames.FILE.capitalize(), self.mainwindow,
+                         toolbar=self.h5_manager.toolbar)
+        self.add_menu(MenuToolbarNames.FILE, MenuToolbarNames.FILE.capitalize(), parent_menu=menubar)
+        self.add_menu(MenuToolbarNames.TOOLS, MenuToolbarNames.TOOLS.capitalize(), parent_menu=menubar)
+        self.add_menu('actions', 'Actions', parent_menu=menubar)
+
+        self.add_toolbar('scan_manager', 'Scan Manager', parent=self.mainwindow,
+                         add_break=False)
+        self.add_menu('scan_manager', 'Scan Manager', MenuToolbarNames.TOOLS, icon_name=ScanManager.icon_name)
+
+    def setup_docks_and_widgets(self):
+        """ Mandatory even if empty"""
+        self.dock_command = gutils.Dock('Scan Command')
+        self.dockarea.addDock(self.dock_command)
+
+        widget_command = QtWidgets.QWidget()
+        widget_command.setLayout(QtWidgets.QVBoxLayout())
+        self.dock_command.addWidget(widget_command)
+
+        splitter_widget = QtWidgets.QSplitter(QtCore.Qt.Orientation.Horizontal)
+        splitter_v_widget = QtWidgets.QSplitter(QtCore.Qt.Orientation.Vertical)
+        widget_command.layout().addWidget(splitter_widget)
+        splitter_widget.addWidget(splitter_v_widget)
+        self.module_widget = QtWidgets.QWidget()
+        self.module_widget.setLayout(QtWidgets.QVBoxLayout())
+        self.module_widget.setMinimumWidth(220)
+        self.module_widget.setMaximumWidth(400)
+
+        self.plotting_widget = QtWidgets.QWidget()
+        self.plotting_widget.setLayout(QtWidgets.QVBoxLayout())
+        self.plotting_widget.setMinimumWidth(220)
+        self.plotting_widget.setMaximumWidth(400)
+
+        self.plotting_settings_tree = ParameterTree()
+        self.plotting_widget.layout().addWidget(self.plotting_settings_tree)
+
+        settings_widget = QtWidgets.QWidget()
+        settings_widget.setLayout(QtWidgets.QVBoxLayout())
+        settings_widget.setMinimumWidth(220)
+
+        splitter_v_widget.addWidget(self.module_widget)
+        splitter_v_widget.addWidget(self.plotting_widget)
+
+        splitter_v_widget.setSizes([400, 400])
+        splitter_widget.addWidget(settings_widget)
+
+        self.populate_status_bar()
+
+        self.settings_toolbox = QtWidgets.QToolBox()
+        settings_widget.layout().addWidget(self.settings_toolbox)
+        self.scanner_widget = QtWidgets.QWidget()
+        self.scanner_widget.setLayout(QtWidgets.QVBoxLayout())
+        self.settings_toolbox.addItem(self.scanner_widget, 'Scanner Settings')
+
+        self.create_dashboard_toolbar(add_break=False)
+
+        self.populate_toolbox_widget([self.settings_tree,
+                                      self.h5_manager.get_h5saver().settings_tree],
+                                     ['General Settings', 'Save Settings'])
+
+        self.set_scanner_settings(self.scanner.parent_widget)
+        self.set_modules_settings(self.modules_manager.settings_tree)
+
+        self.plotting_settings_tree.setParameters(self.settings.child('plot_options'))
+
 
     def setup_actions(self):
-        """ Mandatory even if empty"""
+        self.add_action('ini_positions', 'Init Positions', 'arrows_input', menu='actions')
+        self.set_action_enabled('ini_positions', False)
+        self.add_action('start', 'Start Scan', 'motion_play', "Start the scan",
+                        menu='actions', icon_color=self.get_theme().green)
+        self.add_action('start_batch', 'Start ScanBatches', 'run_all', "Start the batch of scans", menu='actions')
+        self.add_action('stop', 'Stop Scan', 'stop_circle', "Stop the scan",
+                        menu='actions', icon_color=self.get_theme().red)
+        self.add_action('pause', 'Pause Scan', 'pause_circle', "Pause/resume the scan",
+                        checkable=True, menu='actions',
+                        icon_checked_color=self.get_theme().orange)
+        self.add_action('move_at', 'Move at doubleClicked', 'moving',
+                        "Move to positions where you double clicked", checkable=True, menu='actions')
+
+        self._toolbar.addSeparator()
+        self.add_action('navigator', 'Show Navigator', '', menu=MenuToolbarNames.TOOLS, auto_toolbar=False)
+        self.add_action('batch', 'Show Batch Scanner', '', menu=MenuToolbarNames.TOOLS, auto_toolbar=False)
+        self.set_action_visible('start_batch', False)
 
     def connect_things(self):
         self.scanner.scanner_updated_signal.connect(self.do_things_after_scanner_changed)
-    ####
+
+        self.connect_action('ini_positions', self.set_ini_positions)
+        self.connect_action('start', self.start_scan)
+        self.connect_action('start_batch', self.start_scan_batch)
+        self.connect_action('stop', self.stop_scan)
+        self.connect_action('pause', self.pause_scan)
+        self.connect_action('move_at', self.move_to_crosshair)
+
+        self.connect_action('navigator', self.show_navigator)
+        self.connect_action('batch', lambda: self.show_batcher(self.menubar))
+
+    def process_cmds(self, cmd: utils.ThreadCommand):
+        """Process commands sent by actions done in the ui
+
+        Parameters
+        ----------
+        cmd: ThreadCommand
+            Possible values are:
+                * load
+                * viewers_changed
+        """
+        if cmd.command == FileAction.LOAD:
+            self.load_file()
 
     def do_things_after_scanner_changed(self):
-        self.ui.set_action_enabled('ini_positions',
-                                       self.scanner.actuators == self.modules_manager.actuators)
+        self.set_action_enabled('ini_positions',
+                                self.scanner.actuators == self.modules_manager.actuators)
+
+    def do_things_after_ui_setup(self):
+        self.enable_start_stop(False)
 
     def do_things_after_experiment_set(self, experiment_name: str):
         """ This method is called whenever a experiment entry has been set.
@@ -258,13 +438,16 @@ class DAQScan(CustomExt):
         super().do_things_after_experiment_set(experiment_name)
 
         # set the module saver type and applies its h5saver to submodules
-        self._module_and_data_saver: module_saving.ScanSaver = module_saving.ScanSaver(self)
+        self._module_and_data_saver = module_saving.ScanSaver(self)
 
-        if self.ui is not None:
-            self.ui.enable_start_stop(True)
+        self.enable_start_stop(True)
 
         if hasattr(self, 'scan_manager'):
             self.ini_scan_manager()
+
+    @property
+    def module_and_data_saver(self) -> module_saving.ScanSaver:
+        return super().module_and_data_saver
 
     ################
     #  CONFIG/SETUP UI / EXIT
@@ -277,60 +460,6 @@ class DAQScan(CustomExt):
         self.settings.child('scan_options', 'stop_on_timeout').setValue(
             config('pymodaq', 'scan', 'stop_on_timeout'))
 
-    def process_ui_cmds(self, cmd: utils.ThreadCommand):
-        """Process commands sent by actions done in the ui
-
-        Parameters
-        ----------
-        cmd: ThreadCommand
-            Possible values are:
-                * ini_positions
-                * start
-                * start_batch
-                * stop
-                * pause
-                * move_at
-                * new_file
-                * load
-                * save
-                * show_file
-                * open_file
-                * close_file
-                * navigator
-                * batch
-                * viewers_changed
-        """
-        if cmd.command == 'ini_positions':
-            self.set_ini_positions()
-        elif cmd.command == 'start':
-            self.start_scan()
-        elif cmd.command == 'start_batch':
-            self.start_scan_batch()
-        elif cmd.command == 'stop':
-            self.stop_scan()
-        elif cmd.command == 'pause':
-            self.pause_scan()
-        elif cmd.command == 'move_at':
-            self.move_to_crosshair()
-        elif cmd.command == 'new_file':
-            self.create_new_file(new_file=True)
-        elif cmd.command == 'load':
-            self.load_file()
-        elif cmd.command == 'save':
-            self.save_file()
-        elif cmd.command == 'show_file':
-            self.show_file_content()
-        elif cmd.command == 'navigator':
-            self.show_navigator()
-        elif cmd.command == 'batch':
-            self.show_batcher(self.ui.menubar)
-        elif cmd.command == 'open_file':
-            self.open_file()
-        elif cmd.command == 'close_file':
-            self.close_file()
-        elif cmd.command == 'viewers_changed':
-            ...
-
     def quit_fun(self):
         """
             Quit the current instance of DAQ_scan
@@ -339,20 +468,26 @@ class DAQScan(CustomExt):
             --------
             quit_fun
         """
-        try:
-            if self.temp_path is not None:
-                try:
-                    self.h5temp.close()
-                    self.temp_path.cleanup()
-                except Exception as e:
-                    logger.exception(str(e))
 
-            self.close_file()
+        if self.scan_acquisition.is_running:
+            messagebox(title='Running',
+                       text='The Acquisition is running, first stop it')
+            return False
+        elif self.settings['worker', 'worker_tasks'] > 0:
+            messagebox(title='Running',
+                       text='The Saver is finishing the savings')
+            self.scan_acquisition.stop("User prompted a quit of the Application, Stopping the Acquisition")
+            return False
 
-            super().quit_fun()
+        if self.temp_path is not None:
+            try:
+                self.h5temp.close()
+                self.temp_path.cleanup()
+            except Exception as e:
+                logger.exception(str(e))
 
-        except Exception as e:
-            logger.exception(str(e))
+
+        return super().quit_fun()
 
     def create_dataset_settings(self):
         # params about dataset attributes and scan attibutes
@@ -383,7 +518,7 @@ class DAQScan(CustomExt):
                                     self.modules_manager.detectors_all)
         self.batcher.create_menu(menubar)
         self.batcher.setupUI()
-        self.ui.set_action_visible('start_batch', True)
+        self.set_action_visible('start_batch', True)
 
     def start_scan_batch(self):
         self.batch_started = True
@@ -460,12 +595,6 @@ class DAQScan(CustomExt):
             res = True
         return res
 
-    def show_file_content(self):
-        try:
-            self._h5saver.show_file_content()
-        except Exception as e:
-            logger.exception(str(e))
-
     def show_navigator(self):
 
         if self.navigator is None:
@@ -497,26 +626,48 @@ class DAQScan(CustomExt):
         #     viewer_items.update({viewer.title: dict(viewers=[viewer], names=[viewer.title])})
         self.scan_selector = ScanSelector(viewer_items)
 
-        self.ui.add_scanner_settings(self.scan_selector.settings_tree)
+        self.scanner_widget.layout().addWidget(self.scan_selector.settings_tree)
 
         self.scan_selector.scan_select_signal.connect(self.scanner.update_from_scan_selector)
+
+    def populate_toolbox_widget(self, widgets: List[QtWidgets.QWidget], names: List[str]):
+        for widget, name in zip(widgets, names):
+            self.settings_toolbox.addItem(widget, name)
+
+    def set_scanner_settings(self, settings_tree: QtWidgets.QWidget):
+        while True:
+            child = self.scanner_widget.layout().takeAt(0)
+            if not child:
+                break
+            child.widget().deleteLater()
+            QtWidgets.QApplication.processEvents()
+
+        self.scanner_widget.layout().addWidget(settings_tree)
+
+    def set_modules_settings(self, settings_widget):
+        self.module_widget.layout().addWidget(settings_widget)
+
+    def populate_status_bar(self):
+        super().populate_status_bar()
+        self.status_manager.create_permanent_widgets()
+        self.status_manager.set_permanent_status('Initializing')
+
+    def enable_start_stop(self, enable=True):
+        """If True enable main buttons to launch/stop scan"""
+        self.set_action_enabled('start', enable)
+        self.set_action_enabled('stop', enable)
+        self.set_action_enabled('pause', enable)
+        if enable:
+            self.set_action_checked('pause', False)
 
     ################
     #  LOADING SAVING
 
     def load_file(self):
-        self.h5saver.load_file(self.h5saver.h5_file_path)
         # Opening an existing file resets the dataset metadata so the user is prompted
         # to confirm/update it on the next scan (restores behaviour lost in past versions).
         self._metada_dataset_set = False
         self.update_file_settings()
-        self._update_file_status_led()
-
-    def save_file(self):
-        if not os.path.isdir(self.h5saver.settings['base_path']):
-            os.mkdir(self.h5saver.settings['base_path'])
-        filename = gutils.file_io.select_file(self.h5saver.settings['base_path'], save=True, ext='h5')
-        self.h5saver.h5_file.copy_file(str(filename), overwrite=True)
 
     def save_metadata(self, node, type_info='dataset_info'):
         """
@@ -580,155 +731,16 @@ class DAQScan(CustomExt):
                                                       children=[instrument.settings.saveState()])
                 attr[f'{instrument.title}_settings'] = ioxml.parameter_to_xml_string(instrument_settings)
 
-    def create_new_file(self, new_file):
-        if new_file:
-            self._metada_dataset_set = False
-            self.close_file()
-            # Explicitly create a new file (don't reopen existing)
-            try:
-                self._h5saver.init_file(update_h5=True)
-                logger.info(f"Created new h5 file: {self._h5saver.settings['current_h5_file']}")
-            except Exception as e:
-                logger.error(f"Could not create new h5 file: {e}")
-
-        if hasattr(self, '_module_and_data_saver'):
-            self.module_and_data_saver.h5saver = self._h5saver  # force it for detectors to update their h5saver
-        res = self.update_file_settings()
-        self._update_file_status_led()
-        if new_file:
-            self.ui.enable_start_stop()
-        return res
-
-    @property
-    def h5saver(self):
-        if self._h5saver is None:
-            self._h5saver = H5Saver()
-            self._h5saver.settings.child('do_save').hide()
-            self._h5saver.settings.child('custom_name').hide()
-            self._h5saver.new_file_sig.connect(self.create_new_file)
-            self._h5saver.file_changed_sig.connect(self._on_file_changed)
-        if self._h5saver.h5_file is None or not self._h5saver.isopen():
-            # Check if there's an existing file to reopen
-            current_file = self._h5saver.settings['current_h5_file']
-            if current_file and Path(current_file).exists():
-                self._try_open_existing_file(current_file)
-            else:
-                try:
-                    self._h5saver.init_file(update_h5=True)
-                except Exception as e:
-                    logger.warning(f"Could not initialize h5 file: {e}")
-            self._update_file_status_led()
-        return self._h5saver
-
-    def _try_open_existing_file(self, current_file: str):
-        """Try to open an existing file, asking user what to do if locked."""
-        while True:
-            try:
-                logger.debug(f"Reopening existing h5 file: {current_file}")
-                self._h5saver.init_file(addhoc_file_path=current_file)
-                break  # Success
-            except Exception as e:
-                if 'lock' in str(e).lower() or 'errno = 0' in str(e).lower():
-                    # File is locked - ask user what to do
-                    msg = QtWidgets.QMessageBox()
-                    msg.setIcon(QtWidgets.QMessageBox.Icon.Warning)
-                    msg.setWindowTitle("File Locked")
-                    msg.setText(f"Cannot open file:\n{current_file}\n\n"
-                                f"The file may be open in another application.")
-                    msg.setInformativeText("Close the file elsewhere and click Retry, "
-                                           "or select a different file.")
-                    retry_btn = msg.addButton("Retry", QtWidgets.QMessageBox.ButtonRole.ActionRole)
-                    new_auto_btn = msg.addButton("New File (Auto)", QtWidgets.QMessageBox.ButtonRole.AcceptRole)
-                    browse_btn = msg.addButton("Browse...", QtWidgets.QMessageBox.ButtonRole.ActionRole)
-                    msg.addButton(QtWidgets.QMessageBox.StandardButton.Cancel)
-                    msg.exec()
-
-                    if msg.clickedButton() == retry_btn:
-                        continue  # Try again
-                    elif msg.clickedButton() == new_auto_btn:
-                        logger.info("User chose to create new file (auto)")
-                        self._h5saver.init_file(update_h5=True)
-                        break
-                    elif msg.clickedButton() == browse_btn:
-                        # Let user select an existing file to append to
-                        file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
-                            None, "Select HDF5 File",
-                            str(Path(current_file).parent),
-                            "HDF5 Files (*.h5);;All Files (*)",
-                        )
-                        if file_path:
-                            logger.info(f"User selected file: {file_path}")
-                            try:
-                                self._h5saver.init_file(addhoc_file_path=file_path)
-                                break
-                            except Exception as e2:
-                                logger.warning(f"Could not open selected file: {e2}")
-                                continue  # Show dialog again
-                        else:
-                            continue  # User cancelled browse, show dialog again
-                    else:
-                        # User cancelled - leave h5_file unchanged
-                        logger.info("User cancelled file selection - keeping current file state")
-                        break
-                else:
-                    # Other error - fall back to new file
-                    logger.warning(f"Could not reopen h5 file: {e}")
-                    self._h5saver.init_file(update_h5=True)
-                    break
-        self._update_file_status_led()
-
-    @h5saver.setter
-    def h5saver(self, h5saver_temp: H5Saver):
-        self._h5saver = h5saver_temp
-
-    def _update_file_status_led(self):
-        """Reflect the current h5 file open/accessible state in the status bar LED
-        and the SWMR mode indicator."""
-        if self.ui is None:
-            return
-        is_open = (self._h5saver is not None
-                   and self._h5saver.h5_file is not None
-                   and self._h5saver.isopen())
-        self.ui.set_file_open(is_open)
-        swmr_active = is_open and self._h5saver.is_swmr_active
-        swmr_compatible = is_open and self._h5saver.is_swmr_compatible
-        self.ui.set_swmr_status(swmr_active, swmr_compatible)
 
     def _on_file_changed(self, file_path: str):
         """Called when H5Saver switches to a different file (e.g. browse)."""
-        self._update_file_status_led()
+        self.h5_manager.update_file_status_led()
         file_name = Path(file_path).name
-        scan_name = self._h5saver.settings['current_scan_name']
+        scan_name = self.h5saver.settings['current_scan_name']
         if scan_name:
-            self.ui.set_permanent_status(f'{file_name} | {scan_name}')
+            self.status_manager.set_permanent_status(f'{file_name} | {scan_name}')
         else:
-            self.ui.set_permanent_status(file_name)
-
-    def open_file(self):
-        """Reopen the current h5 file if it is closed."""
-        if self._h5saver is not None and not self._h5saver.isopen():
-            current_file = self._h5saver.settings['current_h5_file']
-            if current_file and Path(current_file).exists():
-                self._try_open_existing_file(current_file)
-            else:
-                logger.warning('No file to reopen')
-        self._update_file_status_led()
-
-    def close_file(self):
-        self._h5saver.close_file()
-        self._update_file_status_led()
-
-    @property
-    def module_and_data_saver(self):
-        if (self._module_and_data_saver.h5saver is None
-                or not self._module_and_data_saver.h5saver.isopen()):
-            self._module_and_data_saver.h5saver = self.h5saver
-        return self._module_and_data_saver
-
-    @module_and_data_saver.setter
-    def module_and_data_saver(self, mod: module_saving.ScanSaver):
-        self._module_and_data_saver = mod
-        self._module_and_data_saver.h5saver = self.h5saver
+            self.status_manager.set_permanent_status(file_name)
 
     def update_file_settings(self):
         try:
@@ -744,9 +756,9 @@ class DAQScan(CustomExt):
             file_name = Path(self.h5saver.settings['current_h5_file']).name
             scan_name = self.h5saver.settings['current_scan_name']
             if scan_name:
-                self.ui.set_permanent_status(f'{file_name} | {scan_name}')
+                self.status_manager.set_permanent_status(f'{file_name} | {scan_name}')
             else:
-                self.ui.set_permanent_status(file_name)
+                self.status_manager.set_permanent_status(file_name)
 
             return res
 
@@ -771,7 +783,7 @@ class DAQScan(CustomExt):
         self.h5saver.settings.child('current_scan_name').setValue(scan_name)
 
         file_name = Path(self.h5saver.settings['current_h5_file']).name
-        self.ui.set_permanent_status(f'{file_name} | {scan_name}')
+        self.status_manager.set_permanent_status(f'{file_name} | {scan_name}')
 
         res = self.set_metadata_about_current_scan()
         return res
@@ -781,7 +793,7 @@ class DAQScan(CustomExt):
         self.scanner.actuators = self.modules_manager.actuators
 
     def move_to_crosshair(self, *args, **kwargs):
-        if self.ui.is_action_checked('move_at'):
+        if self.is_action_checked('move_at'):
             self.modules_manager.connect_actuators()
             self.live_plotter.connect_double_clicked(self.move_at)
         else:
@@ -805,7 +817,7 @@ class DAQScan(CustomExt):
 
         """
         if param.name() == 'scan_average':
-            self.ui.show_average_step(param.value() > 1)
+            self.status_manager.show_average_step(param.value() > 1)
         elif param.name() == 'prepare_viewers':
             self.prepare_viewers()
         elif param.name() == 'plot_probe':
@@ -866,23 +878,6 @@ class DAQScan(CustomExt):
         viewers_enum, data_names, _ = self.check_number_type_viewers()
         self.live_plotter.prepare_viewers(viewers_enum, viewers_name=data_names)
 
-    def update_status(self, txt: str, wait_time: int = None):
-        """ Show the txt message in the status bar with a delay of wait_time ms.
-
-        add an info log in the logger
-
-        Parameters
-        ----------
-        txt: str
-            the message to log
-        wait_time: int or None
-            leave the message apparent in the status bar for this duration in ms.
-            If None, uses the value from config('gui', 'message_status_persistence')
-        """
-        self.ui.update_status(txt, wait_time)
-        self.status_signal.emit(txt)
-        logger.info(txt)
-
     def thread_status(self, status: utils.ThreadCommand):
         """ General function to get datas/infos from child thread back to the main.
 
@@ -903,34 +898,32 @@ class DAQScan(CustomExt):
         elif status.command == "Update_scan_index":
             # status[1] = [ind_scan,ind_average]
             self.ind_scan = status.attribute[0]
-            self.ui.set_scan_step(status.attribute[0] + 1)
+            self.status_manager.set_scan_step(status.attribute[0] + 1)
             self.ind_average = status.attribute[1]
-            self.ui.set_scan_step_average(status.attribute[1] + 1)
+            self.status_manager.set_scan_step_average(status.attribute[1] + 1)
 
         elif status.command == "Scan_done":
 
             self.modules_manager.reset_signals()
             self.live_timer.stop()
-            self.ui.set_scan_done()
+            self.status_manager.set_scan_done()
             self.scan_done_signal.emit()
             try:
                 self.module_and_data_saver.flush()
-                if self._h5saver.settings['close_after_scan']:
-                    self.close_file()
-                self._update_file_status_led()
+                if self.h5saver.settings['close_after_scan']:
+                    self.h5_manager.close_file()
             except Exception as e:
                 logger.error(f"Error finalizing scan file: {e}")
                 try:
-                    self._h5saver.close_file()
-                    self._update_file_status_led()
+                    self.h5_manager.close_file()
                 except Exception:
                     pass
 
             if not self.batch_started:
                 if self.settings['scan_options', 'go_to_ini_positions']:
                     self.set_ini_positions()
-                self.ui.set_action_enabled('ini_positions', True)
-                self.ui.set_action_enabled('start', True)
+                self.set_action_enabled('ini_positions', True)
+                self.set_action_enabled('start', True)
 
                 # reactivate module controls using remote_control
                 remote_manager = getattr(self.dashboard, 'remote_manager', None)
@@ -943,25 +936,16 @@ class DAQScan(CustomExt):
                 self.loop_scan_batch()
 
         elif status.command == "Timeout":
-            self.ui.set_permanent_status(status.attribute or 'Timeout occurred')
-
-        elif status.command == 'add_data':
-            ind_scan = status.attribute.pop('ind_scan')
-            self.module_and_data_saver.add_data(dte=status.attribute.pop('extra_data', None), **status.attribute)
-            self.module_and_data_saver.add_time(status.attribute['indexes'])
-            self.command_daq_signal.emit(utils.ThreadCommand("data_saved"))
-
-        elif status.command == 'add_nav_axes':
-            self.module_and_data_saver.add_nav_axes(status.attribute)
+            self.status_manager.set_permanent_status(status.attribute or 'Timeout occurred')
 
     ############
     #  PLOTTING
 
-    def save_temp_live_data(self, scan_data: ScanDataTemp):
+    def save_temp_live_data(self, scan_data: ScanData):
         if scan_data.scan_index == 0:
             if self.scanner.scanner.do_process_data:
                 viewers_enum, data_names, _ = self.check_number_type_viewers()
-                for dwa in scan_data.data:
+                for dwa in scan_data.dte:
                     if dwa.get_full_name() not in data_names:
                         viewer_enum = ViewersEnum.get_viewers_enum_from_data(dwa).increase_dim(self.scanner.n_axes)
 
@@ -986,7 +970,9 @@ class DAQScan(CustomExt):
 
             self.extended_saver.add_nav_axes(self.h5temp.raw_group, nav_axes)
 
-        self.extended_saver.add_data(self.h5temp.raw_group, scan_data.data, scan_data.indexes,
+        self.extended_saver.add_data(self.h5temp.raw_group,
+                                     scan_data.dte,
+                                     scan_data.indexes,
                                      distribution=self.scanner.distribution)
         if self.settings['plot_options', 'plot_at_each_step']:
             self.update_live_plots()
@@ -1048,7 +1034,7 @@ class DAQScan(CustomExt):
                     text="There are not enough or too much selected move modules for this scan")
                 return False
 
-            self.ui.n_scan_steps = self.scanner.n_steps
+            self.status_manager.n_scan_steps = self.scanner.n_steps
 
             # check if the modules are initialized
             for module in self.modules_manager.actuators:
@@ -1059,12 +1045,12 @@ class DAQScan(CustomExt):
                 if not module.initialized_state:
                     raise DAQ_ScanException('module ' + module.title + " is not initialized")
 
-            self.ui.enable_start_stop(True)
+            self.enable_start_stop(True)
             return True
 
         except Exception as e:
             logger.exception(str(e))
-            self.ui.enable_start_stop(False)
+            self.enable_start_stop(False)
 
     def set_metadata_about_current_scan(self):
         """
@@ -1109,12 +1095,12 @@ class DAQScan(CustomExt):
             --------
             set_scan
         """
-        self.ui.update_status('Starting acquisition')
+        self.update_status('Starting acquisition')
         #deactivate double_clicked
-        if self.ui.is_action_checked('move_at'):
-            self.ui.get_action('move_at').trigger()
+        if self.is_action_checked('move_at'):
+            self.get_action('move_at').trigger()
 
-        self._module_and_data_saver.h5saver = self.h5saver
+        self.module_and_data_saver.h5saver = self.h5saver
         res = self.set_scan()
         if res:
             # deactivate module controls using remote_control
@@ -1140,35 +1126,33 @@ class DAQScan(CustomExt):
             else:
                 scan_shape = self.scanner.get_scan_shape()
 
-            for det in self.modules_manager.detectors:
-                det._module_and_data_saver = (
-                    module_saving.DetectorExtendedSaver(det, scan_shape))
-            self._module_and_data_saver.h5saver = self.h5saver  # force the update as the h5saver will also be set on each detectors
+            self.module_and_data_saver.set_scan_shape(scan_shape)
+            self.module_and_data_saver.h5saver = self.h5saver
+            # force the update to all submodules and to take into consideration the scan shape
             self.module_and_data_saver.initialize_time_array(scan_shape)
 
-            if self.h5saver._swmr_mode:
+            if self.h5saver.swmr_mode:
                 interval = self.h5saver.settings['backend', 'swmr_options', 'flush_interval']
                 self.h5saver.set_swmr_flush_interval(interval)
 
             if self.scan_acquisition is None:
                 self.ini_scan_acquisition()
 
-            self.ui.set_action_enabled('ini_positions', False)
-            self.ui.set_action_enabled('start', False)
-            self.ui.set_action_enabled('pause', True)
-            self.ui.set_action_checked('pause', False)
-            self.ui.set_scan_done(False)
+            self.set_action_enabled('ini_positions', False)
+            self.set_action_enabled('start', False)
+            self.set_action_enabled('pause', True)
+            self.set_action_checked('pause', False)
+            self.status_manager.set_scan_done(False)
             if not self.settings['plot_options', 'plot_at_each_step']:
                 self.live_timer.start(self.settings['plot_options', 'refresh_live'])
             self.command_daq_signal.emit(utils.ThreadCommand('start_acquisition'))
-            self.ui.set_permanent_status('Running acquisition')
+            self.status_manager.set_permanent_status('Running acquisition')
             logger.info('Running acquisition')
 
     def ini_scan_acquisition(self):
-        self.scan_acquisition = DAQScanAcquisition(self.settings, self.scanner, self.modules_manager,
-                                                   )
+        self.scan_acquisition = DAQScanAcquisition(self)
         self.command_daq_signal[utils.ThreadCommand].connect(self.scan_acquisition.queue_command)
-        self.scan_acquisition.scan_data_tmp[ScanDataTemp].connect(self.save_temp_live_data)
+        self.scan_acquisition.scan_data_tmp[ScanData].connect(self.save_temp_live_data)
         self.scan_acquisition.status_sig[utils.ThreadCommand].connect(self.thread_status)
 
     def _init_live(self):
@@ -1217,7 +1201,7 @@ class DAQScan(CustomExt):
             --------
             set_ini_positions
         """
-        self.ui.set_permanent_status('Stoping acquisition')
+        self.status_manager.set_permanent_status('Stoping acquisition')
         self.command_daq_signal.emit(utils.ThreadCommand("stop_acquisition"))
 
         if self.settings['scan_options', 'go_to_ini_positions']:
@@ -1225,31 +1209,70 @@ class DAQScan(CustomExt):
         status = 'Data Acquisition has been stopped by user'
 
         self.update_status(status)
-        self.ui.set_permanent_status('')
+        self.status_manager.set_permanent_status('')
 
-        self.ui.set_action_enabled('ini_positions', True)
-        self.ui.set_action_enabled('start', True)
-        self.ui.set_action_enabled('pause', False)
-        self.ui.set_action_checked('pause', False)
+        self.set_action_enabled('ini_positions', True)
+        self.set_action_enabled('start', True)
+        self.set_action_enabled('pause', False)
+        self.set_action_checked('pause', False)
 
     def pause_scan(self):
         """Toggle pause on the running acquisition."""
-        paused = self.ui.is_action_checked('pause')
+        paused = self.is_action_checked('pause')
         self.command_daq_signal.emit(utils.ThreadCommand('pause_acquisition', attribute=paused))
         if paused:
-            self.ui.set_permanent_status('Acquisition paused')
+            self.status_manager.set_permanent_status('Acquisition paused')
         else:
-            self.ui.set_permanent_status('Running acquisition')
+            self.status_manager.set_permanent_status('Running acquisition')
 
     def do_scan(self, start_scan=True):
         """Public method to start the scan programmatically"""
         if start_scan:
-            if not self.ui.is_action_enabled('start'):
-                self.ui.get_action('set_scan').trigger()
+            if not self.is_action_enabled('start'):
+                self.get_action('set_scan').trigger()
                 QtWidgets.QApplication.processEvents()
-            self.ui.get_action('start').trigger()
+            self.get_action('start').trigger()
         else:
-            self.ui.get_action('stop').trigger()
+            self.get_action('stop').trigger()
+
+
+
+
+class SaverWorker(QtCore.QObject):
+    """ Worker in separated thread receiving the data from a DataGenerator
+    and adding them into the enlargeable arrays with the H5file using the
+     ScanModuleSaver """
+
+    n_saved = QtCore.Signal(int)
+    data_to_save_signal = QtCore.Signal(ScanData)
+    nav_axes_signal = QtCore.Signal(list)
+
+    def __init__(self, saver: module_saving.ScanSaver):
+        super().__init__()
+        self.saver: module_saving.ScanSaver  = saver
+        self._n_saved = 0
+        self._show_thread = True
+
+        self.data_to_save_signal.connect(self.save_data, QtCore.Qt.ConnectionType.QueuedConnection)
+        self.nav_axes_signal.connect(self.add_nav_axes, QtCore.Qt.ConnectionType.QueuedConnection)
+
+    @QtCore.Slot(ScanData)
+    def save_data(self, data: ScanData):
+        if self._show_thread:
+            print(f'Saving data in Qthread{self.thread()}')
+            self._show_thread = False
+        self.saver.add_data(data.dte, indexes=data.indexes, distribution=data.distribution,)
+        self.saver.add_time(data.indexes)
+        self._n_saved += 1
+        self.n_saved.emit(self._n_saved)
+
+    @QtCore.Slot(list)
+    def add_nav_axes(self, axes: list[Axis]):
+        if self._show_thread:
+            print(f'Saving data in Qthread{self.thread()}')
+            self._show_thread = False
+        self.saver.add_nav_axes(axes)
+
 
 
 class DAQScanAcquisition(QObject):
@@ -1259,13 +1282,13 @@ class DAQScanAcquisition(QObject):
         =========================== ========================================
 
     """
-    scan_data_tmp = Signal(ScanDataTemp)
+    scan_data_tmp = Signal(ScanData)
     status_sig = Signal(utils.ThreadCommand)
     h5_data_array_ready_signal = Signal()
     scan_step_failed_signal = Signal(ScanStepError)
+    _worker_done = QtCore.Signal()
 
-    def __init__(self, scan_settings: Parameter = None, scanner: Scanner = None,
-                 modules_manager: ModulesManager = None):
+    def __init__(self, daq_scan: DAQScan, parent=None):
 
         """
         DAQScanAcquisition deal with the acquisition part of daq_scan, that is transferring commands to modules,
@@ -1273,23 +1296,52 @@ class DAQScanAcquisition(QObject):
 
         """
 
-        super().__init__()
+        super().__init__(parent)
+        self.daq_scan = daq_scan
 
-        self.scan_settings = scan_settings
-        self.modules_manager = modules_manager
-        self.scanner = scanner
+        self.thread_manager = WorkerThreadManager(parent=self)
 
-        self.start_scan_flag = False  # To assert the scan start command has been set
-        self.stop_scan_flag: bool = False  # To assert the scan stop command has been set
-        self.pause_scan_flag: bool = False  # To assert the scan pause command has been set
+        self.saver_worker: SaverWorker = None
+        self._n_emitted = 0
+
+        self._running = False
         self.timeout_scan_flag = False  # for testing purpose in asserting timeout has been fired
 
-        self.Naverage = self.scan_settings['scan_options', 'scan_average']
+        self.Naverage = self.settings['scan_options', 'scan_average']
         self._ind_average: int = None
         self._ind_scan: int = None
 
         self._current_dte_to_be_plotted: DataToExport = None
         self._current_indexes: tuple[int] = None
+
+    @property
+    def is_running(self) -> bool:
+        return self._running
+
+    @property
+    def h5_manager(self) -> H5Manager:
+        """ Convenience property"""
+        return self.daq_scan.h5_manager
+
+    @property
+    def modules_manager(self) -> ModulesManager:
+        """ Convenience property"""
+        return self.daq_scan.modules_manager
+
+    @property
+    def scanner(self) -> Scanner:
+        """ Convenience property"""
+        return self.daq_scan.scanner
+    
+    @property
+    def settings(self) -> Parameter:
+        return self.daq_scan.settings
+
+    @property
+    def module_and_data_saver(self) -> module_saving.ScanSaver:
+        """ Convenience property"""
+        return self.daq_scan.module_and_data_saver
+
 
     def queue_command(self, command: utils.ThreadCommand):
         """Process the commands sent by the main ui
@@ -1299,28 +1351,65 @@ class DAQScanAcquisition(QObject):
         command: utils.ThreadCommand
         """
         if command.command == "start_acquisition":
-            self.start_scan_flag = True
-            self.set_ini_positions()
+            self.start()
 
         elif command.command == "stop_acquisition":
-            self.stop_scan_flag = True
-            if self.pause_scan_flag:
-                self.finalize_scan()
-            self.pause_scan_flag = False
+            self.stop(msg='User has stopped the acquisition')
 
         elif command.command == "pause_acquisition":
-            self.pause_scan_flag = command.attribute
-            if not self.stop_scan_flag:
-                self.modules_manager.enable_modules(self.pause_scan_flag)
-                self._on_scan_pausing(self.pause_scan_flag)
-                if not self.pause_scan_flag:
-                    self.advance()
+            self.pause(command.attribute)
 
         elif command.command == "move_stages":
             self.modules_manager.move_actuators(command.attribute, polling=False)
 
-        elif command.command == "data_saved":
-            self.h5_data_array_ready_signal.emit()
+    def start(self):
+        self._running = True
+        self._n_emitted = 0
+        self.set_ini_positions()
+
+    def pause(self, do_pause: bool = True):
+        if do_pause:
+            self._running = False
+        else:
+            self._running = True
+
+        self.modules_manager.enable_modules(do_pause)
+        self._on_scan_pausing(do_pause)
+        if not do_pause:
+            self.advance()
+
+    def stop(self, msg: str):
+        self._running = False
+
+
+        try: #1 immediately stop the emission of data to the saver worker
+            self.saver_worker.data_to_save_signal.disconnect(self.saver_worker.save_data)
+        except (TypeError, AttributeError):
+            pass
+
+        #2 disconnect all other signals
+        try:
+            self.scan_step_failed_signal.disconnect(self._on_scan_step_failed)
+        except (TypeError, AttributeError):
+            pass
+        try:
+            self.modules_manager.timeout_signal.disconnect(self.timeout)
+        except (TypeError, AttributeError):
+            pass
+        self.modules_manager.connect_actuators(False)
+        self.modules_manager.connect_detectors(False)
+        self.modules_manager.enable_modules(True)
+
+        #3 terminate the saver worker once its queue is empty
+        if self.settings['worker', 'worker_tasks'] == 0:
+            self.terminate_worker()
+        else:
+            self._worker_done.connect(self.terminate_worker)
+
+        #4 update the GUI
+        self.daq_scan.set_action_checked('pause', False)
+        self._update_status(msg)
+        self.status_sig.emit(utils.ThreadCommand("Scan_done"))
 
     def set_ini_positions(self):
         """ Set the actuators's positions to their initial value as defined in the scanner  """
@@ -1334,21 +1423,33 @@ class DAQScanAcquisition(QObject):
         self.modules_manager.forget_callback(self._on_ini_positions,
                                              module_type=ModuleType.Actuator,
                                              disconnect_modules=True)
-        if self.start_scan_flag:
+        if self._running:
             self.init_scan()
             self.advance()
 
     def init_scan(self):
         try:
+
+            self._running = True
+            print(f'Main Qthread: {self.thread()}')
+            try:
+                self._worker_done.disconnect(self.terminate_worker)
+            except TypeError:
+                pass
+
+            # managing saver worker
+            self.module_and_data_saver.h5saver = self.daq_scan.h5saver
+            self.saver_worker = SaverWorker(saver=self.module_and_data_saver,)
+            self.thread_manager.create_thread_for_worker('saver', self.saver_worker)
+            self.saver_worker.n_saved.connect(self.update_worker_ntask)
+            self.thread_manager.start_thread('saver')
+            self.settings['worker', 'worker_running'] = True
+
             self.modules_manager.connect_actuators(True)
             self.modules_manager.connect_detectors(True)
             self.modules_manager.timeout_signal.connect(self.timeout)
-            self.h5_data_array_ready_signal.connect(self._on_h5data_ready)
-            self.scan_step_failed_signal.connect(self._on_scan_step_failed)
 
-            self.stop_scan_flag = False
-            self.pause_scan_flag = False
-            self.timeout_scan_flag = False
+            self.scan_step_failed_signal.connect(self._on_scan_step_failed)
 
             self.modules_manager.enable_modules(False)
             self._update_status("Acquisition has started")
@@ -1359,6 +1460,39 @@ class DAQScanAcquisition(QObject):
             self.scan_step_failed_signal.emit(ScanStepError(f"Error at init step:\n"
                                                             f"{str(e)}"))
 
+    @QtCore.Slot(int)
+    def update_worker_ntask(self, n_saved: int):
+        n_tasks = self._n_emitted - n_saved
+        self.settings['worker', 'worker_tasks'] = n_tasks
+
+        if n_tasks == 0:
+            self._worker_done.emit()
+
+    def terminate_worker(self):
+        """ Will terminate/close/stops a few things when the worker is done working"""
+        # stopping the plotting before flushing/closing the file
+        #1 disconnecting the connection to here (fired once)
+        try:
+            self._worker_done.disconnect(self.terminate_worker)
+        except TypeError:
+            pass
+        try: #2 disconnect the data production from the saving
+            self.saver_worker.data_to_save_signal.disconnect(self.saver_worker.save_data)
+        except TypeError:
+            pass
+
+        #3 quit the thread managing the data saving (nothing left in the loop and no more connection)
+        self.thread_manager.exit_worker_thread('saver', delete_worker=True)
+
+        #4 flushing/closing the file to be able to create new groups...
+        self.module_and_data_saver.h5saver.flush()
+        self.module_and_data_saver.h5saver.close_file()
+        self.h5_manager.update_file_status_led()
+
+        #5 updating GUI info
+        self.daq_scan.enable_start_stop(True)
+        self.settings['worker', 'worker_running'] = False
+
     def _on_scan_pausing(self, pausing=True):
         if pausing:
             message = "Acquisition has been paused"
@@ -1366,18 +1500,14 @@ class DAQScanAcquisition(QObject):
             message = "Acquisition resumed"
 
         self._update_status(message)
-        logger.info(message)
 
     def advance(self):
         try:
-            if self.stop_scan_flag:
-                self.finalize_scan()
-
-            if self.pause_scan_flag:
+            if not self._running:
                 return
 
             if self._ind_average == self.Naverage-1 and self._ind_scan == self.scanner.n_steps-1:
-                self.finalize_scan()
+                self.stop('The acquisition has finished')
                 return
             elif self._ind_scan == self.scanner.n_steps-1:
                 self._ind_average += 1
@@ -1388,10 +1518,12 @@ class DAQScanAcquisition(QObject):
 
             positions = self.get_next_position()
 
-            self.modules_manager.move_actuators_with_callback(positions,
-                                                              mode=MoveType.ABS,
-                                                              callback=self._on_move_done,
-                                                              do_connect_modules=False)
+            self.modules_manager.move_actuators_with_callback(
+                positions,
+                mode=MoveType.ABS,
+                callback=self._on_move_done,
+                do_connect_modules=False)
+
         except Exception as e:
             self.scan_step_failed_signal.emit(ScanStepError(f"Error at advance step:\n"
                                                             f"ind_step: {self._ind_scan}:\n"
@@ -1418,7 +1550,7 @@ class DAQScanAcquisition(QObject):
                                                  disconnect_modules=False)
             self.modules_manager.order_positions(move_dte)
 
-            QTimer.singleShot(int(self.scan_settings['time_flow', 'wait_time_between']),
+            QTimer.singleShot(int(self.settings['time_flow', 'wait_time_between']),
                               self.grab_data)
         except Exception as e:
             self.scan_step_failed_signal.emit(ScanStepError(f"Error at move_done step:\n"
@@ -1459,9 +1591,10 @@ class DAQScanAcquisition(QObject):
         if self.Naverage > 1:
             self._current_indexes = [self._ind_average] + list(self._current_indexes)
         self._current_indexes = tuple(self._current_indexes)
+
         if self._ind_scan == 0:
             self._update_status("Creating the arrays nodes in the h5file, please be patient")
-            QThread.msleep(50)
+
             nav_axes = self.scanner.get_nav_axes()
             if self.Naverage > 1:
                 for nav_axis in nav_axes:
@@ -1469,30 +1602,37 @@ class DAQScanAcquisition(QObject):
                 nav_axes.append(Axis('Average',
                                      data=np.linspace(0, self.Naverage - 1, self.Naverage),
                                               index=0))
-            self.status_sig.emit(utils.ThreadCommand("add_nav_axes", nav_axes))
+            self.saver_worker.nav_axes_signal.emit(nav_axes)
 
         if self.scanner.scanner.do_process_data:
-            self._current_dte_to_be_plotted = self.scanner.scanner.process_data(dte_grabbed)
+            # extra data to be saved at the same time!
+            dte_grabbed.append(self.scanner.scanner.process_data(dte_grabbed))
         else:
-            full_names: list = self.scan_settings['plot_options', 'plot_0d']['selected'][:]
-            full_names.extend(self.scan_settings['plot_options', 'plot_1d']['selected'][:])
-            self._current_dte_to_be_plotted = dte_grabbed.get_data_from_full_names(full_names, deepcopy=False)
+            full_names: list = self.settings['plot_options', 'plot_0d']['selected'][:]
+            full_names.extend(self.settings['plot_options', 'plot_1d']['selected'][:])
+            self._current_dte_to_be_plotted = dte_grabbed.get_data_from_full_names(full_names, deepcopy=True)
             n_nav_axis_selection = 2-len(self._current_indexes) + 1 if self.Naverage > 1 else 2-len(self._current_indexes)
             self._current_dte_to_be_plotted = self._current_dte_to_be_plotted.get_data_with_naxes_lower_than(n_nav_axis_selection)  # maximum Data2D included nav indexes
 
-        # async saving command sent to all concerned detector control modules
-        self.status_sig.emit(
-            utils.ThreadCommand("add_data",
-                                dict(indexes=self._current_indexes, distribution=self.scanner.distribution,
-                                     ind_scan=self._ind_scan,
-                                     extra_data=self._current_dte_to_be_plotted if self.scanner.scanner.do_process_data else None,)))
+        #filtering the data to be saved:
 
-    def _on_h5data_ready(self):
-        self.scan_data_tmp.emit(ScanDataTemp(self._ind_scan,
-                                             self._current_indexes,
-                                             self._current_dte_to_be_plotted))
 
-        QTimer.singleShot(int(self.scan_settings['time_flow', 'wait_time']),
+        self.saver_worker.data_to_save_signal.emit(
+            ScanData(
+                indexes=list(self._current_indexes),
+                distribution=self.scanner.distribution,
+                scan_index=self._ind_scan,
+                dte=dte_grabbed,))
+        self._n_emitted += 1
+
+        self.scan_data_tmp.emit(
+            ScanData(dte=self._current_dte_to_be_plotted,
+                     scan_index=self._ind_scan,
+                     indexes=list(self._current_indexes),
+                     distribution=self.scanner.distribution,
+                     ))
+
+        QTimer.singleShot(int(self.settings['time_flow', 'wait_time']),
                           self._on_scan_step_done)
 
     def _on_scan_step_done(self):
@@ -1521,8 +1661,8 @@ class DAQScanAcquisition(QObject):
         self.timeout_scan_flag = True
         self.status_sig.emit(utils.ThreadCommand("Timeout", attribute=msg))
         logger.warning(msg)
-        if self.scan_settings['scan_options', 'stop_on_timeout']:
-            self.finalize_scan()
+        if self.settings['scan_options', 'stop_on_timeout']:
+            self.stop(msg=f'Scan stopped due to a Timeout')
         else:
             self.advance()
 
@@ -1531,24 +1671,10 @@ class DAQScanAcquisition(QObject):
         self.status_sig.emit(utils.ThreadCommand("Update_Status", attribute=msg))
         logger.info(msg)
 
-    def finalize_scan(self):
-        self.h5_data_array_ready_signal.disconnect(self._on_h5data_ready)
-        self.scan_step_failed_signal.disconnect(self._on_scan_step_failed)
-
-        self.modules_manager.timeout_signal.disconnect(self.timeout)
-        self.modules_manager.connect_actuators(False)
-        self.modules_manager.connect_detectors(False)
-        self.modules_manager.enable_modules(True)
-
-        self.stop_scan_flag = True
-
-        self._update_status("Acquisition has finished")
-        self.status_sig.emit(utils.ThreadCommand("Scan_done"))
-
     def _on_scan_step_failed(self, exception: ScanStepError):
         logger.warning(exception)
         self.status_sig.emit(utils.ThreadCommand("Scan_done"))
-        self.finalize_scan()
+        self.stop(msg=f'Scan stopped due to a failure during a step')
 
 
 def main():

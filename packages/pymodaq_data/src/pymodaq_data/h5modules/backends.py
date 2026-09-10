@@ -575,6 +575,11 @@ class H5Backend:
         self._swmr_enabled = False
         self.set_backend(backend)
 
+    @property
+    def swmr_mode(self) -> bool:
+        return self._swmr_mode
+
+
     def set_backend(self, backend: str):
         """Switch the active backend, closing any open file first.
 

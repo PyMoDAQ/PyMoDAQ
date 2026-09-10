@@ -1,4 +1,6 @@
 import abc
+import dataclasses
+
 from pymodaq.control_modules.move_utility_classes import HW_SETTINGS_KEY as ACTUATOR_SETTINGS_KEY
 from typing import List,  Optional
 import tempfile
@@ -125,11 +127,16 @@ class DataToActuatorsOpti(DataToActuators):
         return f'{super().__repr__()} iter:{self.ind_iter}'
 
 
+@dataclasses.dataclass
+class DataToSave:
+    dta: DataToActuatorsOpti
+    dte: DataToExport
+
 
 class OptimizationRunner(QtCore.QObject):
     algo_live_plot_signal = QtCore.Signal(DataToExport)
     algo_finished = QtCore.Signal(DataToExport)
-    saver_signal = QtCore.Signal(DataToActuatorsOpti)
+    saver_signal = QtCore.Signal(DataToSave)
 
     runner_command = QtCore.Signal(utils.ThreadCommand)
 
@@ -240,10 +247,12 @@ class OptimizationRunner(QtCore.QObject):
                 self.algo_live_plot_signal.emit(dte_algo)
 
                 
-                self.saver_signal.emit(DataToActuatorsOpti(DataNames.Actuators,
+                self.saver_signal.emit(
+                    DataToSave(dta=DataToActuatorsOpti(DataNames.Actuators,
                                                            data=self.output_to_actuators.deepcopy().data,
                                                            mode=self.output_to_actuators.mode,
-                                                           ind_iter=self._ind_iter))
+                                                           ind_iter=self._ind_iter),
+                               dte=self.det_done_datas))
 
                 self.optimization_algorithm.update_prediction_function()
                 self.runner_command.emit(
@@ -372,10 +381,10 @@ class GenericOptimization(CustomExt):
     def close_file(self):
         self.h5saver.close_file()
 
-    def add_data(self, dta: DataToActuatorsOpti):
+    def add_data(self, data: DataToSave):
         if self.is_action_checked(OptimizerAction.SAVE):
-            self.module_and_data_saver.add_data(axis_values=[dwa[0] for dwa in dta],
-                                                init_step=dta.ind_iter == 0)
+            self.module_and_data_saver.add_data(axis_values=[dwa[0] for dwa in data.dta],
+                                                dte=data.dte,)
 
     @abc.abstractmethod
     def validate_config(self) -> bool:
@@ -613,11 +622,11 @@ class GenericOptimization(CustomExt):
         self.modules_manager.connect_actuators(False)
 
 
-    def quit_fun(self):
+    def quit_fun(self) -> bool:
         self.clean_h5_temp()
 
         self.close_file()
-        super().quit_fun()
+        return super().quit_fun()
 
     def set_model(self):
         model_name = self.settings.child('models', 'model_class').value()

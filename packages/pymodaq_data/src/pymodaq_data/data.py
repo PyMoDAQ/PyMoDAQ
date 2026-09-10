@@ -961,8 +961,12 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
         if isinstance(epsilon, numbers.Number):
             epsilon = Q_(epsilon, self.units)
         try:
+            # using below epsilon - Q_(0, self.units) to handle units with offset/scaling like
+            # °C and °F where the diff produce a derived unit (delta_degree_Celsius) that do
+            # not compare well to epsilon itself. While epsilon - Q_(0, self.units) is not changing
+            # the value but produce similar delta units!
             return bool(np.all([np.abs(self.quantities[ind] - other.quantities[ind])
-                                <= epsilon for ind in range(len(self))]))
+                                <= (epsilon - Q_(0, self.units)) for ind in range(len(self))]))
         except pint.errors.DimensionalityError as e:
             return False
 
@@ -3759,8 +3763,15 @@ class DataToExport(DataLowLevel, SerializableBase):
         data, _ = find_objects_in_list_from_attr_name_val(self.data, 'name', name, return_first=True)
         return data
 
-    def get_data_from_names(self, names: List[str]) -> DataToExport:
+    def get_data_from_names(self, names: List[str] | str) -> DataToExport:
+        if isinstance(names, str):
+            names = [names]
         return DataToExport(self.name, data=[dwa for dwa in self if dwa.name in names])
+
+    def get_data_from_origins(self, origins: list[str] | str) -> DataToExport:
+        if isinstance(origins, str):
+            origins = [origins]
+        return DataToExport(self.name, data=[dwa for dwa in self if dwa.origin in origins])
 
     def get_data_from_name_origin(self, name: str, origin: str = '') -> DataWithAxes:
         """Get the data matching the given name and the given origin"""
@@ -3783,9 +3794,8 @@ class DataToExport(DataLowLevel, SerializableBase):
                 return ind
         raise ValueError
 
-    def index_from_name_origin(self, name: str, origin: str = '') -> List[DataWithAxes]:
+    def index_from_name_origin(self, name: str, origin: str = '') -> int:
         """Get the index of a given DataWithAxes within the list of data"""
-        """Get the data matching the given name and the given origin"""
         if origin == '':
             _, index = find_objects_in_list_from_attr_name_val(self.data, 'name', name, return_first=True)
         else:

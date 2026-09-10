@@ -12,7 +12,8 @@ from .pid.utils import get_models
 
 
 from .scan.daq_scan import DAQScan
-from .daq_logger.daq_logger import DAQ_Logger
+from .daq_logger.daq_logger import DAQLogger
+from .daq_logger.daq_logger_legacy import DAQ_Logger
 from .pid.pid_controller import DAQ_PID
 
 from .bayesian.bayesian_optimization import BayesianOptimization
@@ -27,6 +28,7 @@ from .console import Console
 class ExtensionEnum(StrEnum):
     SCANNER = 'Scanner'
     LOGGER = 'Logger'
+    LOGGER_LEGACY = 'LoggerLegacy'
     PID = 'PID'
     BAYESIAN = 'Bayesian'
     ADAPTIVE = 'Adaptive'
@@ -36,7 +38,8 @@ class ExtensionEnum(StrEnum):
 
 internal_extensions = {
     ExtensionEnum.SCANNER.value: DAQScan,
-    ExtensionEnum.LOGGER.value: DAQ_Logger,
+    ExtensionEnum.LOGGER.value: DAQLogger,
+    ExtensionEnum.LOGGER_LEGACY.value: DAQ_Logger,
     ExtensionEnum.PID.value: DAQ_PID,
     ExtensionEnum.BAYESIAN.value: BayesianOptimization,
     ExtensionEnum.ADAPTIVE.value: AdaptiveOptimisation,

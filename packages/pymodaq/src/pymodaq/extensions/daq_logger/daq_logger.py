@@ -9,12 +9,17 @@ Contains all objects related to the DAQScan module, to do automated scans, savin
 from collections import OrderedDict
 from typing import TYPE_CHECKING, Union
 
+from pymodaq.control_modules.daq_viewer_ui.ui_base import ActionIconNames
+from pymodaq.utils.h5modules.module_saving import LoggerSaver
+from pymodaq_gui.managers.runner_thread_manager import WorkerThreadManager
+from pymodaq_gui.messenger import messagebox
+
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_gui.utils.dock import Dock, DockArea
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_gui.parameter import ioxml
 
-from qtpy import QtWidgets
+from qtpy import QtWidgets, QtCore
 from qtpy.QtCore import QObject, Slot, QThread, Signal, Qt
 
 from pymodaq_gui.utils.widgets import QLED
@@ -24,6 +29,9 @@ from pymodaq.extensions.daq_logger.h5logging import H5Logger
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 from pymodaq.utils.data import DataActuator, DataToExport
 from pymodaq.utils.custom_ext import CustomExt
+from pymodaq_gui.utils.enums import MenuToolbarNames
+
+from pymodaq_gui.utils.widgets import QSpinBox_ro
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -33,78 +41,110 @@ config = Config()
 logger = set_logger(get_module_name(__file__))
 
 
-try:
-    import sqlalchemy
-    from pymodaq.extensions.daq_logger.db.db_logger import DataBaseLogger
-    is_sql = True
-except Exception as e:
-    is_sql = False
-    logger.info('To enable logging to database install: sqalchemy and sqlalchemy_utils packages as'
-                ' well as the backend for your specific database, for instance psycopg2 for'
-                ' PostGreSQL database')
+class LoggerStatusBarManager:
+    def __init__(self, logger: 'DAQLogger'):
+        self.logger = logger
 
-LOG_TYPES = ['None', 'H5 File']
-if is_sql:
-    LOG_TYPES.append('SQL DataBase')
+        self._start_log_time: QtWidgets.QDateTimeEdit = None
+        self._logging_state: QLED = None
+        self._n_saved_sb: QSpinBox_ro = None
+
+    @property
+    def log_time(self) -> QtCore.QDateTime:
+        return self._start_log_time.dateTime()
+
+    @log_time.setter
+    def log_time(self, date_time: QtCore.QDateTime):
+        self._start_log_time.setDateTime(date_time)
+
+    @property
+    def is_logging(self) -> bool:
+        return self._logging_state.get_state()
+
+    @is_logging.setter
+    def is_logging(self, is_logging: bool):
+        self._logging_state.set_as(is_logging)
+
+    @property
+    def n_saved(self) -> bool:
+        return self._n_saved_sb.value()
+
+    @n_saved.setter
+    def n_saved(self, n_saved: bool):
+        self._n_saved_sb.setValue(n_saved)
+
+    @property
+    def statusbar(self):
+        return self.logger.statusbar
+
+    def set_permanent_status(self, status: str):
+        self.logger.set_permanent_status(status)
+
+    def create_permanent_widgets(self):
+        self._start_log_time = QtWidgets.QDateTimeEdit()
+        self._start_log_time.setReadOnly(True)
+        self._start_log_time.setToolTip('Logging started at:')
+        self.statusbar.addPermanentWidget(self._start_log_time)
+
+        self._logging_state = QLED()
+        self._logging_state.setToolTip('logging status: green (running), red (idle)')
+        self._logging_state.clickable = False
+        self.statusbar.addPermanentWidget(self._logging_state)
+
+        self._n_saved_sb = QSpinBox_ro()
+        self._n_saved_sb.setToolTip('Total number of saved data')
+        self.statusbar.addPermanentWidget(self._n_saved_sb)
 
 
-class DAQ_Logger(CustomExt):
+class DAQLogger(CustomExt):
     """
     Main class initializing a DAQ_Logger module
     """
-    command_DAQ_signal = Signal(list)
-
+    show_h5file_statusbar_widgets = True
+    icon_name = ''
     params = [
-        {'title': 'Log Type:', 'name': 'log_type', 'type': 'str', 'value': '', 'readonly': True},
+        {'title': 'Worker:', 'name': 'worker', 'type': 'group', 'children': [
+            {'title': 'Worker Running:', 'name': 'worker_running', 'type': 'led', 'value': False, 'readonly': True},
+            {'title': 'Worker tasks:', 'name': 'worker_tasks', 'type': 'int', 'value': 0, 'readonly': True},
+        ]},
     ]
 
-    def __init__(self, dockarea: DockArea = None, dashboard: 'DashBoard' = None):
+    def __init__(self, dockarea: DockArea = None,
+                 dashboard: 'DashBoard' = None,
+                 ):
+        """
         """
 
-        Parameters
-        ----------
-        dockarea: DockArea
-            instance of the modified pyqtgraph Dockarea
-        dashboard: DashBoard
-            instance of the pymodaq dashboard
-        """
+        super().__init__(dockarea,
+                         dashboard,
+                         add_toolbar_break=False)
 
-        super().__init__(dockarea, dashboard, add_toolbar_break=False)
+        self.status_manager = LoggerStatusBarManager(self)
+        self._module_and_data_saver = LoggerSaver(self)
+        self.logging = Logging(self)
 
-        self.wait_time = 1000
-        self.logger: Union[H5Logger, DataBaseLogger] = None
         self.setup_ui()
 
-    def setup_actions(self):
-        '''
-        subclass method from ActionManager
-        '''
-        logger.debug('setting actions')
-        self.add_action('start', 'Start Logging', 'timer', "Start the logging",
-                        checkable=True, toolbar=self.toolbar,
-                        icon_color=self.get_theme().green)
-        self.add_action('stop', 'Stop', 'timer_off', 'Stop/pause logging',
-                        checkable=False, toolbar=self.toolbar,
-                        icon_color=self.get_theme().red)
+    def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: bool = None):
+        self.enable_start_stop(True)
+        super().do_things_after_experiment_set(experiment_name, show_dashboard)
 
-        log_type_combo = QtWidgets.QComboBox()
-        log_type_combo.addItems(LOG_TYPES)
-        log_type_combo.currentTextChanged.connect(self.set_log_type)
-        self._actions['log_type'] = self.toolbar.addWidget(log_type_combo)
-        self.toolbar.addSeparator()
-        self.add_action('grab_all', 'Grab All', 'run_all', "Grab all selected detectors's data and actuators's value",
-                        checkable=False, toolbar=self.toolbar)
-        self.add_action('stop_all', 'Stop All', 'stop_all', "Stop all selected detectors and actuators",
-                        checkable=False, toolbar=self.toolbar)
-        self.set_action_enabled('start', False)
-        self.set_action_enabled('stop', False)
+    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
+        """
+        """
+        self.add_toolbar(MenuToolbarNames.FILE, MenuToolbarNames.FILE.capitalize(), self.mainwindow,
+                         toolbar=self.h5_manager.toolbar, add_break=False)
+        self.add_menu(MenuToolbarNames.FILE, MenuToolbarNames.FILE.capitalize(), parent_menu=menubar)
+        self.add_menu(MenuToolbarNames.TOOLS, MenuToolbarNames.TOOLS.capitalize(), parent_menu=menubar)
+        self.add_menu('actions', 'Actions', parent_menu=menubar)
 
-        logger.debug('actions set')
+
+        self.create_dashboard_toolbar(add_break=False)
 
     def setup_docks_and_widgets(self):
         logger.debug('setting docks')
         self.docks['detectors'] = Dock("Detectors")
-        splitter = QtWidgets.QSplitter(Qt.Vertical)
+        splitter = QtWidgets.QSplitter(Qt.Orientation.Vertical)
         self.docks['detectors'].addWidget(splitter)
         splitter.addWidget(self.settings_tree)
         splitter.addWidget(self.modules_manager.settings_tree)
@@ -112,56 +152,64 @@ class DAQ_Logger(CustomExt):
 
         self.docks['logger_settings'] = Dock("Logger Settings")
         self.dockarea.addDock(self.docks['logger_settings'], 'right', self.docks['detectors'])
+        self.docks['logger_settings'].setVisible(False)
+        self.docks['logger_settings'].addWidget(self.settings_tree)
+        self.docks['logger_settings'].addWidget(self.h5_manager.h5saver.settings_tree)
 
-        self.statusbar.setMaximumHeight(25)
-        self.status_widget = QtWidgets.QLabel('Initializing')
-        self.statusbar.addPermanentWidget(self.status_widget)
+        self.populate_status_bar()
 
-        self.start_log_time = QtWidgets.QDateTimeEdit()
-        self.start_log_time.setReadOnly(True)
-        self.start_log_time.setToolTip('Logging started at:')
-        self.statusbar.addPermanentWidget(self.start_log_time)
+    def populate_status_bar(self):
+        super().populate_status_bar()
+        self.status_manager.create_permanent_widgets()
+        self.status_manager.set_permanent_status('Initializing')
 
-        self.logging_state = QLED()
-        self.logging_state.setToolTip('logging status: green (running), red (idle)')
-        self.logging_state.clickable = False
-        self.statusbar.addPermanentWidget(self.logging_state)
+    def setup_actions(self):
+        '''
+        subclass method from ActionManager
+        '''
+        logger.debug('setting actions')
+        self.add_action('start', 'Start Logging', 'motion_play', "Start the Logging",
+                        menu='actions', icon_color=self.get_theme().green)
+        self.add_action('stop', 'Stop Logging', 'stop_circle', "Stop the Logging",
+                        menu='actions', icon_color=self.get_theme().red)
+        self.add_action('pause', 'Pause Logging', 'pause_circle', "Pause/resume the Logging",
+                        checkable=True, menu='actions',
+                        icon_checked_color=self.get_theme().orange)
+        self.add_action('settings', 'Show Logging Settings', 'settings', menu='actions',
+                        checkable=True, icon_checked_color=self.get_theme().green)
+
+        self.toolbar.addSeparator()
+        self.add_action('grab_all', 'Grab All', ActionIconNames.GRAB,
+                        "Grab/Stop all selected detectors's data and actuators's value",
+                        checkable=True,
+                        icon_checked=ActionIconNames.GRAB_STOP,
+                        icon_checked_color=self.get_theme().green)
+        logger.debug('actions set')
+
+        self.enable_start_stop(False)
+
+    def enable_start_stop(self, enable=True):
+        """If True enable main buttons to launch/stop scan"""
+        self.set_action_enabled('start', enable)
+        self.set_action_enabled('stop', enable)
+        self.set_action_enabled('pause', enable)
+        if enable:
+            self.set_action_checked('pause', False)
 
     def connect_things(self):
         self.status_signal[str].connect(self.dashboard.add_status)
 
-        self.connect_action('start', self.start_logging)
-        self.connect_action('stop', self.stop_logging)
-        self.connect_action('grab_all', self.start_all)
-        self.connect_action('stop_all', self.stop_all)
+        self.connect_action('start', self.logging.start_logging)
+        self.connect_action('pause', self.logging.pause_logging)
+        self.connect_action('stop', lambda: self.logging.stop_logging('Logging Stopped by the User'))
+        self.connect_action('grab_all', self.start_stop_all)
 
-    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
-        """
-        """
-        self.create_dashboard_toolbar(add_break=False)
+        self.connect_action('settings', self.show_dock_settings)
 
-    def value_changed(self, param):
-        if param.name() == 'log_type':
-            if param.value() != 'None':
-                self.set_action_enabled('start', True)
-                self.set_action_enabled('stop', True)
-                self.set_logger(param.value())
+    def show_dock_settings(self, show: bool = True):
+        self.docks['logger_settings'].setVisible(show)
 
-    def set_logger(self, logger_interface):
-        if self.logger is not None:
-            self.logger.close()
-            self.docks['logger_settings'].removeWidgets()
-
-        if logger_interface == 'H5 File':
-            self.logger = H5Logger(self.modules_manager)
-        elif logger_interface == 'SQL DataBase':
-            self.logger = DataBaseLogger(self.dashboard.experiment_file.stem)
-        else:
-            return
-
-        self.docks['logger_settings'].addWidget(self.logger.settings_tree)
-
-    def quit_fun(self):
+    def quit_fun(self) -> bool:
         """
             Quit the current instance of DAQ_scan and close on cascade move and detector modules.
 
@@ -169,326 +217,246 @@ class DAQ_Logger(CustomExt):
             --------
             quit_fun
         """
-        try:
-            self.logger.close()
-        except Exception as e:
-            logger.exception(str(e))
-
-        super().quit_fun()
-
-    def set_continuous_save(self):
-        """
-            Set a continous save file using the base path located file with
-            a header-name containing date as a string.
-
-            See Also
-            --------
-            daq_utils.set_current_scan_path
-        """
-        if self.logger is not None:
-            self.do_continuous_save = True
-            self.logger.settings.child('N_saved').show()
-            self.logger.settings.child('N_saved').setValue(0)
-
-            settings_str = b'<All_settings>'
-            settings_str += ioxml.parameter_to_xml_string(self.dashboard.settings)
-            # if self.dashboard.settings.child('loaded_files', 'roi_file').value() != '':
-            #     settings_str += ioxml.parameter_to_xml_string(
-            #         self.dashboard.roi_saver.roi_presets)
-            settings_str += ioxml.parameter_to_xml_string(self.settings)
-            settings_str += ioxml.parameter_to_xml_string(self.logger.settings)
-            settings_str += b'</All_settings>'
-
-            if not self.logger.init_logger(settings_str):
-                return False
-            logger.addHandler(self.logger.get_handler())
-            return True
-        else:
+        if self.logging.is_running:
+            messagebox(title='Running',
+                       text='The Logging is running, first stop it')
+            return False
+        elif self.settings['worker', 'worker_tasks'] > 0:
+            messagebox(title='Running',
+                       text='The Saver is finishing the savings')
+            self.logging.stop_logging("User prompted a quit of the Application,"
+                                      " Stopping the Logging")
             return False
 
-    def set_logging(self):
-        """
+        self.h5_manager.close_file()
+        return super().quit_fun()
 
-        """
-        status = self.set_continuous_save()
-        if status:
-            modules_log = self.modules_manager.detectors_all + self.modules_manager.actuators_all
-            if modules_log != []:
-                # check if the modules are initialized
-                for module in modules_log:
-                    if not module.initialized_state:
-                        logger.error(f'module {module.title} is not initialized')
-                        return False
-
-                # create the detectors in the chosen logger
-                for mod in modules_log:
-                    settings_str = b'<All_settings>'
-                    settings_str += ioxml.parameter_to_xml_string(mod.settings)
-
-                    if mod.module_type == 'DAQ_Viewer':
-                        for viewer in mod.ui.viewers:
-                            if hasattr(viewer, 'roi_manager'):
-                                settings_str += ioxml.parameter_to_xml_string(
-                                    viewer.roi_manager.settings)
-                    settings_str += b'</All_settings>'
-                    if mod.module_type == 'DAQ_Viewer':
-                        self.logger.add_detector(mod.title, settings_str)
-                    elif mod.module_type == 'DAQ_Move':
-                        self.logger.add_actuator(mod.title, settings_str)
-
-                self._actions['start'].setEnabled(True)
-                self._actions['stop'].setEnabled(True)
-                return True
-            else:
-                self.update_status('Cannot start logging... No detectors selected')
-                self._actions['start'].setEnabled(False)
-                self._actions['stop'].setEnabled(True)
-                return False
-
-        else:
-            self.update_status('Cannot start logging... check connections')
-            self._actions['start'].setEnabled(False)
-            self._actions['stop'].setEnabled(True)
-            return False
-
-    def start_all(self):
+    def start_stop_all(self, start=True):
         for det in self.modules_manager.detectors:
-            det.grab()
+            det.grab() if start else det.stop_grab()
         for act in self.modules_manager.actuators:
-            act.grab()
+            act.grab() if start else act.stop_grab()
 
-    def stop_all(self):
-        for det in self.modules_manager.detectors:
-            det.stop_grab()
-        for act in self.modules_manager.actuators:
-            act.stop_grab()
 
-    def stop(self):
-        """ Programmatic method to stop action in the extension
+    @property
+    def module_and_data_saver(self) -> LoggerSaver:
+        return super().module_and_data_saver
 
-        Irrelevant for the DAQLogger as it doesn't do anything on the control modules
 
-        """
-        pass
 
-    def set_log_type(self, log_type):
-        self.settings.child('log_type').setValue(log_type)
+class SaverWorker(QtCore.QObject):
+    """ Worker in separated thread receiving the data from a DataGenerator
+    and adding them into the enlargeable arrays with the H5file using the
+     LoggerModuleSaver """
+
+    n_saved = QtCore.Signal(int)
+    data_to_save_signal = QtCore.Signal(DataToExport)
+
+
+    def __init__(self, saver: LoggerSaver, parent=None):
+        super().__init__(parent)
+        self.saver = saver
+        self._n_saved = 0
+        self._show_thread = True
+
+        self.data_to_save_signal.connect(self.save_data, QtCore.Qt.ConnectionType.QueuedConnection)
+
+    @QtCore.Slot(DataToExport)
+    def save_data(self, dte: DataToExport):
+        if self._show_thread:
+            print(f'Saving data in Qthread{self.thread()}')
+            self._show_thread = False
+        self.saver.add_data(dte,)
+        self._n_saved += 1
+        self.n_saved.emit(self._n_saved)
+
+
+class Logging(QObject):
+    _worker_done = QtCore.Signal()
+
+    def __init__(self, logger: DAQLogger, parent=None):
+        super().__init__(parent)
+        self.logger = logger
+        self.thread_manager = WorkerThreadManager(parent=self)
+        self.logger.modules_manager.actuators_changed.connect(self.update_connections)
+        self.logger.modules_manager.detectors_changed.connect(self.update_connections)
+
+        self.saver_worker: SaverWorker = None
+        self._n_emitted = 0
+
+    @property
+    def saver(self) -> LoggerSaver:
+        return self.logger.module_and_data_saver
+
+    @property
+    def is_running(self) -> bool:
+        return self.logger.status_manager.is_logging
+
+    @is_running.setter
+    def is_running(self, value: bool):
+        self.logger.status_manager.is_logging = value
+
+    @property
+    def n_saved(self) -> int:
+        return self.logger.status_manager.n_saved
+
+    @n_saved.setter
+    def n_saved(self, value: int):
+        self.logger.status_manager.n_saved = value
+
+    @property
+    def modules_manager(self) -> ModulesManager:
+        """ Convenience property"""
+        return self.logger.modules_manager
+
+    def _update_status(self, msg: str):
+        """ convenience method to update the status signal """
+        self.logger.update_status(msg)
+        logger.info(msg)
 
     def start_logging(self):
         """
             Start a logging.
         """
-        self.status_widget.setText('Starting logging')
+        self._update_status('Initializing')
+        self._init_logging()
 
-        self.overshoot = False
-        res = self.set_logging()
+        self.logger.set_action_enabled('start', False)
+        self.logger.status_manager.log_time = QtCore.QDateTime.currentDateTime()
+        self.logger.status_manager.set_permanent_status('Starting logging')
+        self.is_running = True
 
-        # mandatory to deal with multithreads
-        if self.runner_thread is not None:
-            self.command_DAQ_signal.disconnect()
-            self.exit_runner_thread()
-            self.runner_thread = None
+        self._connect_control_modules()
+        self._n_emitted = 0
+        self.n_saved = 0
 
-        self.runner_thread = QThread()
+    def update_connections(self):
+        self._disconnect_control_modules()
+        self._connect_control_modules()
 
-        log_acquisition = DAQ_Logging(self.settings, self.logger, self.modules_manager)
+    def _connect_control_modules(self):
+        """ Connect only the selected control modules"""
+        for detector in self.logger.modules_manager.detectors:
+            detector.grab_done_signal.connect(self.save_detector)
+        for actuator in self.logger.modules_manager.actuators:
+            actuator.current_value_signal.connect(self.format_and_save_actuator)
 
-        log_acquisition.moveToThread(self.runner_thread)
+    def _disconnect_control_modules(self):
+        """ Disconnect all the Control Modules """
+        for detector in self.logger.modules_manager.detectors_all:
+            # disconnect all in case one changed the list of logged modules
+            try:
+                detector.grab_done_signal.disconnect(self.save_detector)
+            except TypeError:
+                pass
+        for actuator in self.logger.modules_manager.actuators:
+            try:
+                actuator.move_done_signal.disconnect(self.format_and_save_actuator)
+            except TypeError:
+                pass
 
-        self.command_DAQ_signal[list].connect(log_acquisition.queue_command)
-        log_acquisition.status_sig[list].connect(self.thread_status)
+    def save_detector(self, dte: DataToExport):
+        self._n_emitted += 1
+        self.n_saved += 1
+        self.saver_worker.data_to_save_signal.emit(dte)
 
-        self.runner_thread.log_acquisition = log_acquisition
-        self.runner_thread.start()
+    def format_and_save_actuator(self, dwa: DataActuator):
+        self._n_emitted += 1
+        self.n_saved += 1
+        self.saver_worker.data_to_save_signal.emit(DataToExport(name=dwa.name,
+                                                                data=[dwa]))
 
-        self._actions['start'].setEnabled(False)
-        QtWidgets.QApplication.processEvents()
-        self.logging_state.set_as_false()
-
-        self.command_DAQ_signal.emit(["start_logging"])
-        self.status_widget.setText('Running acquisition')
-
-    def stop_logging(self):
-        """
-            Emit the command_DAQ signal "stop_acquisiion".
-
-            See Also
-            --------
-            set_ini_positions
-        """
-        preset_items_det = self.modules_manager.detectors
-        for det in preset_items_det:
-            det.stop()
-        self.command_DAQ_signal.emit(["stop_acquisition"])
-
-        status = 'Data Logging has been stopped'
-
-        self.update_status(status)
-        self._actions['start'].setEnabled(True)
-
-    @Slot(list)
-    def thread_status(self, status):  # general function to get datas/infos from all threads back to the main
-        """
-            | General function to get datas/infos from all threads back to the main.
-            |
-
-            Switch the status with :
-                * *"Update status"* : Update the status bar with the status attribute txt message
-                * *"Update_scan_index"* : Set the value of the User Interface - indice_scan_sb attribute.
-                * *"Scan_done"* : Save the scan and init the positions
-                * *"Timeout"* : Set the "Timeout occured" in the User Interface-log message
-
-            See Also
-            --------
-            update_status, save_scan, set_ini_positions
-        """
-        if status[0] == "Update_Status":
-            self.update_status(status[1], wait_time=self.wait_time)
-
-        elif status[0] == "Timeout":
-            self.status_widget.setText('Timeout occurred')
-
-    def update_status(self, txt, wait_time=0):
-        """
-            Show the txt message in the status bar with a delay of wait_time ms.
-
-            =============== =========== =======================
-            **Parameters**    **Type**    **Description**
-            *txt*             string      The message to show
-            *wait_time*       int         the delay of showing
-            *log_type*        string      the type of the log
-            =============== =========== =======================
-        """
+    def _init_logging(self):
         try:
-            self.statusbar.showMessage(txt, wait_time)
-            logger.info(txt)
-        except Exception as e:
-            logger.exception(str(e))
-
-
-class DAQ_Logging(QObject):
-    """
-
-    """
-
-    scan_data_tmp = Signal(OrderedDict)
-    status_sig = Signal(list)
-
-    def __init__(self, settings=None, logger=None, modules_manager: ModulesManager = None):
-
-        """
-            DAQ_Logging deal with the acquisition part of daq_logger.
-
-            See Also
-            --------
-            custom_tree.parameter_to_xml_string
-        """
-        
-        super().__init__()
-
-        self.stop_logging_flag = False
-        self.settings = settings
-        self.ini_time = 0
-        self.ind_log = 0
-        self.modules_manager: ModulesManager = modules_manager
-        self.modules_manager.detectors_changed.connect(self.update_connect_detectors)
-        self.modules_manager.actuators_changed.connect(self.update_connect_actuators)
-        self.data_logger = logger
-
-    @Slot(list)
-    def queue_command(self, command):
-        """
-            Treat the queue of commands from the current command to act, between :
-                * *start_logging*
-                * *stop_acquisition*
-                * *set_ini_position*
-                * *move_stages*
-
-            =============== ============== =========================
-            **Parameters**    **Type**      **Description**
-            command           string list   the command string list
-            =============== ============== =========================
-
-            See Also
-            --------
-            start_logging, set_ini_positions, move_stages
-        """
-        if command[0] == "start_logging":
-            self.start_logging()
-
-        elif command[0] == "stop_acquisition":
-            self.stop_scan_flag = True
-            self.stop_logging()
-
-    def do_save_continuous(self, data):
-        """
-
-        """
-        try:
-            self.data_logger.add_data(data)
-        except Exception as e:
-            logger.exception(str(e))
-
-    def format_actuators_data(self, data_act: DataActuator):
-        data = DataToExport(name=data_act.name, data=[data_act])
-        self.do_save_continuous(data)
-
-    def connect_actuators(self, connect=True):
-        """Connect actuators to DAQ_Logging do_save_continuous method
-
-        Parameters
-        ----------
-        connect: bool
-            If True make the connection else disconnect
-        """
-        self.modules_manager.connect_actuators(connect=connect, slot=self.format_actuators_data, signal='current_value')
-
-    def update_connect_actuators(self):
-        try:
-            self.connect_actuators(False)
-        except:
+            self._worker_done.disconnect(self.terminate_worker)
+        except TypeError:
             pass
-        self.connect_actuators()
+        self.saver.h5saver = self.logger.h5saver
+        self.saver.get_set_node(new=True)
 
-    def connect_detectors(self, connect=True):
-        """Connect detectors to DAQ_Logging do_save_continuous method
+        # managing saver worker
+        self.saver_worker = SaverWorker(saver=self.saver,)
+        self.thread_manager.create_thread_for_worker('saver', self.saver_worker)
+        self.saver_worker.n_saved.connect(self.update_worker_ntask)
+        self.thread_manager.start_thread('saver')
+        self.logger.settings['worker', 'worker_running'] = self.thread_manager.get_thread('saver').isRunning()
 
-        Parameters
-        ----------
-        connect: bool
-            If True make the connection else disconnect
-        """
-        self.modules_manager.connect_detectors(connect=connect, slot=self.do_save_continuous)
+    @QtCore.Slot(int)
+    def update_worker_ntask(self, n_saved: int):
+        n_tasks = self._n_emitted - n_saved
+        self.logger.settings['worker', 'worker_tasks'] = n_tasks
 
-    def update_connect_detectors(self):
+        if n_tasks == 0:
+            self._worker_done.emit()
+
+    def terminate_worker(self):
+        """ Will terminate/close/stops a few things when the worker is done working"""
+        # stopping the plotting before flushing/closing the file
+        #1 disconnecting the connection to here (fired once)
         try:
-            self.connect_detectors(False)
-        except :
+            self._worker_done.disconnect(self.terminate_worker)
+        except TypeError:
             pass
-        self.connect_detectors()
+        try: #2 disconnect the data production from the saving
+            self.saver_worker.data_to_save_signal.disconnect(self.saver_worker.save_data)
+        except TypeError:
+            pass
 
-    def stop_logging(self):
-        try:
-            self.connect_detectors(connect=False)
-            self.connect_actuators(connect=False)
-        except Exception as e:
-            logger.exception(str(e))
+        #3 quit the thread managing the data saving (nothing left in the loop and no more connection)
+        self.thread_manager.exit_worker_thread('saver', delete_worker=True)
 
-        if self.stop_logging_flag:
-            status = 'Data Acquisition has been stopped by user'
-            self.status_sig.emit(["Update_Status", status])
-        if self.data_logger is not None:
-            self.data_logger.stop_logger()
+        #4 flushing/closing the file to be able to create new groups...
+        self.logger.h5_manager.close_file()
 
-    def start_logging(self):
-        try:
-            self.connect_detectors()
-            self.connect_actuators()
-            self.stop_logging_flag = False
-            self.status_sig.emit(["Update_Status", "Acquisition has started"])
+        #5 updating GUI info
+        self.logger.settings['worker', 'worker_running'] = self.thread_manager.get_thread('saver').isRunning()
 
-        except Exception as e:
-            logger.exception(str(e))
+
+    def pause_logging(self, do_pause=True):
+        if do_pause:
+            self.is_running = False
+            self._disconnect_control_modules()
+        else:
+            self.is_running = True
+            self._connect_control_modules()
+
+        self._on_scan_pausing(do_pause)
+
+    def stop_logging(self, msg: str = None):
+        """
+        """
+        self.is_running = False
+
+        #1 Stop the emission of data immediately
+        self._disconnect_control_modules()
+
+        #2 terminate the saver worker once its queue is empty
+        if self.logger.settings['worker', 'worker_tasks'] == 0:
+            self.terminate_worker()
+        else:
+            self._worker_done.connect(self.terminate_worker)
+
+        #3 update the GUI
+        self.logger.set_action_checked('pause', False)
+        self.logger.set_action_enabled('start', True)
+        if msg is not None:
+            self._update_status(msg)
+            self.logger.status_manager.set_permanent_status(msg)
+
+    @staticmethod
+    def format_actuators_data(data_act: DataActuator) -> DataToExport:
+        return DataToExport(name=data_act.name, data=[data_act])
+
+    def _on_scan_pausing(self, pausing=True):
+        if pausing:
+            message = "Logging has been paused"
+        else:
+            message = "Logging resumed"
+
+        self._update_status(message)
+        self.logger.status_manager.set_permanent_status(message)
+        self.logger.status_manager.is_logging = not pausing
+
 
 
 def main():
@@ -503,7 +471,7 @@ def main():
                                                       load_extension=False,
                                                       )
     win.mainwindow.setVisible(False)
-    win_ext, logger = create_extension(dashboard, DAQ_Logger, show_extension=True)
+    win_ext, logger = create_extension(dashboard, DAQLogger, show_extension=True)
     sys.exit(app.exec())
 
 
