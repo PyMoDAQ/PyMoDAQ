@@ -12,7 +12,8 @@ from .pid.utils import get_models
 
 
 from .scan.daq_scan import DAQScan
-from .daq_logger.daq_logger import DAQ_Logger
+from .daq_logger.daq_logger import DAQLogger
+from .daq_logger.daq_logger_legacy import DAQ_Logger
 from .pid.pid_controller import DAQ_PID
 
 from .bayesian.bayesian_optimization import BayesianOptimization

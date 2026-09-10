@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from qtpy import QtCore, QtWidgets
 
 from pymodaq_gui.managers.action_manager import ActionManager
+from pymodaq_gui.parameter import ParameterTree, Parameter
 from pymodaq_gui.utils.enums import MenuToolbarNames
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -74,6 +75,12 @@ class H5Manager(QtCore.QObject, ActionManager):
     @property
     def statusbar(self) -> QtWidgets.QStatusBar:
         return self.main_window.statusBar()
+
+    def settings(self) -> Parameter:
+        return self.h5saver.settings
+
+    def settings_tree(self) -> QtWidgets.QWidget:
+        return self.h5saver.settings_tree
 
     def create_file_toolbar_and_menu(self) -> tuple[QtWidgets.QToolBar, QtWidgets.QMenu]:
 
@@ -193,8 +200,12 @@ class H5Manager(QtCore.QObject, ActionManager):
         return FileStatus.REOPENED
 
     def close_file(self):
+        self._h5saver.flush()
         self._h5saver.close_file()
         self.update_file_status_led()
+
+    def flush(self):
+        self.h5saver.flush()
 
     def _try_open_existing_file(self, current_file: str | Path) -> FileStatus:
         """Try to open an existing file, asking user what to do if locked.
