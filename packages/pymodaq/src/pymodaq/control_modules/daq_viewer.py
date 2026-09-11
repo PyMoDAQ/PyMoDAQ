@@ -348,6 +348,8 @@ class DAQ_Viewer(ParameterControlModule):
         elif cmd.command == UiToMainViewer.VIEWERS_CHANGED:
             self._viewer_types: List[ViewersEnum] = cmd.attribute['viewer_types']
             self.viewers = cmd.attribute['viewers']
+        elif cmd.command == UiToMainViewer.QUIT:
+            self.quit_fun()
 
     def detector_changed_from_ui(self, detector: SelectedModule):
         self._detector = detector

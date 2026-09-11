@@ -340,6 +340,8 @@ class DAQ_Move(ParameterControlModule):
             self.command_hardware.emit(
                 ThreadCommand(ControlToHardwareMove.RESET_VALUE),
             )
+        elif cmd.command == UiToMainMove.QUIT:
+            self.quit_fun()
 
     # -------------------------------------------------------------------------
     # Hardware lifecycle hooks

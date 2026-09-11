@@ -246,6 +246,9 @@ class SharedUI(CustomApp):
                 self._main_application.quit_fun()
                 QtWidgets.QApplication.processEvents()
 
+            if self.mainwindow is not None:
+                self.mainwindow.close()
+
         except Exception as e:
             logger.exception(str(e))
 
