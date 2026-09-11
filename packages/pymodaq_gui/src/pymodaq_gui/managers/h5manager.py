@@ -164,7 +164,7 @@ class H5Manager(QtCore.QObject, ActionManager):
     def show_settings(self, show: bool = True):
 
         widget = self._h5saver.settings_tree
-        while widget.parent() is not None:
+        while widget is not None:
             widget = widget.parent()
             if isinstance(widget, Dock):
                 break
