@@ -117,7 +117,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
                  tree: ParameterTree = None, title: str = None, toolbar: QtWidgets.QToolBar=None,
                  create_app_toolbar: bool = True, add_toolbar_break=True,
                  create_app_menu: bool = False,
-                 h5_actions_not: Iterable[FileAction] = (FileAction.CLOSE_FILE, FileAction.CLOSE_FILE)):
+                 h5_actions_not: Iterable[FileAction] = (FileAction.CLOSE_FILE, FileAction.OPEN_FILE)):
 
 
         QObject.__init__(self)
