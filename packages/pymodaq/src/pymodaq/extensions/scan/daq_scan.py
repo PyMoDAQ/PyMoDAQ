@@ -214,13 +214,16 @@ class DAQScan(CustomExt):
 
         super().__init__(parent=dockarea,
                          dashboard=dashboard,
-                         add_toolbar_break=False)
+                         add_toolbar_break=False,
+                         h5_actions_not=(FileAction.SHOW_SETTINGS, FileAction.CLOSE_FILE, FileAction.OPEN_FILE)
+        )
 
         self.wait_time = 1000
         self._show_popups: bool = SHOW_POPUPS # wether to show or not the popups
         self.navigator: Navigator = None
         self.scan_selector: ScanSelector = None
         self.scan_acquisition: DAQScanAcquisition = None
+        self.ini_scan_acquisition()
 
         self.ind_scan = 0
         self.ind_average = 0
@@ -233,7 +236,6 @@ class DAQScan(CustomExt):
         self.modules_manager.settings.child('probe_data').setOpts(expanded=False)
         self.modules_manager.settings.child('test_actuator').setOpts(expanded=False)
         self.modules_manager.detectors_changed.connect(self.clear_plot_from)
-
 
         self.h5_manager.get_h5saver(create_new_file=False).file_changed_sig.connect(self._on_file_changed)
 
@@ -468,7 +470,6 @@ class DAQScan(CustomExt):
             --------
             quit_fun
         """
-
         if self.scan_acquisition.is_running:
             messagebox(title='Running',
                        text='The Acquisition is running, first stop it')
@@ -1134,9 +1135,6 @@ class DAQScan(CustomExt):
             if self.h5saver.swmr_mode:
                 interval = self.h5saver.settings['backend', 'swmr_options', 'flush_interval']
                 self.h5saver.set_swmr_flush_interval(interval)
-
-            if self.scan_acquisition is None:
-                self.ini_scan_acquisition()
 
             self.set_action_enabled('ini_positions', False)
             self.set_action_enabled('start', False)

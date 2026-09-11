@@ -1,6 +1,6 @@
 import inspect
 from pathlib import Path
-from typing import Union, TYPE_CHECKING, Dict, Optional
+from typing import Union, TYPE_CHECKING, Dict, Optional, Iterable
 
 import qt_themes
 from qt_themes import Theme
@@ -9,7 +9,7 @@ from qtpy import QtCore, QtWidgets
 
 from pymodaq_gui.h5modules.saving import H5Saver
 from pymodaq_gui.managers.runner_thread_manager import WorkerThreadManager
-from pymodaq_gui.managers.h5manager import FileStatus, H5Manager
+from pymodaq_gui.managers.h5manager import FileStatus, H5Manager, FileAction
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import get_set_path, get_set_local_dir
@@ -116,7 +116,8 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     def __init__(self, parent: Union[DockArea, QtWidgets.QMainWindow, QtWidgets.QWidget] = None,
                  tree: ParameterTree = None, title: str = None, toolbar: QtWidgets.QToolBar=None,
                  create_app_toolbar: bool = True, add_toolbar_break=True,
-                 create_app_menu: bool = False):
+                 create_app_menu: bool = False,
+                 h5_actions_not: Iterable[FileAction] = (FileAction.CLOSE_FILE, FileAction.CLOSE_FILE)):
 
 
         QObject.__init__(self)
@@ -172,7 +173,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
                           self.__class__.__name__,
                           self.menubar if self.mainwindow is not None else None)
 
-        self._h5_manager = H5Manager(self)
+        self._h5_manager = H5Manager(self, show_not=h5_actions_not)
         self._worker_thread_manager = WorkerThreadManager(parent=self)
 
     @property

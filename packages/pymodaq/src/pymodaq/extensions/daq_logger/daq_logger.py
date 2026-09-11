@@ -175,8 +175,6 @@ class DAQLogger(CustomExt):
         self.add_action('pause', 'Pause Logging', 'pause_circle', "Pause/resume the Logging",
                         checkable=True, menu='actions',
                         icon_checked_color=self.get_theme().orange)
-        self.add_action('settings', 'Show Logging Settings', 'settings', menu='actions',
-                        checkable=True, icon_checked_color=self.get_theme().green)
 
         self.toolbar.addSeparator()
         self.add_action('grab_all', 'Grab All', ActionIconNames.GRAB,
@@ -203,11 +201,6 @@ class DAQLogger(CustomExt):
         self.connect_action('pause', self.logging.pause_logging)
         self.connect_action('stop', lambda: self.logging.stop_logging('Logging Stopped by the User'))
         self.connect_action('grab_all', self.start_stop_all)
-
-        self.connect_action('settings', self.show_dock_settings)
-
-    def show_dock_settings(self, show: bool = True):
-        self.docks['logger_settings'].setVisible(show)
 
     def quit_fun(self) -> bool:
         """
