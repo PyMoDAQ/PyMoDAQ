@@ -1,0 +1,16 @@
+<svg width="44.9" height="20" viewBox="0 0 449 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="failing">
+  <title>failing</title>
+  <linearGradient id="a" x2="0" y2="100%">
+    <stop offset="0" stop-opacity=".1" stop-color="#EEE"/>
+    <stop offset="1" stop-opacity=".1"/>
+  </linearGradient>
+  <mask id="m"><rect width="449" height="200" rx="30" fill="#FFF"/></mask>
+  <g mask="url(#m)">
+    <rect width="449" height="200" fill="#E43" x="0"/>
+    <rect width="449" height="200" fill="url(#a)"/>
+  </g>
+  <g aria-hidden="true" fill="#fff" text-anchor="start" font-family="Verdana,DejaVu Sans,sans-serif" font-size="110">
+    <text x="65" y="148" textLength="334" fill="#000" opacity="0.25">failing</text>
+    <text x="55" y="138" textLength="334">failing</text>
+  </g>
+</svg>
