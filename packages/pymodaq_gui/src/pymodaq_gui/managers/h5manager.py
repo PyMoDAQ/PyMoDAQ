@@ -1,6 +1,6 @@
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterable
 
 from qtpy import QtCore, QtWidgets
 
@@ -12,7 +12,7 @@ from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.enums import BaseEnum, StrEnum
 
 from pymodaq_gui.h5modules.saving import H5Saver
-from pymodaq_gui.utils import select_file
+from pymodaq_gui.utils import select_file, Dock
 
 from pymodaq_gui.utils.widgets import QLED
 from pymodaq_utils.utils import ThreadCommand
@@ -41,12 +41,14 @@ class FileAction(StrEnum):
     SHOW_FILE = 'show_file'
     OPEN_FILE = 'open_file'
     CLOSE_FILE = 'close_file'
+    SHOW_SETTINGS = 'show_settings'
 
 
 class H5Manager(QtCore.QObject, ActionManager):
     command_sig = QtCore.Signal(ThreadCommand)
 
-    def __init__(self, app: 'CustomApp', parent=None):
+    def __init__(self, app: 'CustomApp', parent=None,
+                 show_not: Iterable[FileAction] = (FileAction.CLOSE_FILE, FileAction.OPEN_FILE)):
         """ Create a H5Saver manager to handle display of info in a MainWindow and expose h5 file and h5Saver
         manipulation. The CustomApp it applies to should have a mainwindow attribute pointing to a QMainWindow
 
@@ -57,8 +59,9 @@ class H5Manager(QtCore.QObject, ActionManager):
         """
         QtCore.QObject.__init__(self, parent)
         ActionManager.__init__(self, toolbar=QtWidgets.QToolBar())
+        self._show_not_action = show_not
 
-        self._h5saver: H5Saver = None  #  call self.h5saver property
+        self._h5saver: H5Saver = H5Saver()
         self._app = app
 
         self.main_window = app.mainwindow
@@ -92,24 +95,51 @@ class H5Manager(QtCore.QObject, ActionManager):
         self.add_action(FileAction.SHOW_FILE, 'Show file content', 'folder_data',
                         tip='Browse the content of the current HDF5 file',
                         toolbar=self.toolbar,
-                        menu=self.menu)
+                        auto_toolbar=FileAction.SHOW_FILE not in self._show_not_action,
+                        menu=self.menu,
+                        auto_menu=FileAction.SHOW_FILE not in self._show_not_action)
 
         self.add_action(FileAction.NEW_FILE, 'New file', 'add_circle',
                         toolbar=self.toolbar,
-                        menu=self.menu,)
+                        auto_toolbar=FileAction.NEW_FILE not in self._show_not_action,
+                        menu=self.menu,
+                        auto_menu=FileAction.NEW_FILE not in self._show_not_action,)
 
         self.add_action(FileAction.LOAD, 'Open file to append...', 'file_open',
                         toolbar=self.toolbar,
-                        menu=self.menu,)
+                        auto_toolbar=FileAction.LOAD not in self._show_not_action,
+                        menu=self.menu,
+                        auto_menu=FileAction.LOAD not in self._show_not_action,)
         self.get_menu(MenuToolbarNames.FILE).addSeparator()
+        self.toolbar.addSeparator()
         self.add_action(FileAction.SAVE, 'Save copy as...', 'save',
                         toolbar=self.toolbar,
-                        menu=self.menu,)
+                        auto_toolbar=FileAction.SAVE not in self._show_not_action,
+                        menu=self.menu,
+                        auto_menu=FileAction.SAVE not in self._show_not_action,)
+        self.toolbar.addSeparator()
+        self.get_menu(MenuToolbarNames.FILE).addSeparator()
+        self.add_action(FileAction.SHOW_SETTINGS, 'Show h5 settings', 'settings',
+                        toolbar=self.toolbar if FileAction.SHOW_SETTINGS not in self._show_not_action else None,
+                        auto_toolbar=FileAction.SHOW_SETTINGS not in self._show_not_action,
+                        menu=self.menu,
+                        auto_menu=FileAction.SHOW_SETTINGS not in self._show_not_action,
+                        checkable=True)
 
         # Debug-only actions: registered but not in any menu so they stay hidden from regular users.
         # A developer can access them programmatically or add them back to a menu as needed.
-        self.add_action(FileAction.OPEN_FILE, 'Open current file', '', auto_toolbar=False, auto_menu=False)
-        self.add_action(FileAction.CLOSE_FILE, 'Close current file', '', auto_toolbar=False, auto_menu=False)
+        self.add_action(FileAction.OPEN_FILE, 'Open Current File', '',
+                        toolbar=self.toolbar if FileAction.OPEN_FILE not in self._show_not_action else None,
+                        auto_toolbar=FileAction.OPEN_FILE not in self._show_not_action,
+                        menu= self.menu,
+                        auto_menu=FileAction.OPEN_FILE not in self._show_not_action
+                        )
+        self.add_action(FileAction.CLOSE_FILE, 'Close Current File', '',
+                        toolbar=self.toolbar if FileAction.CLOSE_FILE not in self._show_not_action else None,
+                        auto_toolbar=FileAction.CLOSE_FILE not in self._show_not_action,
+                        menu=self.menu,
+                        auto_menu=FileAction.CLOSE_FILE not in self._show_not_action
+                        )
 
 
         self.connect_action(FileAction.SHOW_FILE, self.show_file_content)
@@ -128,6 +158,21 @@ class H5Manager(QtCore.QObject, ActionManager):
         self.connect_action(FileAction.CLOSE_FILE, self.close_file)
         self.connect_action(FileAction.CLOSE_FILE, lambda: self.command_sig.emit(ThreadCommand(FileAction.CLOSE_FILE)))
 
+        self.connect_action(FileAction.SHOW_SETTINGS, self.show_settings)
+        self.connect_action(FileAction.SHOW_SETTINGS, lambda: self.command_sig.emit(ThreadCommand(FileAction.SHOW_SETTINGS)))
+
+    def show_settings(self, show: bool = True):
+
+        widget = self._h5saver.settings_tree
+        while widget.parent() is not None:
+            widget = widget.parent()
+            if isinstance(widget, Dock):
+                break
+        if widget is None:
+            widget = self._h5saver.settings_tree
+
+        widget.setVisible(show)
+        widget.closeEvent = lambda event: self.set_action_checked(FileAction.SHOW_SETTINGS, False)
 
     def insert_h5stuff_status(self):
         self._file_open_LED = QLED()
