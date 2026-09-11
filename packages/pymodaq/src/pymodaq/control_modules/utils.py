@@ -669,6 +669,7 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
             QtWidgets.QApplication.processEvents()
 
         self._quit_cleanup()
+
         try:
             if self.ui is not None:
                 self.ui.close()

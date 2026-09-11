@@ -191,6 +191,7 @@ class ControlModuleUI(CustomApp):
         raise NotImplementedError
 
 
+
 def register_uis(parent_module_name: str = 'pymodaq.control_modules.daq_move_ui'):
     uis = []
     try:

@@ -147,6 +147,9 @@ class DAQMoveUI(ControlModuleUI):
     def move_done(self, status):
         self.move_done_led.set_as(status)
 
+    def quit_fun(self) -> bool | None:
+        self.command_sig.emit(ThreadCommand(UiToMainMove.QUIT))
+
     # -------------------------------------------------------------------------
     # UI Construction
     # -------------------------------------------------------------------------
