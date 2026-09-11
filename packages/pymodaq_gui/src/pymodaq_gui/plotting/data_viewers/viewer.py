@@ -220,9 +220,15 @@ class ViewerDispatcher:
         while len(self.viewers) < len(viewers_type):
             self.add_viewer(viewers_type[Nviewers_to_leave + ind_loop],
                             dock_name=viewers_name[Nviewers_to_leave + ind_loop]
-                            if viewers_name is not None else None)
+                            if viewers_name is not None else None,
+                            )
             ind_loop += 1
         QtWidgets.QApplication.processEvents()
+        if len(viewers_type) == 1:
+            self.viewer_docks[-1].hideTitleBar()
+        else:
+            for viewer_dock in self.viewer_docks:
+                viewer_dock.showTitleBar()
 
     def close(self):
         for dock in self.viewer_docks:
