@@ -101,7 +101,7 @@ class DAQLogger(CustomExt):
     Main class initializing a DAQ_Logger module
     """
     show_h5file_statusbar_widgets = True
-    icon_name = ''
+    icon_name = 'home_storage'
     params = [
         {'title': 'Worker:', 'name': 'worker', 'type': 'group', 'children': [
             {'title': 'Worker Running:', 'name': 'worker_running', 'type': 'led', 'value': False, 'readonly': True},
