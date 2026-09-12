@@ -2,7 +2,7 @@ from concurrent.futures import Future
 from typing import Optional, TYPE_CHECKING, Union
 from xml.etree.ElementTree import Element
 from pymodaq.utils.data import DataToExport
-from pymodaq.scripting.utils import (
+from pymodaq_scripting.utils import (
     Device,
     LECOActuatorWrapper,
     LECODetectorWrapper,
@@ -62,6 +62,7 @@ class Detector(Device[LECODetectorWrapper]):
 
     def set_settings(self, settings: Element) -> None:
         self._wrapper.set_settings(settings)
+
 
 class Dashboard(Device[LECODashboardWrapper]):
     """
