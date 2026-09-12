@@ -71,6 +71,7 @@ names = [
     'handyman',
     'help',
     'home',
+    'home_storage',
     'info',
     'ink_eraser',
     'ink_eraser_off',
