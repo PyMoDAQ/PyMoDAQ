@@ -1,16 +1,16 @@
 from concurrent.futures import Future
-from typing import Optional
+from typing import Optional, TYPE_CHECKING, Union
 from xml.etree.ElementTree import Element
-
+from pymodaq.utils.data import DataToExport
 from pymodaq.scripting.utils import (
     Device,
     LECOActuatorWrapper,
     LECODetectorWrapper,
     LECODashboardWrapper,
 )
-from pymodaq.utils.data import DataActuator, DataToExport
 
-
+if TYPE_CHECKING:
+    from pymodaq.utils.data import DataActuator
 
 
 class Actuator(Device[LECOActuatorWrapper]):
@@ -20,19 +20,19 @@ class Actuator(Device[LECOActuatorWrapper]):
     def __init__(self, device: str, **kwargs) -> None:
         super().__init__(LECOActuatorWrapper(device, **kwargs))
 
-    def get_actuator_value(self) -> Future[DataActuator]:
+    def get_actuator_value(self) -> Future['DataActuator']:
         return self._wrapper.get_actuator_value()
 
-    def move_home(self) -> Future[DataActuator]:
+    def move_home(self) -> Future['DataActuator']:
         return self._wrapper.move_home()
 
-    def move_abs(self, value: DataActuator | int | float | str) -> Future[DataActuator]:
+    def move_abs(self, value: Union['DataActuator', int, float, str]) -> Future['DataActuator']:
         return self._wrapper.move_abs(value)
 
-    def move_rel(self, value: DataActuator | int | float | str) -> Future[DataActuator]:
+    def move_rel(self, value: Union['DataActuator', int, float, str]) -> Future['DataActuator']:
         return self._wrapper.move_rel(value)
 
-    def stop_move(self) -> Future[DataActuator]:
+    def stop_move(self) -> Future['DataActuator']:
         return self._wrapper.stop_move()
 
     def get_settings(self) -> Future[Element]:
