@@ -4,19 +4,21 @@ from abc import ABC
 
 from concurrent.futures import Future, InvalidStateError
 from functools import cached_property
-from typing import Optional, cast
+from typing import Optional, cast, Union, Generic, TypeVar, TYPE_CHECKING
 from xml.etree.ElementTree import Element
 
 from pyleco.directors.director import Director
 from pyleco.utils.listener import Listener
 from serializall import SerializableFactory, utils
 
-from pymodaq import Q_
-from pymodaq.utils.data import DataActuator, DataToExport
-from typing import Generic, TypeVar
+from pymodaq_data.data import DataToExport
+from pymodaq_data import Q_, DataRaw
 
+if TYPE_CHECKING:
+    from pymodaq.utils.data import DataActuator
 
 sf = SerializableFactory()
+
 
 def compare_xml_trees(base: Element, modified: Element) -> list[tuple[list[str], bytes]]:
     """
@@ -67,7 +69,7 @@ def compare_xml_trees(base: Element, modified: Element) -> list[tuple[list[str],
     return changes
 
 
-def value_to_data_actuator(value: DataActuator | int | float | str) -> DataActuator:
+def value_to_data_actuator(value: Union['DataActuator', int, float, str]) -> Union['DataActuator', DataRaw]:
     """
     Converts any kind of convertible value into a DataActuator
     Parameters
@@ -79,11 +81,11 @@ def value_to_data_actuator(value: DataActuator | int | float | str) -> DataActua
     A DataActuator object containing the value
     """
     if any(isinstance(value, t) for t in (int, float)):
-        return DataActuator(data=value)
+        return DataRaw(name='actuator', data=value)
     if isinstance(value, str):
         value = Q_(value)
     if isinstance(value, Q_):
-        return DataActuator(data=value.magnitude, units=str(value.units))
+        return DataRaw(name='actuator', data=value.magnitude, units=str(value.units))
     return value
 
 
@@ -172,15 +174,15 @@ class LECOActuatorWrapper(LECODeviceWrapper):
     LECO wrapper for actuators: move commands and position callbacks.
     """
     def __init__(self, device: str, **kwargs) -> None:
-        self._send_position_future: Optional[Future[DataActuator]] = None
-        self._move_done_future: Optional[Future[DataActuator]] = None
+        self._send_position_future: Optional[Future['DataActuator']] = None
+        self._move_done_future: Optional[Future['DataActuator']] = None
 
         super().__init__(device, **kwargs)
 
         self._listener.register_binary_rpc_method(self.send_position, accept_binary_input=True)
         self._listener.register_binary_rpc_method(self.set_move_done, accept_binary_input=True)
 
-    def get_actuator_value(self) -> Future[DataActuator]:
+    def get_actuator_value(self) -> Future['DataActuator']:
         future = Future()
         self._send_position_future = future
 
@@ -189,7 +191,7 @@ class LECOActuatorWrapper(LECODeviceWrapper):
 
         return future
 
-    def move_home(self) -> Future[DataActuator]:
+    def move_home(self) -> Future['DataActuator']:
         future = Future()
         self._move_done_future = future
 
@@ -198,7 +200,7 @@ class LECOActuatorWrapper(LECODeviceWrapper):
 
         return future
 
-    def move_abs(self, value: DataActuator | int | float | str) -> Future[DataActuator]:
+    def move_abs(self, value: Union['DataActuator', int, float, str]) -> Future['DataActuator']:
         future = Future()
         self._move_done_future = future
 
@@ -210,7 +212,7 @@ class LECOActuatorWrapper(LECODeviceWrapper):
 
         return future
 
-    def move_rel(self, value: DataActuator) -> Future[DataActuator]:
+    def move_rel(self, value: 'DataActuator') -> Future['DataActuator']:
         future = Future()
         self._move_done_future = future
 
@@ -222,7 +224,7 @@ class LECOActuatorWrapper(LECODeviceWrapper):
 
         return future
 
-    def stop_move(self) -> Future[DataActuator]:
+    def stop_move(self) -> Future['DataActuator']:
         future = Future()
         self._move_done_future = future
 
@@ -232,7 +234,7 @@ class LECOActuatorWrapper(LECODeviceWrapper):
         return future
 
     def send_position(self, data=None, additional_payload=None):
-        value: DataActuator = cast(DataActuator, sf.get_apply_deserializer(additional_payload[0]))
+        value: Union['DataActuator', DataRaw] = cast(DataRaw, sf.get_apply_deserializer(additional_payload[0]))
         try:
             self._send_position_future.set_result(value)
             self._send_position_future = None
@@ -240,7 +242,7 @@ class LECOActuatorWrapper(LECODeviceWrapper):
             pass
 
     def set_move_done(self, data=None, additional_payload=None):
-        value: DataActuator = cast(DataActuator, sf.get_apply_deserializer(additional_payload[0]))
+        value: Union['DataActuator', DataRaw] = cast(DataRaw, sf.get_apply_deserializer(additional_payload[0]))
         try:
             self._move_done_future.set_result(value)
             self._move_done_future = None

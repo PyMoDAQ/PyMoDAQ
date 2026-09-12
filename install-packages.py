@@ -11,12 +11,13 @@ PYMODAQ_PACKAGES = [
         "pymodaq_utils",
         "pymodaq_data",
         "pymodaq_gui",
+        "pymodaq_scripting",
         "pymodaq",
     ]
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Install all four PyMoDAQ packages in the right order (by default in editable mode).",
+        description="Install all five PyMoDAQ packages in the right order (by default in editable mode).",
     )
 
     parser.add_argument(
@@ -36,7 +37,7 @@ def parse_args():
         type=lambda value: value.lower(),
         choices=PYMODAQ_PACKAGES,
         default='pymodaq',
-        help="Select up to which package to install. (e.g. '-o pymodaq_data' will install utils and data packages but not gui and PyMoDAQ itself)",
+        help="Select up to which package to install. (e.g. '-u pymodaq_data' will install utils and data packages but not gui and PyMoDAQ itself)",
     )
 
     return parser.parse_args()
