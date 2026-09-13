@@ -73,6 +73,8 @@ names = [
     'help',
     'home',
     'home_storage',
+    'hourglass',
+    'hourglass_disabled',
     'info',
     'ink_eraser',
     'ink_eraser_off',
