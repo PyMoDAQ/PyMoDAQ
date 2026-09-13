@@ -559,9 +559,10 @@ def _next_free_col(dock: Dock, row: int = 0) -> int:
     grid drops the item count without freeing up its column index, so appending at
     `count()` can land on top of a widget that kept its original position.
     """
+    grid_layout = dock.grid_layout
     occupied = set()
-    for ind in range(dock.layout.count()):
-        item_row, item_col, _, _ = dock.layout.getItemPosition(ind)
+    for ind in range(grid_layout.count()):
+        item_row, item_col, _, _ = grid_layout.getItemPosition(ind)
         if item_row == row:
             occupied.add(item_col)
     col = 0
