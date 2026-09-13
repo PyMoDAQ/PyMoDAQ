@@ -1,7 +1,7 @@
 from concurrent.futures import Future
 from typing import Optional, TYPE_CHECKING, Union
 from xml.etree.ElementTree import Element
-from pymodaq.utils.data import DataToExport
+from pymodaq_data.data import DataToExport
 from pymodaq_scripting.utils import (
     Device,
     LECOActuatorWrapper,
