@@ -117,7 +117,9 @@ class DAQ_Move(ParameterControlModule):
         self.logger.info(f"Initializing DAQ_Move: {title}")
 
         super().__init__(listener_class=MoveActorListener,
-                         action_list=("save", "update"), **kwargs)
+                         action_list=("save", "update"),
+                         title=title,
+                         **kwargs)
 
         self.parent = parent
         self.ui_identifier_default = ui_identifier
@@ -135,7 +137,6 @@ class DAQ_Move(ParameterControlModule):
             self.ui.command_sig.connect(self.process_ui_cmds)
 
         self.splash_sc = get_splash_sc()
-        self._title = title
         if len(ACTUATOR_NAMES) > 0:  # will be 0 if no valid plugins are installed
             self.actuator = kwargs.get("actuator", ACTUATOR_NAMES[0])
 
@@ -248,7 +249,7 @@ class DAQ_Move(ParameterControlModule):
 
     def update_default_values(self):
         if self.ui is not None:
-            self.ui.set_unit_as_suffix(self.units)
+            self.ui.set_unit_as_suffix(self.get_unit_to_display(self.units))
         self.value_changed(self.settings.child('main_settings', 'default_value_green'))
         self.value_changed(self.settings.child('main_settings', 'default_value_red'))
         self.value_changed(self.settings.child('main_settings', 'default_value_relative'))
@@ -305,7 +306,7 @@ class DAQ_Move(ParameterControlModule):
             * rel_value
         """
         if cmd.command == UiToMainMove.INIT:
-            self.init_hardware(cmd.attribute[0])
+            self.do_init_hardware_signal.emit(cmd.attribute[0])  # usually connected to ini_hardware method, but could be bypassed (see Dashboard/ModulesManager)
         elif cmd.command == UiToMainMove.GET_VALUE:
             self.get_actuator_value()
         elif cmd.command == UiToMainMove.LOOP_GET_VALUE:
@@ -339,6 +340,8 @@ class DAQ_Move(ParameterControlModule):
             self.command_hardware.emit(
                 ThreadCommand(ControlToHardwareMove.RESET_VALUE),
             )
+        elif cmd.command == UiToMainMove.QUIT:
+            self.quit_fun()
 
     # -------------------------------------------------------------------------
     # Hardware lifecycle hooks
@@ -757,6 +760,8 @@ class DAQ_Move(ParameterControlModule):
             if self._controller_and_thread.initialized:
                 self.get_actuator_value()
             self.init_signal.emit(self._controller_and_thread.initialized)
+            if self.ui is not None:
+                self.ui.set_init_color(self.get_color_from_status())
 
         elif (
             status.command == ThreadStatusMove.GET_ACTUATOR_VALUE

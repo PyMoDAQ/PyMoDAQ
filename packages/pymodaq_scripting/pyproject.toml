@@ -1,0 +1,73 @@
+[build-system]
+requires = ["hatchling>=1.9.0", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pymodaq_scripting"
+dynamic = [
+    "version",
+]
+description = "Objects and utilities to use PyMoDAQ from a script"
+readme = "README.rst"
+license = { file="LICENSE" }
+requires-python = ">=3.10"
+authors = [
+    { name = "Sébastien Weber", email = "sebastien.weber@cemes.fr" },
+]
+
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Other Environment",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",    
+    "Topic :: Scientific/Engineering :: Human Machine Interfaces",
+    "Topic :: Scientific/Engineering :: Visualization",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: User Interfaces",
+]
+
+dependencies = [
+    "pymodaq_utils>=0.0.8",
+    "pymodaq_data>=5.0.13",
+]
+
+[project.optional-dependencies]
+
+dev = [
+    "hatch",
+    "flake8",
+    "pytest",
+    "pytest-cov",
+    "pytest-xdist",
+]
+
+
+[project.urls]
+Homepage = "http://pymodaq.cnrs.fr"
+Source = "https://github.com/PyMoDAQ/pymodaq_scripting"
+Tracker = "https://github.com/PyMoDAQ/pymodaq_scripting/issues"
+
+[tool.hatch.version.raw-options]
+search_parent_directories = true
+fallback_version = "5.1.0"
+git_describe_command = "python git_describe.py packages/pymodaq_scripting"
+
+[tool.hatch.version]
+source = "vcs"
+
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+]
+
+[tool.coverage.run]
+omit = [
+    "*/examples/*",
+]

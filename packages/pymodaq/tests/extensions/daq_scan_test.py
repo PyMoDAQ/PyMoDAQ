@@ -29,20 +29,26 @@ class TestTimeout:
 
     def test_stops_scan_when_stop_on_timeout_enabled(self, qtbot, scan_acquisition, scan_settings):
         scan_settings.child('scan_options', 'stop_on_timeout').setValue(True)
+        scan_acquisition.init_scan()
+        scan_acquisition.scan_step_failed_signal.disconnect(scan_acquisition._on_scan_step_failed)
 
         with qtbot.waitSignal(scan_acquisition.status_sig, timeout=500):
             scan_acquisition.timeout(['Det1'])
 
         assert scan_acquisition.timeout_scan_flag
+        assert scan_acquisition.stop_scan_flag
 
     def test_does_not_stop_scan_when_stop_on_timeout_disabled(self, qtbot, scan_acquisition,
                                                                 scan_settings):
         scan_settings.child('scan_options', 'stop_on_timeout').setValue(False)
+        scan_acquisition.init_scan()
+        scan_acquisition.scan_step_failed_signal.disconnect(scan_acquisition._on_scan_step_failed)
 
         with qtbot.waitSignal(scan_acquisition.status_sig, timeout=500):
             scan_acquisition.timeout(['Det1'])
 
-        assert not scan_acquisition.timeout_scan_flag
+        assert scan_acquisition.timeout_scan_flag
+        assert not scan_acquisition.stop_scan_flag
 
     def test_message_includes_missing_modules(self, qtbot, scan_acquisition):
         messages = []

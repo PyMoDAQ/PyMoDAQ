@@ -1,11 +1,12 @@
 import time
 from pymodaq.control_modules.move_utility_classes import HW_SETTINGS_KEY as ACTUATOR_SETTINGS_KEY
 from functools import partial  # needed for the button to sync setpoint with currpoint
+from pymodaq.control_modules.utils import ControllerAndThread, QThreadProxy
 from typing import Dict, List, TYPE_CHECKING
 from collections import deque
 import numpy as np
 
-from qtpy import QtGui, QtWidgets
+from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, QThread, Signal
 
 from simple_pid import PID
@@ -14,13 +15,13 @@ from pymodaq.utils.managers.modules import ModuleType
 from pymodaq.utils.managers.modules.loader import PluginInfo
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import ThreadCommand, find_dict_in_list_from_key_val
-from pymodaq.utils.exceptions import DetectorError, ActuatorError, PIDError
+from pymodaq.utils.exceptions import PIDError
 
 from pymodaq_gui.parameter import utils as putils
-from pymodaq_gui.parameter import Parameter, ParameterTree
+from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.plotting.data_viewers.viewer0D import Viewer0D
 from pymodaq_gui.utils.widgets import QLED, LabelWithFont, SpinBox
-from pymodaq_gui.utils.dock import DockArea, Dock
+from pymodaq_gui.utils.dock import Dock
 
 
 from pymodaq_data.data import DataToExport, DataCalculated, DataRaw
@@ -32,10 +33,10 @@ from pymodaq.utils.data import DataActuator, DataToActuators
 from pymodaq.extensions.pid.actuator_controller import PIDController
 from pymodaq.extensions.pid.utils import PIDModelGeneric
 
-from pymodaq.extensions.custom_ext import CustomExt
+from pymodaq.utils.custom_ext import CustomExt
 
 if TYPE_CHECKING:
-    from pymodaq.control_modules.daq_move import DAQ_Move
+    pass
 
 
 config = Config()
@@ -517,13 +518,22 @@ class DAQ_PID(CustomExt):
         try:
             modules: list[PluginInfo] = []
             for setp in self.model_class.setpoints_names:
-                modules.append(PluginInfo(0,
-                                          setp,
-                                          'PID',
-                                          type=ModuleType.Actuator,
-                                          controller=PIDController(self, setp)
-                                          ))
-            self.dashboard.add_move_from_extension(modules=modules)
+                id = self.dashboard.modules_manager.get_random_id()
+                modules.append(
+                    PluginInfo(
+                        id,
+                        setp,
+                        'PID',
+                        type=ModuleType.Actuator,
+                        is_master=False,
+                        controller=ControllerAndThread(
+                            name=setp,
+                            id=id,
+                            thread=QThreadProxy(thread=self.thread()),
+                            controller=PIDController(self, setp),
+                            is_master=False,)
+                      ))
+            self.dashboard.module_creator.add_move_from_extension(modules=modules)
             self.set_action_enabled("create_setp_actuators", False)
 
         except Exception as e:
@@ -720,13 +730,11 @@ class DAQ_PID(CustomExt):
         self.setpoints_sb[i].setValue(self.curr_points[i])
         self.update_runner_setpoints()
 
-    def quit_fun(self):
+    def quit_fun(self) -> bool:
         """ """
         try:
-
-
             self.dashboard.remove_modules([setp for setp in self.model_class.setpoints_names])
-            super().quit_fun()
+            return super().quit_fun()
 
         except Exception as e:
             print(e)

@@ -15,7 +15,7 @@ from pymodaq_gui.messenger import messagebox
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 
 from pymodaq_data.data import DataToExport
-
+from utils import CustomApp
 
 from .db_logger_models import (Base, Data0D, Data1D, Data2D, LogInfo,
                                Configuration, ControlModule)
@@ -252,7 +252,8 @@ class DbLoggerGUI(DbLogger, ParameterManager):
 
 
 class DataBaseLogger(AbstractLogger):
-    def __init__(self, database_name):
+    def __init__(self, database_name, app: CustomApp):
+        self.app = app
         self.dblogger = DbLoggerGUI(database_name)
 
     @property

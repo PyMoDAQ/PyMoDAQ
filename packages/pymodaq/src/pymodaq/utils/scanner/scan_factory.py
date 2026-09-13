@@ -7,7 +7,7 @@ Created the 05/12/2022
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
-from typing import Callable, Union, List, Tuple, TYPE_CHECKING
+from typing import Callable, Union, List, Tuple, TYPE_CHECKING, Any
 from collections.abc import Iterable
 
 import numpy as np
@@ -255,6 +255,15 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
         Selector, ScanSelector
         """
         ...
+
+    def to_dict(self) -> dict[str, Any]:
+        """ Export the values/state of this scanner as a dict in order to simply serialize/deserialize it
+
+        to be reimplemented"""
+        return {}
+
+    def from_dict(self, scanner_dict: dict[str, Any]):
+        pass
 
 
 class ScannerFactory(ObjectFactory):

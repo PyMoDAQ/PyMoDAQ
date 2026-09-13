@@ -146,6 +146,9 @@ class DAQMoveUI(ControlModuleUI):
     def move_done(self, status):
         self.move_done_led.set_as(status)
 
+    def quit_fun(self) -> bool | None:
+        self.command_sig.emit(ThreadCommand(UiToMainMove.QUIT))
+
     # -------------------------------------------------------------------------
     # UI Construction
     # -------------------------------------------------------------------------
@@ -338,6 +341,22 @@ class DAQMoveUI(ControlModuleUI):
     def cleanup_ui(self):
         try:
             self.actuators_combo.currentTextChanged.disconnect()
+        except TypeError:
+            pass
+        if 'move_abs_green' in self.actions_names:
+            self.connect_action('move_abs_green', connect=False)
+        if 'move_abs_red' in self.actions_names:
+            self.connect_action('move_abs_red', connect=False)
+        try:
+            self.move_abs_pb.clicked.disconnect()
+        except TypeError:
+            pass
+        try:
+            self.move_rel_plus_pb.clicked.disconnect()
+        except TypeError:
+            pass
+        try:
+            self.move_rel_minus_pb.clicked.disconnect()
         except TypeError:
             pass
         self.remove_absolute_spinbox_actions(self.toolbar)

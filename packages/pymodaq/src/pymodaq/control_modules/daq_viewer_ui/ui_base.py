@@ -287,9 +287,14 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         if not self.config('pymodaq', 'viewer', 'allow_settings_edition'):
             self._settings_widget.setEnabled(not self.is_action_checked('grab'))
 
+    def quit_fun(self) -> bool | None:
+        self.command_sig.emit(ThreadCommand(UiToMainViewer.QUIT))
+
     # -------------------------------------------------------------------------
     # Visibility / Lifecycle
     # -------------------------------------------------------------------------
+
+
 
     def show_graphs(self, show: bool = True):
         self.parent.setVisible(show)

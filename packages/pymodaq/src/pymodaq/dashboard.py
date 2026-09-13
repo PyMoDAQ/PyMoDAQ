@@ -6,11 +6,11 @@ import datetime
 import subprocess
 from pathlib import Path
 
-from typing import Union, List, Any, TYPE_CHECKING, Sequence, Callable
+from typing import Union, List, TYPE_CHECKING, Sequence, Callable, Any
 import argparse
 
-from qtpy import QtGui, QtWidgets, QtCore
-from qtpy.QtCore import Qt, QThread, Signal, QSize
+from qtpy import QtWidgets, QtCore
+from qtpy.QtCore import Qt, Signal, QSize
 from qtpy.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
@@ -18,29 +18,24 @@ from qtpy.QtWidgets import (
     QMessageBox,
 )
 
-from pymodaq.control_modules.thread_commands import ControllerStatus
-from pymodaq.utils.managers.modules import ModuleType
-from pymodaq.utils.managers.modules.loader import ModuleLoader, PluginInfo
-from pymodaq.utils.managers.roi_manager.roi_manager import ROIManager
-from pymodaq.control_modules.instruments import find_actuator_class_from_name
+from pymodaq.utils.managers.modules.module_creator import ModuleCreator
+from pymodaq.utils.managers.modules.loader import PluginInfo
 from pymodaq.control_modules.enums import DAQTypesEnum
-from pymodaq.control_modules.move_utility_classes import UiType
-from pymodaq.control_modules.utils import ControllerAndThread
 from pymodaq.utils.managers.roi_manager.roi_manager import ROIManager
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import GlobalConfig as Config
-from pymodaq_utils.enums import BaseEnum, StrEnum
+from pymodaq_utils.enums import BaseEnum
 
 from pymodaq_gui.parameter import ParameterTree, Parameter
-from pymodaq_gui.utils import DockArea, Dock, select_file
+from pymodaq_gui.utils import DockArea, Dock
 import pymodaq_gui.utils.layout as layout_mod
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.managers.roi_viewer_manager import ROISaver
 from pymodaq_gui.utils.custom_app import CustomApp
-from pymodaq_gui.utils.shared_ui import MenuToolbarNames
+from pymodaq_gui.utils.enums import MenuToolbarNames
 from pymodaq_gui.config import get_set_layout_path, get_set_roi_path
 from pymodaq_gui.utils.widgets.window import make_window
 
@@ -52,7 +47,6 @@ from pymodaq.utils.daq_utils import get_instrument_plugins
 
 from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
-from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
 from pymodaq.utils.gui_utils.loader_utils import create_extension
 from pymodaq.utils.leco.pymodaq_listener import LECODashboardCommands, DashboardActorListener, LECOComponentMixin
@@ -68,7 +62,7 @@ from pymodaq_gui.managers.manager_base import ManagerActions # should be importe
 
 
 if TYPE_CHECKING:
-    from pymodaq.extensions.custom_ext import CustomExt
+    from pymodaq.utils.custom_ext import CustomExt
 
 logger = set_logger(get_module_name(__file__))
 
@@ -186,7 +180,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
         self.title = ""
 
-        self.module_loader: ModuleLoader = None
         self.roi_saver: ROISaver = None
 
         self.remote_timer = QtCore.QTimer(self)
@@ -196,6 +189,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.ispygame_init = False
 
         self.modules_manager = ModulesManager()
+        self.module_creator = ModuleCreator(self)
 
         self.actuators_modules: list[DAQ_Move] = []
         self.detector_modules: list[DAQ_Viewer] = []
@@ -343,129 +337,16 @@ class DashBoard(CustomApp, LECOComponentMixin):
         except Exception as e:
             logger.exception(str(e))
 
-    def _remove_module_list(self, modules: list[DAQ_Move | DAQ_Viewer],
-                            module_list:list[DAQ_Move | DAQ_Viewer],
-                            compact_manager_attr,
-                            remove_dock_widgets=False):
-        """Remove a list of control modules, clean up compact manager and docks.
-
-        Parameters
-        ----------
-        modules: list
-            Modules to remove.
-        module_list: list
-            The dashboard-level list (self.actuators_modules or self.detector_modules)
-            from which modules are removed.
-        compact_manager_attr: str
-            Name of the compact manager attribute on self.
-        remove_dock_widgets: bool
-            Whether to call dock.removeWidgets() before dock.close() (needed for actuators).
-        """
-        for module in modules[:]:
-            try:
-                if module in module_list:
-                    module_list.remove(module)
-                compact_manager = getattr(self, compact_manager_attr)
-                if compact_manager:
-                    if compact_manager.remove_module(module):
-                        compact_manager.close()
-                        setattr(self, compact_manager_attr, None)
-                module.quit_fun()
-                dock = self.dockarea.docks.get(module.title, None)
-                if dock:
-                    self.docks_viewer.remove(dock) #dereference the dock
-                    if remove_dock_widgets:
-                        dock.removeWidgets()
-                    dock.close()
-            except Exception as e:
-                logger.exception(str(e))
-
     def remove_detectors(self, detector_modules: List[DAQ_Viewer] = None):
-        """
-        Remove the given list of detectors from the dashboard.
-        Parameters
-        ----------
-        detector_modules: List[DAQ_Viewer]
-            List of DAQ_Viewer instances to be removed.
-        """
-        if detector_modules is None:
-            detector_modules = []
-        self._remove_module_list(detector_modules, self.detector_modules,
-                                 'compact_detector_manager')
+        self.module_creator.remove_detectors(detector_modules)
 
     def remove_actuators(self, actuator_modules: List[DAQ_Move] = None):
-        """
-        Remove the given list of actuators from the dashboard.
-        Parameters
-        ----------
-        actuator_modules: List[DAQ_Move]
-            List of DAQ_Move instances to be removed.
-        """
-        if actuator_modules is None:
-            actuator_modules = []
-        self._remove_module_list(actuator_modules, self.actuators_modules,
-                                 'compact_actuator_manager', remove_dock_widgets=True)
-
-    def get_docks_from_modules(
-        self, modules: Sequence[Union["DAQ_Move", "DAQ_Viewer"]],
-    ) -> List[Dock]:
-        """
-        Get a list of Dock instances from the given modules.
-
-        Parameters
-        ----------
-        modules: Sequence[DAQ_Move/DAQ_Viewer]
-            Sequence of DAQ_Move or DAQ_Viewer instances.
-
-        Returns
-        -------
-        List[Dock]
-            List of Dock instances corresponding to the given modules.
-        """
-        docks = []
-        for module in modules:
-            if hasattr(module, "dock"):
-                docks.append(module.dock)
-        return docks
+        self.module_creator.remove_actuators(actuator_modules)
 
     def remove_modules(
         self, modules: List[Union["DAQ_Move", "DAQ_Viewer", "str"]] = None,
     ):
-        """
-        Remove the given list of actuators/detectors from the dashboard.
-
-        Parameters
-        ----------
-        modules: List[DAQ_Move/DAQ_Viewer]
-            List of DAQ_Move/DAQ_Viewer instances to be removed.
-        """
-        if modules is None:
-            modules = []
-        try:
-            actuators_modules = []
-            detector_modules = []
-            for module in modules:
-                if isinstance(module, DAQ_Move):  # Test if module is an instance of DAQ_Move
-                    actuators_modules.append(module)
-                elif isinstance(module, DAQ_Viewer):  # Test if module is an instance of DAQ_Viewer
-                    detector_modules.append(module)
-                if isinstance(module, str):  # Test if module is a string (name of the module)
-                    actuators_modules.extend(
-                        self.modules_manager.get_mods_from_names([module], "act"))  # For actuators
-
-                    detector_modules.extend(
-                        self.modules_manager.get_mods_from_names([module], "det"),  # For detectors
-                    )
-            if (hasattr(self, "actuators_modules")) & (
-                self.actuators_modules is not None
-            ):  # Remove actuators
-                self.remove_actuators(actuators_modules)
-            if (hasattr(self, "detector_modules")) & (
-                self.detector_modules is not None
-            ):  # Remove detectors
-                self.remove_detectors(detector_modules)
-        except Exception as e:
-            logger.exception(str(e))
+        self.module_creator.remove_modules(modules)
 
     def load_extension(self, ext_enum: ExtensionEnum,
                        win: QtWidgets.QMainWindow = None,
@@ -535,6 +416,9 @@ class DashBoard(CustomApp, LECOComponentMixin):
                             icon_name=extensions[ExtensionEnum[ext_name]].klass.icon_name)
 
         self.add_action("state", "State", auto_toolbar=False)
+
+        self.add_widget('add_module', self.module_creator.menu_button, tip='Select a Module to add to this Dashboard',
+                        toolbar='experiment')
 
     def connect_things(self):
         self.status_signal[str].connect(self.add_status)
@@ -633,12 +517,13 @@ class DashBoard(CustomApp, LECOComponentMixin):
         quit_fun
         """
         try:
-            self.connect_leco(connect=False)
-            self.remote_timer.stop()
-
             for ext in self.extensions:
                 if hasattr(self.extensions[ext], "quit_fun"):
                     self.extensions[ext].quit_fun()
+
+            self.connect_leco(connect=False)
+            self.remote_timer.stop()
+
             for mov in self.actuators_modules:
                 try:
                     mov.init_signal.disconnect(self.update_init_tree)
@@ -724,107 +609,26 @@ class DashBoard(CustomApp, LECOComponentMixin):
             path = get_set_layout_path().joinpath(self.experiment_file.stem + ".dock")
             self.save_layout_state(path)
 
-    def add_move(
-            self,
-            plug_name: str = None,
-            plug_type: str = None,
-            ui_identifier: str = None,
-            **kwargs,
-    ) -> DAQ_Move:        
+    def create_compact_actuator_manager(self):
+        self.compact_actuator_manager = ActuatorCompactDock(
+            "Actuators",
+            self.dockarea,
+            orientation=Qt.Orientation.Vertical,
+        )
 
-        actuator = self.create_actuator(plug_name, plug_type, ui_identifier)
-
-        self.set_actuator_type(actuator, plug_type)
-
-        self.add_actuator(actuator)
-        return  actuator
-
-    def create_actuator(self, name: str, class_name: str, ui_identifier: str) -> DAQ_Move:
-        actuator_class = find_actuator_class_from_name(class_name)
-        forced_ui = actuator_class.ui_type
-        ui_identifier = forced_ui if forced_ui != UiType.NONE else ui_identifier
-
-        if ui_identifier is not None:
-            pass
-        else:
-            ui_identifier = config("pymodaq", "actuator", "ui")
-        mov_mod_tmp = DAQ_Move(QtWidgets.QWidget(),
-                               name,
-                               ui_identifier=ui_identifier,
-                               settings_dock=self.settings_dock,
-                               controls_dock=self.controls_dock,
-                               )
-        mov_mod_tmp.bounds_signal[bool].connect(self.do_stuff_from_out_bounds)
-        return mov_mod_tmp
-
-    def set_actuator_type(self, actuator: DAQ_Move, class_name: str):
-        actuator.actuator = class_name  # will fire instrument_changed when done
-
-    def add_actuator(self, actuator: DAQ_Move):
-        # Create compact manager if needed
-        if self.compact_actuator_manager is None:
-            self.compact_actuator_manager = ActuatorCompactDock(
-                "Actuators",
-                self.dockarea,
-                orientation=Qt.Orientation.Vertical,
-            )
-            if self.compact_detector_manager is not None:
-                self.compact_actuator_manager.show('bottom', self.compact_detector_manager.dock)
-            else:
-                self.compact_actuator_manager.show("top")
-
-        QtWidgets.QApplication.processEvents()
-
-        self.compact_actuator_manager.add_module(actuator)
-        return actuator
+    def create_compact_detector_manager(self):
+        self.compact_detector_manager = DetectorCompactDock(
+            "Detectors",
+            self.dockarea,
+            orientation=Qt.Orientation.Vertical,
+        )
 
     def add_move_from_extension(
         self, *args, modules: list[PluginInfo] = None,
         **kwargs,
     ):
-        """Specific method to add DAQ_Moves within the Dashboard. This Particular actuator
-        should be defined in the plugin of the extension and is used to mimic an actuator while
-        move_abs is actually triggering an action on the extension which loaded it
-
-        For an exemple, see the PyMoDAQ builtin PID extension
-
-        Parameters
-        ----------
-        modules: list[PluginInfo]
-
-
-        Deprecated:
-        name: str
-            The name to print on the UI title
-        instrument_name: str
-            The name of the instrument class, for instance PID for the daq_move_PID
-            module and the DAQ_Move_PID instrument class
-        instrument_controller: ControllerAndThread
-            whatever object is used to communicate between the instrument module and the extension
-            which created it
-        ui_identifier: str
-            One of the possible registered UI
-        kwargs: named arguments to be passed to add_move
-        """
-        if modules is None:
-            modules = [
-                PluginInfo(
-                    id=0,
-                    name=args[0],
-                    class_name=args[1],
-                    type=ModuleType.Actuator,
-                    settings=None,
-                    is_master=False,
-                    do_init=True,
-                    ui=None,
-                    daq_type=None,
-                    controller=args[2]
-                ),
-            ]
-        self.module_loader = ModuleLoader(self, [[mod] for mod in modules])
-        self.module_loader.all_instruments_added.connect(self.modules_manager.add_modules)
-        self.module_loader.start()
-
+        """ For backcompatibility"""
+        self.module_creator.add_move_from_extension(*args, modules=modules, **kwargs)
 
     @property
     def docks_viewer(self):
@@ -888,7 +692,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
     def set_detector_type(self, detector: DAQ_Viewer, daq_type: DAQTypesEnum, class_name: str):
         detector.detector = SelectedModule(daq_type, class_name)  # will fire instrument_changed when done
-        
+
     def move_utils_docks(self, position='right'):
         self.dockarea.moveDock(self.settings_dock, position, None)
         self.settings_dock.setVisible(False)
@@ -921,51 +725,10 @@ class DashBoard(CustomApp, LECOComponentMixin):
             callback: Callable = None,
             **kwargs,
     ):
-        """Specific method to add a DAQ_Viewer within the Dashboard. This Particular detector
-        should be defined in the plugin of the extension and is used to mimic a grab while data
-        are actually coming from the extension which loaded it
+        """ For backcompatibility
 
-        For an exemple, see the pymodaq_plugins_datamixer plugin and its DataMixer extension
-        or the DAQ_PID extension
-
-        Parameters
-        ----------
-        modules: list[PluginInfo]
-        callback: a callable method (slot like) that will receive the *list of added modules* when done
-
-        Deprecated:
-        -----------
-        name: str
-            The name to print on the UI title
-        daq_type: str
-            either DAQ0D, DAQ1D, DAQ2D or DAQND depending the type of the instrument
-        instrument_name: str
-            The name of the instrument class, for instance DataMixer for the daq_0Dviewer_DataMixer
-            module and the DAQ_0DViewer_DataMixer instrument class
-        instrument_controller: ControllerAndThread
-            whatever object is used to communicate between the instrument module and the extension
-            which created it
         """
-        if modules is None:
-            modules = [
-                PluginInfo(
-                    id=0,
-                    name=args[0],
-                    class_name=args[2],
-                    type=ModuleType.Detector,
-                    settings=None,
-                    is_master=False,
-                    do_init=True,
-                    ui=None,
-                    daq_type=DAQTypesEnum[args[1]] ,
-                    controller=args[3]
-                ),
-            ]
-        self.module_loader = ModuleLoader(self, [[mod] for mod in modules])
-        self.module_loader.all_instruments_added.connect(self.modules_manager.add_modules)
-        if callback is not None:
-            self.module_loader.all_instruments_added.connect(callback)
-        self.module_loader.start()
+        self.module_creator.add_det_from_extension(*args, modules=modules, callback=callback, **kwargs)
 
 
     # def set_remote_configuration(self, filename):
@@ -1289,7 +1052,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.status_signal.emit(txt)
         logger.info(txt)
 
-
 def load_dashboard_with_arguments(show_dashboard=True, load_extension=True):
 
     extensions_names = ExtensionEnum.values()
@@ -1340,6 +1102,7 @@ def create_load_dashboard(show_dashboard=True) -> tuple[SharedUI, DashBoard]:
 
     shared_ui = SharedUI(win, show=show_dashboard)
     dashboard = DashBoard(area)
+    dashboard.shared_ui = shared_ui
     shared_ui.affect_application(dashboard)
     return shared_ui, dashboard
 

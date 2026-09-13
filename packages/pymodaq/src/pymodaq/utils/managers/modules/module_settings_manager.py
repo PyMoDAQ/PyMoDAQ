@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from pymodaq.control_modules.utils import ParameterControlModule
 
 
-class SettingsManager:
+class ModulesSettingsManager:
     """ Manage the settings from a list of Control Modules either actual instances or as defined in a experiment file"""
 
 

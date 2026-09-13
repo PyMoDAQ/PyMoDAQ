@@ -6,8 +6,12 @@ Created the 05/12/2022
 """
 from importlib import import_module
 from pathlib import Path
+from typing import TYPE_CHECKING
 
+from serializall import SerializableBase, SerializableFactory
 
+from pymodaq_gui.parameter import Parameter
+from pymodaq_gui.parameter.utils import ParameterWithPath, compareValuesParameter
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import get_entrypoints
 from pymodaq_utils.enums import BaseEnum
@@ -16,7 +20,10 @@ from pymodaq.utils.scanner.scan_factory import ScannerFactory
 
 
 logger = set_logger(get_module_name(__file__))
+ser_factory = SerializableFactory()
 
+if TYPE_CHECKING:
+    from pymodaq.utils.scanner import Scanner
 
 
 def register_scanner(parent_module_name: str = 'pymodaq.utils.scanner'):
