@@ -668,8 +668,15 @@ class LoggerSaver(ExtensionSaver):
         elif dte.name in self.actuators:
             self.actuators[dte.name].add_data(self.current_nodes[dte.name],
                                               dte, )
-        else:
-            raise NameError("Cannot save this DataToExport to one of the named saver")
+        else: # try to see if this dte is composed of multiple DataActuators or dwa
+            # from multiple detectors
+            for dwa in dte:
+                if dwa.origin in list(self.actuators.keys()) + list(self.detectors.keys()):
+                    dte_from_dwa = DataToExport(name=dwa.origin, data=[dwa])
+                    self.add_data(dte_from_dwa)
+                else:
+                    raise NameError("Cannot save this DataToExport to one of the named saver")
+
 
 class OptimizerSaver(ExtensionSaver):
     """Implementation of the ModuleSaver class dedicated to Optimizer based modules
