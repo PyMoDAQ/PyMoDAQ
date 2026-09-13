@@ -10,8 +10,8 @@ from pathlib import Path
 PYMODAQ_PACKAGES = [
         "pymodaq_utils",
         "pymodaq_data",
-        "pymodaq_gui",
         "pymodaq_scripting",
+        "pymodaq_gui",
         "pymodaq",
     ]
 

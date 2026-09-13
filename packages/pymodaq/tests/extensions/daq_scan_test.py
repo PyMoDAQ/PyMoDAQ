@@ -39,7 +39,6 @@ def scan_acquisition(qtbot, scan_settings, monkeypatch):
 
     return DAQScanAcquisition(daq_scan=scan)
 
-
 class TestTimeout:
 
     def test_stops_scan_when_stop_on_timeout_enabled(self, qtbot, scan_acquisition, scan_settings):

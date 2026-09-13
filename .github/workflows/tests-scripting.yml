@@ -65,7 +65,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           cd ../../
-          python install-packages.py -d -u pymodaq
+          python install-packages.py -d -u pymodaq_scripting
 
       - name: Install tables (optional – no wheel for all Python versions)
         continue-on-error: true
@@ -148,14 +148,14 @@ jobs:
           rm -rf $(git ls-files ${{ needs.tests.outputs.branch }}/*) || true
           git rm $(git ls-files ${{ needs.tests.outputs.branch }}/*) || true
 
-          mkdir -p 'pymodaq_data/${{ needs.tests.outputs.branch }}'
-          mv tests_*/*.svg 'pymodaq_data/${{ needs.tests.outputs.branch }}/'
+          mkdir -p 'pymodaq_scripting/${{ needs.tests.outputs.branch }}'
+          mv tests_*/*.svg 'pymodaq_scripting/${{ needs.tests.outputs.branch }}/'
       - name: Commit badges
         continue-on-error: true
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add pymodaq_data/
+          git add pymodaq_scripting/
           git commit  --allow-empty -m "Add/Update badge"
 
       - name: Push badges

@@ -35,6 +35,7 @@ classifiers = [
 dependencies = [
     "pymodaq_utils>=0.0.8",
     "pymodaq_data>=5.0.13",
+    "pyleco",
 ]
 
 [project.optional-dependencies]
