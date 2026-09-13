@@ -21,6 +21,7 @@ from qtpy import QtWidgets
 from easydict import EasyDict as edict
 
 from pymodaq.control_modules.daq_move_ui.utils import UiType
+from pymodaq.control_modules.units import get_unit_to_display
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import find_keys_from_val
 from pymodaq_utils import utils
@@ -635,16 +636,7 @@ class DAQ_Move(ParameterControlModule):
         -------
         str: the unit to be displayed on the ui
         """
-        if ("°" in unit or "degree" in unit) and not "°C" in unit:
-            # special case as pint base unit for angles are radians
-            return "°"
-        elif "°C" in unit:
-            return "°C"
-        else:
-            for key in config("pymodaq", "actuator", "allowed_units"):
-                if key in unit:
-                    return config("pymodaq", "actuator", "allowed_units", key)
-            return str(Q_(1, unit).to_base_units().units)
+        return get_unit_to_display(unit)
 
     def _load_plugin_params(self):
         parent_module = utils.find_dict_in_list_from_key_val(
