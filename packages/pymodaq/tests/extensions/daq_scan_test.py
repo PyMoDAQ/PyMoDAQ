@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Tests for pymodaq.extensions.scan.daq_scan"""
 from unittest.mock import Mock
-
+from dataclasses import dataclass
 import pytest
 
 from pymodaq_gui.parameter import Parameter
@@ -21,8 +21,16 @@ def scan_acquisition(qtbot, scan_settings):
     scanner.get_scan_shape.return_value = []
     modules_manager = ModulesManager()
 
-    return DAQScanAcquisition(scan_settings=scan_settings, scanner=scanner,
-                               modules_manager=modules_manager)
+    @dataclass
+    class DAQScan:
+        settings: Parameter
+        scanner: Mock
+        modules_manager: ModulesManager
+
+    scan = DAQScan(scan_settings, scanner, modules_manager)
+
+
+    return DAQScanAcquisition(daq_scan=scan)
 
 
 class TestTimeout:
