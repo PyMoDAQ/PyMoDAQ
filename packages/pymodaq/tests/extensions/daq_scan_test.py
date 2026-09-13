@@ -16,7 +16,7 @@ def scan_settings():
 
 
 @pytest.fixture
-def scan_acquisition(qtbot, scan_settings):
+def scan_acquisition(qtbot, scan_settings, monkeypatch):
     scanner = Mock()
     scanner.get_scan_shape.return_value = []
     modules_manager = ModulesManager()
@@ -26,9 +26,16 @@ def scan_acquisition(qtbot, scan_settings):
         settings: Parameter
         scanner: Mock
         modules_manager: ModulesManager
+        module_and_data_saver: Mock = None
+
+        def set_action_checked(self, action: str, status: bool):
+            pass
+
+    def terminate_worker(obj):
+        return
 
     scan = DAQScan(scan_settings, scanner, modules_manager)
-
+    monkeypatch.setattr(DAQScanAcquisition, "terminate_worker", terminate_worker)
 
     return DAQScanAcquisition(daq_scan=scan)
 
@@ -44,7 +51,7 @@ class TestTimeout:
             scan_acquisition.timeout(['Det1'])
 
         assert scan_acquisition.timeout_scan_flag
-        assert scan_acquisition.stop_scan_flag
+        assert not scan_acquisition.is_running
 
     def test_does_not_stop_scan_when_stop_on_timeout_disabled(self, qtbot, scan_acquisition,
                                                                 scan_settings):
@@ -56,7 +63,7 @@ class TestTimeout:
             scan_acquisition.timeout(['Det1'])
 
         assert scan_acquisition.timeout_scan_flag
-        assert not scan_acquisition.stop_scan_flag
+        assert scan_acquisition.is_running
 
     def test_message_includes_missing_modules(self, qtbot, scan_acquisition):
         messages = []

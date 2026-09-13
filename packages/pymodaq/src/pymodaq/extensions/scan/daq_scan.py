@@ -1476,7 +1476,7 @@ class DAQScanAcquisition(QObject):
             pass
         try: #2 disconnect the data production from the saving
             self.saver_worker.data_to_save_signal.disconnect(self.saver_worker.save_data)
-        except TypeError:
+        except (AttributeError, TypeError):
             pass
 
         #3 quit the thread managing the data saving (nothing left in the loop and no more connection)
