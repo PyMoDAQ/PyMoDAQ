@@ -34,6 +34,7 @@ dependencies = [
     "pymodaq_utils>5.1",
     "pymodaq_gui>5.1",
     "pymodaq_data>5.1",
+    "pymodaq_scripting>5.1",
     "pymodaq_plugin_manager>=0.0.17",
     "pymodaq_plugins_mock>=5.0.12",
     "simple_pid",
