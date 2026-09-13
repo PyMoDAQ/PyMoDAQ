@@ -162,8 +162,8 @@ class ViewerDispatcher:
             dock = self.viewer_docks.pop()
             dock.close()
             viewer = self.viewers.pop()
-            if hasattr(viewer.view, 'roi_manager') and viewer.view.roi_manager is not None:
-                self.rois_dock.removeWidget(viewer.view.roi_manager.roiwidget)
+            if hasattr(viewer.view, 'roi_widget') and viewer.view.roi_widget is not None:
+                self.rois_dock.removeWidget(viewer.view.roi_widget)
             self.viewer_types.pop()
             QtWidgets.QApplication.processEvents()
         self.rois_dock.setVisible(False)
