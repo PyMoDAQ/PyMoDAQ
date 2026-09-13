@@ -103,6 +103,23 @@ class TestDisplayInDock:
 
         # reattaching should take that freed slot, not overlap widgets[2]
         display_in_dock(True, widgets[1], dock)
-        positions = {id(w): dock.layout.getItemPosition(dock.layout.indexOf(w))[:2]
+        grid_layout = dock.grid_layout
+        positions = {id(w): grid_layout.getItemPosition(grid_layout.indexOf(w))[:2]
                     for w in widgets}
         assert len(set(positions.values())) == len(widgets)
+
+    def test_display_in_dock_horizontal_shows_widget(self, qtbot):
+        """A widget shown for the first time in a dock (horizontal layout, the
+        default for settings/controls/ROIs docks) must actually be added and
+        made visible, not silently fail in `_next_free_col`."""
+        area = DockArea()
+        dock = Dock('settings')
+        area.addDock(dock)
+        area.show()
+
+        widget = QtWidgets.QWidget()
+        display_in_dock(True, widget, dock)
+
+        assert widget in dock.widgets
+        assert widget.isVisible()
+        assert dock.isVisible()
