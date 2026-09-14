@@ -5,7 +5,7 @@ Created the 23/11/2022
 @author: Sebastien Weber
 """
 from __future__ import annotations
-
+from dataclasses import dataclass, field
 from typing import Union, List, Tuple, TYPE_CHECKING, Iterable
 import time
 import xml.etree.ElementTree as ET
@@ -44,6 +44,18 @@ class GroupModuleType(BaseEnum):
     DATALOGGER = 3
     OPTIMIZER = 4
     TIME = 5
+
+
+@dataclass
+class DataBundle:
+    """Convenience class to hold data to be saved or plotted"""
+    dte: DataToExport
+    indexes: list[int] = None  # indexes within an eventual Extended array (see DAQ_Scan)
+    axis_values: list[float | np.ndarray] = None  # axis values within an eventual Enlargeable array (see Optimizers)
+    distribution: DataDistribution = field(
+        default_factory=lambda: DataDistribution.uniform
+    )  # type of data to be saved
+    save_index: int = 0  # an index to know what step in the saving process we're in (see DAQ_Scan)
 
 
 class ModuleSaver(metaclass=ABCMeta):
@@ -580,6 +592,15 @@ class ExtensionSaver(ModuleSaver):
                                             metadata=metadata,
                                             group_type=self.group_type.name)
 
+    def add_data(self, dte: DataToExport, **kwargs):
+        """ To be reimplemented with the right module saver signature"""
+        raise NotImplementedError
+
+
+    def add_data_bundle(self, data: DataBundle):
+        """ To be reimplemented with the right module saver signature"""
+        raise NotImplementedError
+
 
 class ScanSaver(ExtensionSaver):
     """Implementation of the ModuleSaver class dedicated to DAQScan module
@@ -621,7 +642,7 @@ class ScanSaver(ExtensionSaver):
         for det_name in self.detectors:
             self.detectors[det_name].add_nav_axes(self._module_group, axes)
 
-    def add_data(self, dte: DataToExport = None, indexes: Iterable[int] = None,
+    def add_data(self, dte: DataToExport, indexes: Iterable[int] = None,
                  distribution=DataDistribution.uniform, **kwargs):
 
         for origin in dte.get_origins():
@@ -630,6 +651,10 @@ class ScanSaver(ExtensionSaver):
                                             indexes=indexes,
                                             distribution=distribution,
                                             )
+        self.add_time(indexes)
+
+    def add_data_bundle(self, data: DataBundle):
+        self.add_data(data.dte, indexes=data.indexes, distribution=data.distribution)
 
 
 class LoggerSaver(ExtensionSaver):
@@ -657,7 +682,7 @@ class LoggerSaver(ExtensionSaver):
             self.actuators[module.title] = ActuatorTimeSaver(module)
             self.actuators[module.title].h5saver = self.h5saver
 
-    def add_data(self, dte: DataToExport):
+    def add_data(self, dte: DataToExport, **kwargs):
         """Add data to it's corresponding control module
 
         The name of the control module is the DataToExport name attribute
@@ -676,6 +701,9 @@ class LoggerSaver(ExtensionSaver):
                     self.add_data(dte_from_dwa)
                 else:
                     raise NameError("Cannot save this DataToExport to one of the named saver")
+
+    def add_data_bundle(self, data: DataBundle):
+        self.add_data(data.dte)
 
 
 class OptimizerSaver(ExtensionSaver):
@@ -706,3 +734,6 @@ class OptimizerSaver(ExtensionSaver):
                  ):
         self.detectors[dte.name].add_data(self.current_nodes[dte.name],
                                           dte, axis_values)
+
+    def add_data_bundle(self, data: DataBundle):
+        self.add_data(data.dte, axis_values=data.axis_values)

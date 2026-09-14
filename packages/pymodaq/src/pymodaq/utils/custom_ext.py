@@ -10,7 +10,7 @@ from pymodaq_gui.utils import CustomApp, DockArea
 
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 from pymodaq.utils.h5modules.module_saving import ModuleSaver
-
+from pymodaq_utils.utils import ThreadCommand
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -24,6 +24,7 @@ class DashBoardToolbarActions(StrEnum):
 
 
 class CustomExt(CustomApp):
+    status_sig = QtCore.Signal(ThreadCommand)
     status_signal = QtCore.Signal(str)  # signal to be used to emit info
     config_changed = QtCore.Signal()  # will be emitted when the user changed anything in the configuration files (emitted from SharedUI)
 
