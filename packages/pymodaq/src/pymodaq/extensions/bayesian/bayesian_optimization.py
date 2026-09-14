@@ -7,7 +7,7 @@ from pymodaq.extensions.bayesian.utils import BayesianAlgorithm, BayesianConfig
 from pymodaq.extensions.bayesian.acquisition import GenericAcquisitionFunctionFactory
 
 from pymodaq.extensions.optimizers_base.optimizer import (
-    GenericOptimization, OptimizationRunner, optimizer_params, OptimizerAction)
+    GenericOptimization, OptimizationWorker, optimizer_params, OptimizerAction)
 from pymodaq.extensions.optimizers_base.utils import find_key_in_nested_dict
 from pymodaq.extensions.optimizers_base.thread_commands import OptimizerToRunner, OptimizerThreadStatus
 
@@ -29,7 +29,7 @@ PREDICTION_PARAMS = ([{'title': 'Kind', 'name': 'kind', 'type': 'list',
                      )
 
 
-class BayesianOptimizationRunner(OptimizationRunner):
+class BayesianOptimizationWorker(OptimizationWorker):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -51,7 +51,7 @@ class BayesianOptimization(GenericOptimization):
     taken form the detectors as a function of one or more parameters controlled by the actuators.
     """
 
-    runner = BayesianOptimizationRunner
+    runner = BayesianOptimizationWorker
     params = optimizer_params(PREDICTION_PARAMS)
     config_saver = BayesianConfig
 

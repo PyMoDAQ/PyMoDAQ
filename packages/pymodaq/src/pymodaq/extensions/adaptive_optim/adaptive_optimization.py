@@ -5,7 +5,7 @@ from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import ThreadCommand
 
 from pymodaq.extensions.optimizers_base.optimizer import (
-    GenericOptimization, OptimizationRunner, optimizer_params, OptimizerAction, StopType)
+    GenericOptimization, OptimizationWorker, optimizer_params, OptimizerAction, StopType)
 from pymodaq.extensions.optimizers_base.utils import find_key_in_nested_dict
 
 from pymodaq.extensions.optimizers_base.thread_commands import OptimizerToRunner
@@ -35,21 +35,16 @@ PREDICTION_PARAMS = (
 )
 
 
-class AdaptiveOptimizationRunner(OptimizationRunner):
+class AdaptiveOptimizationWorker(OptimizationWorker):
 
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def queue_command(self, command: ThreadCommand):
-        """
-        """
-        if command.command == OptimizerToRunner.PREDICTION:
-            kind = command.attribute.pop('kind')
-            lossdim = command.attribute.pop('lossdim')
-            self.optimization_algorithm.set_prediction_function(lossdim, kind, **command.attribute)
-        else:
-            super().queue_command(command)
+    def set_prediction(self, prediction: dict):
+        kind = prediction.pop('kind')
+        lossdim = prediction.pop('lossdim')
+        self.algorithm.set_prediction_function(kind=kind, lossdim=lossdim, **prediction)
 
 
 class AdaptiveOptimisation(GenericOptimization):
@@ -57,7 +52,7 @@ class AdaptiveOptimisation(GenericOptimization):
     taken form the detectors as a function of one or more parameters controlled by the actuators.
     """
 
-    runner = AdaptiveOptimizationRunner
+    worker = AdaptiveOptimizationWorker
     params = optimizer_params(PREDICTION_PARAMS)
     config_saver = AdaptiveConfig
 
@@ -65,12 +60,17 @@ class AdaptiveOptimisation(GenericOptimization):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
         self.get_action(OptimizerAction.SAVE).trigger()
         self.settings.child('main_settings', 'ini_random').hide()
         self.settings.child('main_settings', 'stopping', 'tolerance').hide()
         self.settings.child('main_settings', 'stopping', 'npoints').hide()
         self.settings.child('main_settings', 'stopping', 'stop_type').setLimits(
             [StopType.NONE.value, StopType.ITER.value])
+
+    @property
+    def optimizer(self) -> AdaptiveOptimizationWorker:
+        return self._optimizer
 
     def ini_custom_attributes(self):
         """ Here you can reimplement specific attributes"""
@@ -128,8 +128,8 @@ class AdaptiveOptimisation(GenericOptimization):
             uparams['kind'] = utility_settings['kind']
             uparams['lossdim'] = utility_settings['lossdim']
 
-            self.command_runner.emit(
-                utils.ThreadCommand(OptimizerToRunner.PREDICTION, uparams))
+            self.optimizer.set_prediction(uparams)
+
         except (KeyError, ValueError, AttributeError) as e:
             pass
             print(e)
@@ -138,14 +138,15 @@ class AdaptiveOptimisation(GenericOptimization):
         """ Actions to do after the actuators have been updated
         """
         try:  #see if there is some registered loss function for the defined type
-            self.settings.child('main_settings', 'prediction',
-                                'lossdim').setValue(LossDim.get_enum_from_dim_as_int(len(actuators)))
+            self.settings.child('main_settings',
+                                'prediction',
+                                'lossdim').setValue(
+                LossDim.get_enum_from_dim_as_int(len(actuators)))
             self.update_prediction_function()
 
-            LossFunctionFactory.create(self.settings['main_settings', 'prediction',
-                                                           'lossdim'],
-                                       self.settings['main_settings', 'prediction',
-                                                           'kind'])
+            LossFunctionFactory.create(
+                self.settings['main_settings', 'prediction', 'lossdim'],
+                self.settings['main_settings', 'prediction', 'kind'])
             self.get_action(OptimizerAction.INI_RUNNER).setEnabled(True)
 
         except ValueError as e:

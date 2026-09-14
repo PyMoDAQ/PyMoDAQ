@@ -728,6 +728,27 @@ class OptimizerSaver(ExtensionSaver):
         self.enl_axis_names = enl_axis_names
         self.enl_axis_units = enl_axis_units
 
+    def update_after_h5changed(self):
+        for module in self._module.modules_manager.detectors_all:
+            self.detectors[module.title] = DetectorEnlargeableSaver(
+                module,
+                enl_axis_names=self.enl_axis_names,
+                enl_axis_units=self.enl_axis_units,)
+            self.detectors[module.title].h5saver = self.h5saver
+        for module in self._module.modules_manager.actuators_all:
+            self.actuators[module.title] = ActuatorEnlargeableSaver(
+                module,
+                enl_axis_names=self.enl_axis_names,
+                enl_axis_units=self.enl_axis_units,)
+            self.actuators[module.title].h5saver = self.h5saver
+
+    def update_enl_axis_names_and_units(self,
+                                        enl_axis_names: list[str],
+                                        enl_axis_units: list[str]):
+        self.enl_axis_names = enl_axis_names
+        self.enl_axis_units = enl_axis_units
+        self.update_after_h5changed()
+
     def add_data(self,
                  dte: DataToExport,
                  axis_values: List[Union[float, np.ndarray]] = None,
