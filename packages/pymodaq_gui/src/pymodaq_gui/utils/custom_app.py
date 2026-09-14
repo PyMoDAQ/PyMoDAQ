@@ -280,7 +280,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
             self.thread_manager.exit_worker_threads()
         if self.mainwindow is not None:
             self.mainwindow.close()
-        return True
+        self.disconnect_tree()
 
     def do_things_after_ui_setup(self):
         """ Method to be reimplemented in order to do things after the UI setup

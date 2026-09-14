@@ -20,7 +20,7 @@ def init_qt(qtbot):
 def editor(init_qt):
     if LOCAL_FILES_PATH.is_file():
         LOCAL_FILES_PATH.unlink()
-    qt_themes.set_theme('dracula')
+
     shared_ui, monaco_app = editor_main_loader()
     init_qt.addWidget(shared_ui.mainwindow)
     shared_ui.show()

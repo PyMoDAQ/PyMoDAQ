@@ -160,7 +160,8 @@ class DataMixer(CustomExt):
             type=ModuleType.Detector,
             daq_type=DAQTypesEnum.DAQ0D,
             controller=ControllerAndThread(name='DataMixer',
-                                           thread=QThreadProxy(thread=self.thread()),
+                                           thread=QThreadProxy(thread=self.thread(),
+                                                               ),
                                            controller=self,
                                            is_master=False,
                                            id=id)

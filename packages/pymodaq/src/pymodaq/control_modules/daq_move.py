@@ -305,6 +305,7 @@ class DAQ_Move(ParameterControlModule):
             * move_rel
             * actuator_changed
             * rel_value
+            * quit
         """
         if cmd.command == UiToMainMove.INIT:
             self.do_init_hardware_signal.emit(cmd.attribute[0])  # usually connected to ini_hardware method, but could be bypassed (see Dashboard/ModulesManager)

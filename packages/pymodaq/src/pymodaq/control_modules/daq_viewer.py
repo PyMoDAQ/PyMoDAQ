@@ -326,6 +326,7 @@ class DAQ_Viewer(ParameterControlModule):
                 * do_bkg
                 * take_bkg
                 * viewers_changed
+                * quit
         """
 
         if cmd.command == UiToMainViewer.INIT:
@@ -1306,6 +1307,7 @@ def main(init_qt=True, init_det=False):
 
     shared_ui, daq_viewer = create_load_daq_viewer()
     shared_ui.show()
+    daq_viewer.shared_ui = shared_ui
 
     if init_det:
         daq_viewer.init_hardware_ui(init_det)
