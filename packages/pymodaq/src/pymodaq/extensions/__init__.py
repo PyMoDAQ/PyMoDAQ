@@ -5,7 +5,7 @@ Created the 25/10/2022
 @author: Sebastien Weber
 """
 from pymodaq_utils.enums import StrEnum
-
+from .sequencer.sequencer import Sequencer
 
 from .utils import get_extensions
 from .pid.utils import get_models
@@ -34,6 +34,7 @@ class ExtensionEnum(StrEnum):
     ADAPTIVE = 'Adaptive'
     DATAMIXER = 'DataMixer'
     CONSOLE = 'QtConsole'
+    SEQUENCER = 'Sequencer'
 
 
 internal_extensions = {
@@ -45,6 +46,7 @@ internal_extensions = {
     ExtensionEnum.ADAPTIVE.value: AdaptiveOptimisation,
     ExtensionEnum.DATAMIXER.value: DataMixer,
     ExtensionEnum.CONSOLE.value: Console,
+    ExtensionEnum.SEQUENCER.value: Sequencer,
 }
 
 
