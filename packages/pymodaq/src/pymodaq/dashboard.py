@@ -6,7 +6,7 @@ import datetime
 import subprocess
 from pathlib import Path
 
-from typing import Union, List, TYPE_CHECKING, Sequence, Callable
+from typing import Union, List, TYPE_CHECKING, Sequence, Callable, Any
 import argparse
 
 from qtpy import QtWidgets, QtCore
@@ -19,10 +19,8 @@ from qtpy.QtWidgets import (
 )
 
 from pymodaq.utils.managers.modules.module_creator import ModuleCreator
-from pymodaq.utils.managers.modules import ModuleType
-from pymodaq.utils.managers.modules.loader import ModuleLoader, PluginInfo
+from pymodaq.utils.managers.modules.loader import PluginInfo
 from pymodaq.control_modules.enums import DAQTypesEnum
-from pymodaq.control_modules.utils import ControllerAndThread
 from pymodaq.utils.managers.roi_manager.roi_manager import ROIManager
 
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -37,8 +35,8 @@ import pymodaq_gui.utils.layout as layout_mod
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.managers.roi_viewer_manager import ROISaver
 from pymodaq_gui.utils.custom_app import CustomApp
-from pymodaq_gui.utils.shared_ui import MenuToolbarNames
-from pymodaq_gui.config import get_set_layout_path
+from pymodaq_gui.utils.enums import MenuToolbarNames
+from pymodaq_gui.config import get_set_layout_path, get_set_roi_path
 from pymodaq_gui.utils.widgets.window import make_window
 
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager
@@ -64,7 +62,7 @@ from pymodaq_gui.managers.manager_base import ManagerActions # should be importe
 
 
 if TYPE_CHECKING:
-    from pymodaq.extensions.custom_ext import CustomExt
+    from pymodaq.utils.custom_ext import CustomExt
 
 logger = set_logger(get_module_name(__file__))
 
@@ -373,7 +371,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
         self.add_menu(MenuToolbarNames.VIEW, 'View', menubar)
 
-
         self.add_menu('docked', 'Docked', MenuToolbarNames.VIEW)
 
         self.add_menu(MenuToolbarNames.TOOLS, 'Tools', menubar)
@@ -520,12 +517,13 @@ class DashBoard(CustomApp, LECOComponentMixin):
         quit_fun
         """
         try:
-            self.connect_leco(connect=False)
-            self.remote_timer.stop()
-
             for ext in self.extensions:
                 if hasattr(self.extensions[ext], "quit_fun"):
                     self.extensions[ext].quit_fun()
+
+            self.connect_leco(connect=False)
+            self.remote_timer.stop()
+
             for mov in self.actuators_modules:
                 try:
                     mov.init_signal.disconnect(self.update_init_tree)

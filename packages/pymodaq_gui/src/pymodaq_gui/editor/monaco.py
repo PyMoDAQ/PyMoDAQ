@@ -16,7 +16,7 @@ from pymodaq_utils.logger import set_logger, get_module_name
 
 from pymodaq_gui.messenger import dialog
 from pymodaq_gui.utils import CustomApp
-from pymodaq_gui.utils.shared_ui import MenuToolbarNames
+from pymodaq_gui.utils.enums import MenuToolbarNames
 from pymodaq_gui.utils.file_io import select_file
 
 

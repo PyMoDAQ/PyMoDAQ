@@ -25,8 +25,17 @@ if TYPE_CHECKING:
     from pymodaq.extensions.scan.manager.scan_manager import ScanManager
 
 
-class SubEntryHandler(SubEntryHandler):
-    new_entry = QtCore.Signal(SubEntry)
+class ScanSubEntryHandler(SubEntryHandler):
+
+    def __init__(self,
+                 model: 'SettingsManagerModel',
+                 settings: Parameter,
+                 ind_subentry: int = None,
+                 manager: 'ScanManager' = None,
+                 ):
+
+        super().__init__(model, settings, ind_subentry=ind_subentry)
+        self.manager = manager
 
     @staticmethod
     def get_module(entry: SubEntry, *args, **kwargs) -> ParameterManager:
@@ -47,13 +56,12 @@ class SubEntryHandler(SubEntryHandler):
 
 
 @SubEntryHandlerFactory.register_handler()
-class ScanSettingsEntryHandler(SubEntryHandler):
+class ScanSettingsEntryHandler(ScanSubEntryHandler):
 
     handler_name = 'scan_settings'
     use_dialog = False
 
-    def execute_subentry(self, entry: SubEntry,
-                         manager: 'ScanManager', *args, **kwargs):
+    def execute_subentry(self, entry: SubEntry, *args, **kwargs):
         """ Execute the given subentry
 
         In general, should get first the module on which the settings will be applied
@@ -65,12 +73,12 @@ class ScanSettingsEntryHandler(SubEntryHandler):
         module.settings.child(*entry.setting.path).setValue(entry.setting.value())
         """
 
-        module: Union['DAQScan', 'H5Saver'] = getattr(manager, entry.module_name)
+        module: Union['DAQScan', 'H5Saver'] = getattr(self.manager, entry.module_name)
         module.settings.child(*entry.setting.path[2:]).setValue(entry.setting.value())
 
 
 @SubEntryHandlerFactory.register_handler()
-class ControlModulesEntryHandler(SubEntryHandler):
+class ControlModulesEntryHandler(ScanSubEntryHandler):
 
     handler_name = 'ControlModulesSettings'
     use_dialog = False
@@ -100,8 +108,7 @@ class ControlModulesEntryHandler(SubEntryHandler):
                                  mod in value['all_items']]
             module_from_manager.settings[child.name()] = value
 
-    def execute_subentry(self, entry: SubEntry,
-                         manager: 'ScanManager', *args, **kwargs):
+    def execute_subentry(self, entry: SubEntry, *args, **kwargs):
         """ Execute the given subentry
 
         In general, should get first the module on which the settings will be applied
@@ -124,8 +131,13 @@ class ControlModulesEntryHandler(SubEntryHandler):
                 module_from_daq_scan.selected_detectors_name = value['selected']
             module_from_manager.settings[child.name()] = value
 
+        self.manager.daq_scan.plot_from()
+        # trigger the listing of the available data to be plotted.
+        # The right ones will be selected next subentry
+
+
 @SubEntryHandlerFactory.register_handler()
-class ScannnerEntryHandler(SubEntryHandler):
+class ScannnerEntryHandler(ScanSubEntryHandler):
 
     handler_name = 'ScannerSubType'
     use_dialog = False
@@ -151,8 +163,7 @@ class ScannnerEntryHandler(SubEntryHandler):
         """ update the manager according to the loading of the SubEntry"""
         pass
 
-    def execute_subentry(self, entry: SubEntry,
-                         manager: 'ScanManager', *args, **kwargs):
+    def execute_subentry(self, entry: SubEntry, *args, **kwargs):
         """ Execute the given subentry
 
         In general, should get first the module on which the settings will be applied
@@ -183,7 +194,7 @@ class ScannnerEntryHandler(SubEntryHandler):
 
 
 @SubEntryHandlerFactory.register_handler()
-class StartScanEntryHandler(SubEntryHandler):
+class StartScanEntryHandler(ScanSubEntryHandler):
 
     handler_name = 'StartScanSubType'
     use_dialog = False
@@ -204,8 +215,7 @@ class StartScanEntryHandler(SubEntryHandler):
         """ update the manager according to the loading of the SubEntry"""
         manager.set_action_checked('start_scan', entry.setting.value())
 
-    def execute_subentry(self, entry: SubEntry,
-                         manager: 'ScanManager', *args, **kwargs):
+    def execute_subentry(self, entry: SubEntry, *args, **kwargs):
         """ Execute the given subentry
 
         In general, should get first the module on which the settings will be applied
@@ -217,7 +227,7 @@ class StartScanEntryHandler(SubEntryHandler):
         module.settings.child(*entry.setting.path).setValue(entry.setting.value())
         """
         if entry.setting.value():
-            manager.daq_scan.override_popups(False)
-            manager.daq_scan.start_scan()
-            manager.daq_scan.cancel_override_popups()
+            self.manager.daq_scan.override_popups(False)
+            self.manager.daq_scan.start_scan()
+            self.manager.daq_scan.cancel_override_popups()
 

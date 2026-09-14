@@ -9,7 +9,7 @@ from qtpy.QtWidgets import QDialogButtonBox, QDialog
 
 from pymodaq_gui.managers.settings.subentries import SubEntryHandlerFactory, SubEntryHandlerTypes, \
     SubEntry
-from pymodaq_utils.utils import capitalize
+from pymodaq_utils.utils import capitalize, read_binary_and_deserialize
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.array_manipulation import are_elements_contiguous
@@ -23,7 +23,7 @@ from pymodaq_gui.utils.widgets.table import TableModel
 
 from pymodaq_gui import utils as gutils
 
-from serializall import SerializableFactory
+from serializall import SerializableFactory, SerializableBase
 
 
 import copy
@@ -122,21 +122,6 @@ class ParameterDelegate(QtWidgets.QStyledItemDelegate):
             hint.setHeight(max(hint.height(), 40))
             return hint
         return super().sizeHint(option, index)
-
-
-def settings_manager_subentries_from_path(fname: Path) -> list[SubEntry]:
-    if not fname.exists():
-        return []
-    with open(fname, 'rb') as file:
-        lines = file.readlines()
-    all_lines = b''
-    for line in lines:
-        all_lines += line
-    data = []
-    while len(all_lines) > 0:
-        entry, all_lines = SubEntry.deserialize(all_lines)
-        data.append(entry)
-    return data
 
 
 mock_list = ['elt1', 'elt2', 'elt3']
@@ -328,7 +313,7 @@ class SettingsManagerModel(TableModel):
             if isinstance(fname, (Path, str)):
                 # populate it from full file containning binary list od Subentry
                 self.save_path = fname.parent
-                data = settings_manager_subentries_from_path(Path(fname))
+                data = read_binary_and_deserialize(Path(fname))
             elif isinstance(fname, Iterable):
                 #populate the table from list of bytes encoding SubEntries
                 data = fname
@@ -345,7 +330,7 @@ class SettingsManagerModel(TableModel):
             if isinstance(fname, Path):
                 self.save_path = fname.parent
         with open(fname, mode) as file:
-            file.writelines([SubEntry.serialize(entry) for entry in self._data])
+            file.writelines([ser_factory.get_apply_serializer(entry) for entry in self._data])
 
 
 class SettingsManagerTableView(QtWidgets.QTableView):

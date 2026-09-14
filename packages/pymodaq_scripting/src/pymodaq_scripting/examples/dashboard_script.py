@@ -1,4 +1,4 @@
-from pymodaq.scripting import Detector, Actuator, Dashboard
+from pymodaq_scripting import Detector, Actuator, Dashboard
 
 # Once a dashboard is started:
 dashboard = Dashboard()

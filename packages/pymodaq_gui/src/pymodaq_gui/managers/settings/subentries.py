@@ -87,20 +87,26 @@ class SubEntry:
 
 class SubEntryHandler(QtCore.QObject):
     new_entry = QtCore.Signal(SubEntry)
+    executed_signal = QtCore.Signal(int) # to be emited when execution is done
+    execution_failed = QtCore.Signal(Exception)
 
     handler_name: SubEntryHandlerTypes = abstract_attribute()  # to reimplement in real dialogs
     use_dialog = True
+    sub_entry_done = QtCore.Signal(bool)
 
     def __init__(self,
                  model: 'SettingsManagerModel',
                  settings: Parameter,
                  *args,
+                 ind_subentry: int = None,
                  **kwargs
                  ):
 
         super().__init__()
         self.settings: Parameter = settings
         self.model: SettingsManagerModel = model
+        self._ind_subentry = ind_subentry  # the current index with subentries, see _execute_entry
+        logger.debug(f'subhandler with index {ind_subentry}')
 
     @staticmethod
     def get_module(entry: SubEntry, *args, **kwargs) -> ParameterManager:
@@ -153,9 +159,9 @@ class SubEntryHandler(QtCore.QObject):
         To be reimplemented """
         raise NotImplementedError
 
-    def execute_subentry(self, entry: SubEntry,
-                         *args, **kwargs):
-        """ Execute the given subentry """
+    def execute_subentry(self, entry: SubEntry, **kwargs):
+        """ Execute the given subentry and emit the signal sub_entry_done when done
+        """
         raise NotImplementedError
 
 

@@ -4,7 +4,7 @@ Created the 05/12/2022
 
 @author: Sebastien Weber
 """
-from typing import List, Tuple, TYPE_CHECKING, Iterable
+from typing import List, Tuple, TYPE_CHECKING, Iterable, Any
 
 import numpy as np
 
@@ -104,6 +104,12 @@ class SequentialScanner(ScannerBase):
 
     def set_units(self):
         pass
+
+    def to_dict(self) -> dict[str, Any]:
+        return {'data': self.table_model.get_data_all()}
+
+    def from_dict(self, scanner_dict: dict[str, Any]):
+        self.update_model(scanner_dict['data'])
 
     @property
     def actuators(self):

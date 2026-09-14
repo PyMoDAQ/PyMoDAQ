@@ -10,13 +10,14 @@ from pathlib import Path
 PYMODAQ_PACKAGES = [
         "pymodaq_utils",
         "pymodaq_data",
+        "pymodaq_scripting",
         "pymodaq_gui",
         "pymodaq",
     ]
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Install all four PyMoDAQ packages in the right order (by default in editable mode).",
+        description="Install all five PyMoDAQ packages in the right order (by default in editable mode).",
     )
 
     parser.add_argument(
