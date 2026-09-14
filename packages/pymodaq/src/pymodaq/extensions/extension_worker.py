@@ -99,6 +99,9 @@ class ExtensionWorker(QObject):
     def start(self):
         self._running = True
         self._n_emitted = 0
+        if self._app.has_action('start'):
+            self._app.set_action_enabled('start', False)
+        self._init_saver_worker_and_start_it()
         self._start()
 
     def pause(self, do_pause: bool = True):
@@ -141,8 +144,7 @@ class ExtensionWorker(QObject):
             self._app.set_action_checked('pause', False)
         self._update_status(msg)
 
-    def init_worker_and_start(self):
-        self._running = True
+    def _init_saver_worker_and_start_it(self):
         try:
             self._worker_done.disconnect(self.terminate_worker)
         except TypeError:
@@ -155,14 +157,6 @@ class ExtensionWorker(QObject):
         self.saver_worker.n_saved.connect(self.update_worker_ntask)
         self.thread_manager.start_thread('saver')
         self.settings['worker', 'worker_running'] = True
-
-        self.modules_manager.connect_actuators(True)
-        self.modules_manager.connect_detectors(True)
-
-        self._init_worker_and_start()
-
-    def _init_worker_and_start(self):
-        """ to be reimplemented"""
 
     @QtCore.Slot(int)
     def update_worker_ntask(self, n_saved: int):

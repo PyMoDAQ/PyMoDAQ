@@ -56,7 +56,7 @@ from pymodaq.extensions.scan.manager.scan_manager import ScanManager
 from pymodaq_gui.utils.widgets.spinbox import QSpinBox_ro
 from pymodaq_gui.utils.widgets import QLED
 from pymodaq_gui.utils.custom_app import CustomApp
-from pymodaq.extensions.extension_worker import DataBundle, ExtensionWorker, SaverWorker
+from pymodaq.extensions.extension_worker import DataBundle, ExtensionWorker
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -1247,7 +1247,7 @@ class DAQScanAcquisition(ExtensionWorker):
         """
         self._app: DAQScan = daq_scan # redefined in super but here allows to set the right type,
         # not the generic CustomExt
-        
+
         super().__init__(app=daq_scan, parent=parent)
 
         self.timeout_scan_flag = False  # for testing purpose in asserting timeout has been fired
@@ -1325,14 +1325,17 @@ class DAQScanAcquisition(ExtensionWorker):
                                              module_type=ModuleType.Actuator,
                                              disconnect_modules=True)
         if self._running:
-            self.init_worker_and_start()
+            self.init_things()
             self.advance()
 
-    def _init_worker_and_start(self):
+    def init_things(self):
         try:
             self.modules_manager.timeout_signal.connect(self.timeout)
 
             self.scan_step_failed_signal.connect(self._on_scan_step_failed)
+            
+            self.modules_manager.connect_actuators(True)
+            self.modules_manager.connect_detectors(True)
 
             self.modules_manager.enable_modules(False)
             self._update_status("Acquisition has started")
