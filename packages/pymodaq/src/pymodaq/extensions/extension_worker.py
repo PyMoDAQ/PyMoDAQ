@@ -111,9 +111,9 @@ class ExtensionWorker(QObject):
             self._running = True
 
         if do_pause:
-            message = "Acquisition has been paused"
+            message = "Extension has been paused"
         else:
-            message = "Acquisition resumed"
+            message = "Extension resumed"
 
         self._update_status(message)
         self.modules_manager.enable_modules(do_pause)
@@ -127,7 +127,7 @@ class ExtensionWorker(QObject):
         except (TypeError, AttributeError):
             pass
 
-        self._stop()
+        self._stop(msg)
 
         self.modules_manager.connect_actuators(False)
         self.modules_manager.connect_detectors(False)
@@ -142,6 +142,8 @@ class ExtensionWorker(QObject):
         # 4 update the GUI
         if self._app.has_action('pause'):
             self._app.set_action_checked('pause', False)
+        if self._app.has_action('start'):
+            self._app.set_action_enabled('start', True)
         self._update_status(msg)
 
     def _init_saver_worker_and_start_it(self):
@@ -152,6 +154,7 @@ class ExtensionWorker(QObject):
 
         # managing saver worker
         self.module_and_data_saver.h5saver = self._app.h5saver
+
         self.saver_worker = SaverWorker(saver=self.module_and_data_saver, )
         self.thread_manager.create_thread_for_worker('saver', self.saver_worker)
         self.saver_worker.n_saved.connect(self.update_worker_ntask)
@@ -183,8 +186,7 @@ class ExtensionWorker(QObject):
         self.thread_manager.exit_worker_thread('saver', delete_worker=True)
 
         # 4 flushing/closing the file to be able to create new groups...
-        self.module_and_data_saver.h5saver.flush()
-        self.module_and_data_saver.h5saver.close_file()
+        self.h5_manager.close_file()
         self.h5_manager.update_file_status_led()
 
         # 5 updating GUI info
@@ -212,7 +214,7 @@ class ExtensionWorker(QObject):
         """
         raise NotImplementedError
 
-    def _stop(self):
+    def _stop(self, msg: str = None):
         """ To be reimplemented with specifics of your Worker
 
         Is called automatically after self.stop

@@ -242,11 +242,11 @@ class SharedUI(CustomApp):
         quit_fun
         """
         try:
+            res= True
             if hasattr(self._main_application, 'quit_fun'):
-                self._main_application.quit_fun()
-                QtWidgets.QApplication.processEvents()
+                res = self._main_application.quit_fun()
 
-            if self.mainwindow is not None:
+            if res and self.mainwindow is not None:
                 self.mainwindow.close()
 
         except Exception as e:

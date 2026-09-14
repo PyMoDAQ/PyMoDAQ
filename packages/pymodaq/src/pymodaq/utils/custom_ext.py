@@ -82,11 +82,22 @@ class CustomExt(CustomApp):
         """Method to be subclassed in order to define a custom quit function
         if returned True, one can proceed with other quit mechanisms otherwise do not quit
         """
-        res = super().quit_fun()
+        if self._quit_fun():
+            res = super().quit_fun()
 
-        if self.dashboard is not None:
-            self.show_dashboard(True)  #make sure to show it if it was hidden
-        return res
+            if self.dashboard is not None:
+                self.show_dashboard(True)  #make sure to show it if it was hidden
+            return res
+        else:
+            return False
+
+    def _quit_fun(self) -> bool:
+        """ to be reimplemented in order to properly quit your application
+
+        Then the base class quit_fun method will be called
+
+        """
+        pass
 
     def get_app_toolbars(self) -> list[QtWidgets.QToolBar]:
         """ Get the main toolbars widget to be eventually added in the main window toolbararea

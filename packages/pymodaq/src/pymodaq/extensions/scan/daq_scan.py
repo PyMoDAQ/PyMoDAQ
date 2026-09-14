@@ -455,7 +455,7 @@ class DAQScan(CustomExt):
         self.settings.child('scan_options', 'stop_on_timeout').setValue(
             config('pymodaq', 'scan', 'stop_on_timeout'))
 
-    def quit_fun(self):
+    def _quit_fun(self) -> bool:
         """
             Quit the current instance of DAQ_scan
 
@@ -481,7 +481,7 @@ class DAQScan(CustomExt):
                 logger.exception(str(e))
 
 
-        return super().quit_fun()
+        return True
 
     def create_dataset_settings(self):
         # params about dataset attributes and scan attibutes
@@ -1290,7 +1290,7 @@ class DAQScanAcquisition(ExtensionWorker):
         if not do_pause:
             self.advance()
 
-    def _stop(self):
+    def _stop(self, msg: str = None):
 
         #2 disconnect all other signals
         try:
@@ -1304,7 +1304,8 @@ class DAQScanAcquisition(ExtensionWorker):
 
         #4 update the GUI
         self._app.status_sig.emit(utils.ThreadCommand("Scan_done"))
-
+        if msg is not None:
+            self._app.status_manager.set_permanent_status(msg)
 
     def _update_status(self, msg: str):
         """ convenience method to update the status signal """
@@ -1333,7 +1334,7 @@ class DAQScanAcquisition(ExtensionWorker):
             self.modules_manager.timeout_signal.connect(self.timeout)
 
             self.scan_step_failed_signal.connect(self._on_scan_step_failed)
-            
+
             self.modules_manager.connect_actuators(True)
             self.modules_manager.connect_detectors(True)
 
