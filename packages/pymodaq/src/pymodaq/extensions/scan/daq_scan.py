@@ -56,6 +56,7 @@ from pymodaq.extensions.scan.manager.scan_manager import ScanManager
 from pymodaq_gui.utils.widgets.spinbox import QSpinBox_ro
 from pymodaq_gui.utils.widgets import QLED
 from pymodaq_gui.utils.custom_app import CustomApp
+from pymodaq.extensions.extension_worker import DataBundle, ExtensionWorker
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -73,15 +74,6 @@ class DAQ_ScanException(Exception):
 
 class ScanStepError(Exception):
     """Raised when an error occurs during a scan step"""
-
-
-@dataclasses.dataclass
-class ScanData:
-    """Convenience class to hold data to be saved or plotted"""
-    dte: DataToExport
-    indexes: list[int]
-    distribution: DataDistribution
-    scan_index: int
 
 
 class ScanStatusBarManager:
@@ -148,6 +140,7 @@ class DAQScan(CustomExt):
     """
     Main class initializing a DAQScan module with its dashboard and scanning control panel
     """
+
     settings_name = 'daq_scan_settings'
     show_h5file_statusbar_widgets = True
 
@@ -462,7 +455,7 @@ class DAQScan(CustomExt):
         self.settings.child('scan_options', 'stop_on_timeout').setValue(
             config('pymodaq', 'scan', 'stop_on_timeout'))
 
-    def quit_fun(self):
+    def _quit_fun(self) -> bool:
         """
             Quit the current instance of DAQ_scan
 
@@ -488,7 +481,7 @@ class DAQScan(CustomExt):
                 logger.exception(str(e))
 
 
-        return super().quit_fun()
+        return True
 
     def create_dataset_settings(self):
         # params about dataset attributes and scan attibutes
@@ -942,8 +935,8 @@ class DAQScan(CustomExt):
     ############
     #  PLOTTING
 
-    def save_temp_live_data(self, scan_data: ScanData):
-        if scan_data.scan_index == 0:
+    def save_temp_live_data(self, scan_data: DataBundle):
+        if scan_data.save_index == 0:
             if self.scanner.scanner.do_process_data:
                 viewers_enum, data_names, _ = self.check_number_type_viewers()
                 for dwa in scan_data.dte:
@@ -1150,8 +1143,8 @@ class DAQScan(CustomExt):
     def ini_scan_acquisition(self):
         self.scan_acquisition = DAQScanAcquisition(self)
         self.command_daq_signal[utils.ThreadCommand].connect(self.scan_acquisition.queue_command)
-        self.scan_acquisition.scan_data_tmp[ScanData].connect(self.save_temp_live_data)
-        self.scan_acquisition.status_sig[utils.ThreadCommand].connect(self.thread_status)
+        self.scan_acquisition.scan_data_tmp[DataBundle].connect(self.save_temp_live_data)
+        self.status_sig[utils.ThreadCommand].connect(self.thread_status)
 
     def _init_live(self):
         Naverage = self.settings['scan_options', 'scan_average']
@@ -1234,57 +1227,16 @@ class DAQScan(CustomExt):
             self.get_action('stop').trigger()
 
 
-
-
-class SaverWorker(QtCore.QObject):
-    """ Worker in separated thread receiving the data from a DataGenerator
-    and adding them into the enlargeable arrays with the H5file using the
-     ScanModuleSaver """
-
-    n_saved = QtCore.Signal(int)
-    data_to_save_signal = QtCore.Signal(ScanData)
-    nav_axes_signal = QtCore.Signal(list)
-
-    def __init__(self, saver: module_saving.ScanSaver):
-        super().__init__()
-        self.saver: module_saving.ScanSaver  = saver
-        self._n_saved = 0
-        self._show_thread = True
-
-        self.data_to_save_signal.connect(self.save_data, QtCore.Qt.ConnectionType.QueuedConnection)
-        self.nav_axes_signal.connect(self.add_nav_axes, QtCore.Qt.ConnectionType.QueuedConnection)
-
-    @QtCore.Slot(ScanData)
-    def save_data(self, data: ScanData):
-        if self._show_thread:
-            print(f'Saving data in Qthread{self.thread()}')
-            self._show_thread = False
-        self.saver.add_data(data.dte, indexes=data.indexes, distribution=data.distribution,)
-        self.saver.add_time(data.indexes)
-        self._n_saved += 1
-        self.n_saved.emit(self._n_saved)
-
-    @QtCore.Slot(list)
-    def add_nav_axes(self, axes: list[Axis]):
-        if self._show_thread:
-            print(f'Saving data in Qthread{self.thread()}')
-            self._show_thread = False
-        self.saver.add_nav_axes(axes)
-
-
-
-class DAQScanAcquisition(QObject):
+class DAQScanAcquisition(ExtensionWorker):
     """
         =========================== ========================================
 
         =========================== ========================================
 
     """
-    scan_data_tmp = Signal(ScanData)
-    status_sig = Signal(utils.ThreadCommand)
+    scan_data_tmp = Signal(DataBundle)
     h5_data_array_ready_signal = Signal()
     scan_step_failed_signal = Signal(ScanStepError)
-    _worker_done = QtCore.Signal()
 
     def __init__(self, daq_scan: DAQScan, parent=None):
 
@@ -1293,16 +1245,11 @@ class DAQScanAcquisition(QObject):
         getting back data, saviong and letting know th UI about the scan status
 
         """
+        self._app: DAQScan = daq_scan # redefined in super but here allows to set the right type,
+        # not the generic CustomExt
 
-        super().__init__(parent)
-        self.daq_scan = daq_scan
+        super().__init__(app=daq_scan, parent=parent)
 
-        self.thread_manager = WorkerThreadManager(parent=self)
-
-        self.saver_worker: SaverWorker = None
-        self._n_emitted = 0
-
-        self._running = False
         self.timeout_scan_flag = False  # for testing purpose in asserting timeout has been fired
 
         self.Naverage = self.settings['scan_options', 'scan_average']
@@ -1313,33 +1260,9 @@ class DAQScanAcquisition(QObject):
         self._current_indexes: tuple[int] = None
 
     @property
-    def is_running(self) -> bool:
-        return self._running
-
-    @property
-    def h5_manager(self) -> H5Manager:
-        """ Convenience property"""
-        return self.daq_scan.h5_manager
-
-    @property
-    def modules_manager(self) -> ModulesManager:
-        """ Convenience property"""
-        return self.daq_scan.modules_manager
-
-    @property
     def scanner(self) -> Scanner:
         """ Convenience property"""
-        return self.daq_scan.scanner
-    
-    @property
-    def settings(self) -> Parameter:
-        return self.daq_scan.settings
-
-    @property
-    def module_and_data_saver(self) -> module_saving.ScanSaver:
-        """ Convenience property"""
-        return self.daq_scan.module_and_data_saver
-
+        return self._app.scanner
 
     def queue_command(self, command: utils.ThreadCommand):
         """Process the commands sent by the main ui
@@ -1360,30 +1283,14 @@ class DAQScanAcquisition(QObject):
         elif command.command == "move_stages":
             self.modules_manager.move_actuators(command.attribute, polling=False)
 
-    def start(self):
-        self._running = True
-        self._n_emitted = 0
+    def _start(self):
         self.set_ini_positions()
 
-    def pause(self, do_pause: bool = True):
-        if do_pause:
-            self._running = False
-        else:
-            self._running = True
-
-        self.modules_manager.enable_modules(do_pause)
-        self._on_scan_pausing(do_pause)
+    def _pause(self, do_pause: bool = True):
         if not do_pause:
             self.advance()
 
-    def stop(self, msg: str):
-        self._running = False
-
-
-        try: #1 immediately stop the emission of data to the saver worker
-            self.saver_worker.data_to_save_signal.disconnect(self.saver_worker.save_data)
-        except (TypeError, AttributeError):
-            pass
+    def _stop(self, msg: str = None):
 
         #2 disconnect all other signals
         try:
@@ -1394,20 +1301,17 @@ class DAQScanAcquisition(QObject):
             self.modules_manager.timeout_signal.disconnect(self.timeout)
         except (TypeError, AttributeError):
             pass
-        self.modules_manager.connect_actuators(False)
-        self.modules_manager.connect_detectors(False)
-        self.modules_manager.enable_modules(True)
-
-        #3 terminate the saver worker once its queue is empty
-        if self.settings['worker', 'worker_tasks'] == 0:
-            self.terminate_worker()
-        else:
-            self._worker_done.connect(self.terminate_worker)
 
         #4 update the GUI
-        self.daq_scan.set_action_checked('pause', False)
-        self._update_status(msg)
-        self.status_sig.emit(utils.ThreadCommand("Scan_done"))
+        self._app.status_sig.emit(utils.ThreadCommand("Scan_done"))
+        if msg is not None:
+            self._app.status_manager.set_permanent_status(msg)
+
+    def _update_status(self, msg: str):
+        """ convenience method to update the status signal """
+        self._app.status_sig.emit(utils.ThreadCommand("Update_Status", attribute=msg))
+        logger.info(msg)
+
 
     def set_ini_positions(self):
         """ Set the actuators's positions to their initial value as defined in the scanner  """
@@ -1422,32 +1326,17 @@ class DAQScanAcquisition(QObject):
                                              module_type=ModuleType.Actuator,
                                              disconnect_modules=True)
         if self._running:
-            self.init_scan()
+            self.init_things()
             self.advance()
 
-    def init_scan(self):
+    def init_things(self):
         try:
-
-            self._running = True
-            print(f'Main Qthread: {self.thread()}')
-            try:
-                self._worker_done.disconnect(self.terminate_worker)
-            except TypeError:
-                pass
-
-            # managing saver worker
-            self.module_and_data_saver.h5saver = self.daq_scan.h5saver
-            self.saver_worker = SaverWorker(saver=self.module_and_data_saver,)
-            self.thread_manager.create_thread_for_worker('saver', self.saver_worker)
-            self.saver_worker.n_saved.connect(self.update_worker_ntask)
-            self.thread_manager.start_thread('saver')
-            self.settings['worker', 'worker_running'] = True
-
-            self.modules_manager.connect_actuators(True)
-            self.modules_manager.connect_detectors(True)
             self.modules_manager.timeout_signal.connect(self.timeout)
 
             self.scan_step_failed_signal.connect(self._on_scan_step_failed)
+
+            self.modules_manager.connect_actuators(True)
+            self.modules_manager.connect_detectors(True)
 
             self.modules_manager.enable_modules(False)
             self._update_status("Acquisition has started")
@@ -1457,47 +1346,6 @@ class DAQScanAcquisition(QObject):
         except Exception as e:
             self.scan_step_failed_signal.emit(ScanStepError(f"Error at init step:\n"
                                                             f"{str(e)}"))
-
-    @QtCore.Slot(int)
-    def update_worker_ntask(self, n_saved: int):
-        n_tasks = self._n_emitted - n_saved
-        self.settings['worker', 'worker_tasks'] = n_tasks
-
-        if n_tasks == 0:
-            self._worker_done.emit()
-
-    def terminate_worker(self):
-        """ Will terminate/close/stops a few things when the worker is done working"""
-        # stopping the plotting before flushing/closing the file
-        #1 disconnecting the connection to here (fired once)
-        try:
-            self._worker_done.disconnect(self.terminate_worker)
-        except TypeError:
-            pass
-        try: #2 disconnect the data production from the saving
-            self.saver_worker.data_to_save_signal.disconnect(self.saver_worker.save_data)
-        except (AttributeError, TypeError):
-            pass
-
-        #3 quit the thread managing the data saving (nothing left in the loop and no more connection)
-        self.thread_manager.exit_worker_thread('saver', delete_worker=True)
-
-        #4 flushing/closing the file to be able to create new groups...
-        self.module_and_data_saver.h5saver.flush()
-        self.module_and_data_saver.h5saver.close_file()
-        self.h5_manager.update_file_status_led()
-
-        #5 updating GUI info
-        self.daq_scan.enable_start_stop(True)
-        self.settings['worker', 'worker_running'] = False
-
-    def _on_scan_pausing(self, pausing=True):
-        if pausing:
-            message = "Acquisition has been paused"
-        else:
-            message = "Acquisition resumed"
-
-        self._update_status(message)
 
     def advance(self):
         try:
@@ -1531,7 +1379,7 @@ class DAQScanAcquisition(QObject):
     def get_next_position(self) -> DataToExport:
         try:
 
-            self.status_sig.emit(
+            self._app.status_sig.emit(
                 utils.ThreadCommand("Update_scan_index",
                                     attribute=[self._ind_scan, self._ind_average]))
             return self.scanner.positions_at(self._ind_scan)  # get positions
@@ -1616,16 +1464,16 @@ class DAQScanAcquisition(QObject):
 
 
         self.saver_worker.data_to_save_signal.emit(
-            ScanData(
+            DataBundle(
                 indexes=list(self._current_indexes),
                 distribution=self.scanner.distribution,
-                scan_index=self._ind_scan,
+                save_index=self._ind_scan,
                 dte=dte_grabbed,))
         self._n_emitted += 1
 
         self.scan_data_tmp.emit(
-            ScanData(dte=self._current_dte_to_be_plotted,
-                     scan_index=self._ind_scan,
+            DataBundle(dte=self._current_dte_to_be_plotted,
+                     save_index=self._ind_scan,
                      indexes=list(self._current_indexes),
                      distribution=self.scanner.distribution,
                      ))
@@ -1657,22 +1505,18 @@ class DAQScanAcquisition(QObject):
             msg = 'Timeout during acquisition'
         self._update_status(msg)
         self.timeout_scan_flag = True
-        self.status_sig.emit(utils.ThreadCommand("Timeout", attribute=msg))
+        self._app.status_sig.emit(utils.ThreadCommand("Timeout", attribute=msg))
         logger.warning(msg)
         if self.settings['scan_options', 'stop_on_timeout']:
             self.stop(msg=f'Scan stopped due to a Timeout')
         else:
             self.advance()
 
-    def _update_status(self, msg: str):
-        """ convenience method to update the status signal """
-        self.status_sig.emit(utils.ThreadCommand("Update_Status", attribute=msg))
-        logger.info(msg)
-
     def _on_scan_step_failed(self, exception: ScanStepError):
         logger.warning(exception)
-        self.status_sig.emit(utils.ThreadCommand("Scan_done"))
+        self._app.status_sig.emit(utils.ThreadCommand("Scan_done"))
         self.stop(msg=f'Scan stopped due to a failure during a step')
+
 
 
 def main():
