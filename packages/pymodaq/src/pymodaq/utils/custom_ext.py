@@ -23,6 +23,8 @@ class DashBoardToolbarActions(StrEnum):
     SHOW = 'show_dashboard'
 
 
+
+
 class CustomExt(CustomApp):
     status_sig = QtCore.Signal(ThreadCommand)
     status_signal = QtCore.Signal(str)  # signal to be used to emit info

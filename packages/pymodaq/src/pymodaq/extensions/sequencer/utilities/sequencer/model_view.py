@@ -21,13 +21,13 @@ from ..element_factory import SeqEltFactory, SeqEltBase, MIME_TYPE
 from ..elements.button import AddButtonPlaceholder
 from ..elements.root import RootElt
 from ..styling import button_style, menu_style, color_from_depth
-from ...utils import get_set_sequencer_path
+from ... import get_set_sequencer_path
 from ..yaml_utils import PrettyListDumper
 
 
 if TYPE_CHECKING:
     from pymodaq.scripting import Dashboard
-    from pymodaq_plugins_sequencer.utilities.sequencer.sequence import Sequence
+    from pymodaq.extensions.sequencer.utilities.sequencer.sequence import Sequence
 
 seq_factory = SeqEltFactory()
 ser_factory = SerializableFactory()

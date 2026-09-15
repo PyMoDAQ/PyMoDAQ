@@ -55,6 +55,14 @@ class ExtensionWorker(QObject):
     """
     _worker_done = QtCore.Signal()
 
+    #these below should be added as top children in the extension settings
+    params = [
+        {'title': 'Worker:', 'name': 'worker', 'type': 'group', 'children': [
+            {'title': 'Worker Running:', 'name': 'worker_running', 'type': 'led', 'value': False, 'readonly': True},
+            {'title': 'Worker tasks:', 'name': 'worker_tasks', 'type': 'int', 'value': 0, 'readonly': True},
+        ]},
+    ]
+
     def __init__(self, app: CustomExt, parent=None):
 
         """

@@ -13,6 +13,7 @@ from pymodaq.extensions.sequencer.utilities.sequencer.sequence import Sequence
 from qtpy import QtWidgets, QtCore
 
 from pymodaq_gui import utils as gutils
+from pymodaq_gui.utils.custom_app import WorkFlowActions
 from pymodaq_gui.utils.enums import MenuToolbarNames
 
 from pymodaq_utils.config import Config, GlobalConfig
@@ -56,13 +57,9 @@ class StatusBarManager:
 
 class Sequencer(CustomExt):
     show_h5file_statusbar_widgets = True
+    show_workflow_actions = True
     _worker_done = QtCore.Signal()
-    params = [
-        {'title': 'Worker:', 'name': 'worker', 'type': 'group', 'children': [
-            {'title': 'Worker Running:', 'name': 'worker_running', 'type': 'led', 'value': False, 'readonly': True},
-            {'title': 'Worker tasks:', 'name': 'worker_tasks', 'type': 'int', 'value': 0, 'readonly': True},
-        ]},
-    ]
+    params = [] + ExtensionWorker.params
 
     def __init__(self, parent: gutils.DockArea, dashboard):
 
@@ -150,7 +147,6 @@ class Sequencer(CustomExt):
                          toolbar=self.h5_manager.toolbar, add_break=False)
         self.add_menu(MenuToolbarNames.FILE, MenuToolbarNames.FILE.capitalize(), parent_menu=menubar)
         self.add_menu(MenuToolbarNames.TOOLS, MenuToolbarNames.TOOLS.capitalize(), parent_menu=menubar)
-        self.add_menu('actions', 'Actions', parent_menu=menubar)
 
         self.create_dashboard_toolbar(add_break=False)
 
@@ -173,14 +169,7 @@ class Sequencer(CustomExt):
         ActionManager.add_action
         """
 
-        self.add_action('start', 'Start Logging', 'motion_play',
-                        "Start the Global Sequence",
-                        menu='actions', icon_color=self.get_theme().green)
-        self.add_action('stop', 'Stop Logging', 'stop_circle', "Stop the Global Sequence",
-                        menu='actions', icon_color=self.get_theme().red)
-        self.add_action('pause', 'Pause Logging', 'pause_circle', "Pause/resume the Global Sequence",
-                        checkable=True, menu='actions',
-                        icon_checked_color=self.get_theme().orange)
+
         self.toolbar.addSeparator()
         self.add_action('add_sequence', 'Add Sequence', 'add_circle',
                         tip='Add a sequence',
@@ -195,13 +184,6 @@ class Sequencer(CustomExt):
         self.add_action('save_sequence', 'Save Sequence', 'file_save',
                         tip='Save as a sequence file',
                         )
-        self.toolbar.addSeparator()
-        self.add_action('do_log', 'Do Logging', 'home_storage',
-                        tip='Log all data generated within the Sequences',
-                        icon_checked_color=self.get_theme().green,
-                        icon_color=self.get_theme().red,
-                        checkable=True,
-                        checked=True)
 
     def connect_things(self):
         """Connect actions and/or other widgets signal to methods"""
@@ -211,9 +193,9 @@ class Sequencer(CustomExt):
         self.connect_action('load_sequence', lambda: self.load_sequence())
         self.connect_action('save_sequence', lambda: self.save_sequence())
 
-        self.connect_action('start', self.sequence_worker.start)
-        self.connect_action('stop', self.sequence_worker.stop)
-        self.connect_action('pause', self.sequence_worker.pause)
+        self.connect_action(WorkFlowActions.START, self.sequence_worker.start)
+        self.connect_action(WorkFlowActions.STOP, self.sequence_worker.stop)
+        self.connect_action(WorkFlowActions.PAUSE, self.sequence_worker.pause)
 
         self.h5_manager.connect_action(FileAction.SHOW_SETTINGS, self.show_settings)
 
@@ -320,22 +302,22 @@ class SequenceWorker(ExtensionWorker):
     def _start(self):
         self.module_and_data_saver.get_set_node(new=True)
         for sequence in self.app.sequences.values():
-            sequence.set_log_callback(self.save_callback if self.app.is_action_checked('do_log')
+            sequence.set_log_callback(self.save_callback if self.app.is_action_checked(WorkFlowActions.LOG)
                                       else None)
 
         self._n_emitted = 0
 
-        self.app.set_action_enabled('start', False)
+        self.app.set_action_enabled(WorkFlowActions.START, False)
         self.app.main_sequence.sequence_finished.connect(self.stopped)
-        self.app.main_sequence.get_action('start').trigger()
+        self.app.main_sequence.get_action(WorkFlowActions.START).trigger()
 
     def _pause(self, do_pause: bool = True):
         for sequence in self.app.sequences.values():
-            sequence.get_action('pause').trigger()
+            sequence.get_action(WorkFlowActions.PAUSE).trigger()
 
     def _stop(self, msg: str = None):
         for sequence in self.app.sequences.values():
-            sequence.get_action('stop').trigger()
+            sequence.get_action(WorkFlowActions.STOP).trigger()
 
     def stopped(self, msg: str = None):
         self._running = False
@@ -350,8 +332,8 @@ class SequenceWorker(ExtensionWorker):
             self._worker_done.connect(self.terminate_worker)
 
         #3 update the GUI
-        self._app.set_action_checked('pause', False)
-        self._app.set_action_enabled('start', True)
+        self._app.set_action_checked(WorkFlowActions.PAUSE, False)
+        self._app.set_action_enabled(WorkFlowActions.START, True)
         if msg is not None:
             self.app.update_status(msg)
             self.status_manager.set_permanent_status(msg)

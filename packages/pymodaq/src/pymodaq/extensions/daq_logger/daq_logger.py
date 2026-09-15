@@ -13,6 +13,7 @@ from pymodaq.control_modules.daq_viewer_ui.ui_base import ActionIconNames
 from pymodaq.utils.h5modules.module_saving import LoggerSaver
 from pymodaq_gui.managers.runner_thread_manager import WorkerThreadManager
 from pymodaq_gui.messenger import messagebox
+from pymodaq_gui.utils.custom_app import WorkFlowActions
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_gui.utils.dock import Dock, DockArea
@@ -103,13 +104,10 @@ class DAQLogger(CustomExt):
     Main class initializing a DAQ_Logger module
     """
     show_h5file_statusbar_widgets = True
+    show_workflow_actions = True
     icon_name = 'home_storage'
-    params = [
-        {'title': 'Worker:', 'name': 'worker', 'type': 'group', 'children': [
-            {'title': 'Worker Running:', 'name': 'worker_running', 'type': 'led', 'value': False, 'readonly': True},
-            {'title': 'Worker tasks:', 'name': 'worker_tasks', 'type': 'int', 'value': 0, 'readonly': True},
-        ]},
-    ]
+    params = [] + ExtensionWorker.params
+
 
     def __init__(self, dockarea: DockArea = None,
                  dashboard: 'DashBoard' = None,
@@ -127,8 +125,11 @@ class DAQLogger(CustomExt):
 
         self.setup_ui()
 
+    def do_things_after_ui_setup(self):
+        self.set_action_visible(WorkFlowActions.LOG, False) # hide as it should always be True for this extension
+
     def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: bool = None):
-        self.enable_start_stop(True)
+        self.enable_workflow_actions(True)
         super().do_things_after_experiment_set(experiment_name, show_dashboard)
 
     def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
@@ -138,8 +139,6 @@ class DAQLogger(CustomExt):
                          toolbar=self.h5_manager.toolbar, add_break=False)
         self.add_menu(MenuToolbarNames.FILE, MenuToolbarNames.FILE.capitalize(), parent_menu=menubar)
         self.add_menu(MenuToolbarNames.TOOLS, MenuToolbarNames.TOOLS.capitalize(), parent_menu=menubar)
-        self.add_menu('actions', 'Actions', parent_menu=menubar)
-
 
         self.create_dashboard_toolbar(add_break=False)
 
@@ -170,13 +169,6 @@ class DAQLogger(CustomExt):
         subclass method from ActionManager
         '''
         logger.debug('setting actions')
-        self.add_action('start', 'Start Logging', 'motion_play', "Start the Logging",
-                        menu='actions', icon_color=self.get_theme().green)
-        self.add_action('stop', 'Stop Logging', 'stop_circle', "Stop the Logging",
-                        menu='actions', icon_color=self.get_theme().red)
-        self.add_action('pause', 'Pause Logging', 'pause_circle', "Pause/resume the Logging",
-                        checkable=True, menu='actions',
-                        icon_checked_color=self.get_theme().orange)
 
         self.toolbar.addSeparator()
         self.add_action('grab_all', 'Grab All', ActionIconNames.GRAB,
@@ -186,22 +178,14 @@ class DAQLogger(CustomExt):
                         icon_checked_color=self.get_theme().green)
         logger.debug('actions set')
 
-        self.enable_start_stop(False)
-
-    def enable_start_stop(self, enable=True):
-        """If True enable main buttons to launch/stop scan"""
-        self.set_action_enabled('start', enable)
-        self.set_action_enabled('stop', enable)
-        self.set_action_enabled('pause', enable)
-        if enable:
-            self.set_action_checked('pause', False)
+        self.enable_workflow_actions(False)
 
     def connect_things(self):
         self.status_signal[str].connect(self.dashboard.add_status)
 
-        self.connect_action('start', self.logging.start)
-        self.connect_action('pause', self.logging.pause)
-        self.connect_action('stop', lambda: self.logging.stop('Logging Stopped by the User'))
+        self.connect_action(WorkFlowActions.START, self.logging.start)
+        self.connect_action(WorkFlowActions.PAUSE, self.logging.pause)
+        self.connect_action(WorkFlowActions.STOP, lambda: self.logging.stop('Logging Stopped by the User'))
         self.connect_action('grab_all', self.start_stop_all)
 
     def _quit_fun(self) -> bool:
@@ -239,34 +223,6 @@ class DAQLogger(CustomExt):
         return super().module_and_data_saver
 
 
-
-class SaverWorker(QtCore.QObject):
-    """ Worker in separated thread receiving the data from a DataGenerator
-    and adding them into the enlargeable arrays with the H5file using the
-     LoggerModuleSaver """
-
-    n_saved = QtCore.Signal(int)
-    data_to_save_signal = QtCore.Signal(DataToExport)
-
-
-    def __init__(self, saver: LoggerSaver, parent=None):
-        super().__init__(parent)
-        self.saver = saver
-        self._n_saved = 0
-        self._show_thread = True
-
-        self.data_to_save_signal.connect(self.save_data, QtCore.Qt.ConnectionType.QueuedConnection)
-
-    @QtCore.Slot(DataToExport)
-    def save_data(self, dte: DataToExport):
-        if self._show_thread:
-            print(f'Saving data in Qthread{self.thread()}')
-            self._show_thread = False
-        self.saver.add_data(dte,)
-        self._n_saved += 1
-        self.n_saved.emit(self._n_saved)
-
-
 class Logging(ExtensionWorker):
 
     def __init__(self, logger: DAQLogger, parent=None):
@@ -275,7 +231,6 @@ class Logging(ExtensionWorker):
 
         self._app.modules_manager.actuators_changed.connect(self.update_connections)
         self._app.modules_manager.detectors_changed.connect(self.update_connections)
-
 
     @property
     def n_saved(self) -> int:
@@ -298,13 +253,13 @@ class Logging(ExtensionWorker):
 
         self._app.status_manager.log_time = QtCore.QDateTime.currentDateTime()
         self._app.status_manager.set_permanent_status('Starting logging')
-
-        self._connect_control_modules()
         self.n_saved = 0
+        self.update_connections()
 
     def update_connections(self):
-        self._disconnect_control_modules()
-        self._connect_control_modules()
+        if self.is_running:
+            self._disconnect_control_modules()
+            self._connect_control_modules()
 
     def _connect_control_modules(self):
         """ Connect only the selected control modules"""
