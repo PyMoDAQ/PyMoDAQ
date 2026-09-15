@@ -58,7 +58,7 @@ class StatusBarManager:
 class Sequencer(CustomExt):
     show_h5file_statusbar_widgets = True
     show_workflow_actions = True
-    _worker_done = QtCore.Signal()
+
     params = [] + ExtensionWorker.params
 
     def __init__(self, parent: gutils.DockArea, dashboard):

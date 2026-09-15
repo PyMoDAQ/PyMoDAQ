@@ -6,7 +6,7 @@ from typing import Iterable, TYPE_CHECKING, Union, Mapping
 from qtpy import QtWidgets, QtCore
 from qtpy.QtCore import Qt
 
-from messenger import messagebox
+from pymodaq_gui.messenger import messagebox
 from pymodaq_data.h5modules.backends import NodeError
 from pymodaq_gui.plotting.data_viewers import ViewerDispatcher, ViewersEnum
 from pymodaq_gui.utils.widgets.window import make_window

@@ -700,7 +700,7 @@ class LoggerSaver(ExtensionSaver):
                     dte_from_dwa = DataToExport(name=dwa.origin, data=[dwa])
                     self.add_data(dte_from_dwa)
                 else:
-                    raise NameError("Cannot save this DataToExport to one of the named saver")
+                    raise NameError(f"Cannot save this DataToExport named {dte.name} to one of the named saver")
 
     def add_data_bundle(self, data: DataBundle):
         self.add_data(data.dte)
