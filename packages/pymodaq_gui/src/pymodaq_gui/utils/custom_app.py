@@ -384,16 +384,36 @@ class CustomApp(QObject, ActionManager, ParameterManager):
                         icon_color=self.get_theme().red,
                         checkable=True,
                         checked=True)
+        self.toolbar.addSeparator()
 
     def enable_workflow_actions(self,
                                 enable=True,
                                 excepted: Iterable[str | WorkFlowActions] = (),
+                                opposite: Iterable[str | WorkFlowActions] = (),
                                 other_actions: Iterable[str | WorkFlowActions] = ()):
+        """ Enable/Disable workflow actions (start, stop, pause) + other specified ones
+
+        if an action is specified in excepted, nothing is done on it
+        if an action is specified in opposite, the opposite boolean is applied to its enabled status
+
+        Everytime this function is called the Pause action is unchecked
+
+        """
+        if not isinstance(excepted, Iterable):
+            excepted = [excepted]
+        if not isinstance(other_actions, Iterable):
+            other_actions = [other_actions]
+        if not isinstance(opposite, Iterable):
+            opposite = [opposite]
+
         for action in WorkFlowActions.names() + list(other_actions):
             if self.has_action(action) and action not in excepted:
-                self.set_action_enabled(action, enable)
-        if enable:
-            self.set_action_checked(WorkFlowActions.PAUSE, False)
+                if action in opposite:
+                    self.set_action_enabled(action, not enable)
+                else:
+                    self.set_action_enabled(action, enable)
+
+        self.set_action_checked(WorkFlowActions.PAUSE, False)
 
     def connect_things(self):
         """Connect actions and/or other widgets signal to methods
