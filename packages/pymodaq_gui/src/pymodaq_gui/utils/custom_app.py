@@ -11,6 +11,7 @@ from pymodaq_gui.h5modules.saving import H5Saver
 from pymodaq_gui.managers.runner_thread_manager import WorkerThreadManager
 from pymodaq_gui.managers.h5manager import FileStatus, H5Manager, FileAction
 from pymodaq_utils.config import GlobalConfig as Config
+from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import get_set_path, get_set_local_dir
 from pymodaq_utils.warnings import deprecation_msg
@@ -23,6 +24,13 @@ from pymodaq_gui.utils.splash import get_splash_sc
 
 logger = set_logger(get_module_name(__file__))
 config = Config()
+
+
+class WorkFlowActions(StrEnum):
+    START = 'start'
+    STOP = 'stop'
+    PAUSE = 'pause'
+    LOG = 'log'
 
 
 class CustomApp(QObject, ActionManager, ParameterManager):
@@ -110,6 +118,8 @@ class CustomApp(QObject, ActionManager, ParameterManager):
 
     log_signal = QtCore.Signal(str)
     show_h5file_statusbar_widgets = False
+    show_workflow_actions = False
+
     h5_base_group_name = 'AppData'  # rename that in your app/extension to give a meaningful name to your base group
     params = []
 
@@ -269,6 +279,9 @@ class CustomApp(QObject, ActionManager, ParameterManager):
 
         self.setup_actions()  # see ActionManager MixIn class
 
+        if self.show_workflow_actions:
+            self.setup_workflow_actions()
+
         self.connect_things()
 
         self.do_things_after_ui_setup()
@@ -350,6 +363,36 @@ class CustomApp(QObject, ActionManager, ParameterManager):
 
         """
         pass
+
+    def setup_workflow_actions(self):
+        if 'actions' not in self.menus:
+            self.add_menu('actions', 'Actions', parent_menu=self.menubar)
+
+        self.add_action(WorkFlowActions.START, 'Start Workflow', 'motion_play',
+                        "Start the workflow",
+                        menu='actions', icon_color=self.get_theme().green)
+        self.add_action(WorkFlowActions.STOP, 'Stop Workflow', 'stop_circle', "Stop the workflow",
+                        menu='actions', icon_color=self.get_theme().red)
+        self.add_action(WorkFlowActions.PAUSE, 'Pause Workflow', 'pause_circle', "Pause/resume the workflow",
+                        checkable=True, menu='actions',
+                        icon_checked_color=self.get_theme().orange)
+
+        self.toolbar.addSeparator()
+        self.add_action(WorkFlowActions.LOG, 'Do Logging', 'home_storage',
+                        tip='Log all data generated within the workflow',
+                        menu='actions',
+                        icon_checked_color=self.get_theme().green,
+                        icon_color=self.get_theme().red,
+                        checkable=True,
+                        checked=True)
+
+    def enable_workflow_actions(self,
+                                enable=True,
+                                excepted: Iterable[str | WorkFlowActions] = (),
+                                other_actions: Iterable[str | WorkFlowActions] = ()):
+        for action in WorkFlowActions.names() + list(other_actions):
+            if self.has_action(action) and action not in excepted:
+                self.set_action_enabled(action, enable)
 
     def connect_things(self):
         """Connect actions and/or other widgets signal to methods
