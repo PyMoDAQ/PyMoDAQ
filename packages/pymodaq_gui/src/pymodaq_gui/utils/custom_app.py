@@ -277,10 +277,9 @@ class CustomApp(QObject, ActionManager, ParameterManager):
 
         self.setup_menus_and_toolbars(self.menubar)  # see ActionManager MixIn class
 
-        self.setup_actions()  # see ActionManager MixIn class
-
         if self.show_workflow_actions:
             self.setup_workflow_actions()
+        self.setup_actions()  # see ActionManager MixIn class
 
         self.connect_things()
 
@@ -393,6 +392,8 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         for action in WorkFlowActions.names() + list(other_actions):
             if self.has_action(action) and action not in excepted:
                 self.set_action_enabled(action, enable)
+        if enable:
+            self.set_action_checked(WorkFlowActions.PAUSE, False)
 
     def connect_things(self):
         """Connect actions and/or other widgets signal to methods
