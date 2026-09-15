@@ -47,6 +47,7 @@ class FileAction(StrEnum):
 class H5Manager(QtCore.QObject, ActionManager):
     command_sig = QtCore.Signal(ThreadCommand)
     file_open_signal = QtCore.Signal(bool)
+    file_loaded_signal = QtCore.Signal(Path)
 
     def __init__(self, app: 'CustomApp', parent=None,
                  show_not: Iterable[FileAction] = (FileAction.CLOSE_FILE, FileAction.OPEN_FILE)):
@@ -327,8 +328,10 @@ class H5Manager(QtCore.QObject, ActionManager):
             if not isinstance(file_path, Path):
                 file_path = Path(file_path)
             self.current_folder = file_path.parent
-            self._try_open_existing_file(file_path)
+            file_status = self._try_open_existing_file(file_path)
             self.update_file_status_led()
+            if file_status not in (FileStatus.NO_FILE, FileStatus.CLOSED):
+                self.file_loaded_signal.emit(file_path)
 
     def save_file(self):
         Path(self.h5saver.settings['base_path']).mkdir(exist_ok=True)

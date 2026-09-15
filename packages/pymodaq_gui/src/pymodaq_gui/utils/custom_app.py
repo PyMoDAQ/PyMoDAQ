@@ -406,7 +406,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         if not isinstance(opposite, Iterable):
             opposite = [opposite]
 
-        for action in WorkFlowActions.names() + list(other_actions):
+        for action in [WorkFlowActions(value) for value in WorkFlowActions.values()] + list(other_actions):
             if self.has_action(action) and action not in excepted:
                 if action in opposite:
                     self.set_action_enabled(action, not enable)
