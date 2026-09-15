@@ -46,6 +46,7 @@ class FileAction(StrEnum):
 
 class H5Manager(QtCore.QObject, ActionManager):
     command_sig = QtCore.Signal(ThreadCommand)
+    file_open_signal = QtCore.Signal(bool)
 
     def __init__(self, app: 'CustomApp', parent=None,
                  show_not: Iterable[FileAction] = (FileAction.CLOSE_FILE, FileAction.OPEN_FILE)):
@@ -65,6 +66,7 @@ class H5Manager(QtCore.QObject, ActionManager):
         self._app = app
 
         self.main_window = app.mainwindow
+        self.current_folder: Path = Path(config('data', 'data_saving', 'h5file', 'save_path'))
 
         self._h5_base_group_name = getattr(app, 'h5_base_group_name', 'Data')
 
@@ -238,6 +240,7 @@ class H5Manager(QtCore.QObject, ActionManager):
         if self._h5saver is not None and not self._h5saver.isopen():
             current_file = self._h5saver.settings['current_h5_file']
             if current_file and Path(current_file).exists():
+                self.current_folder = Path(current_file).parent
                 return self._try_open_existing_file(current_file)
             else:
                 return FileStatus.NO_FILE
@@ -263,6 +266,7 @@ class H5Manager(QtCore.QObject, ActionManager):
             try:
                 logger.debug(f"Reopening existing h5 file: {current_file}")
                 self._h5saver.init_file(addhoc_file_path=current_file)
+                self.file_open_signal.emit(True)
                 return FileStatus.REOPENED  # Success
             except Exception as e:
                 if 'lock' in str(e).lower() or 'errno = 0' in str(e).lower():
@@ -285,6 +289,7 @@ class H5Manager(QtCore.QObject, ActionManager):
                     elif msg.clickedButton() == new_auto_btn:
                         logger.info("User chose to create new file (auto)")
                         self._h5saver.init_file(update_h5=True)
+                        self.file_open_signal.emit(True)
                         return FileStatus.NEW
                     elif msg.clickedButton() == browse_btn:
                         # Let user select an existing file to append to
@@ -297,6 +302,7 @@ class H5Manager(QtCore.QObject, ActionManager):
                             logger.info(f"User selected file: {file_path}")
                             try:
                                 self._h5saver.init_file(addhoc_file_path=file_path)
+                                self.file_open_signal.emit(True)
                                 return FileStatus.REOPENED_ANOTHER
                             except Exception as e2:
                                 logger.warning(f"Could not open selected file: {e2}")
@@ -306,16 +312,23 @@ class H5Manager(QtCore.QObject, ActionManager):
                     else:
                         # User cancelled - leave h5_file unchanged
                         logger.info("User cancelled file selection - keeping current file state")
+                        self.file_open_signal.emit(False)
                         return FileStatus.CLOSED
                 else:
                     # Other error - fall back to new file
                     logger.warning(f"Could not reopen h5 file: {e}")
                     self._h5saver.init_file(update_h5=True)
+                    self.file_open_signal.emit(True)
                     return FileStatus.NEW
 
     def load_file(self):
-        self.h5saver.load_file(self.h5saver.h5_file_path)
-        self.update_file_status_led()
+        file_path = select_file(self.current_folder, save=False, ext='h5')
+        if not (file_path is None or file_path == ''):
+            if not isinstance(file_path, Path):
+                file_path = Path(file_path)
+            self.current_folder = file_path.parent
+            self._try_open_existing_file(file_path)
+            self.update_file_status_led()
 
     def save_file(self):
         Path(self.h5saver.settings['base_path']).mkdir(exist_ok=True)
