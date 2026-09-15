@@ -42,6 +42,7 @@ dependencies = [
     "pyleco>0.3; python_version>=\"3.10\"",
     "bayesian-optimization>=2.0",
     "adaptive",
+    "pyyaml",
 ]
 
 [project.optional-dependencies]
