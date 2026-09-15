@@ -151,10 +151,6 @@ class DAQScan(CustomExt):
     icon_name = 'qr_code_scanner'
 
     params = [
-        {'title': 'Worker:', 'name': 'worker', 'type': 'group', 'children': [
-            {'title': 'Worker Running:', 'name': 'worker_running', 'type': 'led', 'value': False, 'readonly': True},
-            {'title': 'Worker tasks:', 'name': 'worker_tasks', 'type': 'int', 'value': 0, 'readonly': True},
-        ]},
         {'title': 'Time Flow:', 'name': 'time_flow', 'type': 'group', 'expanded': False,
          'children': [
             {'title': 'Wait time step (ms)', 'name': 'wait_time', 'type': 'int', 'value': 0,
@@ -190,7 +186,7 @@ class DAQScan(CustomExt):
             {'title': 'Refresh Plots (ms)', 'name': 'refresh_live', 'type': 'int',
              'value': 1000, 'visible': False},
             ]},
-    ]
+    ] + ExtensionWorker.params
 
     def __init__(self, dockarea: gutils.DockArea = None, dashboard: DashBoard = None):
         """

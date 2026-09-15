@@ -59,12 +59,7 @@ class Sequencer(CustomExt):
     show_h5file_statusbar_widgets = True
     show_workflow_actions = True
     _worker_done = QtCore.Signal()
-    params = [
-        {'title': 'Worker:', 'name': 'worker', 'type': 'group', 'children': [
-            {'title': 'Worker Running:', 'name': 'worker_running', 'type': 'led', 'value': False, 'readonly': True},
-            {'title': 'Worker tasks:', 'name': 'worker_tasks', 'type': 'int', 'value': 0, 'readonly': True},
-        ]},
-    ]
+    params = [] + ExtensionWorker.params
 
     def __init__(self, parent: gutils.DockArea, dashboard):
 
