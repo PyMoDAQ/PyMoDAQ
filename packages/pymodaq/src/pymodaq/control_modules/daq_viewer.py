@@ -496,8 +496,9 @@ class DAQ_Viewer(ParameterControlModule):
     def save_current(self):
         """Save current data into a h5file"""
         self._do_save_data = True
-        self._save_file_pathname = select_file(start_path=self._save_file_pathname, save=True,
-                                                                                  ext='h5')  # see daq_utils
+        start_path = self._save_file_pathname or config('data', 'data_saving', 'h5file', 'save_path')
+        self._save_file_pathname = select_file(start_path=start_path, save=True, ext='h5')
+
         self._save_export_data(self._data_to_save_export)
 
 
