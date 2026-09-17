@@ -54,6 +54,7 @@ class ExtensionWorker(QObject):
 
     """
     _worker_done = QtCore.Signal()
+    worker_terminated = QtCore.Signal()
 
     #these below should be added as top children in the extension settings
     params = [
@@ -201,6 +202,8 @@ class ExtensionWorker(QObject):
         if hasattr(self._app, 'enable_start_stop'):
             self._app.enable_start_stop(True)
         self.settings['worker', 'worker_running'] = False
+
+        self.worker_terminated.emit()
 
     def _update_status(self, msg: str):
         """ convenience method to update the status display
