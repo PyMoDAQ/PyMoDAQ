@@ -147,11 +147,24 @@ class ExtensionWorker(QObject):
         else:
             self._worker_done.connect(self.terminate_worker)
 
-        # 4 update the GUI
-        if self._app.has_action('pause'):
-            self._app.set_action_checked('pause', False)
-        if self._app.has_action('start'):
-            self._app.set_action_enabled('start', True)
+        # 4 update the GUI -- only for apps that haven't been ported to
+        # pymodaq_gui.managers.workflow_manager (`self._app.workflow`, e.g. daq_scan): those own
+        # 'start'/'pause's enabled/checked state exclusively through their own workflow's
+        # state/guards, confirmed via their own status signal (daq_scan's thread_status ->
+        # "Scan_done" -> FINISHED), not through this generic, unconditional re-enable. Toggling
+        # 'start' back on here, right after _stop(msg) and *before* any real confirmation that
+        # work has actually finished (draining the saver queue can still be pending -- see the
+        # terminate_worker()/_worker_done branch above), reopens exactly the double-start race
+        # the workflow's STOPPING state exists to close, so a workflow-owning app must be the
+        # sole place this happens. Apps that haven't been ported yet (daq_logger, sequencer) have
+        # no workflow of their own and still need this -- for sequencer specifically this is
+        # redundant with SequenceWorker.stopped()'s own re-enable (harmless, idempotent), but for
+        # daq_logger it's the only place 'start'/'pause' ever get re-enabled at all.
+        if not hasattr(self._app, 'workflow'):
+            if self._app.has_action('pause'):
+                self._app.set_action_checked('pause', False)
+            if self._app.has_action('start'):
+                self._app.set_action_enabled('start', True)
         self._update_status(msg)
 
     def _init_saver_worker_and_start_it(self):
