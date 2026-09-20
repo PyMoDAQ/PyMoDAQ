@@ -7,6 +7,7 @@ from qt_themes import Theme
 from qtpy.QtCore import QObject, QLocale
 from qtpy import QtCore, QtWidgets
 
+from pymodaq_data.h5modules.data_saving import DataToExportSaver
 from pymodaq_gui.h5modules.saving import H5Saver
 from pymodaq_gui.managers.runner_thread_manager import WorkerThreadManager
 from pymodaq_gui.managers.h5manager import FileStatus, H5Manager, FileAction
@@ -421,3 +422,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         To be reimplemented
         """
         pass
+
+    @property
+    def module_and_data_saver(self) -> DataToExportSaver:
+        return DataToExportSaver(self.h5_manager.h5saver)
