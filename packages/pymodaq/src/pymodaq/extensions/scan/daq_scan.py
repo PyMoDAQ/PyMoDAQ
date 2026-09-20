@@ -7,9 +7,7 @@ Contains all objects related to the DAQScan module, to do automated scans, savin
 """
 
 from __future__ import annotations
-import dataclasses
 import logging
-import os
 from pathlib import Path
 import tempfile
 from typing import List, Tuple, TYPE_CHECKING
@@ -17,12 +15,9 @@ from typing import List, Tuple, TYPE_CHECKING
 import numpy as np
 from qtpy import QtWidgets, QtCore
 from qtpy.QtWidgets import QDialogButtonBox
-from qtpy.QtCore import QObject, QThread, Signal, QDateTime, QDate, QTime, QTimer
+from qtpy.QtCore import Signal, QDateTime, QDate, QTime, QTimer
 
-from pymodaq_gui.managers.h5manager import FileAction, H5Manager
-from pymodaq_gui.managers.runner_thread_manager import WorkerThreadManager
-from pymodaq_gui.managers.settings.settings_manager import SettingsManager
-from pymodaq_gui.plotting.data_viewers import ViewerDispatcher
+from pymodaq_gui.managers.h5manager import FileAction
 from pymodaq.control_modules.enums import MoveType
 from pymodaq.utils.custom_ext import CustomExt
 from pymodaq.utils.managers.modules import ModuleType
@@ -42,11 +37,11 @@ from pymodaq_gui.plotting.navigator import Navigator
 from pymodaq_gui.messenger import messagebox
 from pymodaq_gui import utils as gutils
 from pymodaq_gui.h5modules.saving import H5Saver
+from pymodaq_data.h5modules.data_saving import DataBundle
 from pymodaq_gui.utils.enums import MenuToolbarNames
 
 from pymodaq.utils.scanner.scanner import Scanner
 from pymodaq.utils.managers.batchscan_manager import BatchScanner
-from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 from pymodaq.post_treatment.load_and_plot import LoaderPlotter
 
 from pymodaq.utils.h5modules import module_saving
@@ -55,8 +50,8 @@ from pymodaq.utils.data import DataActuator
 from pymodaq.extensions.scan.manager.scan_manager import ScanManager
 from pymodaq_gui.utils.widgets.spinbox import QSpinBox_ro
 from pymodaq_gui.utils.widgets import QLED
-from pymodaq_gui.utils.custom_app import CustomApp, WorkFlowActions
-from pymodaq.extensions.extension_worker import DataBundle, ExtensionWorker
+from pymodaq_gui.utils.custom_app import WorkFlowActions
+from pymodaq_gui.utils.app_worker import ExtensionWorker, SaverWorker
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -186,7 +181,7 @@ class DAQScan(CustomExt):
             {'title': 'Refresh Plots (ms)', 'name': 'refresh_live', 'type': 'int',
              'value': 1000, 'visible': False},
             ]},
-    ] + ExtensionWorker.params
+    ] + SaverWorker.params
 
     def __init__(self, dockarea: gutils.DockArea = None, dashboard: DashBoard = None):
         """
@@ -1443,7 +1438,7 @@ class DAQScanAcquisition(ExtensionWorker):
         #filtering the data to be saved:
 
 
-        self.saver_worker.data_to_save_signal.emit(
+        self.saver_worker.data_processed_signal.emit(
             DataBundle(
                 indexes=list(self._current_indexes),
                 distribution=self.scanner.distribution,
