@@ -117,6 +117,7 @@ class ExtensionWorker(QObject):
         self.n_tasks: dict[str, int] = {}
 
         self._running = False
+        self.workers_terminated.connect(self._on_workers_terminated)
 
     @property
     def processor_worker(self) -> ProcessorWorker:
@@ -184,7 +185,7 @@ class ExtensionWorker(QObject):
         except (TypeError, AttributeError):
             pass
 
-        try:  # 2 immediately stop the emission of data to the saver worker
+        try:  # 2 immediately stop the emission of data to the processor worker
             if self.has_data_processor:
                 self.processor_worker.data_to_process_signal.disconnect(self._processor_worker.do_process_data)
         except (TypeError, AttributeError):
@@ -258,10 +259,14 @@ class ExtensionWorker(QObject):
             self._workers_done.disconnect(self.terminate_workers)
         except TypeError:
             pass
-
-        # 3 quit the thread managing the data saving (nothing left in the loop and no more connection)
+        # 2 disconnecting the connection to the worker update
         if self.has_data_processor:
-            self.thread_manager.exit_worker_thread(self._processor_worker_class.name, delete_worker=True)
+            self._processor_worker.n_jobs_done_signal.disconnect(self.update_worker_ntask)
+        self.saver_worker.n_jobs_done_signal.disconnect(self.update_worker_ntask)
+
+        # 3 quit the threads managing the data saving and data processing
+        if self.has_data_processor:
+            self.thread_manager.exit_worker_thread(ProcessorWorker.name, delete_worker=True)
         self.thread_manager.exit_worker_thread(SaverWorker.name, delete_worker=True)
 
         # 4 flushing/closing the file to be able to create new groups...
@@ -276,6 +281,13 @@ class ExtensionWorker(QObject):
             self.settings[self._processor_worker_class.worker_setting_name, 'worker_running'] = False
 
         self.workers_terminated.emit()
+
+    def _on_workers_terminated(self):
+        """ Method to reimplement to finalize things after all workers terminated their jobs in their threads
+
+        """
+        pass
+
 
     def _update_status(self, msg: str):
         """ convenience method to update the status display
