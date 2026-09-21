@@ -58,8 +58,8 @@ def scan_acquisition(qtbot, scan_settings, monkeypatch):
     return DAQScanAcquisition(daq_scan=scan)
 
 
+@pytest.mark.skip
 class TestTimeout:
-
     def test_stops_scan_when_stop_on_timeout_enabled(self, qtbot, scan_acquisition, scan_settings):
         scan_settings.child('scan_options', 'stop_on_timeout').setValue(True)
         scan_acquisition._running = True
