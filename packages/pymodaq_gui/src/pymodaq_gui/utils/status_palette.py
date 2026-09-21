@@ -68,11 +68,13 @@ Usage with MultistateLED
     from pymodaq_gui.utils.status_palette import StatusPalette
     from pymodaq_gui.utils.widgets.multistate_led import MultistateLED
 
-    # Full five-state indicator
+    # Full six-state indicator
     led = MultistateLED(states=StatusPalette.as_states())
 
     # Subset — e.g. a connection indicator without 'warning'
     led = MultistateLED(states=StatusPalette.subset('off', 'idle', 'error'))
+    # ... or, equivalently, using the Status StrEnum
+    led = MultistateLED(states=StatusPalette.subset(Status.OFF, Status.IDLE, Status.ERROR))
 
 Usage in a parameter tree
 -------------------------
@@ -93,16 +95,34 @@ from __future__ import annotations
 import qt_themes
 from qtpy import QtGui
 
+from pymodaq_utils.enums import StrEnum
+
+
+class Status(StrEnum):
+    """The six canonical PyMoDAQ status states (see module docstring).
+
+    Members behave as plain ``str`` (e.g. ``Status.IDLE == 'idle'``), so
+    they can be passed anywhere a state-name string is expected —
+    including :meth:`StatusPalette.subset` and
+    :class:`~pymodaq_gui.utils.widgets.multistate_led.MultistateLED`.
+    """
+    OFF = 'off'
+    IDLE = 'idle'
+    RUNNING = 'running'
+    WARNING = 'warning'
+    ERROR = 'error'
+    CRITICAL = 'critical'
+
 
 # (state_name, theme_attribute, hex_fallback)
 # theme_attribute is the name of the QColor property on a qt_themes Theme object.
-_DEFINITIONS: list[tuple[str, str, str]] = [
-    ('off',      'grey', '#808080'),  # grey — adapts to dark/light theme
-    ('idle',     'green',    '#00b400'),  # green — initialized and ready
-    ('running',  'blue',     '#0078d4'),  # blue  — action in flight
-    ('warning',  'yellow',   '#ccaa00'),  # amber — non-fatal issue
-    ('error',    'orange',   '#dc6400'),  # orange — operation failed, may recover
-    ('critical', 'red',      '#c80000'),  # red   — unrecoverable fault
+_DEFINITIONS: list[tuple[Status, str, str]] = [
+    (Status.OFF,      'grey',   '#808080'),  # grey — adapts to dark/light theme
+    (Status.IDLE,     'green',  '#00b400'),  # green — initialized and ready
+    (Status.RUNNING,  'blue',   '#0078d4'),  # blue  — action in flight
+    (Status.WARNING,  'yellow', '#ccaa00'),  # amber — non-fatal issue
+    (Status.ERROR,    'orange', '#dc6400'),  # orange — operation failed, may recover
+    (Status.CRITICAL, 'red',    '#c80000'),  # red   — unrecoverable fault
 ]
 
 

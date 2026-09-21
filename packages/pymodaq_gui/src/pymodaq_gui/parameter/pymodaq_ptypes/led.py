@@ -1,7 +1,7 @@
 from qtpy.QtCore import Signal
 from pyqtgraph.parametertree.parameterTypes.basetypes import WidgetParameterItem, SimpleParameter
 
-from pymodaq_gui.utils.widgets import MultistateLED, DEFAULT_STATES
+from pymodaq_gui.utils.widgets import MultistateLED, DEFAULT_STATES, LedState
 
 
 class _BoolLedWidget(MultistateLED):
@@ -11,13 +11,13 @@ class _BoolLedWidget(MultistateLED):
 
     def __init__(self, readonly=True):
         super().__init__(states=DEFAULT_STATES, readonly=readonly)
-        self.state_changed.connect(lambda name: self.sigChanged.emit(name == 'true'))
+        self.state_changed.connect(lambda name: self.sigChanged.emit(name == LedState.TRUE))
 
     def value(self):
-        return self.get_state() == 'true'
+        return self.get_state() == LedState.TRUE
 
     def setValue(self, v: bool):
-        self.set_state('true' if v else 'false')
+        self.set_state(LedState.TRUE if v else LedState.FALSE)
 
 
 class LedParameterItem(WidgetParameterItem):

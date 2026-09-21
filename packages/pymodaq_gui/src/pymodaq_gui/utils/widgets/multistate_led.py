@@ -1,11 +1,24 @@
 from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtCore import Signal
+from pymodaq_utils.enums import StrEnum
 from pymodaq_gui.utils.widgets.painter_utils import draw_shape, make_brush, desaturate, SHAPES, GRADIENTS
+
+
+class LedState(StrEnum):
+    """Default two-state set for :class:`MultistateLED` — visually matches QLED.
+
+    Members behave as plain ``str`` (e.g. ``LedState.TRUE == 'true'``), so
+    existing code passing ``'true'`` / ``'false'`` string literals keeps
+    working unchanged.
+    """
+    FALSE = 'false'
+    TRUE = 'true'
+
 
 # Default two-state set — visually matches QLED
 DEFAULT_STATES = [
-    ('false', '#c80000'),
-    ('true',  '#00b400'),
+    (LedState.FALSE, '#c80000'),
+    (LedState.TRUE,  '#00b400'),
 ]
 
 
@@ -20,10 +33,16 @@ class MultistateLED(QtWidgets.QWidget):
     ----------
     parent : QWidget, optional
     states : list of (str, str | QColor), optional
-        Ordered ``[(name, color), ...]`` pairs.  *color* can be a hex string
-        (``'#rrggbb'``), an SVG color name, or a ``QColor`` instance (e.g.
-        from :class:`~pymodaq_gui.utils.status_palette.StatusPalette`).
-        Defaults to a two-state red/green set.
+        Ordered ``[(name, color), ...]`` pairs.  *name* can be a plain
+        string or a :class:`~pymodaq_utils.enums.StrEnum` member (e.g.
+        :class:`LedState` or
+        :class:`~pymodaq_gui.utils.status_palette.Status`) — both compare
+        equal to their string value, so mixing the two is safe.  *color*
+        can be a hex string (``'#rrggbb'``), an SVG color name, or a
+        ``QColor`` instance (e.g. from
+        :class:`~pymodaq_gui.utils.status_palette.StatusPalette`).
+        Defaults to :data:`DEFAULT_STATES` (a two-state red/green set
+        keyed on :class:`LedState`).
     readonly : bool
         When ``True`` (default) clicking has no effect.  Sets ``self.clickable``
         to ``not readonly`` — assign ``w.clickable`` directly to change at
