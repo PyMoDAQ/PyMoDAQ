@@ -23,7 +23,8 @@ from pymodaq_gui.parameter import ioxml
 from qtpy import QtWidgets, QtCore
 from qtpy.QtCore import QObject, Slot, QThread, Signal, Qt
 
-from pymodaq_gui.utils.widgets import QLED
+from pymodaq_gui.utils.widgets import MultistateLED, StatusPalette, Status
+from pymodaq_utils.enums import StrEnum
 
 
 from pymodaq.extensions.daq_logger.h5logging import H5Logger
@@ -44,12 +45,19 @@ config = Config()
 logger = set_logger(get_module_name(__file__))
 
 
+class LoggerLedState(StrEnum):
+    """States of the DAQ_Logger logging-status LED."""
+    IDLE = 'idle'
+    RUNNING = 'running'
+    ERROR = 'error'
+
+
 class LoggerStatusBarManager:
     def __init__(self, logger: 'DAQLogger'):
         self.logger = logger
 
         self._start_log_time: QtWidgets.QDateTimeEdit = None
-        self._logging_state: QLED = None
+        self._logging_state: MultistateLED = None
         self._n_saved_sb: QSpinBox_ro = None
 
     @property
@@ -62,11 +70,11 @@ class LoggerStatusBarManager:
 
     @property
     def is_logging(self) -> bool:
-        return self._logging_state.get_state()
+        return self._logging_state.get_state() == LoggerLedState.RUNNING
 
     @is_logging.setter
     def is_logging(self, is_logging: bool):
-        self._logging_state.set_as(is_logging)
+        self._logging_state.set_state(LoggerLedState.RUNNING if is_logging else LoggerLedState.IDLE)
 
     @property
     def n_saved(self) -> bool:
@@ -89,9 +97,15 @@ class LoggerStatusBarManager:
         self._start_log_time.setToolTip('Logging started at:')
         self.statusbar.addPermanentWidget(self._start_log_time)
 
-        self._logging_state = QLED()
-        self._logging_state.setToolTip('logging status: green (running), red (idle)')
-        self._logging_state.clickable = False
+        self._logging_state = MultistateLED(
+            states=[
+                (LoggerLedState.IDLE,    StatusPalette.color(Status.OFF)),
+                (LoggerLedState.RUNNING, StatusPalette.color(Status.RUNNING)),
+                (LoggerLedState.ERROR,   StatusPalette.color(Status.CRITICAL)),
+            ],
+            readonly=True,
+        )
+        self._logging_state.setToolTip('Logging state: idle / running / error')
         self.statusbar.addPermanentWidget(self._logging_state)
 
         self._n_saved_sb = QSpinBox_ro()
@@ -253,6 +267,7 @@ class Logging(ExtensionWorker):
 
         self._app.status_manager.log_time = QtCore.QDateTime.currentDateTime()
         self._app.status_manager.set_permanent_status('Starting logging')
+        self._app.status_manager.is_logging = True
         self.n_saved = 0
         self.update_connections()
 
@@ -307,6 +322,7 @@ class Logging(ExtensionWorker):
 
         #1 Stop the emission of data immediately
         self._disconnect_control_modules()
+        self._app.status_manager.is_logging = False
 
         if msg is not None:
             self._app.status_manager.set_permanent_status(msg)

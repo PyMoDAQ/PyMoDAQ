@@ -12,7 +12,7 @@ import logging
 import os
 from pathlib import Path
 import tempfile
-from typing import List, Tuple, TYPE_CHECKING
+from typing import List, Tuple, Union, TYPE_CHECKING
 
 import numpy as np
 from qtpy import QtWidgets, QtCore
@@ -54,7 +54,8 @@ from pymodaq.utils.scanner.scan_selector import ScanSelector, SelectorItem
 from pymodaq.utils.data import DataActuator
 from pymodaq.extensions.scan.manager.scan_manager import ScanManager
 from pymodaq_gui.utils.widgets.spinbox import QSpinBox_ro
-from pymodaq_gui.utils.widgets import QLED
+from pymodaq_gui.utils.widgets import MultistateLED, StatusPalette, Status
+from pymodaq_utils.enums import StrEnum
 from pymodaq_gui.utils.custom_app import CustomApp, WorkFlowActions
 from pymodaq.extensions.extension_worker import DataBundle, ExtensionWorker
 
@@ -76,6 +77,14 @@ class ScanStepError(Exception):
     """Raised when an error occurs during a scan step"""
 
 
+class ScanLedState(StrEnum):
+    """States of the DAQ_Scan scan-progress LED."""
+    IDLE = 'idle'
+    RUNNING = 'running'
+    COMPLETE = 'complete'
+    ERROR = 'error'
+
+
 class ScanStatusBarManager:
 
     def __init__(self, scan: DAQScan):
@@ -85,7 +94,7 @@ class ScanStatusBarManager:
         self._indice_scan_sb: QSpinBox_ro = None
         self._indice_average_sb: QSpinBox_ro = None
 
-        self._scan_done_LED: QLED = None
+        self._scan_done_LED: MultistateLED = None
 
     @property
     def statusbar(self):
@@ -104,10 +113,16 @@ class ScanStatusBarManager:
         self._indice_average_sb = QSpinBox_ro()
         self._indice_average_sb.setToolTip('Current average value')
 
-        self._scan_done_LED = QLED()
-        self._scan_done_LED.set_as_false()
-        self._scan_done_LED.clickable = False
-        self._scan_done_LED.setToolTip('Scan done state')
+        self._scan_done_LED = MultistateLED(
+            states=[
+                (ScanLedState.IDLE,     StatusPalette.color(Status.OFF)),
+                (ScanLedState.RUNNING,  StatusPalette.color(Status.RUNNING)),
+                (ScanLedState.COMPLETE, StatusPalette.color(Status.IDLE)),
+                (ScanLedState.ERROR,    StatusPalette.color(Status.CRITICAL)),
+            ],
+            readonly=True,
+        )
+        self._scan_done_LED.setToolTip('Scan state: idle / running / complete / error')
 
         self.statusbar.insertPermanentWidget(1, self._n_scan_steps_sb) # 1 because there is already the permanent label
         self.statusbar.insertPermanentWidget(2, self._indice_scan_sb)
@@ -132,8 +147,13 @@ class ScanStatusBarManager:
     def set_scan_step_average(self, step_ind: int):
         self._indice_average_sb.setValue(step_ind)
 
+    def set_scan_state(self, state: Union[ScanLedState, str]):
+        """Set the scan LED to a named state (see :class:`ScanLedState`)."""
+        self._scan_done_LED.set_state(state)
+
     def set_scan_done(self, done=True):
-        self._scan_done_LED.set_as(done)
+        """Compatibility shim: True → COMPLETE, False → RUNNING."""
+        self._scan_done_LED.set_state(ScanLedState.COMPLETE if done else ScanLedState.RUNNING)
 
 
 class DAQScan(CustomExt):
