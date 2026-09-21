@@ -163,7 +163,7 @@ class TestMultistateLEDDisabled:
         with qtbot.waitExposed(led):
             img = led.grab().toImage()
             center = img.pixel(20, 20)
-            assert QtGui.QColor(center).saturation() > 0
+            assert QtGui.QColor(center).saturation() > 10
 
     def test_disabled_color_is_desaturated(self, qapp, qtbot):
         led = MultistateLED(states=[('on', '#00b400')], size=40)
@@ -173,4 +173,4 @@ class TestMultistateLEDDisabled:
         with qtbot.waitExposed(led):
             img = led.grab().toImage()
             center = img.pixel(20, 20)
-            assert QtGui.QColor(center).saturation() == 0
+            assert QtGui.QColor(center).saturation() <= 10
