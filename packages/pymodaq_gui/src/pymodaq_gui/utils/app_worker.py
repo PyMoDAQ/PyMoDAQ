@@ -246,7 +246,9 @@ class ExtensionWorker(QObject):
     @QtCore.Slot(str, int)
     def update_worker_ntask(self, worker_name: str, n_saved: int):
         self.n_tasks[worker_name] = self.thread_manager.n_jobs[worker_name] - n_saved
-        self.settings[self.thread_manager.get_worker(worker_name).worker_setting_name, 'worker_tasks'] = self.n_tasks[worker_name]
+        if worker_name in self.thread_manager.workers:
+            self.settings[self.thread_manager.get_worker(worker_name).worker_setting_name, 'worker_tasks'] = (
+                self.n_tasks)[worker_name]
 
         if np.all([n_task == 0 for n_task in self.n_tasks.values()]):
             self._workers_done.emit()
