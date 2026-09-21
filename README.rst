@@ -23,6 +23,7 @@ Packages
 - `pymodaq_gui <packages/pymodaq_gui/README.rst>`_ providing qt-based tools to build PyMoDAQ-like GUIs
 - `pymodaq_data <packages/pymodaq_data/README.rst>`_  providing tools to manage data obtained by PyMoDAQ (but not only)
 - `pymodaq_utils <packages/pymodaq_utils/README.rst>`_ providing utilities used by the other packages
+- `pymodaq_scripting <packages/pymodaq_scripting/README.rst>`_ providing utilities used to communicate with a DashBoard form a script in another process
 
 
 Each package directory can be navigated to for more detailed information about its goal. A link to the official documentation is also provided at the end of each README.
