@@ -18,6 +18,7 @@ from pymodaq.utils.h5modules.module_saving import (
 from pymodaq.utils.custom_ext import CustomExt
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.utils import CustomApp
+from pymodaq_gui.utils.custom_app import WorkFlowActions
 from pymodaq_utils.utils import ThreadCommand
 
 
@@ -207,10 +208,8 @@ class ExtensionWorker(QObject):
             self._workers_done.connect(self.terminate_workers)
 
         # 4 update the GUI
-        if self._app.has_action('pause'):
-            self._app.set_action_checked('pause', False)
-        if self._app.has_action('start'):
-            self._app.set_action_enabled('start', True)
+        self._app.enable_workflow_actions(True,
+                                         opposite=WorkFlowActions.PAUSE)
         self._update_status(msg)
 
     def _init_saver_worker_and_start_it(self):

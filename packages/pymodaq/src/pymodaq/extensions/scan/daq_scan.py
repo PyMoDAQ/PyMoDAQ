@@ -264,7 +264,7 @@ class DAQScan(CustomExt):
                                                     menu=self.get_menu('scan_manager'))
 
         if self.dashboard.experiment_manager.entry_applied:
-            self.enable_workflow_actions(True)
+            self.enable_workflow_actions(True, other_actions='ini_positions')
             self.ini_scan_manager()
 
         logger.info('DAQScan Initialized')
@@ -419,7 +419,10 @@ class DAQScan(CustomExt):
         # set the module saver type and applies its h5saver to submodules
         self._module_and_data_saver = module_saving.ScanSaver(self)
 
-        self.enable_workflow_actions(True)
+        try:
+            self.enable_workflow_actions(True, other_actions='ini_positions')
+        except KeyError: #actions may not yet be activated
+            pass
 
         if hasattr(self, 'scan_manager'):
             self.ini_scan_manager()
@@ -451,7 +454,7 @@ class DAQScan(CustomExt):
             messagebox(title='Running',
                        text='The Acquisition is running, first stop it')
             return False
-        elif self.settings['worker', 'worker_tasks'] > 0:
+        elif self.settings[SaverWorker.worker_setting_name, 'worker_tasks'] > 0:
             messagebox(title='Running',
                        text='The Saver is finishing the savings')
             self.scan_acquisition.stop("User prompted a quit of the Application, Stopping the Acquisition")
@@ -1105,10 +1108,6 @@ class DAQScan(CustomExt):
                 interval = self.h5saver.settings['backend', 'swmr_options', 'flush_interval']
                 self.h5saver.set_swmr_flush_interval(interval)
 
-            self.enable_workflow_actions(False,
-                                         excepted=WorkFlowActions.PAUSE,
-                                         other_actions='ini_positions')
-
             self.status_manager.set_scan_done(False)
             if not self.settings['plot_options', 'plot_at_each_step']:
                 self.live_timer.start(self.settings['plot_options', 'refresh_live'])
@@ -1178,9 +1177,7 @@ class DAQScan(CustomExt):
         self.update_status(status)
         self.status_manager.set_permanent_status('')
 
-        self.enable_workflow_actions(True,
-                                     other_actions='ini_positions',
-                                     opposite=WorkFlowActions.PAUSE)
+
 
     def pause_scan(self):
         """Toggle pause on the running acquisition."""
@@ -1210,7 +1207,6 @@ class DAQScanAcquisition(ExtensionWorker):
 
     """
     scan_data_tmp = Signal(DataBundle)
-    h5_data_array_ready_signal = Signal()
     scan_step_failed_signal = Signal(ScanStepError)
 
     def __init__(self, daq_scan: DAQScan, parent=None):
@@ -1233,6 +1229,10 @@ class DAQScanAcquisition(ExtensionWorker):
 
         self._current_dte_to_be_plotted: DataToExport = None
         self._current_indexes: tuple[int] = None
+
+    @property
+    def app(self) -> DAQScan:
+        return self._app
 
     @property
     def scanner(self) -> Scanner:
@@ -1259,6 +1259,10 @@ class DAQScanAcquisition(ExtensionWorker):
             self.modules_manager.move_actuators(command.attribute, polling=False)
 
     def _start(self):
+        self.app.enable_workflow_actions(False,
+                                         excepted=(WorkFlowActions.PAUSE,
+                                                   WorkFlowActions.STOP),
+                                         other_actions='ini_positions')
         self.set_ini_positions()
 
     def _pause(self, do_pause: bool = True):
@@ -1281,6 +1285,9 @@ class DAQScanAcquisition(ExtensionWorker):
         self._app.status_sig.emit(utils.ThreadCommand("Scan_done"))
         if msg is not None:
             self._app.status_manager.set_permanent_status(msg)
+        self.app.enable_workflow_actions(True,
+                                         other_actions='ini_positions',
+                                         opposite=WorkFlowActions.PAUSE)
 
     def _update_status(self, msg: str):
         """ convenience method to update the status signal """
@@ -1438,13 +1445,13 @@ class DAQScanAcquisition(ExtensionWorker):
         #filtering the data to be saved:
 
 
-        self.saver_worker.data_processed_signal.emit(
+        self.saver_worker.data_to_save_signal.emit(
             DataBundle(
                 indexes=list(self._current_indexes),
                 distribution=self.scanner.distribution,
                 save_index=self._ind_scan,
                 dte=dte_grabbed,))
-        self._n_emitted += 1
+        self.thread_manager.n_jobs[SaverWorker.name] += 1
 
         self.scan_data_tmp.emit(
             DataBundle(dte=self._current_dte_to_be_plotted,
@@ -1489,7 +1496,6 @@ class DAQScanAcquisition(ExtensionWorker):
 
     def _on_scan_step_failed(self, exception: ScanStepError):
         logger.warning(exception)
-        self._app.status_sig.emit(utils.ThreadCommand("Scan_done"))
         self.stop(msg=f'Scan stopped due to a failure during a step')
 
 

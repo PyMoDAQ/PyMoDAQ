@@ -272,7 +272,7 @@ class Sequencer(CustomExt):
             messagebox(title='Running',
                        text='The Sequencer is running, first stop it')
             return False
-        elif self.settings['worker', 'worker_tasks'] > 0:
+        elif self.settings[SaverWorker.worker_setting_name, 'worker_tasks'] > 0:
             messagebox(title='Running',
                        text='The Saver is finishing the savings')
             self.sequence_worker.stop("User prompted a quit of the Application, Stopping the Acquisition")
@@ -284,7 +284,6 @@ class Sequencer(CustomExt):
 class SequenceWorker(ExtensionWorker):
 
     def __init__(self, sequencer: Sequencer, parent=None):
-        self._app: Sequencer
         super().__init__(app=sequencer, parent=parent)
 
     @property
@@ -296,8 +295,8 @@ class SequenceWorker(ExtensionWorker):
         return self.app.status_manager
 
     def save_callback(self, dte: DataToExport):
-        self._n_emitted += 1
-        self.saver_worker.data_processed_signal.emit(DataBundle(dte=dte))
+        self.thread_manager.n_jobs[SaverWorker.name] += 1
+        self.saver_worker.data_to_save_signal.emit(DataBundle(dte=dte))
 
     def _start(self):
         self.module_and_data_saver.get_set_node(new=True)
@@ -305,9 +304,11 @@ class SequenceWorker(ExtensionWorker):
             sequence.set_log_callback(self.save_callback if self.app.is_action_checked(WorkFlowActions.LOG)
                                       else None)
 
-        self._n_emitted = 0
 
-        self.app.set_action_enabled(WorkFlowActions.START, False)
+        self.app.enable_workflow_actions(False, excepted=(WorkFlowActions.PAUSE,
+                                                          WorkFlowActions.STOP,
+                                                          WorkFlowActions.LOG))
+
         self.app.main_sequence.sequence_finished.connect(self.stopped)
         self.app.main_sequence.get_action(WorkFlowActions.START).trigger()
 
@@ -315,25 +316,20 @@ class SequenceWorker(ExtensionWorker):
         for sequence in self.app.sequences.values():
             sequence.get_action(WorkFlowActions.PAUSE).trigger()
 
-    def _stop(self, msg: str = None):
+
+    def stop(self, msg: str = None):
         for sequence in self.app.sequences.values():
             sequence.get_action(WorkFlowActions.STOP).trigger()
 
     def stopped(self, msg: str = None):
-        self._running = False
-        #1 Stop the emission of data immediately
+        super().stop(msg)
+
+    def _stop(self, msg: str = None):
         for sequence in self.app.sequences.values():
             sequence.recursive_disconnect_elts()
 
-        #2 terminate the saver worker once its queue is empty
-        if self.settings['worker', 'worker_tasks'] == 0:
-            self.terminate_workers()
-        else:
-            self._workers_done.connect(self.terminate_workers)
-
-        #3 update the GUI
-        self._app.set_action_checked(WorkFlowActions.PAUSE, False)
-        self._app.set_action_enabled(WorkFlowActions.START, True)
+        self.app.enable_workflow_actions(True,
+                                         opposite=WorkFlowActions.PAUSE)
         if msg is not None:
             self.app.update_status(msg)
             self.status_manager.set_permanent_status(msg)

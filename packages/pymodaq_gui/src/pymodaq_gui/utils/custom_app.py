@@ -285,6 +285,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         self.connect_things()
 
         self.do_things_after_ui_setup()
+        self.apply_size_hint()
 
     def quit_fun(self) -> bool | None:
         """Method to be reimplemented in order to define a custom quit function
@@ -300,6 +301,20 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         """ Method to be reimplemented in order to do things after the UI setup
         """
         pass
+
+    def apply_size_hint(self):
+        if self.mainwindow is not None:
+            self.mainwindow.resize(self._size_hint)
+        else:
+            self.parent.resize(self._size_hint)
+
+    @property
+    def _size_hint(self) -> QtCore.QSize:
+        """ property telling the optimal size for your application UI
+
+        To be reimplemented
+        """
+        return QtCore.QSize(1200, 800)
 
     def setup_docks_and_widgets(self):
         """ Method to be reimplemented to set up the docks layout and/or widgets

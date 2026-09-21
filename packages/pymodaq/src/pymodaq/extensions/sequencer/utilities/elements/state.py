@@ -9,7 +9,7 @@ from serializall import SerializableFactory
 from pymodaq_utils.logger import set_logger, get_module_name
 
 from pymodaq_data import DataToExport
-from pymodaq.utils.managers.state.state_manager import StateManager
+
 from pymodaq_gui.managers.manager_base import ManagerActions
 from pymodaq_gui.utils.widgets.combo import ComboBox
 
@@ -30,6 +30,7 @@ class StateElt(SeqEltBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        from pymodaq.utils.managers.state.state_manager import StateManager  # dynamical import to avoid circular imports...
         self.state_manager = StateManager()
 
         self._state: str = self.state_manager.entry

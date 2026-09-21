@@ -8,7 +8,7 @@ Contains all objects related to the DAQScan module, to do automated scans, savin
 
 from typing import TYPE_CHECKING
 
-from pymodaq.control_modules.daq_viewer_ui.ui_base import ActionIconNames
+from pymodaq.control_modules.enums import ActionIconNames
 from pymodaq.utils.h5modules.module_saving import LoggerSaver
 from pymodaq_gui.messenger import messagebox
 from pymodaq_gui.utils.custom_app import WorkFlowActions

@@ -350,7 +350,7 @@ class SeqEltBase(QtCore.QObject, ActionManager):
 
     def to_dict(self) -> dict[str, Any]:
         """ Serialization in a dictionary"""
-        from pymodaq_plugins_sequencer.utilities.elements.button import AddButtonPlaceholder
+        from pymodaq.extensions.sequencer.utilities.elements.button import AddButtonPlaceholder
         dict_config: dict[str, Any] = {'elt_name': self.elt_name,
                                        'id': self.id,}
         dict_config.update(self.to_dict_custom())
