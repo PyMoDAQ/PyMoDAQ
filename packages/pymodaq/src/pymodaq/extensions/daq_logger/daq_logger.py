@@ -195,7 +195,7 @@ class DAQLogger(CustomExt):
                        text='The Logging is running, first stop it')
             return False
 
-        elif self.settings['worker', 'worker_tasks'] > 0:
+        elif self.settings[SaverWorker.worker_setting_name, 'worker_tasks'] > 0:
             messagebox(title='Running',
                        text='The Saver is finishing the savings')
             self.logging.stop("User prompted a quit of the Application,"
@@ -210,7 +210,6 @@ class DAQLogger(CustomExt):
             det.grab() if start else det.stop_grab()
         for act in self.modules_manager.actuators:
             act.grab() if start else act.stop_grab()
-
 
     @property
     def module_and_data_saver(self) -> LoggerSaver:
@@ -277,14 +276,14 @@ class Logging(ExtensionWorker):
                 pass
 
     def save_detector(self, dte: DataToExport):
-        self._n_emitted += 1
+        self.thread_manager.n_jobs[SaverWorker.name] += 1
         self.n_saved += 1
-        self.saver_worker.data_processed_signal.emit(DataBundle(dte=dte))
+        self.saver_worker.data_to_save_signal.emit(DataBundle(dte=dte))
 
     def format_and_save_actuator(self, dwa: DataActuator):
-        self._n_emitted += 1
+        self.thread_manager.n_jobs[SaverWorker.name] += 1
         self.n_saved += 1
-        self.saver_worker.data_processed_signal.emit(
+        self.saver_worker.data_to_save_signal.emit(
             DataBundle(dte=DataToExport(name=dwa.name,
                                         data=[dwa])))
 
