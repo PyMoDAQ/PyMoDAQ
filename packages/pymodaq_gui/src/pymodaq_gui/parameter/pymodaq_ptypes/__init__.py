@@ -4,7 +4,7 @@ from .action_led import ActionLedParameter
 from .bool import BoolPushParameter
 from .pixmap import PixmapParameter, PixmapCheckParameter
 from .slide import SliderSpinBox, SliderParameter
-from .led import LedPushParameter, LedParameter
+from .led import LedPushParameter, LedParameter, MultistateLedParameter
 from .date import DateParameter, DateTimeParameter, TimeParameter
 from .list import ListParameter
 from .table import TableParameter
@@ -28,6 +28,7 @@ registerParameterType('slide', SliderParameter, override=True)
 
 registerParameterType('led', LedParameter, override=True)
 registerParameterType('led_push', LedPushParameter, override=True)
+registerParameterType('multistate_led', MultistateLedParameter, override=True)
 registerParameterType('date', DateParameter, override=True)
 registerParameterType('date_time', DateTimeParameter, override=True)
 registerParameterType('time', TimeParameter, override=True)

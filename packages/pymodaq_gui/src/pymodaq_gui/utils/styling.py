@@ -8,6 +8,7 @@ from pyqtgraph import mkColor
 from qtpy import QtCore, QtGui, QtWidgets
 
 from pymodaq_gui.resources.material_icons import MaterialIcon
+from pymodaq_gui.utils.widgets.painter_utils import draw_shape
 from pymodaq_utils.config import GlobalConfig as Config
 
 config = Config()
@@ -86,38 +87,8 @@ def make_shape_icon(
         painter.setBrush(brush if filled else QtCore.Qt.BrushStyle.NoBrush)
         painter.setPen(pen if not filled else QtCore.Qt.PenStyle.NoPen)
 
-        if shape == "circle":
-            painter.drawEllipse(1, 1, size - 2, size - 2)
-        elif shape == "triangle":
-            # Draw an equilateral triangle pointing upwards
-            half_size = size / 2
-            triangle_height = (size * (3 ** 0.5)) / 2
-            offset_y = (size - triangle_height) / 2
-            points = [
-                QtCore.QPointF(half_size, offset_y),
-                QtCore.QPointF(size - 1, size - offset_y - 1),
-                QtCore.QPointF(1, size - offset_y - 1),
-            ]
-            polygon = QtGui.QPolygonF(points)
-            painter.drawPolygon(polygon)
-        elif shape == "square":
-            painter.drawRect(1, 1, size - 2, size - 2)
-        elif shape == "rectangle":
-            painter.drawRect(1, 1, width - 2, height - 2)
-        elif shape == "diamond":
-            # Draw a diamond (rotated square)
-            half_width = width / 2
-            half_height = height / 2
-            points = [
-                QtCore.QPointF(half_width, 1),
-                QtCore.QPointF(width - 1, half_height),
-                QtCore.QPointF(half_width, height - 1),
-                QtCore.QPointF(1, half_height),
-            ]
-            polygon = QtGui.QPolygonF(points)
-            painter.drawPolygon(polygon)
-        else:
-            raise ValueError(f"Unsupported shape: {shape}")
+        rect = QtCore.QRectF(1, 1, width - 2, height - 2)
+        draw_shape(painter, shape, rect)
 
         painter.end()
     return QtGui.QIcon(pixmap)

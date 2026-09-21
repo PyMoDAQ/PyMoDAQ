@@ -31,7 +31,7 @@ from pymodaq_data.h5modules.data_saving import DataEnlargeableSaver
 
 from pymodaq_gui.plotting.data_viewers.viewer0D import Viewer0D
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerDispatcher
-from pymodaq_gui.utils import QLED
+from pymodaq_gui.utils.widgets import MultistateLED, StatusPalette, Status
 from pymodaq_gui.utils.widgets.spinbox import QSpinBox_ro
 from pymodaq_gui import utils as gutils
 from pymodaq_gui.parameter import utils as putils
@@ -77,6 +77,21 @@ class DataNames(StrEnum):
     ProbedData = 'probed_data'
     Actuators = 'actuators'
     Tradeoff = 'tradeoff'
+
+
+class OptimizerLedState(StrEnum):
+    """States of the overall optimisation-progress LED."""
+    IDLE = 'idle'
+    RUNNING = 'running'
+    COMPLETE = 'complete'
+    ERROR = 'error'
+
+
+class ModelLedState(StrEnum):
+    """States of the model/runner initialization LEDs."""
+    UNINITIALIZED = 'uninitialized'
+    READY = 'ready'
+    ERROR = 'error'
 
 
 def optimizer_params(prediction_params: list[dict]):
@@ -448,10 +463,16 @@ class GenericOptimization(CustomExt):
         self._optimizing_step = QSpinBox_ro()
         self._optimizing_step.setToolTip('Current Optimizing step')
 
-        self._optimizing_done_LED = QLED()
-        self._optimizing_done_LED.set_as_false()
-        self._optimizing_done_LED.clickable = False
-        self._optimizing_done_LED.setToolTip('Scan done state')
+        self._optimizing_done_LED = MultistateLED(
+            states=[
+                (OptimizerLedState.IDLE,     StatusPalette.color(Status.OFF)),
+                (OptimizerLedState.RUNNING,  StatusPalette.color(Status.RUNNING)),
+                (OptimizerLedState.COMPLETE, StatusPalette.color(Status.IDLE)),
+                (OptimizerLedState.ERROR,    StatusPalette.color(Status.CRITICAL)),
+            ],
+            readonly=True,
+        )
+        self._optimizing_done_LED.setToolTip('Optimisation state: idle / running / complete / error')
         self._statusbar.addPermanentWidget(self._status_message_label)
 
         self._statusbar.addPermanentWidget(self._optimizing_step)
@@ -548,12 +569,26 @@ class GenericOptimization(CustomExt):
         combo_model.addItems([model['name'] for model in MODELS])
         self.add_widget(OptimizerAction.MODELS, combo_model, tip='List of available models')
         self.add_action(OptimizerAction.INI_MODEL, 'Init Model', 'ini')
-        self.add_widget('model_led', QLED, toolbar=self.toolbar)
+        self.add_widget('model_led', MultistateLED(
+            states=[
+                (ModelLedState.UNINITIALIZED, StatusPalette.color(Status.OFF)),
+                (ModelLedState.READY,         StatusPalette.color(Status.IDLE)),
+                (ModelLedState.ERROR,         StatusPalette.color(Status.CRITICAL)),
+            ],
+            readonly=True,
+        ), toolbar=self.toolbar)
         self.add_action(OptimizerAction.SAVE, 'Save?', 'SaveAs', tip='If checked, data will be saved',
                         checkable=True)
         self.add_action(OptimizerAction.INI_RUNNER, 'Init the Optimisation Algorithm', 'ini', checkable=True,
                         enabled=False)
-        self.add_widget('runner_led', QLED, toolbar=self.toolbar)
+        self.add_widget('runner_led', MultistateLED(
+            states=[
+                (ModelLedState.UNINITIALIZED, StatusPalette.color(Status.OFF)),
+                (ModelLedState.READY,         StatusPalette.color(Status.IDLE)),
+                (ModelLedState.ERROR,         StatusPalette.color(Status.CRITICAL)),
+            ],
+            readonly=True,
+        ), toolbar=self.toolbar)
         self.add_action(OptimizerAction.RUN, 'Run Optimisation', 'run2', checkable=True, enabled=False)
         self.add_action(OptimizerAction.RESTART, 'Restart algo', 'Refresh2', checkable=False, enabled=False)
         self.add_action(OptimizerAction.STOP, 'Stop algo', 'stop', checkable=False, enabled=False,
@@ -745,7 +780,7 @@ class GenericOptimization(CustomExt):
             self.modules_manager.selected_detectors_name = self.model_class.detectors_name
 
             self.enable_controls_opti(True)
-            self.get_action('model_led').set_as_true()
+            self.get_action('model_led').set_state(ModelLedState.READY)
             self.set_action_enabled(OptimizerAction.INI_MODEL, False)
             self.set_action_enabled(OptimizerAction.MODELS, False)
 
@@ -826,7 +861,7 @@ class GenericOptimization(CustomExt):
                     viewer.view.data_displayer.clear_data()
 
         self.enl_index = 0
-        self._optimizing_done_LED.set_as_false()
+        self._optimizing_done_LED.set_state(OptimizerLedState.IDLE)
         self.ini_temp_file()
         self.ini_live_plot()
 
@@ -845,7 +880,7 @@ class GenericOptimization(CustomExt):
     def ini_optimization_runner(self):
         self._status_message_label.setText('Initializing Algorithm and thread')
         if self.is_action_checked(OptimizerAction.INI_RUNNER):
-            self._optimizing_done_LED.set_as_false()
+            self._optimizing_done_LED.set_state(OptimizerLedState.IDLE)
             if not self.model_class.has_fitness_observable():
                 messagebox(title='Warning', text='No 0D observable has been chosen as a fitness value for the algorithm')
                 self.set_action_checked(OptimizerAction.INI_RUNNER, False)
@@ -878,7 +913,7 @@ class GenericOptimization(CustomExt):
 
                 runner.moveToThread(self.runner_thread)
                 self.runner_thread.start()
-                self.get_action('runner_led').set_as_true()
+                self.get_action('runner_led').set_state(ModelLedState.READY)
                 self.set_action_enabled(OptimizerAction.RUN, True)
                 self.set_action_enabled(OptimizerAction.RESTART, True)
                 self.set_action_enabled(OptimizerAction.STOP, True)
@@ -903,7 +938,7 @@ class GenericOptimization(CustomExt):
                     self.runner_thread.terminate()
                     self.runner_thread.wait()
             self.splash.setVisible(False)
-            self.get_action('runner_led').set_as_false()
+            self.get_action('runner_led').set_state(ModelLedState.UNINITIALIZED)
             self._ini_runner = False
             self.set_action_enabled(OptimizerAction.RUN, False)
             self.set_action_enabled(OptimizerAction.RESTART, False)
@@ -922,7 +957,7 @@ class GenericOptimization(CustomExt):
         self.go_to_best()
         self.get_action(OptimizerAction.RUN).trigger()
         self.optimization_done_signal.emit(dte)
-        self._optimizing_done_LED.set_as_true()
+        self._optimizing_done_LED.set_state(OptimizerLedState.COMPLETE)
         self._status_message_label.setText('Optimization Done')
 
     def do_live_plot(self, dte_algo: DataToExport):
@@ -982,6 +1017,7 @@ class GenericOptimization(CustomExt):
 
     def run_optimization(self):
         if self.is_action_checked(OptimizerAction.RUN):
+            self._optimizing_done_LED.set_state(OptimizerLedState.RUNNING)
             self._status_message_label.setText('Running Optimization')
             self.set_action_enabled(OptimizerAction.SAVE, False)
             self.get_action(OptimizerAction.RUN).set_icon('pause')
