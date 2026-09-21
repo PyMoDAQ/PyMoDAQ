@@ -11,8 +11,8 @@ class LedState(StrEnum):
     existing code passing ``'true'`` / ``'false'`` string literals keeps
     working unchanged.
     """
-    FALSE = 'false'
-    TRUE = 'true'
+    FALSE = 'False'
+    TRUE = 'True'
 
 
 # Default two-state set — visually matches QLED
@@ -110,14 +110,14 @@ class MultistateLED(QtWidgets.QWidget):
 
     def set_state(self, name: str):
         """Set the active state by name.  Emits ``state_changed`` if changed."""
-        for i, (n, _) in enumerate(self._states):
-            if n == name:
-                if i != self._index:
-                    self._index = i
+        for ind, (state, _) in enumerate(self._states):
+            if state.lower() == name.lower():
+                if ind != self._index:
+                    self._index = ind
                     self.update()
-                    self.state_changed.emit(name)
+                    self.state_changed.emit(state)
                 return
-        raise ValueError(f"Unknown state {name!r}. Valid states: {[n for n, _ in self._states]}")
+        raise ValueError(f"Unknown state {name!r}. Valid states: {[state for state, _ in self._states]}")
 
     def state_names(self) -> list[str]:
         """Return the ordered list of state names."""
