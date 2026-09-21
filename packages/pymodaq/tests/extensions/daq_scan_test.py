@@ -44,13 +44,16 @@ def scan_acquisition(qtbot, scan_settings, monkeypatch):
         def set_action_checked(self, action: str, status: bool):
             pass
 
-    def terminate_worker(obj):
+        def enable_workflow_actions(self, *args, **kwargs):
+            pass
+
+    def terminate_workers(obj):
         return
 
 
 
     scan = DAQScan(scan_settings, scanner, modules_manager)
-    monkeypatch.setattr(DAQScanAcquisition, "terminate_worker", terminate_worker)
+    monkeypatch.setattr(DAQScanAcquisition, "terminate_workers", terminate_workers)
 
     return DAQScanAcquisition(daq_scan=scan)
 

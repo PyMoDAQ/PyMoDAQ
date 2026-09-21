@@ -83,6 +83,9 @@ class Console(CustomExt):
 
         self.setup_ui()
 
+    def _quit_fun(self) -> bool:
+        return True
+
     def do_things_after_experiment_set(self, experiment: str):
         super().do_things_after_experiment_set(experiment)
 

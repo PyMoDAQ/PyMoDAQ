@@ -202,7 +202,7 @@ class ExtensionWorker(QObject):
             pass
 
         # 3 terminate the saver worker once its queue is empty
-        if self.settings[self.saver_worker.worker_setting_name, 'worker_tasks'] == 0:
+        if self.settings[SaverWorker.worker_setting_name, 'worker_tasks'] == 0:
             self.terminate_workers()
         else:
             self._workers_done.connect(self.terminate_workers)

@@ -1,6 +1,7 @@
 from qtpy import QtWidgets
 
 from pymodaq.utils.config import get_set_experiment_path
+from pymodaq.utils.gui_utils.loader_utils import create_extension
 from pymodaq_utils.config import GlobalConfig
 from pytest import fixture, mark
 from pymodaq.dashboard import create_load_dashboard, extensions
@@ -26,24 +27,20 @@ def dashboard(init_qt):
     yield dashboard, qtbot
     dashboard.quit_fun()
 
-    # Alternative: Flush the event loop multiple times to clear the queue
-    for _ in range(10):
-        QtWidgets.QApplication.processEvents()
-
 
 
 class TestExtensions:
-    @mark.parametrize('ext', extensions)
-    def test_load(self, dashboard, ext):
+    def test_load(self, dashboard):
         dashboard, qtbot = dashboard
 
-        ext = dashboard.load_extension(ext)
-        qtbot.addWidget(ext.parent)
-        qtbot.addWidget(ext.tree)
-        QtWidgets.QApplication.processEvents()
-        ext.quit_fun()
-        # Let threads stop gracefully
-        QtWidgets.QApplication.processEvents()
+        for ext_name in extensions:
+            win_ext, ext = create_extension(dashboard, extensions[ext_name].klass)
+            # qtbot.addWidget(ext.parent)
+            # qtbot.addWidget(ext.tree)
+
+            ext.quit_fun()
+            QtWidgets.QApplication.processEvents()
+
 
 
 

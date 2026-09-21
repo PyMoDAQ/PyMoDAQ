@@ -242,9 +242,10 @@ class DataMixer(CustomExt):
             if self.model_class is not None:
                 self.model_class.update_settings(param)
 
-    def quit_fun(self) -> bool:
+    def _quit_fun(self) -> bool:
         self.dashboard.remove_modules(['DataMixer'])
-        return super().quit_fun()
+        return True
+
 
 def main():
     import sys
