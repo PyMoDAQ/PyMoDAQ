@@ -20,7 +20,8 @@ from pymodaq.utils.exceptions import PIDError
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.plotting.data_viewers.viewer0D import Viewer0D
-from pymodaq_gui.utils.widgets import MultistateLED, StatusPalette, LabelWithFont, SpinBox
+from pymodaq_gui.utils.widgets import MultistateLED, StatusPalette, Status, LabelWithFont, SpinBox
+from pymodaq_utils.enums import StrEnum
 from pymodaq_gui.utils.dock import Dock
 
 
@@ -41,6 +42,20 @@ if TYPE_CHECKING:
 
 config = Config()
 logger = set_logger(get_module_name(__file__))
+
+
+class ModelLedState(StrEnum):
+    """States of the model initialization LED."""
+    UNINITIALIZED = 'uninitialized'
+    READY = 'ready'
+    ERROR = 'error'
+
+
+class PidLedState(StrEnum):
+    """States of the PID-loop status LED."""
+    IDLE = 'idle'
+    RUNNING = 'running'
+    ERROR = 'error'
 
 
 class DAQ_PID(CustomExt):
@@ -300,13 +315,13 @@ class DAQ_PID(CustomExt):
             pid_runner.moveToThread(self.runner_thread)
 
             self.runner_thread.start()
-            self.get_action("pid_led").set_state('running')
+            self.get_action("pid_led").set_state(PidLedState.RUNNING)
             self.enable_controls_pid_run(True)
 
         else:
             if hasattr(self, "runner_thread"):
                 self.exit_runner_thread()
-            self.get_action("pid_led").set_state('idle')
+            self.get_action("pid_led").set_state(PidLedState.IDLE)
             self.enable_controls_pid_run(False)
 
         self.initialized_state = True
@@ -456,9 +471,9 @@ class DAQ_PID(CustomExt):
             tip="Initialize the selected model: algo/data conversion")
         self.add_widget("model_led", MultistateLED(
             states=[
-                ('uninitialized', StatusPalette.color('off')),
-                ('ready',         StatusPalette.color('idle')),
-                ('error',         StatusPalette.color('critical')),
+                (ModelLedState.UNINITIALIZED, StatusPalette.color(Status.OFF)),
+                (ModelLedState.READY,         StatusPalette.color(Status.IDLE)),
+                (ModelLedState.ERROR,         StatusPalette.color(Status.CRITICAL)),
             ],
             readonly=True,
         ), toolbar=self.toolbar)
@@ -470,9 +485,9 @@ class DAQ_PID(CustomExt):
             tip="Init the PID thread", checkable=True)
         self.add_widget("pid_led", MultistateLED(
             states=[
-                ('idle',    StatusPalette.color('off')),
-                ('running', StatusPalette.color('running')),
-                ('error',   StatusPalette.color('critical')),
+                (PidLedState.IDLE,    StatusPalette.color(Status.OFF)),
+                (PidLedState.RUNNING, StatusPalette.color(Status.RUNNING)),
+                (PidLedState.ERROR,   StatusPalette.color(Status.CRITICAL)),
             ],
             readonly=True,
         ), toolbar=self.toolbar)
@@ -637,7 +652,7 @@ class DAQ_PID(CustomExt):
             )
 
             self.enable_controls_pid(True)
-            self.get_action("model_led").set_state('ready')
+            self.get_action("model_led").set_state(ModelLedState.READY)
             self.set_action_enabled("ini_model", False)
             self.set_action_enabled("create_setp_actuators", True)
 

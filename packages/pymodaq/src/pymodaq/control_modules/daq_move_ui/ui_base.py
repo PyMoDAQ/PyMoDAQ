@@ -21,13 +21,22 @@ from pymodaq_gui.plotting.data_viewers import ViewerDispatcher
 from pymodaq_gui.utils import (DockArea, QSpinBoxWithShortcut,
                                PushButtonIcon, QSpinBox_ro,
                                Dock)
-from pymodaq_gui.utils.widgets import LabelWithFont, MultistateLED, StatusPalette
+from pymodaq_gui.utils.widgets import LabelWithFont, MultistateLED, StatusPalette, Status
 from pymodaq_gui.plotting.utils.plot_utils import DetachablePanel
+from pymodaq_utils.enums import StrEnum
 
 
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq.control_modules.daq_move_ui.utils import UiType
 config = Config()
+
+
+class MoveLedState(StrEnum):
+    """States of the DAQ_Move status LED."""
+    UNINITIALIZED = 'uninitialized'
+    IDLE = 'idle'
+    MOVING = 'moving'
+    ERROR = 'error'
 
 
 
@@ -115,7 +124,7 @@ class DAQMoveUI(ControlModuleUI):
     @actuator_init.setter
     def actuator_init(self, status):
         self._ini_state = status
-        self.status_led.set_state('idle' if status else 'uninitialized')
+        self.status_led.set_state(MoveLedState.IDLE if status else MoveLedState.UNINITIALIZED)
         self.enable_move_buttons(status)
         self.update_init_icon(status, 'ini_actuator')
         if self.has_action('ini_actuator'):
@@ -141,11 +150,11 @@ class DAQMoveUI(ControlModuleUI):
     @property
     def move_done(self):
         """bool: True when the actuator is idle (not moving)."""
-        return self.status_led.get_state() != 'moving'
+        return self.status_led.get_state() != MoveLedState.MOVING
 
     @move_done.setter
     def move_done(self, status):
-        self.status_led.set_state('idle' if status else 'moving')
+        self.status_led.set_state(MoveLedState.IDLE if status else MoveLedState.MOVING)
 
     def quit_fun(self) -> bool | None:
         self.command_sig.emit(ThreadCommand(UiToMainMove.QUIT))
@@ -182,10 +191,10 @@ class DAQMoveUI(ControlModuleUI):
         self.abs_value_sb_bis = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('pymodaq', 'actuator', 'siprefix'))
         self.status_led = MultistateLED(
             states=[
-                ('uninitialized', StatusPalette.color('off')),
-                ('idle',          StatusPalette.color('idle')),
-                ('moving',        StatusPalette.color('running')),
-                ('error',         StatusPalette.color('critical')),
+                (MoveLedState.UNINITIALIZED, StatusPalette.color(Status.OFF)),
+                (MoveLedState.IDLE,          StatusPalette.color(Status.IDLE)),
+                (MoveLedState.MOVING,        StatusPalette.color(Status.RUNNING)),
+                (MoveLedState.ERROR,         StatusPalette.color(Status.CRITICAL)),
             ],
             readonly=True,
         )

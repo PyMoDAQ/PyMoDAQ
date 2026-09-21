@@ -2,7 +2,7 @@ import warnings
 from qtpy import QtWidgets, QtCore
 from pyqtgraph.parametertree.parameterTypes.basetypes import WidgetParameterItem, SimpleParameter
 
-from pymodaq_gui.utils.widgets import MultistateLED, DEFAULT_STATES
+from pymodaq_gui.utils.widgets import MultistateLED, DEFAULT_STATES, LedState
 
 
 class ActionLedWidget(QtWidgets.QWidget):
@@ -36,7 +36,7 @@ class ActionLedWidget(QtWidgets.QWidget):
                 DeprecationWarning,
                 stacklevel=2,
             )
-            v = 'true' if v else 'false'
+            v = LedState.TRUE if v else LedState.FALSE
         self.led.set_state(v)
 
 
@@ -81,7 +81,7 @@ class ActionLedParameter(SimpleParameter):
                 DeprecationWarning,
                 stacklevel=2,
             )
-            return 'true' if v else 'false'
+            return LedState.TRUE if v else LedState.FALSE
         return str(v)
 
     def activate(self):

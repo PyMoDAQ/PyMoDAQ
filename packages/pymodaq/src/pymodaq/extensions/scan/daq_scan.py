@@ -12,7 +12,7 @@ import logging
 import os
 from pathlib import Path
 import tempfile
-from typing import List, Tuple, TYPE_CHECKING
+from typing import List, Tuple, Union, TYPE_CHECKING
 
 import numpy as np
 from qtpy import QtWidgets, QtCore
@@ -54,7 +54,8 @@ from pymodaq.utils.scanner.scan_selector import ScanSelector, SelectorItem
 from pymodaq.utils.data import DataActuator
 from pymodaq.extensions.scan.manager.scan_manager import ScanManager
 from pymodaq_gui.utils.widgets.spinbox import QSpinBox_ro
-from pymodaq_gui.utils.widgets import MultistateLED, StatusPalette
+from pymodaq_gui.utils.widgets import MultistateLED, StatusPalette, Status
+from pymodaq_utils.enums import StrEnum
 from pymodaq_gui.utils.custom_app import CustomApp, WorkFlowActions
 from pymodaq.extensions.extension_worker import DataBundle, ExtensionWorker
 
@@ -74,6 +75,14 @@ class DAQ_ScanException(Exception):
 
 class ScanStepError(Exception):
     """Raised when an error occurs during a scan step"""
+
+
+class ScanLedState(StrEnum):
+    """States of the DAQ_Scan scan-progress LED."""
+    IDLE = 'idle'
+    RUNNING = 'running'
+    COMPLETE = 'complete'
+    ERROR = 'error'
 
 
 class ScanStatusBarManager:
@@ -106,10 +115,10 @@ class ScanStatusBarManager:
 
         self._scan_done_LED = MultistateLED(
             states=[
-                ('idle',     StatusPalette.color('off')),
-                ('running',  StatusPalette.color('running')),
-                ('complete', StatusPalette.color('idle')),
-                ('error',    StatusPalette.color('critical')),
+                (ScanLedState.IDLE,     StatusPalette.color(Status.OFF)),
+                (ScanLedState.RUNNING,  StatusPalette.color(Status.RUNNING)),
+                (ScanLedState.COMPLETE, StatusPalette.color(Status.IDLE)),
+                (ScanLedState.ERROR,    StatusPalette.color(Status.CRITICAL)),
             ],
             readonly=True,
         )
@@ -138,13 +147,13 @@ class ScanStatusBarManager:
     def set_scan_step_average(self, step_ind: int):
         self._indice_average_sb.setValue(step_ind)
 
-    def set_scan_state(self, state: str):
-        """Set the scan LED to a named state: 'idle', 'running', 'complete', or 'error'."""
+    def set_scan_state(self, state: Union[ScanLedState, str]):
+        """Set the scan LED to a named state (see :class:`ScanLedState`)."""
         self._scan_done_LED.set_state(state)
 
     def set_scan_done(self, done=True):
-        """Compatibility shim: True → 'complete', False → 'running'."""
-        self._scan_done_LED.set_state('complete' if done else 'running')
+        """Compatibility shim: True → COMPLETE, False → RUNNING."""
+        self._scan_done_LED.set_state(ScanLedState.COMPLETE if done else ScanLedState.RUNNING)
 
 
 class DAQScan(CustomExt):
