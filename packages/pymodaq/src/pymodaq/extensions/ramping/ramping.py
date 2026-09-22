@@ -4,15 +4,16 @@ from typing import Iterable, TYPE_CHECKING, Callable
 import numpy as np
 from qtpy import QtWidgets, QtCore
 
-from pymodaq.control_modules.enums import MoveType
-from pymodaq_gui.utils.app_worker import ExtensionWorker, SaverWorker
+from pymodaq_utils.config import GlobalConfig
+from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_utils.utils import ThreadCommand
+
 from pymodaq_data.h5modules.data_saving import DataBundle
 from pymodaq_data import Q_
-
-from pymodaq.control_modules.thread_commands import ControlToHardwareMove
-from pymodaq.utils.data import DataActuator
-from pymodaq.utils.managers.modules import ModuleType
 from pymodaq_data import DataToExport
+
+from pymodaq_gui.utils.widgets import QLED
+from pymodaq_gui.utils.app_worker import ExtensionWorker, SaverWorker
 from pymodaq_gui import utils as gutils
 from pymodaq_gui.managers.h5manager import FileAction
 from pymodaq_gui.messenger import messagebox
@@ -20,27 +21,27 @@ from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.plotting.data_viewers import ViewerDispatcher
 from pymodaq_gui.utils import Dock, QSpinBox_ro
 from pymodaq_gui.utils.custom_app import WorkFlowActions
-
 from pymodaq_gui.utils.shared_ui import MenuToolbarNames
-from pymodaq_plugins_ramping.utilities.histograming import HistogramProcessor, H5Histogramming, InfoForHistogram
-from pymodaq_plugins_ramping.utilities.module_saver import RampSaver, GROUP
-from pymodaq_utils.config import GlobalConfig
-from pymodaq_utils.logger import set_logger, get_module_name
 
+from pymodaq.control_modules.thread_commands import ControlToHardwareMove
+from pymodaq.utils.data import DataActuator
+from pymodaq.utils.managers.modules import ModuleType
+from pymodaq.control_modules.enums import MoveType
 from pymodaq.extensions.utils import CustomExt
 
-from pymodaq_plugins_ramping.utilities.ramp_generator import RampGenerator
-from pymodaq_utils.utils import ThreadCommand
-from pymodaq_gui.utils.widgets import QLED
+
+from pymodaq.extensions.ramping.utilities.histograming import HistogramProcessor, H5Histogramming, InfoForHistogram
+from pymodaq.extensions.ramping.utilities.module_saver import RampSaver, GROUP
+from pymodaq.extensions.ramping.utilities.ramp_generator import RampGenerator
+
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 
+
 logger = set_logger(get_module_name(__file__))
 config = GlobalConfig()
-
-
 
 EXTENSION_NAME = 'Ramp'  # the name that will be displayed in the extension list in the
 # dashboard
