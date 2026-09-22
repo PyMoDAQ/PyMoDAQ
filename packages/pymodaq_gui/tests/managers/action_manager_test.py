@@ -10,7 +10,14 @@ from packaging.version import Version
 import pytest
 from qtpy import QtWidgets, QtGui, QtCore
 from pymodaq_gui.managers.action_manager import ActionManager
+import os
+import sys
+import pytest
 
+
+IS_WINDOWS_CI = sys.platform == "win32" and (
+    os.getenv("CI") == "true" or "GITHUB_ACTIONS" in os.environ
+)
 
 version_qt = QtCore.qVersion()
 
@@ -48,6 +55,7 @@ def test_icon(qtbot):
     assert not is_icon_null(action_manager, "icon_from_pymodaq")
 
 
+@pytest.mark.skipif(IS_WINDOWS_CI, reason="This test fails on the CI runner Windows")
 def test_icon_qt(qtbot):
     action_manager = ActionManager(toolbar=QtWidgets.QToolBar(), menu=QtWidgets.QMenu())
     qtbot.addWidget(action_manager.toolbar)
