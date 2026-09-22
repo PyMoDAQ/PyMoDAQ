@@ -75,12 +75,13 @@ class DAQMoveUI(ControlModuleUI):
 
     is_compact = False
 
-    def __init__(self, parent: Union[DockArea, QtWidgets.QWidget],
+    def __init__(self, app, parent: Union[DockArea, QtWidgets.QWidget],
                  title="DAQ_Move",
                  controls_dock: Dock = None,
                  settings_dock: Dock = None,):
 
-        super().__init__(parent,
+        super().__init__(app,
+                         parent,
                          title=title,
                          settings_dock=settings_dock,)
 
@@ -157,7 +158,7 @@ class DAQMoveUI(ControlModuleUI):
         self.status_led.set_state(MoveLedState.IDLE if status else MoveLedState.MOVING)
 
     def quit_fun(self) -> bool | None:
-        self.command_sig.emit(ThreadCommand(UiToMainMove.QUIT))
+        return self.app.quit_fun()
 
     # -------------------------------------------------------------------------
     # UI Construction
@@ -563,9 +564,6 @@ class DAQMoveUI(ControlModuleUI):
         self.graph_widget.close()
         self.control_widget.close()
         super().close()
-
-    def quit_fun(self):
-        self.command_sig.emit(ThreadCommand(UiToMainMove.QUIT))
 
 
 if __name__ == '__main__':

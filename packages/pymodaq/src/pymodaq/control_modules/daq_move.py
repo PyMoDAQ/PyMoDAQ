@@ -126,9 +126,11 @@ class DAQ_Move(ParameterControlModule):
         self.ui_identifier_default = ui_identifier
         if parent is not None:
 
-            self.ui = DAQMoveUI(parent, title,
-                                  controls_dock=kwargs.pop('controls_dock', None),
-                                  settings_dock=kwargs.pop('settings_dock', None))
+            self.ui = DAQMoveUI(self,
+                                parent,
+                                title,
+                                controls_dock=kwargs.pop('controls_dock', None),
+                                settings_dock=kwargs.pop('settings_dock', None))
         else:
             self.ui = None
 

@@ -68,13 +68,13 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     pymodaq.utils.daq_utils.ThreadCommand
     """
 
-    def __init__(self, parent: QtWidgets.QWidget, title="DAQ_Viewer",
+    def __init__(self, app, parent: QtWidgets.QWidget, title="DAQ_Viewer",
                  rois_dock: Dock = None,
                  settings_dock: Dock = None,
                  area: DockArea = None,
                  **kwargs):
 
-        ControlModuleUI.__init__(self, parent,
+        ControlModuleUI.__init__(self, app, parent,
                                  title=title,
                                  settings_dock=settings_dock,)
         if area is not None:
@@ -260,7 +260,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
                                              self.selector.selected_module]))
 
     def quit_fun(self):
-        self.command_sig.emit(ThreadCommand(UiToMainViewer.QUIT))
+        return self.app.quit_fun()
 
     def _enable_detchoices(self, enable=True):
         self.get_action('selector').widget.setEnabled(enable)
@@ -281,9 +281,6 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
         if not self.config('pymodaq', 'viewer', 'allow_settings_edition'):
             self._settings_widget.setEnabled(not self.is_action_checked('grab'))
-
-    def quit_fun(self) -> bool | None:
-        self.command_sig.emit(ThreadCommand(UiToMainViewer.QUIT))
 
     # -------------------------------------------------------------------------
     # Visibility / Lifecycle

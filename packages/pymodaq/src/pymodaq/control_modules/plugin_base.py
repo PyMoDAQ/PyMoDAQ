@@ -1,10 +1,11 @@
+from typing import Any
 import warnings
 
 from qtpy.QtCore import QObject, Slot
 from easydict import EasyDict as edict
-from pyqtgraph.parametertree import Parameter
-from pyqtgraph.parametertree.parameterTypes import GroupParameter
-from pyqtgraph.parametertree.Parameter import registerParameterType
+from pymodaq_gui.parameter import Parameter
+
+from pymodaq_gui.parameter.pymodaq_ptypes import GroupParameter, registerParameterType
 
 from pymodaq.control_modules.thread_commands import ControllerStatus, ThreadStatus
 from pymodaq_gui.parameter import utils as putils
@@ -78,7 +79,7 @@ class PluginBase(QObject):
         self.settings.sigTreeStateChanged.connect(self.send_param_status)
         self.parent = parent
         self.status = edict(info="", controller=None, initialized=False)
-        self.controller = None
+        self.controller: Any = None
         if parent is not None:
             self._title = parent.title
         else:
