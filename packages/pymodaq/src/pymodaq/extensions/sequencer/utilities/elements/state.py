@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 import weakref
 
 
@@ -15,6 +15,9 @@ from pymodaq_gui.utils.widgets.combo import ComboBox
 
 from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltBase, SeqEltFactory, ElementError
 from pymodaq.extensions.sequencer.utilities.widget_with_toolbar import WidgetWithToolbar
+
+if TYPE_CHECKING:
+    from pymodaq.utils.managers.state.state_manager import StateManager
 
 
 ser_factory = SerializableFactory()

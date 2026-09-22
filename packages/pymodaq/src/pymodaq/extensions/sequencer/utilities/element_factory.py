@@ -26,7 +26,7 @@ from pymodaq_gui.utils.styling import Font
 logger = set_logger(get_module_name(__file__))
 
 if TYPE_CHECKING:
-    from pymodaq.dashboard import Dashboard
+    from pymodaq.dashboard import DashBoard
     from pymodaq.extensions.sequencer.utilities.sequencer.sequence import Sequence
 
 ser_factory = SerializableFactory()
@@ -243,7 +243,7 @@ class SeqEltBase(QtCore.QObject, ActionManager):
         return self._dashboard
 
     @dashboard.setter
-    def dashboard(self, value: 'Dashboard'):
+    def dashboard(self, value: 'DashBoard'):
         """ """
         self._dashboard = value
         self.do_things_with_dashboard()

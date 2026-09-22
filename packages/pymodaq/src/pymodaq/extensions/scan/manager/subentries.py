@@ -20,6 +20,7 @@ ser_factory = SerializableFactory()
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
+    from pymodaq_gui.managers.settings.utils import SettingsManagerModel
     from pymodaq_gui.h5modules.saving import H5Saver
     from pymodaq.extensions.scan.daq_scan import DAQScan
     from pymodaq.extensions.scan.manager.scan_manager import ScanManager
