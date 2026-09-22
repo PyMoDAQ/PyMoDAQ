@@ -705,12 +705,12 @@ class View2D(ActionManager, QtCore.QObject):
         self.histogrammer.show_hide_histogram(show, are_items_visible)
 
     def prepare_image_widget_for_lineouts(self, ratio=0.7):
-        QtGui.QGuiApplication.processEvents()
+
         self.splitter_VRight.splitterMoved[int, int].emit(int(ratio * self.parent_widget.height()), 1)
         self.splitter.moveSplitter(int(ratio * self.parent_widget.width()), 1)
         self.splitter_VLeft.moveSplitter(int(ratio * self.parent_widget.height()), 1)
         self.splitter_VLeft.splitterMoved[int, int].emit(int(ratio * self.parent_widget.height()), 1)
-        QtGui.QGuiApplication.processEvents()
+
 
     def collapse_lineout_widgets(self):
         self.prepare_image_widget_for_lineouts(ratio=1)

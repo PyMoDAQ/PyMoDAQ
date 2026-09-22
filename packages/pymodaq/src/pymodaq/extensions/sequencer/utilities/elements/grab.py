@@ -1,13 +1,12 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 import weakref
 
 from serializall import SerializableFactory
 
 from qtpy import QtCore, QtGui
 
-from pymodaq.control_modules.daq_viewer import DAQ_Viewer
-from pymodaq.control_modules.daq_viewer_ui.ui_base import ActionIconNames
-from pymodaq_gui.managers.action_manager import QAction
+from pymodaq.control_modules.enums import ActionIconNames
+
 from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.logger import set_logger, get_module_name
 
@@ -20,6 +19,9 @@ from pymodaq.extensions.sequencer.utilities.widget_with_toolbar import WidgetWit
 from qt_themes import get_theme
 from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq.utils.managers.modules import ModuleType
+
+if TYPE_CHECKING:
+    from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 
 ser_factory = SerializableFactory()
 logger = set_logger(get_module_name(__file__))
@@ -152,7 +154,7 @@ class GrabElt(SeqEltBase):
             except TypeError as e:
                 pass
 
-    def get_selected_detectors(self) -> list[DAQ_Viewer]:
+    def get_selected_detectors(self) -> list['DAQ_Viewer']:
         return [self.modules_manager.get_mod_from_name(det, mod=ModuleType.Detector) for det in self.selected]
 
     def _execute(self, dte: DataToExport=None):

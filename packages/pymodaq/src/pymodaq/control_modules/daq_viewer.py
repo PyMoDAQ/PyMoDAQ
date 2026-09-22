@@ -140,7 +140,8 @@ class DAQ_Viewer(ParameterControlModule):
 
         self.parent = parent
         if parent is not None:
-            self.ui = DAQ_Viewer_UI(parent, title,
+            self.ui = DAQ_Viewer_UI(self,
+                                    parent, title,
                                     area = area,
                                     rois_dock=self.rois_dock,
                                     settings_dock=kwargs.pop('settings_dock', None),)

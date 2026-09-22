@@ -4,14 +4,12 @@ Created the 15/11/2022
 
 @author: Sebastien Weber
 """
-import copy
+from __future__ import annotations
+
 import datetime
 from dateutil import parser
-from numbers import Number
 import os
 from pathlib import Path
-from typing import Union, Iterable
-
 
 import numpy as np
 from qtpy.QtCore import QObject, Signal
@@ -22,9 +20,8 @@ from pymodaq_utils import utils
 from pymodaq_utils.config import GlobalConfig as Config
 
 from pymodaq_data.h5modules.backends import (
-    H5Backend, backends_available, SaveType,
-    GroupType, InvalidDataDimension, InvalidScanType,
-    GROUP, VLARRAY, SWMR_CAPABLE_BACKENDS)
+    backends_available, SaveType,
+    GroupType, SWMR_CAPABLE_BACKENDS)
 from pymodaq_data.h5modules.saving import H5SaverLowLevel
 
 from pymodaq_gui.parameter import Parameter, ParameterTree
@@ -667,3 +664,5 @@ class H5Saver(H5SaverBase, QObject):
         self.shared_ui.affect_application(self.analysis_prog)
 
         self.shared_ui.show()
+
+

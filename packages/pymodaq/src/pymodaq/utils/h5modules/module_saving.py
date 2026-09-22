@@ -5,7 +5,6 @@ Created the 23/11/2022
 @author: Sebastien Weber
 """
 from __future__ import annotations
-from dataclasses import dataclass, field
 from typing import Union, List, Tuple, TYPE_CHECKING, Iterable
 import time
 import xml.etree.ElementTree as ET
@@ -21,12 +20,11 @@ from pymodaq_data import DataDim, DataWithAxes
 from pymodaq_data.data import Axis, DataToExport, DataDistribution, DataRaw, DataSource
 from pymodaq_data.h5modules.data_saving import (
     DataToExportSaver, DataToExportEnlargeableSaver,
-    DataToExportTimedSaver, DataToExportExtendedSaver)
+    DataToExportTimedSaver, DataToExportExtendedSaver, DataBundle)
 from pymodaq_data.h5modules.backends import GROUP, Node
 
 from pymodaq_gui.h5modules.saving import H5SaverBase
 from pymodaq_gui.parameter import ioxml
-from pymodaq.utils.managers.modules.utils import ModuleType
 
 if TYPE_CHECKING:
     from pymodaq.extensions.scan.daq_scan import DAQScan
@@ -44,18 +42,6 @@ class GroupModuleType(BaseEnum):
     DATALOGGER = 3
     OPTIMIZER = 4
     TIME = 5
-
-
-@dataclass
-class DataBundle:
-    """Convenience class to hold data to be saved or plotted"""
-    dte: DataToExport
-    indexes: list[int] = None  # indexes within an eventual Extended array (see DAQ_Scan)
-    axis_values: list[float | np.ndarray] = None  # axis values within an eventual Enlargeable array (see Optimizers)
-    distribution: DataDistribution = field(
-        default_factory=lambda: DataDistribution.uniform
-    )  # type of data to be saved
-    save_index: int = 0  # an index to know what step in the saving process we're in (see DAQ_Scan)
 
 
 class ModuleSaver(metaclass=ABCMeta):

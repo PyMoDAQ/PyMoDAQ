@@ -1,22 +1,22 @@
 from pathlib import Path
 import yaml
 
-from pymodaq.extensions.extension_worker import ExtensionWorker
-from pymodaq.utils.h5modules.module_saving import LoggerSaver, DataBundle
+from pymodaq_gui.utils.app_worker import ExtensionWorker, SaverWorker
+from pymodaq.utils.h5modules.module_saving import LoggerSaver
+from pymodaq_data.h5modules.data_saving import DataBundle
 from pymodaq_data import DataToExport
 from pymodaq_gui.managers.h5manager import FileAction
-from pymodaq_gui.managers.runner_thread_manager import WorkerThreadManager
 from pymodaq_gui.messenger import messagebox
 from pymodaq_gui.utils import select_file
 from pymodaq.extensions.sequencer.utilities.sequencer.sequence import Sequence
 
-from qtpy import QtWidgets, QtCore
+from qtpy import QtWidgets
 
 from pymodaq_gui import utils as gutils
 from pymodaq_gui.utils.custom_app import WorkFlowActions
 from pymodaq_gui.utils.enums import MenuToolbarNames
 
-from pymodaq_utils.config import Config, GlobalConfig
+from pymodaq_utils.config import GlobalConfig
 from pymodaq_utils.logger import set_logger, get_module_name
 
 from pymodaq.extensions.utils import CustomExt
@@ -59,7 +59,7 @@ class Sequencer(CustomExt):
     show_h5file_statusbar_widgets = True
     show_workflow_actions = True
 
-    params = [] + ExtensionWorker.params
+    params = [] + SaverWorker.params
 
     def __init__(self, parent: gutils.DockArea, dashboard):
 
@@ -272,7 +272,7 @@ class Sequencer(CustomExt):
             messagebox(title='Running',
                        text='The Sequencer is running, first stop it')
             return False
-        elif self.settings['worker', 'worker_tasks'] > 0:
+        elif self.settings[SaverWorker.worker_setting_name, 'worker_tasks'] > 0:
             messagebox(title='Running',
                        text='The Saver is finishing the savings')
             self.sequence_worker.stop("User prompted a quit of the Application, Stopping the Acquisition")
@@ -284,7 +284,6 @@ class Sequencer(CustomExt):
 class SequenceWorker(ExtensionWorker):
 
     def __init__(self, sequencer: Sequencer, parent=None):
-        self._app: Sequencer
         super().__init__(app=sequencer, parent=parent)
 
     @property
@@ -296,7 +295,7 @@ class SequenceWorker(ExtensionWorker):
         return self.app.status_manager
 
     def save_callback(self, dte: DataToExport):
-        self._n_emitted += 1
+        self.thread_manager.n_jobs[SaverWorker.name] += 1
         self.saver_worker.data_to_save_signal.emit(DataBundle(dte=dte))
 
     def _start(self):
@@ -305,9 +304,11 @@ class SequenceWorker(ExtensionWorker):
             sequence.set_log_callback(self.save_callback if self.app.is_action_checked(WorkFlowActions.LOG)
                                       else None)
 
-        self._n_emitted = 0
 
-        self.app.set_action_enabled(WorkFlowActions.START, False)
+        self.app.enable_workflow_actions(False, excepted=(WorkFlowActions.PAUSE,
+                                                          WorkFlowActions.STOP,
+                                                          WorkFlowActions.LOG))
+
         self.app.main_sequence.sequence_finished.connect(self.stopped)
         self.app.main_sequence.get_action(WorkFlowActions.START).trigger()
 
@@ -315,25 +316,20 @@ class SequenceWorker(ExtensionWorker):
         for sequence in self.app.sequences.values():
             sequence.get_action(WorkFlowActions.PAUSE).trigger()
 
-    def _stop(self, msg: str = None):
+
+    def stop(self, msg: str = None):
         for sequence in self.app.sequences.values():
             sequence.get_action(WorkFlowActions.STOP).trigger()
 
     def stopped(self, msg: str = None):
-        self._running = False
-        #1 Stop the emission of data immediately
+        super().stop(msg)
+
+    def _stop(self, msg: str = None):
         for sequence in self.app.sequences.values():
             sequence.recursive_disconnect_elts()
 
-        #2 terminate the saver worker once its queue is empty
-        if self.settings['worker', 'worker_tasks'] == 0:
-            self.terminate_worker()
-        else:
-            self._worker_done.connect(self.terminate_worker)
-
-        #3 update the GUI
-        self._app.set_action_checked(WorkFlowActions.PAUSE, False)
-        self._app.set_action_enabled(WorkFlowActions.START, True)
+        self.app.enable_workflow_actions(True,
+                                         opposite=WorkFlowActions.PAUSE)
         if msg is not None:
             self.app.update_status(msg)
             self.status_manager.set_permanent_status(msg)

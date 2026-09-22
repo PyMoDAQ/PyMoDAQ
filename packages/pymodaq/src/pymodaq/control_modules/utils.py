@@ -677,7 +677,7 @@ class ParameterControlModule(ParameterManager, LECOComponentMixin, ControlModule
                 self.ui.close()
         except Exception as e:
             self.logger.exception(str(e))
-        self.quit_signal.emit()
+        return True
 
     def _quit_cleanup(self):
         """Override in subclasses to add module-specific teardown before UI close."""

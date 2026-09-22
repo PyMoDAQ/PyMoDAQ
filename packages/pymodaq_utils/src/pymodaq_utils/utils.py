@@ -643,7 +643,7 @@ if __name__ == '__main__':
     #plugins = get_plugins()  # pragma: no cover
     #extensions = get_extension()
     #models = get_models()
-    #count = count_lines('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git\\pymodaq\src')
+    #count = count_lines(r'C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git\\pymodaq\src')
 
 
     # import license

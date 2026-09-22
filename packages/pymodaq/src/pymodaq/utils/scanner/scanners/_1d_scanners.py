@@ -160,10 +160,10 @@ class Scan1DSparse(Scan1DBase):
 
     def set_scan(self):
         try:
-            range_strings = re.findall("[^,\s]+", self.settings['parsed_string'])
+            range_strings = re.findall(r"[^,\s]+", self.settings['parsed_string'])
             series = np.asarray([])
             for range_string in range_strings:
-                number_strings = re.findall("[^:]+", range_string)  # Extract the numbers by splitting on :.
+                number_strings = re.findall(r"[^:]+", range_string)  # Extract the numbers by splitting on :.
                 this_range = np.asarray([])
                 if len(number_strings) == 3:  # 3 Numbers specify a range
                     start, step, stop = [float(number) for number in number_strings]

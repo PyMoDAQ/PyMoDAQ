@@ -9,15 +9,15 @@ Created the 05/09/2022
 from typing import List, Union
 import sys
 
-from qtpy import QtWidgets, QtCore, QtGui
-from qtpy.QtWidgets import QVBoxLayout,  QWidget
+from qtpy import QtWidgets, QtCore
+from qtpy.QtWidgets import QVBoxLayout
 
+from pymodaq.control_modules.enums import ActionIconNames
 from pymodaq.utils.daq_utils import ThreadCommand
 from pymodaq.control_modules.ui_utils import ControlModuleUI
 
 from pymodaq_gui.utils import DockArea, Dock
 from pymodaq_utils.config import GlobalConfig as Config
-from pymodaq_utils.enums import StrEnum
 from pymodaq.control_modules.instruments import DET_TYPES
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerFactory, ViewerDispatcher
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
@@ -37,14 +37,6 @@ options = {
     'DAQND': [name for name in [plugin['name'] for plugin in DET_TYPES['DAQND']]],
 }
 add_menu_entries = add_category_layers(options)
-
-
-class ActionIconNames(StrEnum):
-    SNAP = 'looks_one'
-    GRAB = 'repeat'
-    GRAB_STOP = 'repeat_on'
-    INI = 'cable'
-    RESET = 'replay'
 
 
 class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
@@ -76,13 +68,13 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     pymodaq.utils.daq_utils.ThreadCommand
     """
 
-    def __init__(self, parent: QtWidgets.QWidget, title="DAQ_Viewer",
+    def __init__(self, app, parent: QtWidgets.QWidget, title="DAQ_Viewer",
                  rois_dock: Dock = None,
                  settings_dock: Dock = None,
                  area: DockArea = None,
                  **kwargs):
 
-        ControlModuleUI.__init__(self, parent,
+        ControlModuleUI.__init__(self, app, parent,
                                  title=title,
                                  settings_dock=settings_dock,)
         if area is not None:
@@ -142,10 +134,10 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._data_ready = status
         if status:
             icon = create_icon(ActionIconNames.SNAP,
-                               icon_color=self.get_theme().green,)
+                               icon_color=self.get_theme().green, )
         else:
             icon = create_icon(ActionIconNames.SNAP,
-                               icon_color=self.get_theme().red,)
+                               icon_color=self.get_theme().red, )
         self.get_action('snap').set_icon(icon)
 
     # -------------------------------------------------------------------------
@@ -268,7 +260,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
                                              self.selector.selected_module]))
 
     def quit_fun(self):
-        self.command_sig.emit(ThreadCommand(UiToMainViewer.QUIT))
+        return self.app.quit_fun()
 
     def _enable_detchoices(self, enable=True):
         self.get_action('selector').widget.setEnabled(enable)
@@ -289,9 +281,6 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
         if not self.config('pymodaq', 'viewer', 'allow_settings_edition'):
             self._settings_widget.setEnabled(not self.is_action_checked('grab'))
-
-    def quit_fun(self) -> bool | None:
-        self.command_sig.emit(ThreadCommand(UiToMainViewer.QUIT))
 
     # -------------------------------------------------------------------------
     # Visibility / Lifecycle

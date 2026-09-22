@@ -7,7 +7,6 @@ from serializall import SerializableFactory
 
 from qtpy import QtCore, QtWidgets
 
-from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.enums import MoveType
 from pymodaq.control_modules.units import get_unit_to_display
 from pymodaq.utils.data import DataActuator
@@ -20,9 +19,7 @@ from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltBase, S
 
 from pymodaq.extensions.sequencer.utilities.widget_with_toolbar import WidgetWithToolbar
 from qt_themes import get_theme
-from pymodaq.utils.managers.modules_manager import ModulesManager
 
-from pymodaq.control_modules.instruments import ACTUATOR_NAMES, find_actuator_class_from_name
 from pymodaq_utils.categorizing import categorize_items, find_last_index
 
 ser_factory = SerializableFactory()

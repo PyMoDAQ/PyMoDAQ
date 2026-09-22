@@ -7,6 +7,7 @@ from qt_themes import Theme
 from qtpy.QtCore import QObject, QLocale
 from qtpy import QtCore, QtWidgets
 
+from pymodaq_data.h5modules.data_saving import DataToExportSaver
 from pymodaq_gui.h5modules.saving import H5Saver
 from pymodaq_gui.managers.runner_thread_manager import WorkerThreadManager
 from pymodaq_gui.managers.h5manager import FileStatus, H5Manager, FileAction
@@ -284,6 +285,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         self.connect_things()
 
         self.do_things_after_ui_setup()
+        self.apply_size_hint()
 
     def quit_fun(self) -> bool | None:
         """Method to be reimplemented in order to define a custom quit function
@@ -299,6 +301,20 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         """ Method to be reimplemented in order to do things after the UI setup
         """
         pass
+
+    def apply_size_hint(self):
+        if self.mainwindow is not None:
+            self.mainwindow.resize(self._size_hint)
+        else:
+            self.parent.resize(self._size_hint)
+
+    @property
+    def _size_hint(self) -> QtCore.QSize:
+        """ property telling the optimal size for your application UI
+
+        To be reimplemented
+        """
+        return QtCore.QSize(1200, 800)
 
     def setup_docks_and_widgets(self):
         """ Method to be reimplemented to set up the docks layout and/or widgets
@@ -406,7 +422,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         if not isinstance(opposite, Iterable):
             opposite = [opposite]
 
-        for action in WorkFlowActions.names() + list(other_actions):
+        for action in [WorkFlowActions(value) for value in WorkFlowActions.values()] + list(other_actions):
             if self.has_action(action) and action not in excepted:
                 if action in opposite:
                     self.set_action_enabled(action, not enable)
@@ -421,3 +437,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         To be reimplemented
         """
         pass
+
+    @property
+    def module_and_data_saver(self) -> DataToExportSaver:
+        return DataToExportSaver(self.h5_manager.h5saver)
