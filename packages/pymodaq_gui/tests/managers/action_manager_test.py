@@ -35,6 +35,8 @@ def is_icon_null(
 
 def test_icon(qtbot):
     action_manager = ActionManager(toolbar=QtWidgets.QToolBar(), menu=QtWidgets.QMenu())
+    qtbot.addWidget(action_manager.toolbar)
+    qtbot.addWidget(action_manager.menu)
 
     action_manager.add_action(short_name="no_icon", name="my_no_icon", icon_name="")
 
@@ -44,6 +46,13 @@ def test_icon(qtbot):
         short_name="icon_from_pymodaq", name="an_icon_from_pymodaq", icon_name="NewFile",
     )
     assert not is_icon_null(action_manager, "icon_from_pymodaq")
+
+
+def test_icon_qt(qtbot):
+    action_manager = ActionManager(toolbar=QtWidgets.QToolBar(), menu=QtWidgets.QMenu())
+    qtbot.addWidget(action_manager.toolbar)
+    qtbot.addWidget(action_manager.menu)
+    action_manager.toolbar.show()
 
     if Version(version_qt) > Version("6.7"):
         action_manager.add_action(
@@ -61,7 +70,7 @@ def test_icon(qtbot):
 
 def test_action_properties(qtbot):
     action_manager = ActionManager(toolbar=QtWidgets.QToolBar(), menu=QtWidgets.QMenu())
-
+    qtbot.addWidget(action_manager.toolbar)
     action_manager.add_action(short_name="no_icon", name="my_no_icon", icon_name="")
     action_manager.add_action(
         short_name="icon_from_pymodaq", name="an_icon_from_pymodaq", icon_name="NewFile",
@@ -80,7 +89,8 @@ def test_menu_creation(qtbot):
     """Test creating menus"""
     menu = QtWidgets.QMenu()
     action_manager = ActionManager(toolbar=QtWidgets.QToolBar(), menu=menu)
-
+    qtbot.addWidget(action_manager.toolbar)
+    qtbot.addWidget(action_manager.menu)
     # Create a simple menu
     file_menu = action_manager.add_menu('file_menu', 'File')
 
@@ -96,6 +106,8 @@ def test_menu_with_icon(qtbot):
     """Test creating menus with icons"""
     menu = QtWidgets.QMenu()
     action_manager = ActionManager(toolbar=QtWidgets.QToolBar(), menu=menu)
+    qtbot.addWidget(action_manager.toolbar)
+    qtbot.addWidget(menu)
 
     # Create menu with icon
     edit_menu = action_manager.add_menu('edit_menu', 'Edit', icon_name='NewFile')
@@ -107,7 +119,8 @@ def test_nested_menus(qtbot):
     """Test creating nested menus (menu within menu)"""
     menu = QtWidgets.QMenu()
     action_manager = ActionManager(toolbar=QtWidgets.QToolBar(), menu=menu)
-
+    qtbot.addWidget(action_manager.toolbar)
+    qtbot.addWidget(menu)
     # Create parent menu
     parent_menu = action_manager.add_menu('parent', 'Parent Menu')
 
@@ -127,7 +140,8 @@ def test_add_action_to_menu_by_name(qtbot):
     """Test adding actions to menu using menu name"""
     menu = QtWidgets.QMenu()
     action_manager = ActionManager(toolbar=QtWidgets.QToolBar(), menu=menu)
-
+    qtbot.addWidget(action_manager.toolbar)
+    qtbot.addWidget(menu)
     # Create menu
     action_manager.add_menu('file_menu', 'File')
 
@@ -144,7 +158,8 @@ def test_add_action_to_menu_by_object(qtbot):
     """Test adding actions to menu using QMenu object"""
     menu = QtWidgets.QMenu()
     action_manager = ActionManager(toolbar=QtWidgets.QToolBar(), menu=menu)
-
+    qtbot.addWidget(action_manager.toolbar)
+    qtbot.addWidget(menu)
     # Create menu
     edit_menu = action_manager.add_menu('edit_menu', 'Edit')
 
@@ -160,7 +175,8 @@ def test_multiple_actions_in_menu(qtbot):
     """Test adding multiple actions to the same menu"""
     menu = QtWidgets.QMenu()
     action_manager = ActionManager(toolbar=QtWidgets.QToolBar(), menu=menu)
-
+    qtbot.addWidget(action_manager.toolbar)
+    qtbot.addWidget(menu)
     # Create menu
     action_manager.add_menu('file_menu', 'File')
 
@@ -177,7 +193,8 @@ def test_menu_without_auto_menu(qtbot):
     """Test creating menu without automatically adding it to parent menu"""
     menu = QtWidgets.QMenu()
     action_manager = ActionManager(toolbar=QtWidgets.QToolBar(), menu=menu)
-
+    qtbot.addWidget(action_manager.toolbar)
+    qtbot.addWidget(menu)
     # Create menu without auto-adding
     floating_menu = action_manager.add_menu('floating', 'Floating Menu', auto_menu=False)
 
@@ -190,7 +207,8 @@ def test_menu_without_auto_menu(qtbot):
 def test_menu_getter_errors(qtbot):
     """Test error handling for menu getters"""
     action_manager = ActionManager(toolbar=QtWidgets.QToolBar(), menu=QtWidgets.QMenu())
-
+    qtbot.addWidget(action_manager.toolbar)
+    qtbot.addWidget(action_manager.menu)
     # Test getting non-existent menu
     with pytest.raises(KeyError):
         action_manager.get_menu('nonexistent')
@@ -203,7 +221,8 @@ def test_add_action_invalid_menu_type(qtbot):
     """Test error handling when passing invalid menu type"""
     menu = QtWidgets.QMenu()
     action_manager = ActionManager(toolbar=QtWidgets.QToolBar(), menu=menu)
-
+    qtbot.addWidget(action_manager.toolbar)
+    qtbot.addWidget(menu)
     # Try to add action with invalid menu type
     with pytest.raises(TypeError):
         action_manager.add_action('test', 'Test Action', menu=123)
@@ -213,7 +232,8 @@ def test_shared_menu(qtbot):
     """Test that the same menu can be added to multiple parent menus"""
     menu = QtWidgets.QMenu()
     action_manager = ActionManager(toolbar=QtWidgets.QToolBar(), menu=menu)
-
+    qtbot.addWidget(action_manager.toolbar)
+    qtbot.addWidget(menu)
     # Create two parent menus
     file_menu = action_manager.add_menu('file', 'File')
     view_menu = action_manager.add_menu('view', 'View')
@@ -244,10 +264,11 @@ def test_shared_menu(qtbot):
 def test_toolbar_creation(qtbot):
     """Test creating toolbars"""
     action_manager = ActionManager(toolbar=QtWidgets.QToolBar(), menu=QtWidgets.QMenu())
-
+    qtbot.addWidget(action_manager.toolbar)
+    qtbot.addWidget(action_manager.menu)
     # Create a toolbar
     file_toolbar = action_manager.add_toolbar('file_toolbar', 'File Toolbar')
-
+    qtbot.addWidget(file_toolbar)
     assert action_manager.has_toolbar('file_toolbar')
     assert action_manager.get_toolbar('file_toolbar') == file_toolbar
     assert 'file_toolbar' in action_manager.toolbars_names
@@ -263,6 +284,9 @@ def test_multiple_toolbars(qtbot):
     file_toolbar = action_manager.add_toolbar('file', 'File')
     edit_toolbar = action_manager.add_toolbar('edit', 'Edit')
     view_toolbar = action_manager.add_toolbar('view', 'View')
+    qtbot.addWidget(file_toolbar)
+    qtbot.addWidget(edit_toolbar)
+    qtbot.addWidget(view_toolbar)
 
     assert len(action_manager.toolbars) == 3
     assert len(action_manager.toolbars_names) == 3
@@ -287,7 +311,7 @@ def test_set_toolbar(qtbot):
 
     toolbar = QtWidgets.QToolBar()
     action_manager.set_toolbar(toolbar)
-
+    qtbot.addWidget(toolbar)
     assert action_manager.toolbar == toolbar
     assert action_manager._toolbar == toolbar
 
@@ -298,7 +322,7 @@ def test_set_menu(qtbot):
 
     menu = QtWidgets.QMenu()
     action_manager.set_menu(menu)
-
+    qtbot.addWidget(menu)
     assert action_manager.menu == menu
     assert action_manager._menu == menu
 
@@ -307,7 +331,7 @@ def test_add_action_to_toolbar(qtbot):
     """Test adding actions to toolbar"""
     toolbar = QtWidgets.QToolBar()
     action_manager = ActionManager(toolbar=toolbar)
-
+    qtbot.addWidget(toolbar)
     action_manager.add_action('save', 'Save', icon_name='SaveAs', auto_toolbar=True)
 
     assert action_manager.has_action('save')
@@ -320,6 +344,8 @@ def test_add_action_to_menu_and_toolbar(qtbot):
     menu = QtWidgets.QMenu()
     toolbar = QtWidgets.QToolBar()
     action_manager = ActionManager(toolbar=toolbar, menu=menu)
+    qtbot.addWidget(toolbar)
+    qtbot.addWidget(menu)
 
     file_menu = action_manager.add_menu('file', 'File')
     action_manager.add_action('open', 'Open', icon_name='Open',
@@ -335,7 +361,8 @@ def test_affect_to_toolbar(qtbot):
     toolbar1 = QtWidgets.QToolBar()
     toolbar2 = QtWidgets.QToolBar()
     action_manager = ActionManager(toolbar=toolbar1)
-
+    qtbot.addWidget(toolbar1)
+    qtbot.addWidget(toolbar2)
     action_manager.add_action('copy', 'Copy', auto_toolbar=True)
     action_manager.affect_to('copy', toolbar2)
 
@@ -349,7 +376,8 @@ def test_affect_to_menu(qtbot):
     menu1 = QtWidgets.QMenu()
     menu2 = QtWidgets.QMenu()
     action_manager = ActionManager(menu=menu1)
-
+    qtbot.addWidget(menu1)
+    qtbot.addWidget(menu2)
     action_manager.add_action('paste', 'Paste', auto_menu=True)
     action_manager.affect_to('paste', menu2)
 
@@ -505,7 +533,7 @@ def test_add_widget_with_signal(qtbot):
     """Test adding widget with signal connection"""
     toolbar = QtWidgets.QToolBar()
     action_manager = ActionManager(toolbar=toolbar)
-
+    qtbot.addWidget(toolbar)
     called = []
 
     def on_text_changed(text):
@@ -525,7 +553,7 @@ def test_add_custom_widget(qtbot):
     """Test adding custom widget class"""
     toolbar = QtWidgets.QToolBar()
     action_manager = ActionManager(toolbar=toolbar)
-
+    qtbot.addWidget(toolbar)
     class CustomWidget(QtWidgets.QLabel):
         def __init__(self):
             super().__init__("Custom")
@@ -611,7 +639,8 @@ def test_complex_menu_toolbar_structure(qtbot):
 
     # Create toolbar
     toolbar = action_manager.add_toolbar('main', 'Main Toolbar')
-
+    qtbot.addWidget(toolbar)
+    qtbot.addWidget(menu)
     # Create nested menu structure
     file_menu = action_manager.add_menu('file', 'File')
     recent_menu = action_manager.add_menu('recent', 'Recent', parent_menu=file_menu)
