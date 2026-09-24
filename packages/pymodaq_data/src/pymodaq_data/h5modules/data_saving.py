@@ -524,7 +524,33 @@ class DataSaverLoader(DataManagement):
         return data
 
 
-class BkgSaver(DataSaverLoader):
+class SharedAxesSaverLoader(DataSaverLoader):
+    """Base for arrays accompanying data in the same group (background, error bars): they describe
+    the same points as the data, so they share its axes rather than saving their own
+
+    The axes of a group apply to all the arrays in it: by default, such arrays save their axes only
+    if the group holds none yet (saved on their own), not when saved next to their data.
+    """
+
+    def add_data(self, where: Union[Node, str], data: DataWithAxes, save_axes: bool = None,
+                 **kwargs):
+        """Adds the arrays, and possibly their axes, to a given location
+
+        Parameters
+        ----------
+        where: Union[Node, str]
+            the path of a given node or the node itself
+        data: DataWithAxes
+        save_axes: bool or None
+            None (default) saves the axes only if the group holds none yet: next to their data,
+            the arrays share the data axes, on their own they keep theirs
+        """
+        if save_axes is None:
+            save_axes = self._axis_saver.get_last_node_name(where) is None
+        super().add_data(where, data, save_axes=save_axes, **kwargs)
+
+
+class BkgSaver(SharedAxesSaverLoader):
     """Specialized Object to save and load DataWithAxes background object to and from a h5file
 
     Parameters
@@ -542,7 +568,7 @@ class BkgSaver(DataSaverLoader):
         super().__init__(h5saver)
 
 
-class ErrorSaverLoader(DataSaverLoader):
+class ErrorSaverLoader(SharedAxesSaverLoader):
     """Specialized Object to save and load DataWithAxes errors bars to and from a h5file
 
     Parameters
@@ -862,6 +888,7 @@ class DataToExportSaver:
         self._h5saver = h5saver
         self._data_saver = DataSaverLoader(self._h5saver)
         self._bkg_saver = BkgSaver(self._h5saver)
+        self._error_saver = ErrorSaverLoader(self._h5saver)
 
     @property
     def h5saver(self) -> H5SaverLowLevel:
@@ -957,7 +984,7 @@ class DataToExportSaver:
                                                         self.channel_formatter(ind), dwa.name)
                 # dwa_group = self._get_node_from_title(dim_group, dwa.name)
                 if dwa_group is not None:
-                    self._bkg_saver.add_data(dwa_group, dwa, save_axes=False)
+                    self._error_saver.add_data(dwa_group, dwa, save_axes=False)
 
 
 class DataToExportEnlargeableSaver(DataToExportSaver):
