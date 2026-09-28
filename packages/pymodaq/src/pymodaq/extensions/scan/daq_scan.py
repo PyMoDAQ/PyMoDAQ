@@ -402,7 +402,7 @@ class DAQScan(CustomExt):
 
         self.plotting_settings_tree.setParameters(self.settings.child('plot_options'))
 
-        self.general_settings_tree.addParameters(self.settings.child('worker'))
+        self.general_settings_tree.addParameters(self.settings.child(SaverWorker.worker_setting_name))
         self.general_settings_tree.addParameters(self.settings.child('time_flow'))
         self.general_settings_tree.addParameters(self.settings.child('scan_options'))
 
