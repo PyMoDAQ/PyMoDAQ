@@ -12,7 +12,8 @@ from pymodaq_data.h5modules import saving
 from pymodaq_data.h5modules.data_saving import (
     DataLoader, AxisSaverLoader, DataSaverLoader, DataToExportSaver,
     DataEnlargeableSaver, DataToExportTimedSaver, SPECIAL_GROUP_NAMES, DataToExportExtendedSaver,
-    DataToExportEnlargeableSaver, DataExtendedSaver, DataLoader, BkgSaver, squeeze)
+    DataToExportEnlargeableSaver, DataExtendedSaver, DataLoader, BkgSaver, ErrorSaverLoader,
+    squeeze)
 from pymodaq_data.data import (Axis, DataWithAxes, DataSource, DataToExport, DataRaw,
                                DataDim, DataDistribution, Averaging)
 
@@ -286,15 +287,35 @@ class TestDataSaverLoader:
         data_saver.add_data(h5saver.raw_group, data)
         bkgSaver.add_data('/RawData', data)
 
-        loaded_data = data_saver.load_data(h5saver.get_node('/RawData/Data01'), load_all=True, with_bkg=True)
+        loaded_data = data_saver.load_data(h5saver.get_node('/RawData/Data01'), load_all=True,
+                                           with_bkg=True)
         assert len(loaded_data) == 2
         assert loaded_data.labels == data.labels
+        # the background shares the data axes: loaded once, not duplicated
+        assert [axis.label for axis in loaded_data.axes] == ['myaxis0', 'myaxis1']
 
         for dat in loaded_data:
             assert np.allclose(dat, np.zeros(dat.shape))
 
         assert loaded_data == data-data
 
+
+    @pytest.mark.parametrize('saver_class', [BkgSaver, ErrorSaverLoader])
+    def test_companion_arrays_share_the_axes_of_their_data(self, h5saver_lowlevel, saver_class):
+        """The axes of a group apply to all its arrays: a background or error bars saved next to
+        their data do not save them again, saved on their own they do"""
+        h5saver = h5saver_lowlevel
+        axis_loader = AxisSaverLoader(h5saver)
+        data = DataWithAxes(name='mydata', data=[DATA2D], source='raw', dim='Data2D',
+                            axes=[Axis('myaxis0', data=create_axis_array(DATA2D.shape[0]), index=0)])
+        alone_group = h5saver.get_set_group(h5saver.raw_group, 'alone')
+        saver_class(h5saver).add_data(alone_group, data)
+        assert [axis.label for axis in axis_loader.get_axes(alone_group)] == ['myaxis0']
+
+        with_data_group = h5saver.get_set_group(h5saver.raw_group, 'with_data')
+        DataSaverLoader(h5saver).add_data(with_data_group, data)
+        saver_class(h5saver).add_data(with_data_group, data)
+        assert [axis.label for axis in axis_loader.get_axes(with_data_group)] == ['myaxis0']
 
     def test_extra_attributes_and_timestamping(self, h5saver_lowlevel):
         h5saver = h5saver_lowlevel
@@ -734,6 +755,33 @@ class TestDataLoader:
         data_loaded = data_loader.load_data(h5saver.get_node('/RawData/MyDet/Data2D/CH00/Data00'), with_bkg=True)
         for ind in range(len(data_loaded)):
             assert np.all(data_loaded[ind] == pytest.approx(0 * DATA2D))
+
+    def test_add_error(self, h5saver_lowlevel, init_data_to_export):
+        """add_error stores error bars as errors, not as a background to subtract"""
+        h5saver = h5saver_lowlevel
+        data_to_export = init_data_to_export
+        data_loader = DataLoader(h5saver)
+
+        data_saver = DataToExportSaver(h5saver)
+        det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
+
+        data_to_export = DataToExport('mydte', data=[DataWithAxes(
+            name='mydata2D', data=[DATA2D], labels=['mylabel1'], source='raw', dim='Data2D')])
+        errors = DataToExport('errors', data=[data_to_export[0].deepcopy_with_new_data(
+            [0.1 * np.ones(DATA2D.shape)])])
+        data_saver.add_data(det_group, data_to_export)
+        data_saver.add_error(det_group, errors)
+
+        channel = h5saver.get_node('/RawData/MyDet/Data2D/CH00')
+        data_types = [node.attrs['data_type'] for node in h5saver.walk_nodes(channel)
+                      if 'data_type' in node.attrs.attrs_name]
+        assert 'bkg' not in data_types
+        assert 'error' in data_types
+
+        data_loaded = data_loader.load_data('/RawData/MyDet/Data2D/CH00/Data00', with_bkg=True)
+        assert np.all(data_loaded[0] == pytest.approx(DATA2D))
+        assert data_loaded.errors is not None
+        assert np.allclose(data_loaded.errors[0], 0.1)
 
     def test_load_enlargeable_data(self, h5saver_lowlevel, init_data_to_export):
         h5saver = h5saver_lowlevel
