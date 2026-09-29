@@ -318,11 +318,19 @@ def bind_transition(widget: QtCore.QObject, workflow: Workflow, transition: str,
                     signal_name: str = 'triggered', click_slot: Callable | None = None) -> Binding:
     """ Click -> trigger(transition) by default; enabled kept synced to
     can_trigger(transition). `signal_name`: 'triggered' for QAction,
-    'clicked' for QPushButton/... `click_slot`, if given, replaces the
-    bare trigger() on click -- it's then responsible for calling
-    trigger() itself, e.g. daq_scan's 'start' running set_scan() first. """
+    'clicked' for QPushButton/... `click_slot`, if given, runs first (e.g.
+    daq_scan's 'start' running set_scan()) and trigger(transition) is then
+    called automatically -- unless `click_slot` returns exactly `False`, in
+    which case the transition is skipped (e.g. set_scan() validation
+    failed). """
     if click_slot is None:
         click_slot = lambda *_: workflow.trigger(transition)
+    else:
+        user_slot = click_slot
+
+        def click_slot(*args):
+            if user_slot(*args) is not False:
+                workflow.trigger(transition)
 
     def sync_slot(*_):
         widget.setEnabled(workflow.can_trigger(transition))
