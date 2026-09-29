@@ -474,35 +474,35 @@ class TestBindTransition:
         binding.unbind()
         binding.resync()  # must not raise, and must not touch the (possibly dead) widget
 
-    def test_click_slot_override_runs_instead_of_bare_trigger(self, qtbot):
-        """ The 'start' case: validation with real side effects has to run on click, and only
-        that callback decides whether/when to actually call trigger(). """
+    def test_click_slot_runs_then_trigger_fires_automatically(self, qtbot):
+        """ The 'start' case: validation with real side effects has to run on click; trigger()
+        then fires automatically afterward, so the callback doesn't need `workflow` in its
+        closure at all for the common case. """
         workflow = Workflow('test')
         workflow.add_transition('go', ['A'], 'B')
         action = QtWidgets.QAction('Go')
         calls = []
 
-        def validate_then_go(*_):
+        def validate(*_):
             calls.append(True)
-            # validation succeeds: decide to trigger ourselves
-            workflow.trigger('go')
+            # validation succeeds: no need to call trigger() ourselves
 
-        bind_transition(action, workflow, 'go', click_slot=validate_then_go)
+        bind_transition(action, workflow, 'go', click_slot=validate)
         action.trigger()
         assert calls == [True]
-        assert workflow.state == 'B'  # the callback's own trigger() call took effect
+        assert workflow.state == 'B'  # trigger() ran automatically after validate()
 
-    def test_click_slot_override_can_refuse_to_trigger(self, qtbot):
+    def test_click_slot_can_refuse_to_trigger_by_returning_false(self, qtbot):
         workflow = Workflow('test')
         workflow.add_transition('go', ['A'], 'B')
         action = QtWidgets.QAction('Go')
 
         def validation_fails(*_):
-            pass  # never calls trigger()
+            return False  # explicit refusal: trigger() is skipped
 
         bind_transition(action, workflow, 'go', click_slot=validation_fails)
         action.trigger()
-        assert workflow.state == 'A'  # nothing happened -- the callback chose not to trigger
+        assert workflow.state == 'A'  # nothing happened -- the callback refused to trigger
 
     def test_enabled_sync_is_unchanged_by_a_click_slot_override(self, qtbot):
         """ Whether click bare-triggers or runs a custom callback, the enabled state still
@@ -510,11 +510,13 @@ class TestBindTransition:
         workflow = Workflow('test')
         workflow.add_transition('go', ['A'], 'B')
         action = QtWidgets.QAction('Go')
-        bind_transition(action, workflow, 'go', click_slot=lambda *_: workflow.trigger('go'))
+        calls = []
+        bind_transition(action, workflow, 'go', click_slot=lambda *_: calls.append(True))
         assert action.isEnabled()
 
         action.trigger()
-        assert workflow.state == 'B'
+        assert calls == [True]
+        assert workflow.state == 'B'  # trigger() ran automatically after the click_slot
         assert not action.isEnabled()  # 'go' no longer legal from B
 
     def test_unbind_disconnects_a_click_slot_override_too(self, qtbot):

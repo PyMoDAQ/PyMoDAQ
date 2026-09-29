@@ -174,34 +174,32 @@ class TestBindStandardWorkflowActions:
         assert action_manager.get_action('scan_start').objectName() == 'scan_start'
         assert action_manager.get_action('scan_pause').objectName() == 'scan_pause'
 
-    def test_on_start_runs_instead_of_a_bare_trigger(self, qtbot, action_manager):
-        """ The daq_scan case: 'start' needs real validation first, and only that callback
-        decides whether/when to actually enter RUNNING. """
+    def test_on_start_runs_then_trigger_fires_automatically(self, qtbot, action_manager):
+        """ The daq_scan case: 'start' needs real validation first; trigger() then fires
+        automatically afterward unless the callback returns False. """
         workflow = standard_workflow()
         calls = []
 
-        def validate_then_start(*_):
+        def validate(*_):
             calls.append(True)
-            workflow.trigger(StandardTransitions.START)
 
-        bind_standard_workflow_actions(action_manager, workflow, on_start=validate_then_start)
+        bind_standard_workflow_actions(action_manager, workflow, on_start=validate)
         action_manager.get_action('start').trigger()
         assert calls == [True]
         assert workflow.state == 'RUNNING'
 
     def test_on_start_can_refuse_to_enter_running(self, qtbot, action_manager):
         workflow = standard_workflow()
-        bind_standard_workflow_actions(action_manager, workflow, on_start=lambda *_: None)
+        bind_standard_workflow_actions(action_manager, workflow, on_start=lambda *_: False)
         action_manager.get_action('start').trigger()
-        assert workflow.state == 'IDLE'  # validation "failed": never called trigger()
+        assert workflow.state == 'IDLE'  # validation refused: trigger() was skipped
 
-    def test_on_stop_runs_instead_of_a_bare_trigger(self, qtbot, action_manager):
+    def test_on_stop_runs_then_trigger_fires_automatically(self, qtbot, action_manager):
         workflow = standard_workflow()
         calls = []
 
         def do_stop(*_):
             calls.append(True)
-            workflow.trigger(StandardTransitions.STOP)
 
         bind_standard_workflow_actions(action_manager, workflow, on_stop=do_stop)
         workflow.trigger(StandardTransitions.START)
@@ -216,15 +214,15 @@ class TestBindStandardWorkflowActions:
         action_manager.get_action('start').trigger()
         assert workflow.state == 'RUNNING'
 
-    def test_on_pause_resume_runs_instead_of_a_bare_trigger_any(self, qtbot, action_manager):
+    def test_on_pause_resume_runs_then_trigger_any_fires_automatically(self, qtbot, action_manager):
         """ daq_scan's pause_scan(): same single-implementation-for-button-and-script pattern
-        as on_start/on_stop, so nothing reimplements trigger_any(RESUME, PAUSE) a second time. """
+        as on_start/on_stop -- must NOT call trigger_any() itself, since unlike a single
+        trigger() the toggle isn't idempotent (see bind_pause_action's docstring). """
         workflow = standard_workflow()
         calls = []
 
         def do_pause_resume():
             calls.append(True)
-            workflow.trigger_any(StandardTransitions.RESUME, StandardTransitions.PAUSE)
 
         bind_standard_workflow_actions(action_manager, workflow, on_pause_resume=do_pause_resume)
         workflow.trigger(StandardTransitions.START)
