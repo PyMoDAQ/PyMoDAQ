@@ -2,33 +2,20 @@
 DRAFT — small debug/inspection widget for Workflow. Not wired into
 CustomApp or any extension yet.
 
-Shows the workflow's name and current state (live, via the existing
-state_changed signal), a table of every registered state (cell
-background color-coded: green = the active state, blue = reachable via
-one currently-legal transition, red = not reachable right now), a table
-of every defined (transition, from_state) pair -- one row per pair, not
-per transition, so a transition legal from several states (e.g. 'stop'
-from both PAUSED and RUNNING) never needs one cell to represent two
-different states' statuses at once ('From' green iff that row's single
-state is where we are, 'To' colored with the same green/blue/red status
-as the States table, 'Legal now?' blue/red) -- and a table of whatever
-TransitionBindings the caller hands it.
+Live state, plus three tables: states (color-coded green=active/
+blue=accessible/red=unallowed), transitions (one row per
+(transition, from_state) pair, so a transition legal from several
+states never needs one cell to cover two statuses), and whatever
+Bindings the caller hands it (Workflow doesn't track its own bindings,
+so this widget can't discover them itself -- see set_bindings()).
 
-Deliberately the "cheap tier": tables, no graph/flowchart drawing. For
-our graph sizes (4-6 states) an actual node-and-arrow rendering would be
-a separate, bigger piece of work (QGraphicsView + a layout) -- not
-needed for a first debug view.
-
-This widget does NOT go looking for bindings itself: Workflow
-deliberately doesn't track its own bindings (staying decoupled from the
-UI layer), so the caller supplies whatever TransitionBindings it
-already has, via the constructor or set_bindings().
+Cheap tier: tables, no graph/flowchart drawing.
 """
 from collections.abc import Hashable, Iterable
 
 from qtpy import QtGui, QtWidgets
 
-from pymodaq_gui.managers.workflow_manager import TransitionBinding, Workflow
+from pymodaq_gui.managers.workflow_manager import Binding, Workflow
 
 # Light tints, not solid colors, so default (usually black) text stays legible.
 COLOR_ACTIVE = QtGui.QColor(190, 255, 190)      # the current state
@@ -38,13 +25,13 @@ COLOR_UNALLOWED = QtGui.QColor(255, 200, 200)   # not reachable/legal right now
 
 class WorkflowInspector(QtWidgets.QWidget):
     """ Read-only debug view of a Workflow's graph and (optionally) the
-    TransitionBindings currently wired to it. """
+    Bindings currently wired to it. """
 
-    def __init__(self, workflow: Workflow, bindings: Iterable[TransitionBinding] = (),
+    def __init__(self, workflow: Workflow, bindings: Iterable[Binding] = (),
                 parent: QtWidgets.QWidget = None):
         super().__init__(parent)
         self.workflow = workflow
-        self._bindings: list[TransitionBinding] = list(bindings)
+        self._bindings: list[Binding] = list(bindings)
 
         self.setWindowTitle(f"Workflow inspector -- {workflow.name}")
 
@@ -77,7 +64,7 @@ class WorkflowInspector(QtWidgets.QWidget):
         table.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
         return table
 
-    def set_bindings(self, bindings: Iterable[TransitionBinding]):
+    def set_bindings(self, bindings: Iterable[Binding]):
         """ Replace the list of bindings shown. The inspector never
         discovers these on its own -- hand it whatever bindings you
         currently have (e.g. the ones your extension created). """
@@ -92,9 +79,8 @@ class WorkflowInspector(QtWidgets.QWidget):
         self._refresh_bindings()
 
     def _state_statuses(self) -> dict[Hashable, tuple[str, QtGui.QColor]]:
-        """ One (label, color) per registered state -- computed once per
-        refresh() and shared between the States and Transitions tables,
-        so both agree on what "accessible"/"unallowed" means. """
+        """ One (label, color) per state, shared between the States and
+        Transitions tables so both agree. """
         current = self.workflow.state
         accessible = {transition.to_state for name, transition in self.workflow.transitions.items()
                       if self.workflow.can_trigger(name)}
@@ -122,13 +108,8 @@ class WorkflowInspector(QtWidgets.QWidget):
             table.setItem(row, 1, status_item)
 
     def _refresh_transitions(self, statuses: dict[Hashable, tuple[str, QtGui.QColor]]):
-        """ One row per (transition, from_state) pair -- not one row per
-        transition. A transition with several from_states (e.g. 'stop'
-        legal from both PAUSED and RUNNING) would otherwise need one
-        cell to represent two states with two different statuses at
-        once (RUNNING active, PAUSED merely accessible) -- a single flat
-        color can't express that, so each from_state gets its own row
-        and its own unambiguous color instead. """
+        """ One row per (transition, from_state) pair -- see module
+        docstring for why. """
         current = self.workflow.state
         rows = [(name, transition, from_state)
                for name, transition in self.workflow.transitions.items()
@@ -162,11 +143,11 @@ class WorkflowInspector(QtWidgets.QWidget):
         table = self._bindings_table
         table.setRowCount(len(self._bindings))
         for row, binding in enumerate(self._bindings):
-            table.setItem(row, 0, QtWidgets.QTableWidgetItem(str(binding.transition)))
+            table.setItem(row, 0, QtWidgets.QTableWidgetItem(str(binding.label)))
             table.setItem(row, 1, QtWidgets.QTableWidgetItem(type(binding.widget).__name__))
-            # No dedicated name field on TransitionBinding -- objectName()
-            # is Qt's own generic identifier, set by whoever created the
-            # widget (e.g. action_manager.add_action(...).setObjectName(...)).
+            # No dedicated name field on Binding -- objectName() is Qt's
+            # own generic identifier, set by whoever created the widget
+            # (e.g. action_manager.add_action(...).setObjectName(...)).
             table.setItem(row, 2, QtWidgets.QTableWidgetItem(binding.widget.objectName()))
 
             bound_item = QtWidgets.QTableWidgetItem('bound' if binding.is_bound else 'unbound')

@@ -167,7 +167,7 @@ class TestBindStandardWorkflowActions:
         assert bindings['pause'].widget is action_manager.get_action('pause')
 
     def test_actions_have_objectname_set(self, qtbot, action_manager):
-        """ No dedicated name field on TransitionBinding -- Qt's own
+        """ No dedicated name field on Binding -- Qt's own
         objectName() is the generic identifier instead. """
         workflow = standard_workflow('scan')
         bind_standard_workflow_actions(action_manager, workflow)
@@ -215,6 +215,22 @@ class TestBindStandardWorkflowActions:
         bind_standard_workflow_actions(action_manager, workflow)
         action_manager.get_action('start').trigger()
         assert workflow.state == 'RUNNING'
+
+    def test_on_pause_resume_runs_instead_of_a_bare_trigger_any(self, qtbot, action_manager):
+        """ daq_scan's pause_scan(): same single-implementation-for-button-and-script pattern
+        as on_start/on_stop, so nothing reimplements trigger_any(RESUME, PAUSE) a second time. """
+        workflow = standard_workflow()
+        calls = []
+
+        def do_pause_resume():
+            calls.append(True)
+            workflow.trigger_any(StandardTransitions.RESUME, StandardTransitions.PAUSE)
+
+        bind_standard_workflow_actions(action_manager, workflow, on_pause_resume=do_pause_resume)
+        workflow.trigger(StandardTransitions.START)
+        action_manager.get_action('pause').trigger()
+        assert calls == [True]
+        assert workflow.state == 'PAUSED'
 
 
 class TestBindPauseAction:
