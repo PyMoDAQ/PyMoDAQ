@@ -17,10 +17,21 @@ from qtpy import QtGui, QtWidgets
 
 from pymodaq_gui.managers.workflow_manager import Binding, Workflow
 
-# Light tints, not solid colors, so default (usually black) text stays legible.
+# Light tints, always paired with COLOR_TEXT below -- the app's own default text color can't
+# be relied on (it's white in dark mode, unreadable on a light tint), so every colored cell
+# gets an explicit foreground, not just a background.
 COLOR_ACTIVE = QtGui.QColor(190, 255, 190)      # the current state
 COLOR_ACCESSIBLE = QtGui.QColor(195, 220, 255)  # reachable via a currently-legal transition
 COLOR_UNALLOWED = QtGui.QColor(255, 200, 200)   # not reachable/legal right now
+COLOR_TEXT = QtGui.QColor('black')
+
+
+def _colorize(item: QtWidgets.QTableWidgetItem, color: QtGui.QColor):
+    """ Set both background and a legible foreground -- COLOR_TEXT stays right against every
+    color above since they're all light tints by design, unlike the app's default text color,
+    which flips light/dark with the theme. """
+    item.setBackground(color)
+    item.setForeground(COLOR_TEXT)
 
 
 class WorkflowInspector(QtWidgets.QWidget):
@@ -102,8 +113,8 @@ class WorkflowInspector(QtWidgets.QWidget):
             label, color = statuses[state]
             state_item = QtWidgets.QTableWidgetItem(str(state))
             status_item = QtWidgets.QTableWidgetItem(label)
-            state_item.setBackground(color)
-            status_item.setBackground(color)
+            _colorize(state_item, color)
+            _colorize(status_item, color)
             table.setItem(row, 0, state_item)
             table.setItem(row, 1, status_item)
 
@@ -128,10 +139,10 @@ class WorkflowInspector(QtWidgets.QWidget):
 
             # 'From': this row's single state, colored only if it's where we are.
             if from_state == current:
-                from_item.setBackground(COLOR_ACTIVE)
+                _colorize(from_item, COLOR_ACTIVE)
             # 'To': same status color as that state gets in the States table.
-            to_item.setBackground(statuses[transition.to_state][1])
-            legal_item.setBackground(COLOR_ACCESSIBLE if legal_here else COLOR_UNALLOWED)
+            _colorize(to_item, statuses[transition.to_state][1])
+            _colorize(legal_item, COLOR_ACCESSIBLE if legal_here else COLOR_UNALLOWED)
 
             table.setItem(row, 0, name_item)
             table.setItem(row, 1, from_item)
@@ -151,5 +162,5 @@ class WorkflowInspector(QtWidgets.QWidget):
             table.setItem(row, 2, QtWidgets.QTableWidgetItem(binding.widget.objectName()))
 
             bound_item = QtWidgets.QTableWidgetItem('bound' if binding.is_bound else 'unbound')
-            bound_item.setBackground(COLOR_ACTIVE if binding.is_bound else COLOR_UNALLOWED)
+            _colorize(bound_item, COLOR_ACTIVE if binding.is_bound else COLOR_UNALLOWED)
             table.setItem(row, 3, bound_item)
