@@ -14,7 +14,9 @@ template).
   runs `sync_slot` on every state_changed/revalidated (plus once now),
   optionally wired to a click. ``bind_transition()``/``bind_enabled()``
   (+ ``bind_enabled_to_states()``/``bind_enabled_to_transition()``) are
-  canned `sync_slot`s (setEnabled) over the same primitive. All return a
+  canned `sync_slot`s (setEnabled) over the same primitive;
+  ``bind_toggle()`` is the checkable-widget variant for a pair of
+  transitions that toggle each other (e.g. pause/resume). All return a
   ``Binding`` (``.resync()``/``.unbind()``).
 * ``Workflow.revalidate()``: resyncs every binding without an actual
   transition -- for when a guard's external input changes on its own.
@@ -336,6 +338,38 @@ def bind_transition(widget: QtCore.QObject, workflow: Workflow, transition: str,
         widget.setEnabled(workflow.can_trigger(transition))
 
     return bind_sync(widget, workflow, sync_slot, transition, signal_name, click_slot)
+
+
+def bind_toggle(widget: QtCore.QObject, workflow: Workflow, off_to_on: str, on_to_off: str,
+                signal_name: str = 'triggered', toggle_slot: Callable | None = None,
+                sync_slot: Callable | None = None, label: str = '') -> Binding:
+    """ A checkable widget toggling between two transitions, e.g. pause
+    (RUNNING -> PAUSED) / resume (PAUSED -> RUNNING). Click ->
+    trigger_any(off_to_on, on_to_off) (whichever is currently legal) by
+    default.
+    `toggle_slot`, if given, runs first, same contract as
+    bind_transition()'s `click_slot`: return `False` to refuse the toggle.
+    Unlike a single trigger(), trigger_any() is NOT idempotent -- calling
+    it twice toggles back to where it started -- so `toggle_slot` must
+    never call trigger()/trigger_any() itself.
+    `sync_slot`, if given, replaces the default enabled/checked sync (e.g.
+    standard_workflow.bind_pause_action() routes through ActionManager for
+    its enabled/checked + icon_checked refresh instead of calling
+    widget.setEnabled/setChecked directly). Default: enabled synced to
+    can_trigger_any(off_to_on, on_to_off), checked synced to
+    can_trigger(on_to_off) -- i.e. checked means "already on, the next
+    click turns it back off". """
+    def click_slot(*args):
+        if toggle_slot is None or toggle_slot(*args) is not False:
+            workflow.trigger_any(off_to_on, on_to_off)
+
+    if sync_slot is None:
+        def sync_slot(*_):
+            widget.setEnabled(workflow.can_trigger_any(off_to_on, on_to_off))
+            widget.setChecked(workflow.can_trigger(on_to_off))
+
+    return bind_sync(widget, workflow, sync_slot, label or f'{off_to_on}/{on_to_off}',
+                     signal_name, click_slot)
 
 
 def bind_enabled(widget: QtCore.QObject, workflow: Workflow, predicate: Callable[[], bool],

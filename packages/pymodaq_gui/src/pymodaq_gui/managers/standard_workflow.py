@@ -8,7 +8,7 @@ workflow_manager.py's generic engine, for daq_scan/daq_logger/sequencer.
   that graph. Extend it (add_state/add_transition) for more, e.g. ERROR.
 * UI binding, three composable pieces: `bind_transition()` for start/stop
   (optional `click_slot`); `bind_pause_action()` merges PAUSE+RESUME into
-  one checkable toggle via `bind_sync()`; `bind_standard_workflow_actions()`
+  one checkable toggle via `bind_toggle()`; `bind_standard_workflow_actions()`
   composes all three, returning {'start', 'stop', 'pause'} Bindings.
 
 Still open: LOG isn't modeled (config flag, not lifecycle); multi-workflow
@@ -28,7 +28,7 @@ from pymodaq_gui.managers.workflow_manager import (
     Binding,
     action_name_for,
     bind_transition,
-    bind_sync,
+    bind_toggle,
 )
 
 
@@ -71,20 +71,16 @@ def bind_pause_action(action_manager: ActionManager, workflow: Workflow,
                       toolbar: QtWidgets.QToolBar = None,
                       menu: QtWidgets.QMenu = None,
                       on_pause_resume: Callable | None = None) -> Binding:
-    """ PAUSE+RESUME merged into one checkable toggle button.
-    `on_pause_resume`, if given, replaces the bare
-    trigger_any(RESUME, PAUSE) on click. """
+    """ PAUSE+RESUME merged into one checkable toggle button, via
+    workflow_manager.bind_toggle(). `on_pause_resume`, if given, runs
+    first -- same contract as bind_transition()'s `click_slot`: return
+    `False` to refuse the toggle, and never call trigger()/trigger_any()
+    itself (see bind_toggle()'s docstring for why). """
     pause_name = action_name_for(workflow, StandardTransitions.PAUSE)
     action = action_manager.add_action(pause_name, f"Pause {workflow.name}", "pause_circle",
                                        f"Pause/resume {workflow.name}", checkable=True,
                                        toolbar=toolbar, menu=menu)
     action.setObjectName(pause_name)
-
-    def click_slot(*_):
-        if on_pause_resume is not None:
-            on_pause_resume()
-        else:
-            workflow.trigger_any(StandardTransitions.RESUME, StandardTransitions.PAUSE)
 
     def sync_slot(*_):
         # If can resume or pause, then pause is enabled
@@ -94,7 +90,8 @@ def bind_pause_action(action_manager: ActionManager, workflow: Workflow,
         # If can resume, then pause is checked
         action_manager.set_action_checked(pause_name, workflow.can_trigger(StandardTransitions.RESUME))
 
-    return bind_sync(action, workflow, sync_slot, 'pause/resume', 'triggered', click_slot)
+    return bind_toggle(action, workflow, StandardTransitions.PAUSE, StandardTransitions.RESUME,
+                       toggle_slot=on_pause_resume, sync_slot=sync_slot, label='pause/resume')
 
 
 def bind_standard_workflow_actions(action_manager: ActionManager, workflow: Workflow,
@@ -107,8 +104,9 @@ def bind_standard_workflow_actions(action_manager: ActionManager, workflow: Work
                                    stop_icon_color: QtGui.QColor | bytes | str | None = None,
                                    ) -> dict[str, Binding]:
     """ Creates the Start/Stop/Pause actions and binds all three.
-    `on_start`/`on_stop` replace the bare trigger() on click (see
-    bind_transition()'s `click_slot`) -- omit for the fire-and-forget
+    `on_start`/`on_stop` run before the transition on click (see
+    bind_transition()'s `click_slot`) -- trigger() then fires automatically
+    unless the callback returns `False` -- omit for the fire-and-forget
     case. Returns {'start': ..., 'stop': ..., 'pause': ...}. """
     start_name = action_name_for(workflow, StandardTransitions.START)
     start_action = action_manager.add_action(start_name, f"Start {workflow.name}", "motion_play",
