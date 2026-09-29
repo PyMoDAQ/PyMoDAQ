@@ -1,48 +1,20 @@
 """
-DRAFT — not wired into CustomApp yet, for discussion.
+DRAFT — not wired into CustomApp yet.
 
-The example/template built on top of workflow_manager.py's generic
-engine: the IDLE/RUNNING/PAUSED/STOPPING graph with start/pause/resume/
-stop/finished transitions that daq_scan/daq_logger/sequencer actually
-need, plus its UI counterpart.
+The concrete IDLE/RUNNING/PAUSED/STOPPING template built on
+workflow_manager.py's generic engine, for daq_scan/daq_logger/sequencer.
 
-* ``standard_workflow()``: just a function that returns a Workflow
-  already populated with that graph. Callers never see
-  add_state/add_transition. One needing more (e.g. an ERROR state)
-  takes the returned object and extends its graph with a couple more
-  add_state/add_transition calls directly -- no subclassing.
+* ``standard_workflow()``: returns a Workflow already populated with
+  that graph. Extend it (add_state/add_transition) for more, e.g. ERROR.
+* UI binding, three composable pieces: `bind_transition()` for start/stop
+  (optional `click_slot` for a caller with extra work, e.g. daq_scan's
+  'start' running set_scan()); `bind_pause_action()` merges PAUSE+RESUME
+  into one checkable toggle (can't be expressed with bind_transition()
+  alone); `bind_standard_workflow_actions()` composes all three,
+  returning {'start', 'stop', 'pause'} Bindings.
 
-* UI binding is composed from three pieces, each usable on its own:
-  - `start`/`stop`: plain `action_manager.add_action(...)` +
-    `bind_transition()`, the latter now taking an optional `click_slot`
-    (see workflow_manager.py) for a caller with extra requirements on
-    one of them -- e.g. daq_scan.py, where 'start' must run set_scan()
-    (real side effects, can veto entering RUNNING) before it's safe to
-    enter RUNNING, so its click can't go straight to
-    `workflow.trigger('start')`.
-  - `bind_pause_action()`: the one piece that can't be done with
-    `bind_transition()` alone -- merging PAUSE+RESUME into a single
-    checkable toggle button, a UI convention tied to this particular
-    3-button pattern (nothing generic could infer that two transitions
-    should collapse into one control; that's a choice only this
-    template's author can make). Exposed separately so a caller with
-    its own `on_start`/`on_stop` can still reuse this piece instead of
-    duplicating it.
-  - `bind_standard_workflow_actions()`: convenience composing all
-    three, now for the general case, not just the fire-and-forget one
-    -- `on_start`/`on_stop` forward straight to bind_transition()'s
-    `click_slot`, so a caller whose start/stop need real work no longer
-    has to hand-assemble action creation + bind_enabled_to_transition()
-    by hand; it only has to when it wants a *different* action-creation
-    shape than this one (a different toolbar/menu split per action,
-    say). Returns a dict of the three TransitionBindings ({'start':
-    ..., 'stop': ..., 'pause': ...}), e.g. to pass to a
-    WorkflowInspector or to unbind() individually later.
-
-Still open:
-* LOG is not modeled here (config flag, not lifecycle) -- deferred.
-* For multi-workflow apps, is one shared "Actions" menu right, or one
-  submenu per workflow?
+Still open: LOG isn't modeled (config flag, not lifecycle); multi-workflow
+apps -- one shared Actions menu, or one submenu per workflow?
 """
 
 from collections.abc import Callable
@@ -55,7 +27,7 @@ from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_gui.managers.workflow_manager import (
     Workflow,
     DEFAULT_WORKFLOW_NAME,
-    TransitionBinding,
+    Binding,
     action_name_for,
     bind_transition,
     finalize_binding,
@@ -73,21 +45,19 @@ class StandardTransitions(StrEnum):
     FINISHED = "finished"
 
 
+class StandardStates(StrEnum):
+    """The four lifecycle states standard_workflow() builds."""
+    IDLE = "IDLE"
+    RUNNING = "RUNNING"
+    PAUSED = "PAUSED"
+    STOPPING = "STOPPING"
+
+
 def standard_workflow(name: str = DEFAULT_WORKFLOW_NAME) -> Workflow:
     """The IDLE/RUNNING/PAUSED/STOPPING graph that daq_scan/daq_logger/
-    sequencer all need, ready to use as-is.
-
-    STOPPING exists to model a real async gap: 'stop' only *requests* a
-    stop, it doesn't confirm one happened. Whoever wires this up MUST
-    call trigger('finished') once that confirmation actually arrives
-    (e.g. daq_scan's thread_status on "Scan_done") -- if nothing ever
-    does, the workflow is stuck in STOPPING forever, START stays
-    illegal, and there's no timeout or other self-correction. If a given
-    workflow's stop is genuinely synchronous (no worker thread to wait
-    on), trigger('stop') immediately followed by trigger('finished') is
-    fine -- but don't skip 'finished' and expect 'stop' to reach IDLE by
-    itself; it doesn't, on purpose."""
-    IDLE, RUNNING, PAUSED, STOPPING = "IDLE", "RUNNING", "PAUSED", "STOPPING"
+    sequencer all need, ready to use as-is."""
+    IDLE, RUNNING, PAUSED, STOPPING = StandardStates.IDLE, StandardStates.RUNNING, \
+        StandardStates.PAUSED, StandardStates.STOPPING
 
     workflow = Workflow(name)
     workflow.add_state(IDLE, default=True)
@@ -95,24 +65,21 @@ def standard_workflow(name: str = DEFAULT_WORKFLOW_NAME) -> Workflow:
     workflow.add_transition(StandardTransitions.PAUSE, [RUNNING], PAUSED)
     workflow.add_transition(StandardTransitions.RESUME, [PAUSED], RUNNING)
     workflow.add_transition(StandardTransitions.STOP, [RUNNING, PAUSED], STOPPING)
-    # Legal from RUNNING too, not just STOPPING: a worker finishing on its own (all steps
-    # done, a timeout, a step failure) never goes through 'stop' at all -- it confirms
-    # completion directly from RUNNING, with no stop request on the app side. Generic to any
-    # acquisition-style workflow, not daq_scan-specific (found by porting daq_scan, which had
-    # to extend this itself before this became the template default).
     workflow.add_transition(StandardTransitions.FINISHED, [STOPPING, RUNNING], IDLE)
     return workflow
 
 
 def bind_pause_action(action_manager: ActionManager, workflow: Workflow,
                       toolbar: QtWidgets.QToolBar = None,
-                      menu: QtWidgets.QMenu = None) -> TransitionBinding:
-    """ The one piece of the standard 3-button pattern that
-    bind_transition() alone can't express: PAUSE+RESUME merged into a
-    single checkable toggle button. Exposed separately (not just
-    inlined in bind_standard_workflow_actions()) so a caller that needs
-    to hand-wire 'start' itself can still reuse this piece for pause,
-    without duplicating the toggle logic. """
+                      menu: QtWidgets.QMenu = None,
+                      on_pause_resume: Callable | None = None) -> Binding:
+    """ PAUSE+RESUME merged into one checkable toggle button. Exposed
+    separately so a caller hand-wiring 'start' itself can still reuse
+    this piece for pause. `on_pause_resume`, if given, replaces the bare
+    trigger_any(RESUME, PAUSE) on click -- same idea as bind_transition()'s
+    `click_slot`, so a caller's own pause_scan()-style method (used e.g.
+    by a programmatic do_scan()) is the single place that logic lives,
+    not duplicated between the button and that method. """
     pause_name = action_name_for(workflow, StandardTransitions.PAUSE)
     action = action_manager.add_action(pause_name, f"Pause {workflow.name}", "pause_circle",
                                        f"Pause/resume {workflow.name}", checkable=True,
@@ -120,7 +87,10 @@ def bind_pause_action(action_manager: ActionManager, workflow: Workflow,
     action.setObjectName(pause_name)
 
     def click_slot(*_):
-        workflow.trigger_any(StandardTransitions.RESUME, StandardTransitions.PAUSE)
+        if on_pause_resume is not None:
+            on_pause_resume()
+        else:
+            workflow.trigger_any(StandardTransitions.RESUME, StandardTransitions.PAUSE)
 
     action.triggered.connect(click_slot)
 
@@ -136,7 +106,7 @@ def bind_pause_action(action_manager: ActionManager, workflow: Workflow,
     workflow.revalidated.connect(sync_slot)
     sync_slot()
 
-    return finalize_binding(action, workflow, 'pause/resume', 'triggered', click_slot, sync_slot)
+    return finalize_binding(action, workflow, 'pause/resume', sync_slot, 'triggered', click_slot)
 
 
 def bind_standard_workflow_actions(action_manager: ActionManager, workflow: Workflow,
@@ -144,17 +114,14 @@ def bind_standard_workflow_actions(action_manager: ActionManager, workflow: Work
                                    menu: QtWidgets.QMenu = None,
                                    on_start: Callable | None = None,
                                    on_stop: Callable | None = None,
+                                   on_pause_resume: Callable | None = None,
                                    start_icon_color: QtGui.QColor | bytes | str | None = None,
                                    stop_icon_color: QtGui.QColor | bytes | str | None = None,
-                                   ) -> dict[str, TransitionBinding]:
-    """ Convenience composing the three pieces above: creates the Start/
-    Stop/Pause actions and binds all three. `on_start`/`on_stop`, if
-    given, replace the bare trigger('start')/trigger('stop') on click
-    (bind_transition()'s `click_slot` -- see its docstring) for a
-    workflow whose start/stop need real work first, not just a bare
-    trigger(). Omit them for the fire-and-forget case (nothing to run
-    besides the transition itself). Returns {'start': ..., 'stop': ...,
-    'pause': ...}. """
+                                   ) -> dict[str, Binding]:
+    """ Creates the Start/Stop/Pause actions and binds all three.
+    `on_start`/`on_stop` replace the bare trigger() on click (see
+    bind_transition()'s `click_slot`) -- omit for the fire-and-forget
+    case. Returns {'start': ..., 'stop': ..., 'pause': ...}. """
     start_name = action_name_for(workflow, StandardTransitions.START)
     start_action = action_manager.add_action(start_name, f"Start {workflow.name}", "motion_play",
                                              f"Start {workflow.name}", toolbar=toolbar, menu=menu,
@@ -171,6 +138,7 @@ def bind_standard_workflow_actions(action_manager: ActionManager, workflow: Work
     stop_binding = bind_transition(stop_action, workflow, StandardTransitions.STOP,
                                    click_slot=on_stop)
 
-    pause_binding = bind_pause_action(action_manager, workflow, toolbar=toolbar, menu=menu)
+    pause_binding = bind_pause_action(action_manager, workflow, toolbar=toolbar, menu=menu,
+                                      on_pause_resume=on_pause_resume)
 
     return {'start': start_binding, 'stop': stop_binding, 'pause': pause_binding}
