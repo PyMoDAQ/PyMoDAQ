@@ -3406,18 +3406,66 @@ class DataToExport(DataLowLevel, SerializableBase):
             if dat.origin is None or dat.origin == '':
                 dat.origin = self.name
 
-    def __sub__(self, other: object):
-        if isinstance(other, DataToExport) and len(other) == len(self):
-            new_data = copy.deepcopy(self)
-            for ind_dfp in range(len(self)):
-                new_data[ind_dfp] = self[ind_dfp] - other[ind_dfp]
-            return new_data
+    def _combine(self, other: object, op: Callable, reflected: bool = False) -> 'DataToExport':
+        """Combine self and other elementwise, applying ``op`` to every element.
+
+        *other* may be:
+
+        - a plain number: broadcast to every element. Whether this is
+          actually valid is decided by DataWithAxes/pint arithmetic itself,
+          not pre-judged here — e.g. adding a bare number only makes sense
+          for dimensionless data (pint raises otherwise), while multiplying
+          by one is always valid regardless of units.
+        - another DataToExport of the same length: paired by list position
+          (index i of self with index i of other), not by name.
+          DataToExport is used to combine structurally-parallel containers
+          (e.g. successive snapshots from the same DAQ_Scan/ModulesManager
+          run, always iterated in the same order), and existing callers rely
+          on being able to combine elements whose *names* legitimately
+          differ between the two operands (e.g. a signal container and a
+          differently-named background container). Only the count and,
+          per-pair, the array shapes/units need to match — the latter
+          enforced by DataWithAxes arithmetic itself.
+
+        Parameters
+        ----------
+        other: DataToExport or numbers.Number
+        op: Callable
+            Binary operation applied to each pair, e.g. ``np.subtract``. Its
+            ``__name__`` is used in error messages.
+        reflected: bool
+            If True, apply ``op(other_i, self_i)`` instead of
+            ``op(self_i, other_i)``, for the non-commutative ``__r*__`` methods.
+        """
+        if isinstance(other, numbers.Number):
+            others = [other] * len(self)
+        elif not isinstance(other, DataToExport):
+            raise TypeError(f'Could not {op.__name__} a {self.__class__.__name__} and a '
+                            f'{other.__class__.__name__}: only a number or another '
+                            f'{self.__class__.__name__} is supported')
+        elif len(other) != len(self):
+            raise TypeError(f'Could not {op.__name__} a {other.__class__.__name__} with a '
+                            f'{self.__class__.__name__} of a different length')
         else:
-            raise TypeError(f'Could not substract a {other.__class__.__name__} or a {self.__class__.__name__} '
-                            f'of a different length')
+            others = other
+        new_data = copy.deepcopy(self)
+        for ind_dfp, (dwa, other_dwa) in enumerate(zip(self, others)):
+            new_data[ind_dfp] = op(other_dwa, dwa) if reflected else op(dwa, other_dwa)
+        return new_data
+
+    def __sub__(self, other: object):
+        return self._combine(other, np.subtract)
+
+    def __rsub__(self, other: object):
+        return self._combine(other, np.subtract, reflected=True)
 
     def __eq__(self, other):
         if not isinstance(other, DataToExport):
+            return False
+        if len(self) != len(other):
+            # zip() below would otherwise silently truncate to the shorter of
+            # the two, letting a DataToExport compare equal to a strict
+            # superset of itself.
             return False
 
         for dwa, other_dwa in zip(self, other):
@@ -3433,31 +3481,20 @@ class DataToExport(DataLowLevel, SerializableBase):
 
 
     def __add__(self, other: object):
-        if isinstance(other, DataToExport) and len(other) == len(self):
-            new_data = copy.deepcopy(self)
-            for ind_dfp in range(len(self)):
-                new_data[ind_dfp] = self[ind_dfp] + other[ind_dfp]
-            return new_data
-        else:
-            raise TypeError(f'Could not add a {other.__class__.__name__} or a {self.__class__.__name__} '
-                            f'of a different length')
+        return self._combine(other, np.add)
+
+    __radd__ = __add__  # addition is commutative
 
     def __mul__(self, other: object):
-        if isinstance(other, numbers.Number):
-            new_data = copy.deepcopy(self)
-            for ind_dfp in range(len(self)):
-                new_data[ind_dfp] = self[ind_dfp] * other
-            return new_data
-        else:
-            raise TypeError(f'Could not multiply a {other.__class__.__name__} with a {self.__class__.__name__} '
-                            f'of a different length')
+        return self._combine(other, np.multiply)
+
+    __rmul__ = __mul__  # multiplication is commutative
 
     def __truediv__(self, other: object):
-        if isinstance(other, numbers.Number):
-            return self * (1 / other)
-        else:
-            raise TypeError(f'Could not divide a {other.__class__.__name__} with a {self.__class__.__name__} '
-                            f'of a different length')
+        return self._combine(other, np.true_divide)
+
+    def __rtruediv__(self, other: object):
+        return self._combine(other, np.true_divide, reflected=True)
 
     def average(self, other: DataToExport, weight: int) -> DataToExport:
         """ Compute the weighted average between self and other DataToExport and attributes it to self
@@ -3469,14 +3506,10 @@ class DataToExport(DataLowLevel, SerializableBase):
             The weight the 'other_data' holds with respect to self
 
         """
-        if isinstance(other, DataToExport) and len(other) == len(self):
-            new_data = copy.copy(self)
-            for ind_dfp in range(len(self)):
-                new_data[ind_dfp] = self[ind_dfp].average(other[ind_dfp], weight)
-            return new_data
-        else:
-            raise TypeError(f'Could not average a {other.__class__.__name__} with a {self.__class__.__name__} '
-                            f'of a different length')
+        def average(dwa: DataWithAxes, other_dwa: DataWithAxes) -> DataWithAxes:
+            return dwa.average(other_dwa, weight)
+
+        return self._combine(other, average)
 
     def merge_as_dwa(self, dim: Union[str, DataDim], name: str = None) -> DataRaw:
         """ attempt to merge filtered dwa into one

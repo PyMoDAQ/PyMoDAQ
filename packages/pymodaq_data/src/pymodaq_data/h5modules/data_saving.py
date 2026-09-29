@@ -4,6 +4,10 @@ Created the 21/11/2022
 
 @author: Sebastien Weber
 """
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
 from time import time
 from typing import Union, List, Tuple, Iterable
 from pathlib import Path
@@ -18,13 +22,28 @@ from .saving import DataType, H5SaverLowLevel
 from .backends import GROUP, CARRAY, Node, EARRAY, NodeError, GroupType  # noqa: F401
 from pymodaq_utils.utils import capitalize
 from pymodaq_data.h5modules.saving import SaveType
-
+from .. import DataToExport, DataDistribution
 
 SPECIAL_GROUP_NAMES = dict(nav_axes='NavAxes')
 
 
 class AxisError(Exception):
     pass
+
+
+@dataclass
+class DataBundle:
+    """Convenience class to hold data to be saved or plotted"""
+    dte: DataToExport
+    node: str = None
+    settings: str = ''
+    indexes: list[int] = None  # indexes within an eventual Extended array (see DAQ_Scan)
+    axis_values: list[float | np.ndarray] = None  # axis values within an eventual Enlargeable array (see Optimizers)
+    distribution: DataDistribution = field(
+        default_factory=lambda: DataDistribution.uniform
+    )  # type of data to be saved
+    save_index: int = 0  # an index to know what step in the saving process we're in (see DAQ_Scan)
+
 
 
 class DataManagement(metaclass=ABCMeta):
@@ -844,6 +863,14 @@ class DataToExportSaver:
         self._data_saver = DataSaverLoader(self._h5saver)
         self._bkg_saver = BkgSaver(self._h5saver)
 
+    @property
+    def h5saver(self) -> H5SaverLowLevel:
+        return self._h5saver
+
+    @h5saver.setter
+    def h5saver(self, h5saver: H5SaverLowLevel):
+        self._h5saver = h5saver
+
     def __getattr__(self, item):
         """ Allows to call attributes of the underlying H5Saver object"""
 
@@ -876,6 +903,9 @@ class DataToExportSaver:
         """All DataWithAxes included in the DataToExport will be saved into a channel group indexed
         and formatted as below"""
         return f'CH{ind:02d}'
+
+    def add_data_bundle(self, data: DataBundle):
+        self.add_data(data.node, data.dte, data.settings)
 
     def add_data(self, where: Union[Node, str], data: DataToExport, settings_as_xml='', **kwargs):
         """
@@ -968,6 +998,9 @@ class DataToExportEnlargeableSaver(DataToExportSaver):
         self._data_saver = DataEnlargeableSaver(self._h5saver)
         self._nav_axis_saver = AxisSaverLoader(self._h5saver)
 
+    def add_data_bundle(self, data: DataBundle):
+        self.add_data(data.node, data.dte, axis_values=data.axis_values, settings_as_xml=data.settings)
+
     def add_data(self, where: Union[Node, str], data: DataToExport,
                  axis_values: List[Union[float, np.ndarray]] = None,
                  axis_value: Union[float, np.ndarray] = None,
@@ -1031,6 +1064,9 @@ class DataToExportTimedSaver(DataToExportEnlargeableSaver):
     def add_data(self, where: Union[Node, str], data: DataToExport, settings_as_xml='', **kwargs):
         super().add_data(where, data, axis_values=[data.timestamp], settings_as_xml=settings_as_xml, **kwargs)
 
+    def add_data_bundle(self, data: DataBundle):
+        self.add_data(data.node, data.dte, settings_as_xml=data.settings)
+
 
 class DataToExportExtendedSaver(DataToExportSaver):
     """Object to save DataToExport at given indexes within arrays including extended shape
@@ -1065,6 +1101,9 @@ class DataToExportExtendedSaver(DataToExportSaver):
         if self._nav_axis_saver.get_last_node_name(nav_group) is None:
             for axis in axes:
                 self._nav_axis_saver.add_axis(nav_group, axis)
+
+    def add_data_bundle(self, data: DataBundle):
+        self.add_data(data.node, data.dte, data.indexes, data.distribution, data.settings)
 
     def add_data(self, where: Union[Node, str],
                  data: DataToExport,
@@ -1220,8 +1259,8 @@ class DataLoader:
                 # in swmr mode, if at the time where the axis is read, a writer added stuff
                 # then the axis and the data may not be consistent. Below is an attempt to correct this
                 for ind_nav, nav_axe in enumerate(nav_axes):
-                    if nav_axe.size > data.shape[data.nav_indexes[ind_nav]]:
-                        nav_axe.data = nav_axe.get_data()[:data.shape[data.nav_indexes[ind_nav]]]
+                    if nav_axe.size > data.shape[data.nav_indexes[nav_axe.index]]:
+                        nav_axe.data = nav_axe.get_data()[:data.shape[data.nav_indexes[nav_axe.index]]]
                 axes.extend(nav_axes)
                 data.axes = axes
                 data.get_dim_from_data_axes()
@@ -1291,3 +1330,5 @@ class DataLoader:
         raise NameError(f'No dwa matching this name: {name} and '
                         f'origin: {origin} hanging from '
                         f'{where}')
+
+

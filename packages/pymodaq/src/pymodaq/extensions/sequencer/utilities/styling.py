@@ -1,8 +1,9 @@
 import qt_themes
-from PySide6.QtGui import QColor
+from qtpy.QtGui import QColor
 from qtpy import QtWidgets, QtGui
 
 from qt_themes import get_theme
+
 
 def text_color(level: int):
     colors = ('text', 'subtext0', 'subtext1')
@@ -80,34 +81,6 @@ def menu_style(level: int):
         left: 6px;
     }}
     """
-
-
-if __name__ == '__main__':
-    from pymodaq_plugins_sequencer.utilities.element_factory import SeqEltFactory
-    from pymodaq_gui.utils.menu_utils import MenuButton
-    from pymodaq_gui.utils.utils import mkQApp
-
-    app = mkQApp('Button')
-
-    container = QtWidgets.QWidget()
-    #container.setStyleSheet("background-color: transparent;")
-    layout = QtWidgets.QHBoxLayout(container)
-    layout.setContentsMargins(0, 0, 0, 0)
-    layout.setSpacing(0)
-    buttons = []
-    themes = ['monokai', 'atom_one', 'catppuccin_frappe', 'nord']
-    for ind in range(4):
-        qt_themes.set_theme(themes[ind])
-        button = MenuButton('Add', add_menu_entries=SeqEltFactory().elements)
-        button.setFixedHeight(30)
-        button.setStyleSheet(button_style(ind))
-        button.menu.setStyleSheet(menu_style(0))
-        layout.addWidget(button)
-        buttons.append(button)
-
-    container.show()
-
-    app.exec()
 
 
 def color_from_depth(color: QColor, depth: int) -> QColor:

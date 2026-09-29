@@ -759,11 +759,11 @@ class DAQ_PID(CustomExt):
         self.setpoints_sb[i].setValue(self.curr_points[i])
         self.update_runner_setpoints()
 
-    def quit_fun(self) -> bool:
+    def _quit_fun(self) -> bool:
         """ """
         if self.model_class is not None:
             self.dashboard.remove_modules([setp for setp in self.model_class.setpoints_names if setp in self.dashboard.modules_manager.actuators_name])
-        super().quit_fun()
+        return True
 
     def update_runner_setpoints(self):
         self.command_pid.emit(ThreadCommand("update_setpoints", self.setpoints))

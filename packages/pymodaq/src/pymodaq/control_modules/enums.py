@@ -42,3 +42,11 @@ class MoveType(StrEnum):
     ABS = 'abs'
     REL = 'rel'
     HOME = 'home'
+
+
+class ActionIconNames(StrEnum):
+    SNAP = 'looks_one'
+    GRAB = 'repeat'
+    GRAB_STOP = 'repeat_on'
+    INI = 'cable'
+    RESET = 'replay'

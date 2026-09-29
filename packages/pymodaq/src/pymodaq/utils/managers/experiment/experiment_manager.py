@@ -208,6 +208,19 @@ class ExperimentManager(ManagerBase):
 
         for child in (self.settings.child(ModuleType.Actuator.value).children() +
             self.settings.child(ModuleType.Detector.value).children()):
+
+            if 'axis' in [param.name() for param in child.child('controller').children()]:
+                axis_param = child.child("controller", "axis")
+                axis_limits = axis_param.opts['limits']
+                if isinstance(axis_limits, list):
+                    axis_name = axis_param.value()
+                else:
+                    values = list(axis_limits.values())
+                    axis_names = list(axis_limits.keys())
+                    axis_name = axis_names[values.index(axis_param.value())]
+            else:
+                axis_name = None
+
             plugins.append(
                 PluginInfo(
                     id = child['controller', 'controller_ID'],
@@ -221,8 +234,7 @@ class ExperimentManager(ManagerBase):
                     ui = child['info', 'ui'] if 'ui' in [ch.name() for ch in child.child('info').children()] else None,
                     daq_type=DAQTypesEnum[child['info', 'dim']] if 'dim' in [
                         ch.name() for ch in child.child('info').children()] else None,
-                    axis_name=child["controller", "axis"] if 'axis' in [
-                        param.name() for param in child.child('controller').children()] else None,
+                    axis_name=axis_name,
                 )
             )
 

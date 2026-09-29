@@ -1500,6 +1500,78 @@ class TestDataToExport:
         assert data_div[0] == dat3 / DIV_COEFF
         assert data_div[1] == dat2 / DIV_COEFF
 
+    def test_mul_div_with_another_dte(self):
+        """*/  should accept another DataToExport, positionally, just like +/-
+        (e.g. normalizing a signal container by a monitor/reference one)."""
+        dat1 = init_data(data=DATA2D, Ndata=2, name='data2D1')
+        dat2 = init_data(data=0.2 * DATA2D + 1, Ndata=2, name='data2D2')
+        dat3 = init_data(data=-0.7 * DATA2D - 1, Ndata=2, name='data2D3')
+        dat4 = init_data(data=2 * DATA2D + 1, Ndata=2, name='data2D4')
+
+        data1 = data_mod.DataToExport(name='toexport', data=[dat1, dat2])
+        data2 = data_mod.DataToExport(name='toexport', data=[dat3, dat4])
+
+        data_mul = data1 * data2
+        data_div = data1 / data2
+
+        assert data_mul[0] == dat1 * dat3
+        assert data_mul[1] == dat2 * dat4
+
+        assert data_div[0] == dat1 / dat3
+        assert data_div[1] == dat2 / dat4
+
+        data_wrong_len = data_mod.DataToExport(name='toexport', data=[dat3, dat4, dat1])
+        with pytest.raises(TypeError):
+            data1 * data_wrong_len
+        with pytest.raises(TypeError):
+            data1 / data_wrong_len
+
+    def test_add_sub_with_scalar(self):
+        """+/- should accept a plain number too, broadcasting it to every
+        element. This mirrors DataWithAxes/pint's own rule: adding a bare
+        number only makes sense for dimensionless data (as here), the same
+        constraint that already applies to a single DataWithAxes."""
+        dat1 = init_data(data=DATA2D, Ndata=2, name='data2D1')
+        dat2 = init_data(data=0.2 * DATA2D, Ndata=2, name='data2D2')
+        data1 = data_mod.DataToExport(name='toexport', data=[dat1, dat2])
+
+        OFFSET = 3.5
+        data_sum = data1 + OFFSET
+        data_diff = data1 - OFFSET
+
+        assert data_sum[0] == dat1 + OFFSET
+        assert data_sum[1] == dat2 + OFFSET
+        assert data_diff[0] == dat1 - OFFSET
+        assert data_diff[1] == dat2 - OFFSET
+
+    def test_add_scalar_with_real_units_raises(self):
+        """Container-level scalar +/- must inherit the same strict pint rule
+        as a single DataWithAxes: a bare number is dimensionless, so adding
+        it to non-dimensionless data must raise, not silently succeed by
+        assuming the scalar is 'in the container's units'."""
+        dat1 = init_data(data=DATA1D, Ndata=1, name='raw', units=REAL_UNITS)
+        data1 = data_mod.DataToExport(name='toexport', data=[dat1])
+
+        with pytest.raises(pint.errors.DimensionalityError):
+            data1 + 5.
+
+        with pytest.raises(pint.errors.DimensionalityError):
+            data1 - 5.
+
+    def test_reflected_scalar_operators(self):
+        """N + dte / N * dte should equal dte + N / dte * N (commutative);
+        N - dte / N / dte should equal the properly operand-flipped result,
+        matching what a bare DataWithAxes already does via NDArrayOperatorsMixin."""
+        dat1 = init_data(data=DATA2D + 1, Ndata=2, name='data2D1')  # no zeros, for division
+        dat2 = init_data(data=0.2 * DATA2D + 1, Ndata=2, name='data2D2')
+        data1 = data_mod.DataToExport(name='toexport', data=[dat1, dat2])
+
+        N = 3.5
+        assert (N + data1) == (data1 + N)
+        assert (N * data1) == (data1 * N)
+        assert (N - data1)[0] == N - dat1
+        assert (N / data1)[0] == N / dat1
+
     def test_average(self):
         dat1 = init_data(data=DATA2D, Ndata=2, name='data2D1')
         dat2 = init_data(data=0.2 * DATA2D, Ndata=2, name='data2D2')
@@ -1514,6 +1586,35 @@ class TestDataToExport:
 
         assert data1[0] == dat1.average(dat3, WEIGHT)
         assert data1[1] == dat2.average(dat2, WEIGHT)
+
+    def test_average_does_not_mutate_self(self):
+        """average() used to shallow-copy self, aliasing the underlying list
+        so writing into the result also silently mutated the original."""
+        dat1 = init_data(data=DATA2D, Ndata=2, name='data2D1')
+        dat2 = init_data(data=0.2 * DATA2D, Ndata=2, name='data2D2')
+        dat3 = init_data(data=-0.7 * DATA2D, Ndata=2, name='data2D3')
+
+        data1 = data_mod.DataToExport(name='toexport', data=[dat1, dat2])
+        data2 = data_mod.DataToExport(name='toexport', data=[dat3, dat2])
+        original_first_array = data1[0][0].copy()
+
+        data1.average(data2, 6)
+
+        assert np.array_equal(data1[0][0], original_first_array)
+
+    def test_eq_checks_length(self):
+        """A DataToExport must not compare equal to a strict superset of
+        itself: zip(self, other) alone silently truncates to the shorter of
+        the two."""
+        dat1 = init_data(data=DATA2D, Ndata=2, name='data2D1')
+        dat2 = init_data(data=0.2 * DATA2D, Ndata=2, name='data2D2')
+        dat3 = init_data(data=-0.7 * DATA2D, Ndata=2, name='data2D3')
+
+        data_a = data_mod.DataToExport(name='toexport', data=[dat1, dat2])
+        data_b = data_mod.DataToExport(name='toexport', data=[dat1, dat2, dat3])
+
+        assert data_a != data_b
+        assert data_b != data_a
 
     def test_merge(self):
 

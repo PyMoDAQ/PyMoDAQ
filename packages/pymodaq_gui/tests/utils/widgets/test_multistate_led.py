@@ -8,9 +8,9 @@ class TestLedState:
     """LedState / Status are StrEnum: members must stay interchangeable with plain strings."""
 
     def test_led_state_equals_plain_strings(self):
-        assert LedState.FALSE == 'false'
-        assert LedState.TRUE == 'true'
-        assert [n for n, _ in DEFAULT_STATES] == ['false', 'true']
+        assert LedState.FALSE == 'False'
+        assert LedState.TRUE == 'True'
+        assert [n for n, _ in DEFAULT_STATES] == ['False', 'True']
 
     def test_status_equals_plain_strings(self):
         assert list(Status) == ['off', 'idle', 'running', 'warning', 'error', 'critical']
@@ -20,9 +20,9 @@ class TestMultistateLEDEnumInterop:
 
     def test_set_get_state_mix_enum_and_string(self, qapp):
         led = MultistateLED()
-        assert led.get_state() == 'false'
+        assert led.get_state() == 'False'
         led.set_state(LedState.TRUE)
-        assert led.get_state() == 'true'
+        assert led.get_state() == 'True'
         led.set_state('false')
         assert led.get_state() == LedState.FALSE
 

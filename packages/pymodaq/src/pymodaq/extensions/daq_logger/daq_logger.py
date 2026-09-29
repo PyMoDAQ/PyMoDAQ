@@ -6,36 +6,30 @@
 Contains all objects related to the DAQScan module, to do automated scans, saving data...
 """
 
-from collections import OrderedDict
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
-from pymodaq.control_modules.daq_viewer_ui.ui_base import ActionIconNames
+from pymodaq.control_modules.enums import ActionIconNames
 from pymodaq.utils.h5modules.module_saving import LoggerSaver
-from pymodaq_gui.managers.runner_thread_manager import WorkerThreadManager
 from pymodaq_gui.messenger import messagebox
 from pymodaq_gui.utils.custom_app import WorkFlowActions
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_gui.utils.dock import Dock, DockArea
 from pymodaq_utils.config import GlobalConfig as Config
-from pymodaq_gui.parameter import ioxml
 
 from qtpy import QtWidgets, QtCore
-from qtpy.QtCore import QObject, Slot, QThread, Signal, Qt
+from qtpy.QtCore import Qt
 
 from pymodaq_gui.utils.widgets import MultistateLED, StatusPalette, Status
 from pymodaq_utils.enums import StrEnum
 
-
-from pymodaq.extensions.daq_logger.h5logging import H5Logger
-from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 from pymodaq.utils.data import DataActuator, DataToExport
 from pymodaq.utils.custom_ext import CustomExt
 from pymodaq_gui.utils.enums import MenuToolbarNames
 
 from pymodaq_gui.utils.widgets import QSpinBox_ro
-from pymodaq.extensions.extension_worker import DataBundle, ExtensionWorker
-
+from pymodaq_gui.utils.app_worker import ExtensionWorker, SaverWorker
+from pymodaq_data.h5modules.data_saving import DataBundle
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -120,7 +114,7 @@ class DAQLogger(CustomExt):
     show_h5file_statusbar_widgets = True
     show_workflow_actions = True
     icon_name = 'home_storage'
-    params = [] + ExtensionWorker.params
+    params = [] + SaverWorker.params
 
 
     def __init__(self, dockarea: DockArea = None,
@@ -215,7 +209,7 @@ class DAQLogger(CustomExt):
                        text='The Logging is running, first stop it')
             return False
 
-        elif self.settings['worker', 'worker_tasks'] > 0:
+        elif self.settings[SaverWorker.worker_setting_name, 'worker_tasks'] > 0:
             messagebox(title='Running',
                        text='The Saver is finishing the savings')
             self.logging.stop("User prompted a quit of the Application,"
@@ -230,7 +224,6 @@ class DAQLogger(CustomExt):
             det.grab() if start else det.stop_grab()
         for act in self.modules_manager.actuators:
             act.grab() if start else act.stop_grab()
-
 
     @property
     def module_and_data_saver(self) -> LoggerSaver:
@@ -298,12 +291,12 @@ class Logging(ExtensionWorker):
                 pass
 
     def save_detector(self, dte: DataToExport):
-        self._n_emitted += 1
+        self.thread_manager.n_jobs[SaverWorker.name] += 1
         self.n_saved += 1
         self.saver_worker.data_to_save_signal.emit(DataBundle(dte=dte))
 
     def format_and_save_actuator(self, dwa: DataActuator):
-        self._n_emitted += 1
+        self.thread_manager.n_jobs[SaverWorker.name] += 1
         self.n_saved += 1
         self.saver_worker.data_to_save_signal.emit(
             DataBundle(dte=DataToExport(name=dwa.name,

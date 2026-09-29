@@ -244,6 +244,7 @@ class ParameterManager:
             tree: ParameterTree = None,
     ):
         self._current_filter_text = ""
+        self._settings: Parameter = None
         if settings_name is None:
             settings_name = self.settings_name
         # create a settings tree to be shown eventually in a dock
@@ -313,14 +314,25 @@ class ParameterManager:
 
     def set_settings(self, settings: Union[Parameter, List[Dict[str, str]], Path]):
         """ similar to the property setter but easier to subclass"""
+
+        if hasattr(self, '_settings') and self._settings is not None:
+            try:
+                self.disconnect_tree()
+            except TypeError:
+                pass
+
         settings = self.create_parameter(settings)
         self._settings = settings
+
         self.tree.setParameters(
             self._settings, showTop=False,
         )  # load the tree with this parameter object
-        self._settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
+        self.connect_tree()
         self._settings_tree.tree.itemExpanded.connect(lambda: self._settings_tree.tree.resizeColumnToContents(0))
         self._settings_tree.tree.itemCollapsed.connect(lambda: self._settings_tree.tree.resizeColumnToContents(0))
+
+    def connect_tree(self):
+        self._settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
 
     def disconnect_tree(self):
         try:

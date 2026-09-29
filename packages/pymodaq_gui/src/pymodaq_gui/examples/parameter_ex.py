@@ -84,7 +84,7 @@ class ParameterEx(ParameterManager):
              'tip': 'Status indicator — cannot be toggled by the user'},
             {'title': 'LED (clickable)', 'name': 'anotherled', 'type': 'led_push', 'value': True,
              'tip': 'Click to toggle — pointer cursor indicates interactivity'},
-            {'title': 'Action + LED', 'name': 'anactionled', 'type': 'action_led', 'value': 'false',
+            {'title': 'Action + LED', 'name': 'anactionled', 'type': 'action_led', 'value': 'False',
              'tip': 'Button fires sigActivated; LED state reflects outcome. label opt sets button text.',
              'label': 'Run'},
             {'title': 'Multi-state LED', 'name': 'amultistateled', 'type': 'multistate_led',

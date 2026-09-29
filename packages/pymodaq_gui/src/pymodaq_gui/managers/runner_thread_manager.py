@@ -1,6 +1,44 @@
+from dataclasses import dataclass
 from typing import Any
 
 from qtpy import QtCore
+
+from pymodaq_data.h5modules.data_saving import DataBundle
+from pymodaq_data import DataToExport
+
+
+def get_thread_params(worker_setting_name: str) -> list[dict]:
+    return [
+        {'title': worker_setting_name, 'name': worker_setting_name, 'type': 'group', 'children': [
+            {'title': 'Worker Running:', 'name': 'worker_running', 'type': 'led', 'value': False, 'readonly': True},
+            {'title': 'Worker tasks:', 'name': 'worker_tasks', 'type': 'int', 'value': 0, 'readonly': True},
+        ]},
+    ]
+
+
+@dataclass
+class DataForProcessor:
+    """ To be subclassed if necessary!"""
+    node_path: str
+
+
+
+class ThreadWorker(QtCore.QObject):
+
+    worker_setting_name: str = 'worker'
+
+    params = get_thread_params(worker_setting_name)
+
+    n_jobs_done_signal = QtCore.Signal(str, int)
+    data_to_save_signal = QtCore.Signal(DataBundle)
+    data_to_process_signal = QtCore.Signal(DataForProcessor)
+    data_processed_signal = QtCore.Signal(DataToExport)
+    name = 'ThreadWorker'
+
+    def __init__(self, parent = None):
+        """ Base class for any worker to be moved in a thread"""
+        super().__init__(parent)
+        self._n_jobs_done = 0
 
 
 class WorkerThreadManager(QtCore.QObject):
@@ -9,7 +47,8 @@ class WorkerThreadManager(QtCore.QObject):
         super().__init__(parent)
 
         self.worker_threads: dict[str, QtCore.QThread] = {}
-        self.workers: dict[str, QtCore.QObject] = {}
+        self.workers: dict[str, ThreadWorker] = {}
+        self.n_jobs: dict[str, int] = {}
 
         self.current_name: str = None
 
@@ -18,20 +57,20 @@ class WorkerThreadManager(QtCore.QObject):
         return self.worker_threads.get(self.current_name, None)
 
     @property
-    def worker(self) -> QtCore.QObject:
+    def worker(self) -> ThreadWorker:
         return self.workers.get(self.current_name, None)
 
-    def get_worker(self, name: str) -> QtCore.QObject:
+    def get_worker(self, name: str) -> ThreadWorker:
         return self.workers.get(name, None)
 
     def get_thread(self, name: str) -> QtCore.QThread:
         return self.worker_threads.get(name, None)
 
     def create_thread_for_worker(self, name: str,
-                                 worker: QtCore.QObject,
+                                 worker: ThreadWorker,
                                  delete_if_exists=True,
                                  start_thread=False,
-                                 thread: QtCore.QThread = None) -> QtCore.QObject:
+                                 thread: QtCore.QThread = None) -> QtCore.QThread:
         """ Create a new thread (or return an existing one) for a worker, and move the worker to it
         I
         t is up to you to connect the worker methods with your main app using Signal/Slot connections
@@ -49,6 +88,8 @@ class WorkerThreadManager(QtCore.QObject):
             self.worker_threads[name] = thread
             self.workers[name] = worker
             self.workers[name].moveToThread(self.worker_threads[name])
+
+        self.n_jobs[name] = 0
 
         if start_thread:
             self.worker_threads[name].start()

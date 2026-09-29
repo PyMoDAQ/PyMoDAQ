@@ -1,11 +1,11 @@
 import weakref
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from serializall import SerializableFactory
 
 from qtpy import QtCore, QtWidgets
 
-from pymodaq.control_modules.daq_move import DAQ_Move
+
 from pymodaq.control_modules.enums import MoveType
 from pymodaq.utils.managers.modules import ModuleType
 from pymodaq.utils.scanner.scanner import Orientation
@@ -18,6 +18,9 @@ from pymodaq.extensions.sequencer.utilities.widget_with_toolbar import WidgetWit
 from qt_themes import get_theme
 from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq.utils.scanner import Scanner
+
+if TYPE_CHECKING:
+    from pymodaq.control_modules.daq_move import DAQ_Move
 
 
 ser_factory = SerializableFactory()
@@ -45,7 +48,7 @@ class ScannerElt(SeqEltBase):
 
     def do_things_with_dashboard(self):
         if self._actuators_all_to_restore is not None:
-            act_all_to_restore: list[DAQ_Move] = []
+            act_all_to_restore: list['DAQ_Move'] = []
             for act_name in self._actuators_all_to_restore:
                 if act_name in self.dashboard.modules_manager.actuators_name:
                     act_all_to_restore.append(
@@ -55,7 +58,7 @@ class ScannerElt(SeqEltBase):
         else:
             act_all_to_restore = self.dashboard.modules_manager.actuators_all
 
-        act_selected_to_restore: list[DAQ_Move] = []
+        act_selected_to_restore: list['DAQ_Move'] = []
         if self._actuators_selected_to_restore is not None:
             for act_name in self._actuators_selected_to_restore:
                 if act_name in self.dashboard.modules_manager.actuators_name:

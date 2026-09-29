@@ -2,6 +2,7 @@ import warnings
 import pytest
 from qtpy import QtWidgets
 from pymodaq_gui.parameter import Parameter, ParameterTree
+from pymodaq_gui.utils.widgets import LedState
 
 
 @pytest.fixture
@@ -84,7 +85,7 @@ class TestMultistateLedParameter:
     def test_default_two_state(self, tree):
         p = Parameter.create(name='ms', type='multistate_led', value='false')
         tree.setParameters(p, showTop=False)
-        assert p.value() == 'false'
+        assert p.value() == LedState.FALSE
 
     def test_custom_states_roundtrip(self, tree):
         p = Parameter.create(name='ms', type='multistate_led',
@@ -122,13 +123,13 @@ class TestActionLedParameter:
     def test_default_value_is_false_string(self, tree):
         p = Parameter.create(name='act', type='action_led', value='false')
         tree.setParameters(p, showTop=False)
-        assert p.value() == 'false'
+        assert p.value() == LedState.FALSE
 
     def test_set_state_by_string(self, tree):
         p = Parameter.create(name='act', type='action_led', value='false')
         tree.setParameters(p, showTop=False)
         p.setValue('true')
-        assert p.value() == 'true'
+        assert p.value() == LedState.TRUE
 
     def test_bool_true_coerced_with_warning(self, tree):
         p = Parameter.create(name='act', type='action_led', value='false')
@@ -137,7 +138,7 @@ class TestActionLedParameter:
             warnings.simplefilter('always')
             p.setValue(True)
             assert any(issubclass(warning.category, DeprecationWarning) for warning in w)
-        assert p.value() == 'true'
+        assert p.value() == LedState.TRUE
 
     def test_bool_false_coerced_with_warning(self, tree):
         p = Parameter.create(name='act', type='action_led', value='true')
@@ -146,7 +147,7 @@ class TestActionLedParameter:
             warnings.simplefilter('always')
             p.setValue(False)
             assert any(issubclass(warning.category, DeprecationWarning) for warning in w)
-        assert p.value() == 'false'
+        assert p.value() == LedState.FALSE
 
     def test_sigactivated_emitted_on_button_click(self, tree, qtbot):
         p = Parameter.create(name='act', type='action_led', value='false')

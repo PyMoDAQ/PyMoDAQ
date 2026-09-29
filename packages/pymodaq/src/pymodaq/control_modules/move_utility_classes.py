@@ -652,7 +652,7 @@ class DAQ_Move_base(PluginBase):
         else:
             raise NotImplementedError
 
-    def move_home(self, value: Union[float, DataActuator]):
+    def move_home(self, *args, **kwargs):
         if hasattr(self, 'move_Home'):
             deprecation_msg('move_Home method in plugins is deprecated, use move_home', 3)
             self.move_Home()  # type: ignore
@@ -871,7 +871,7 @@ class DAQ_Move_base(PluginBase):
         pass
 
     @abstractmethod
-    def stop_motion(self, value: DataActuator) -> None:
+    def stop_motion(self, *args, **kwargs) -> None:
         """Stop the actuator and emit move_done signal."""
         pass
 

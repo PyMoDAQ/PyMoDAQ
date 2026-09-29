@@ -1,6 +1,6 @@
 from importlib import import_module
 from pathlib import Path
-from typing import Union
+from typing import Union, TYPE_CHECKING
 import numpy as np
 from qtpy import QtCore, QtWidgets, QtGui
 import qt_themes
@@ -14,6 +14,10 @@ from pymodaq_gui.plotting.utils.plot_utils import DetachablePanel
 from pymodaq_gui.utils.widgets.widget_with_label_title import WidgetWithLabelTitle
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import GlobalConfig as Config
+
+
+if TYPE_CHECKING:
+    from pymodaq.control_modules.utils import ControlModule
 
 config = Config()
 
@@ -37,8 +41,9 @@ class ControlModuleUI(CustomApp):
     # Common icon name for initialization action
     INIT_ICON = 'cable'
 
-    def __init__(self, parent, title, settings_dock: Dock = None,):
+    def __init__(self, app: 'ControlModule', parent, title, settings_dock: Dock = None,):
         super().__init__(parent, title=title)
+        self._app = app
         self.settings_dock: Dock = settings_dock
         self.config = config
         self._ini_state = False
@@ -51,6 +56,15 @@ class ControlModuleUI(CustomApp):
             detached=self.config('pymodaq', 'control_modules', 'settings_as_popup'),
             layout_config_path=('pymodaq', 'control_modules', 'settings_dock_layout'),
             is_shown=lambda: self.is_action_checked('show_settings'))
+
+    @property
+    def app(self) -> 'ControlModule':
+        return self._app
+
+    def quit_fun(self) -> bool:
+        res = super().quit_fun()
+
+        return res
 
     def add_setting_tree(self, tree):
         self._settings_widget.insert_widget(tree)

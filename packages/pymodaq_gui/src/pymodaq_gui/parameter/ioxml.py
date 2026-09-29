@@ -134,11 +134,17 @@ def add_text_to_elt(elt, param):
     """
     param_type = str(param.type())
     param_val = param.value()
+
     if 'bool' in param_type or 'led' in param_type:
-        if param_val:
-            text = '1'
+        if param_type == 'multistate_led':
+            text = param_val
+        elif isinstance(param_val, str):
+            text = param_val
         else:
-            text = '0'
+            if param_val:
+                text = '1'
+            else:
+                text = '0'
     elif param_type == 'itemselect':
         if param_val is not None:
             elt.set('all_items',
@@ -229,6 +235,8 @@ def dict_from_param(param: Parameter):
         else:
             limits = str(limits_opt)
         opts.update(dict(limits=limits))
+    if 'states' in param.opts:
+        opts.update(dict(states=str(param_opts.get('states'))))
 
     return opts
 
@@ -280,7 +288,9 @@ def elt_to_dict(el):
             param.update(dict(limits=limits))
         except Exception as e:
             logger.exception(e)
-
+    if 'states' in el.attrib.keys():
+        states = eval(el.get('states'))
+        param.update(dict(states=states))
     return param
 
 
@@ -433,7 +443,12 @@ def set_txt_from_elt(el, param_dict):
             else:
                 param_value = dict(all_items=eval(el.get('all_items', val_text)), selected=eval(val_text))
         elif 'bool' in param_type or 'led' in param_type:  # covers 'bool' 'bool_push',  'led' and 'led_push'types
-            param_value = bool(int(val_text))
+            if param_type == 'multistate_led':
+                param_value = val_text
+            elif not (val_text == '0' or val_text == '1'):
+                param_value = val_text
+            else:
+                param_value = bool(int(val_text))
         elif param_type == 'date_time':
             param_value = QDateTime.fromMSecsSinceEpoch(int(val_text))
         elif param_type == 'date':

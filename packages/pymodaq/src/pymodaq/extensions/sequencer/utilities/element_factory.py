@@ -26,7 +26,7 @@ from pymodaq_gui.utils.styling import Font
 logger = set_logger(get_module_name(__file__))
 
 if TYPE_CHECKING:
-    from pymodaq.dashboard import Dashboard
+    from pymodaq.dashboard import DashBoard
     from pymodaq.extensions.sequencer.utilities.sequencer.sequence import Sequence
 
 ser_factory = SerializableFactory()
@@ -243,7 +243,7 @@ class SeqEltBase(QtCore.QObject, ActionManager):
         return self._dashboard
 
     @dashboard.setter
-    def dashboard(self, value: 'Dashboard'):
+    def dashboard(self, value: 'DashBoard'):
         """ """
         self._dashboard = value
         self.do_things_with_dashboard()
@@ -350,7 +350,7 @@ class SeqEltBase(QtCore.QObject, ActionManager):
 
     def to_dict(self) -> dict[str, Any]:
         """ Serialization in a dictionary"""
-        from pymodaq_plugins_sequencer.utilities.elements.button import AddButtonPlaceholder
+        from pymodaq.extensions.sequencer.utilities.elements.button import AddButtonPlaceholder
         dict_config: dict[str, Any] = {'elt_name': self.elt_name,
                                        'id': self.id,}
         dict_config.update(self.to_dict_custom())

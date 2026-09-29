@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from typing import Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING, Optional
 
 from pymodaq.control_modules.utils import ControllerAndThread
 from pymodaq_gui.parameter import Parameter
@@ -36,7 +36,7 @@ class PluginInfo:
     ui: str | None = None
     daq_type: DAQTypesEnum | None = None
     controller: ControllerAndThread = None
-    axis_name: str = None
+    axis_name: Optional[str] = None
 
 
 class ModuleLoader(QtCore.QObject):
@@ -186,7 +186,7 @@ class ModuleLoader(QtCore.QObject):
         self._set_type_timeout_timer.start()
         if self._current_plugin.type == ModuleType.Actuator:
             self.creator.set_actuator_type(self._current_module,
-                                             self._current_plugin.class_name)
+                                           self._current_plugin.class_name)
         else:
             self.creator.set_detector_type(self._current_module,
                                              self._current_plugin.daq_type,
