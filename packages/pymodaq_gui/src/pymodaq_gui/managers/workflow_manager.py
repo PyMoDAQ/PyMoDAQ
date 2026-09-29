@@ -10,11 +10,12 @@ template).
   `state_changed`. A transition's optional `guard` can refuse it outright
   (checked by can_trigger/trigger); on_enter/on_exit run unconditionally
   once a transition has already happened -- they can't veto.
-* ``bind_transition()`` / ``bind_enabled_to_states()`` /
-  ``bind_enabled_to_transition()``: wire a widget's enabled state (and
-  optionally a click -> trigger()) to the workflow, no ActionManager
-  needed. All three return a ``Binding`` (click connection optional,
-  ``.resync()``/``.unbind()``).
+* ``bind_sync(widget, workflow, sync_slot, ..., signal_name=, click_slot=)``:
+  runs `sync_slot` on every state_changed/revalidated (plus once now),
+  optionally wired to a click. ``bind_transition()``/``bind_enabled()``
+  (+ ``bind_enabled_to_states()``/``bind_enabled_to_transition()``) are
+  canned `sync_slot`s (setEnabled) over the same primitive. All return a
+  ``Binding`` (``.resync()``/``.unbind()``).
 * ``Workflow.revalidate()``: resyncs every binding without an actual
   transition -- for when a guard's external input changes on its own.
 
@@ -251,15 +252,10 @@ def action_name_for(workflow: Workflow, transition: str) -> str:
 
 
 class Binding:
-    """ Handle returned by every bind_* primitive below: keeps
-    widget.setEnabled() synced to a predicate over the workflow, and
-    optionally holds a click connection that triggers a transition
-    (`signal_name`/`click_slot` are None for sync-only bindings, e.g.
-    bind_enabled_to_states()). `label` is whatever it's synced to
-    (transition name, or joined states) -- for introspection/UI tooling
-    (WorkflowInspector), not load-bearing; use `widget.objectName()` for
-    a human-readable widget identity. `.resync()`/`.unbind()` -- auto-
-    unbound on the widget's `destroyed` signal too. """
+    """ Handle returned by bind_sync() and friends: `.resync()`/`.unbind()`,
+    auto-unbound on the widget's `destroyed` signal too. `label` is for
+    introspection/UI tooling (WorkflowInspector) only, not load-bearing;
+    use `widget.objectName()` for a human-readable widget identity. """
 
     def __init__(self, widget: QtCore.QObject, workflow: Workflow, label: str, sync_slot: Callable,
                 signal_name: str | None = None, click_slot: Callable | None = None):
@@ -297,25 +293,20 @@ class Binding:
         self._bound = False
 
 
-def _enabled_sync(widget: QtCore.QObject, workflow: Workflow, predicate: Callable[[], bool]) -> Callable:
-    """ Build, wire (state_changed/revalidated) and immediately run a
-    `widget.setEnabled(predicate())` slot. Returns the slot, for
-    finalize_binding() to wrap. """
-    def sync_slot(*_):
-        widget.setEnabled(predicate())
+def bind_sync(widget: QtCore.QObject, workflow: Workflow, sync_slot: Callable,
+             label: str = '', signal_name: str | None = None,
+             click_slot: Callable | None = None) -> Binding:
+    """ Run `sync_slot(*_)` on every state_changed/revalidated (plus once
+    now); if `signal_name`/`click_slot` are given, also connect
+    `click_slot` on that signal first. `sync_slot` can do anything, e.g.
+    standard_workflow.bind_pause_action():
+    ``bind_sync(action, workflow, sync_slot, 'pause/resume', 'triggered', click_slot)``. """
+    if signal_name is not None:
+        getattr(widget, signal_name).connect(click_slot)
     workflow.state_changed.connect(sync_slot)
     workflow.revalidated.connect(sync_slot)
     sync_slot()
-    return sync_slot
 
-
-def finalize_binding(widget: QtCore.QObject, workflow: Workflow, label: str, sync_slot: Callable,
-                     signal_name: str | None = None, click_slot: Callable | None = None) -> Binding:
-    """ Wrap already-made connections into a Binding, auto-unbound if
-    `widget` is destroyed without an explicit unbind() call. Used by
-    bind_transition() below and by standard_workflow.bind_pause_action(),
-    which builds its own sync_slot/click_slot (its click picks between
-    two transitions) but still wants this bookkeeping. """
     binding = Binding(widget, workflow, label, sync_slot, signal_name, click_slot)
     destroyed_signal = getattr(widget, 'destroyed', None)
     if destroyed_signal is not None:
@@ -325,38 +316,41 @@ def finalize_binding(widget: QtCore.QObject, workflow: Workflow, label: str, syn
 
 def bind_transition(widget: QtCore.QObject, workflow: Workflow, transition: str,
                     signal_name: str = 'triggered', click_slot: Callable | None = None) -> Binding:
-    """ Wire `widget` (already created, e.g. via
-    `action_manager.add_action(action_name_for(workflow, transition), ...)`)
-    to `transition`: click -> trigger(transition) by default, enabled
-    kept synced to can_trigger(transition). `signal_name` is the click
-    signal ('triggered' for QAction, 'clicked' for QPushButton/...).
-
-    `click_slot`, if given, replaces the bare trigger() on click -- for a
-    transition needing real (possibly side-effecting/veto-capable) work
-    first (e.g. daq_scan's 'start' running set_scan()); the callback is
-    then responsible for calling trigger() itself. """
+    """ Click -> trigger(transition) by default; enabled kept synced to
+    can_trigger(transition). `signal_name`: 'triggered' for QAction,
+    'clicked' for QPushButton/... `click_slot`, if given, replaces the
+    bare trigger() on click -- it's then responsible for calling
+    trigger() itself, e.g. daq_scan's 'start' running set_scan() first. """
     if click_slot is None:
         click_slot = lambda *_: workflow.trigger(transition)
-    getattr(widget, signal_name).connect(click_slot)
-    sync_slot = _enabled_sync(widget, workflow, lambda: workflow.can_trigger(transition))
-    return finalize_binding(widget, workflow, transition, sync_slot, signal_name, click_slot)
+
+    def sync_slot(*_):
+        widget.setEnabled(workflow.can_trigger(transition))
+
+    return bind_sync(widget, workflow, sync_slot, transition, signal_name, click_slot)
+
+
+def bind_enabled(widget: QtCore.QObject, workflow: Workflow, predicate: Callable[[], bool],
+                 label: str = '') -> Binding:
+    """ widget.setEnabled() kept synced to `predicate()`, no click. E.g.
+    daq_scan's 'ini_positions': `lambda: workflow.state == IDLE and
+    scanner.actuators == modules_manager.actuators`. If `predicate`
+    depends on something external, call workflow.revalidate() when it
+    changes. """
+    def sync_slot(*_):
+        widget.setEnabled(predicate())
+
+    return bind_sync(widget, workflow, sync_slot, label)
 
 
 def bind_enabled_to_states(widget: QtCore.QObject, workflow: Workflow,
                            states: Iterable[Hashable]) -> Binding:
-    """ Keep widget.setEnabled() synced to `workflow.state in states`, for
-    a widget that doesn't itself trigger a transition (e.g. daq_scan's
-    'ini_positions', only enabled while IDLE). """
+    """ bind_enabled() with `workflow.state in states` as the predicate. """
     states = frozenset(states)
-    sync_slot = _enabled_sync(widget, workflow, lambda: workflow.state in states)
-    return finalize_binding(widget, workflow, '|'.join(str(s) for s in states), sync_slot)
+    return bind_enabled(widget, workflow, lambda: workflow.state in states,
+                        '|'.join(str(s) for s in states))
 
 
 def bind_enabled_to_transition(widget: QtCore.QObject, workflow: Workflow, transition: str) -> Binding:
-    """ Keep widget.setEnabled() synced to `workflow.can_trigger(transition)`,
-    for a widget whose click can't go straight to trigger() via
-    bind_transition() -- e.g. daq_scan's 'start', which must run
-    set_scan()'s validation first and only call trigger('start') itself
-    once that succeeds. """
-    sync_slot = _enabled_sync(widget, workflow, lambda: workflow.can_trigger(transition))
-    return finalize_binding(widget, workflow, transition, sync_slot)
+    """ bind_enabled() with `workflow.can_trigger(transition)` as the predicate. """
+    return bind_enabled(widget, workflow, lambda: workflow.can_trigger(transition), transition)

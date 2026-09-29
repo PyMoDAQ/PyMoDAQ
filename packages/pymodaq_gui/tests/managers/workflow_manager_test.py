@@ -9,7 +9,7 @@ from qtpy import QtWidgets
 
 from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_gui.managers.workflow_manager import (
-    Workflow, WorkflowManager, bind_transition, bind_enabled_to_states,
+    Workflow, WorkflowManager, bind_sync, bind_transition, bind_enabled, bind_enabled_to_states,
     bind_enabled_to_transition, action_name_for, DEFAULT_WORKFLOW_NAME)
 
 
@@ -321,9 +321,59 @@ def action_manager(qtbot):
     return ActionManager(toolbar=QtWidgets.QToolBar(), menu=QtWidgets.QMenu())
 
 
+class TestBindSync:
+    """ Arbitrary sync_slot (not just setEnabled), optionally with a click. """
+
+    def test_sync_slot_can_write_more_than_one_thing(self, qtbot):
+        workflow = Workflow('test')
+        workflow.add_transition('go', ['A'], 'B')
+        widget = QtWidgets.QPushButton('Widget')
+        widget.setCheckable(True)
+        writes = []
+
+        def sync_slot(*_):
+            writes.append(workflow.state)
+            widget.setEnabled(workflow.state == 'A')
+            widget.setChecked(workflow.state == 'B')
+
+        bind_sync(widget, workflow, sync_slot)
+        assert writes == ['A']
+        assert widget.isEnabled() and not widget.isChecked()
+
+        workflow.trigger('go')
+        assert writes == ['A', 'B']
+        assert not widget.isEnabled() and widget.isChecked()
+
+    def test_click_slot_and_sync_slot_both_wired(self, qtbot):
+        workflow = Workflow('test')
+        workflow.add_transition('go', ['A'], 'B')
+        widget = QtWidgets.QPushButton('Widget')
+        clicks = []
+
+        binding = bind_sync(widget, workflow, lambda *_: widget.setEnabled(workflow.state == 'A'),
+                            signal_name='clicked', click_slot=lambda *_: clicks.append(True))
+        widget.click()
+        assert clicks == [True]
+        assert workflow.state == 'A'  # click_slot didn't trigger anything itself
+
+        workflow.trigger('go')
+        assert not widget.isEnabled()
+        binding.unbind()
+        widget.click()
+        assert clicks == [True]  # unbound: no longer connected
+
+    def test_no_click_when_signal_name_omitted(self, qtbot):
+        """ signal_name=None (the default): no click wiring at all, same
+        as bind_enabled()/bind_enabled_to_states(). """
+        workflow = Workflow('test')
+        widget = QtWidgets.QPushButton('Widget')
+        bind_sync(widget, workflow, lambda *_: widget.setEnabled(True))
+        widget.click()  # must not raise, nothing connected to it
+
+
 class TestBindTransition:
-    """ The actually-general primitive: wires a plain QAction to a
-    transition, no ActionManager involved at all. """
+    """ click -> trigger(transition) by default, enabled synced to
+    can_trigger(transition) -- the common single-write bind_sync() shape. """
 
     def test_wires_a_bare_qaction_with_no_action_manager(self, qtbot):
         workflow = Workflow('test')
@@ -538,6 +588,50 @@ class TestBindTransitionOnAnActionManagerAction:
         binding.unbind()
         binding.unbind()  # must not raise
         assert not binding.is_bound
+
+
+class TestBindEnabled:
+    """ The general form bind_enabled_to_states()/bind_enabled_to_transition()
+    are thin wrappers over -- an arbitrary predicate, for a condition
+    neither canned one covers (e.g. daq_scan's 'ini_positions': a state
+    check *and* an external condition). """
+
+    def test_enabled_reflects_an_arbitrary_predicate(self, qtbot):
+        workflow = Workflow('test')
+        workflow.add_transition('go', ['A'], 'B')
+        widget = QtWidgets.QPushButton('Widget')
+        external_ok = [True]
+
+        bind_enabled(widget, workflow, lambda: workflow.state == 'A' and external_ok[0])
+        assert widget.isEnabled()
+
+        workflow.trigger('go')
+        assert not widget.isEnabled()  # state half of the predicate now false
+
+    def test_external_half_of_the_predicate_needs_revalidate(self, qtbot):
+        """ Like a guard, the external half of a composite predicate can
+        change with no transition of its own -- state_changed alone
+        won't pick it up, revalidate() is what resyncs it. """
+        workflow = Workflow('test')
+        widget = QtWidgets.QPushButton('Widget')
+        external_ok = [True]
+
+        bind_enabled(widget, workflow, lambda: external_ok[0])
+        assert widget.isEnabled()
+
+        external_ok[0] = False
+        assert widget.isEnabled()  # stale: nothing told the binding to recheck
+
+        workflow.revalidate()
+        assert not widget.isEnabled()
+
+    def test_no_transition_is_ever_triggered_by_this_binding(self, qtbot):
+        workflow = Workflow('test')
+        workflow.add_transition('go', ['A'], 'B')
+        widget = QtWidgets.QPushButton('Widget')
+        bind_enabled(widget, workflow, lambda: True)
+        widget.click()
+        assert workflow.state == 'A'  # unaffected
 
 
 class TestBindEnabledToStates:
