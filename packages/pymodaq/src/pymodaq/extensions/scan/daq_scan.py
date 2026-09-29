@@ -49,8 +49,8 @@ from pymodaq.utils.scanner.scan_selector import ScanSelector, SelectorItem
 from pymodaq.utils.data import DataActuator
 from pymodaq.extensions.scan.manager.scan_manager import ScanManager
 from pymodaq_gui.utils.widgets.spinbox import QSpinBox_ro
-from pymodaq_gui.managers.standard_workflow import (
-    StandardTransitions, standard_workflow, bind_standard_workflow_actions)
+
+from pymodaq_gui.utils.app_worker import ExtensionWorker, SaverWorker
 from pymodaq_gui.utils.widgets import MultistateLED, StatusPalette, Status
 from pymodaq_utils.enums import StrEnum
 from pymodaq_gui.utils.custom_app import WorkFlowActions
@@ -160,6 +160,7 @@ class DAQScan(CustomExt):
 
     settings_name = 'daq_scan_settings'
     show_h5file_statusbar_widgets = True
+    show_workflow_actions = True
 
     command_daq_signal = Signal(utils.ThreadCommand)
     scan_done_signal = QtCore.Signal()
@@ -217,27 +218,6 @@ class DAQScan(CustomExt):
         """
         
         logger.info('Initializing DAQScan')
-
-        # Created before super().__init__(): CustomExt.__init__ (run by super().__init__()
-        # below) can itself call do_things_after_experiment_set() synchronously, before any of
-        # this class's own __init__ body has run, if an experiment entry is already applied on
-        # the dashboard when this extension is opened -- and that method needs self.workflow to
-        # exist (self.workflow.revalidate()). standard_workflow() is a plain, self-contained
-        # QObject with no dependency on CustomApp/ActionManager, so it's safe to build this
-        # early; the guard's lambda only reads self.experiment_manager lazily, the first time
-        # it's actually called, by which point self.dashboard (set a few lines into
-        # CustomExt.__init__, before that early call) is already there.
-        self.workflow = standard_workflow()
-        # 'start' needs real (side-effecting) validation via set_scan(), so its click can't go
-        # straight to workflow.trigger('start') -- see start_scan()/connect_things(). It does,
-        # however, get a guard: a scan can't start before an experiment entry is applied, and
-        # that check is a pure predicate (no side effects), which is exactly what guards are for.
-        self.workflow.add_transition(
-            StandardTransitions.START, ['IDLE'], 'RUNNING',
-            guard=lambda: bool(self.experiment_manager and self.experiment_manager.entry_applied))
-        # (standard_workflow() already makes 'finished' legal from RUNNING as well as STOPPING
-        # by default -- a scan finishing on its own, e.g. via thread_status's "Scan_done", never
-        # goes through stop_scan()/'stop' at all, so no override needed here.)
 
         super().__init__(parent=dockarea,
                          dashboard=dashboard,
@@ -306,6 +286,7 @@ class DAQScan(CustomExt):
                                                     menu=self.get_menu('scan_manager'))
 
         if self.dashboard.experiment_manager.entry_applied:
+            self.enable_workflow_actions(True, other_actions='ini_positions')
             self.ini_scan_manager()
 
         logger.info('DAQScan Initialized')
@@ -401,8 +382,6 @@ class DAQScan(CustomExt):
 
 
     def setup_actions(self):
-        self.add_menu('actions', 'Actions', parent_menu=self.menubar)
-
         self.add_action('ini_positions', 'Init Positions', 'arrows_input', menu='actions')
         self.set_action_enabled('ini_positions', False)
         self.add_action('start_batch', 'Start ScanBatches', 'run_all', "Start the batch of scans", menu='actions')
@@ -410,7 +389,6 @@ class DAQScan(CustomExt):
                         "Move to positions where you double clicked", checkable=True, menu='actions')
 
         self._toolbar.addSeparator()
-
         self.add_action('navigator', 'Show Navigator', '', menu=MenuToolbarNames.TOOLS, auto_toolbar=False)
         self.add_action('batch', 'Show Batch Scanner', '', menu=MenuToolbarNames.TOOLS, auto_toolbar=False)
         self.set_action_visible('start_batch', False)
@@ -419,24 +397,10 @@ class DAQScan(CustomExt):
         self.scanner.scanner_updated_signal.connect(self.do_things_after_scanner_changed)
 
         self.connect_action('ini_positions', self.set_ini_positions)
-
-        # Creates AND binds Start/Stop/Pause: bind_standard_workflow_actions() combines both by
-        # design (same as bind_pause_action() alone always did), so it's called here rather than
-        # split across setup_actions()/connect_things() -- 'navigator'/'batch' above are
-        # menu-only (auto_toolbar=False) and nothing else touches self._toolbar afterward, so
-        # this doesn't change the toolbar's visible order either way. on_start/on_stop replace
-        # the bare trigger('start')/trigger('stop') on click, since both need real work first
-        # (set_scan()'s validation, which can veto entering RUNNING; emitting the actual
-        # "stop_acquisition" command) -- see bind_transition()'s click_slot in
-        # workflow_manager.py.
-        bind_standard_workflow_actions(
-            self, self.workflow, menu='actions',
-            on_start=self.start_scan, on_stop=self.stop_scan,
-            start_icon_color=self.get_theme().green, stop_icon_color=self.get_theme().red)
-        self.workflow.on(StandardTransitions.PAUSE, self._on_pause_triggered)
-        self.workflow.on(StandardTransitions.RESUME, self._on_resume_triggered)
-
+        self.connect_action(WorkFlowActions.START, self.start_scan)
         self.connect_action('start_batch', self.start_scan_batch)
+        self.connect_action(WorkFlowActions.STOP, self.stop_scan)
+        self.connect_action(WorkFlowActions.PAUSE, self.pause_scan)
         self.connect_action('move_at', self.move_to_crosshair)
 
         self.connect_action('navigator', self.show_navigator)
@@ -459,6 +423,10 @@ class DAQScan(CustomExt):
         self.set_action_enabled('ini_positions',
                                 self.scanner.actuators == self.modules_manager.actuators)
 
+    def do_things_after_ui_setup(self):
+        self.enable_workflow_actions(False)
+        self.set_action_visible(WorkFlowActions.LOG, False)
+
     def do_things_after_experiment_set(self, experiment_name: str):
         """ This method is called whenever a experiment entry has been set.
 
@@ -473,8 +441,10 @@ class DAQScan(CustomExt):
         # set the module saver type and applies its h5saver to submodules
         self._module_and_data_saver = module_saving.ScanSaver(self)
 
-        # Check workflow when entry_applied changes
-        self.workflow.revalidate()
+        try:
+            self.enable_workflow_actions(True, other_actions='ini_positions')
+        except KeyError: #actions may not yet be activated
+            pass
 
         if hasattr(self, 'scan_manager'):
             self.ini_scan_manager()
@@ -948,7 +918,7 @@ class DAQScan(CustomExt):
                 if self.settings['scan_options', 'go_to_ini_positions']:
                     self.set_ini_positions()
                 self.set_action_enabled('ini_positions', True)
-                self.workflow.trigger(StandardTransitions.FINISHED)
+                self.set_action_enabled(WorkFlowActions.START, True)
 
                 # reactivate module controls using remote_control
                 remote_manager = getattr(self.dashboard, 'remote_manager', None)
@@ -1070,10 +1040,12 @@ class DAQScan(CustomExt):
                 if not module.initialized_state:
                     raise DAQ_ScanException('module ' + module.title + " is not initialized")
 
+            self.enable_workflow_actions(True)
             return True
 
         except Exception as e:
             logger.exception(str(e))
+            self.enable_workflow_actions(False)
 
     def set_metadata_about_current_scan(self):
         """
@@ -1158,9 +1130,6 @@ class DAQScan(CustomExt):
                 interval = self.h5saver.settings['backend', 'swmr_options', 'flush_interval']
                 self.h5saver.set_swmr_flush_interval(interval)
 
-            self.set_action_enabled('ini_positions', False)
-            self.workflow.trigger(StandardTransitions.START)
-
             self.status_manager.set_scan_done(False)
             if not self.settings['plot_options', 'plot_at_each_step']:
                 self.live_timer.start(self.settings['plot_options', 'refresh_live'])
@@ -1230,41 +1199,26 @@ class DAQScan(CustomExt):
         self.update_status(status)
         self.status_manager.set_permanent_status('')
 
-        # -> STOPPING, not IDLE: closes the double-start race where START used to be
-        # re-enabled here, synchronously, before the worker thread had actually confirmed the
-        # scan stopped (via thread_status's "Scan_done" -> FINISHED, below). START stays
-        # disabled until that confirmation arrives -- and so does 'ini_positions' (re-enabled in
-        # thread_status's "Scan_done" branch, not here): it manually commands actuators, and
-        # enabling it before the worker has actually stopped would let a manual move race
-        # whatever the worker is still doing for the current step, same race as START's.
-        self.workflow.trigger(StandardTransitions.STOP)
 
-    def _on_pause_triggered(self, old_state: str, new_state: str):
-        self.command_daq_signal.emit(utils.ThreadCommand('pause_acquisition', attribute=True))
-        self.status_manager.set_permanent_status('Acquisition paused')
-
-    def _on_resume_triggered(self, old_state: str, new_state: str):
-        self.command_daq_signal.emit(utils.ThreadCommand('pause_acquisition', attribute=False))
-        self.status_manager.set_permanent_status('Running acquisition')
 
     def pause_scan(self):
-        """Toggle pause on the running acquisition, programmatically."""
-        # Trigger resume if in pause, else trigger pause
-        self.workflow.trigger_any(StandardTransitions.RESUME, StandardTransitions.PAUSE)
+        """Toggle pause on the running acquisition."""
+        paused = self.is_action_checked(WorkFlowActions.PAUSE)
+        self.command_daq_signal.emit(utils.ThreadCommand('pause_acquisition', attribute=paused))
+        if paused:
+            self.status_manager.set_permanent_status('Acquisition paused')
+        else:
+            self.status_manager.set_permanent_status('Running acquisition')
 
     def do_scan(self, start_scan=True):
-        """Public method to start/stop the scan programmatically.
-
-        Goes straight through the workflow (state/can_trigger + the real start_scan()/
-        stop_scan() methods) rather than simulating a click on the Start/Stop QActions --
-        no-op if the corresponding transition isn't currently legal, same as clicking a
-        disabled button would be."""
+        """Public method to start the scan programmatically"""
         if start_scan:
-            if self.workflow.can_trigger(StandardTransitions.START):
-                self.start_scan()
+            if not self.is_action_enabled(WorkFlowActions.START):
+                self.get_action('set_scan').trigger()
+                QtWidgets.QApplication.processEvents()
+            self.get_action(WorkFlowActions.START).trigger()
         else:
-            if self.workflow.can_trigger(StandardTransitions.STOP):
-                self.stop_scan()
+            self.get_action(WorkFlowActions.STOP).trigger()
 
 
 class DAQScanAcquisition(ExtensionWorker):
