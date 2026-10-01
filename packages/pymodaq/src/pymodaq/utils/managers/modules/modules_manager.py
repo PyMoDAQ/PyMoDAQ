@@ -60,11 +60,16 @@ class ModulesManager(QObject, ParameterManager):
                                     # the received responses (see grab_data/move_actuators)
 
     params = [
+        {'title': "Probe detectors", 'name': 'probe_detectors', 'type': 'action_led', 'value': False},
+        {'title': "Probe actuators", 'name': 'probe_actuators', 'type': 'action_led', 'value': False},
+
         {'title': 'Detectors', 'name': 'detectors', 'type': 'itemselect', 'checkbox': True},
         {'title': 'Actuators', 'name': 'actuators', 'type': 'itemselect', 'checkbox': True},
 
-        {'title': "Probe detectors", 'name': 'probe_detectors', 'type': 'action_led', 'value': False, 'children': []},
-        {'title': "Probe actuators", 'name': 'probe_actuators', 'type': 'action_led', 'value': False, 'children': []},
+        # Probe results live in their own group, not nested under the probe buttons above,
+        # so they render below the selection lists instead of pushing them out of view.
+        {'title': 'Probed detector data', 'name': 'probe_detectors_results', 'type': 'group', 'children': []},
+        {'title': 'Probed actuator positions', 'name': 'probe_actuators_results', 'type': 'group', 'children': []},
     ]
 
     def __init__(self,
@@ -156,6 +161,8 @@ class ModulesManager(QObject, ParameterManager):
     def show_only_control_modules(self, show: True):
         self.settings.child('probe_detectors').show(not show)
         self.settings.child('probe_actuators').show(not show)
+        self.settings.child('probe_detectors_results').show(not show)
+        self.settings.child('probe_actuators_results').show(not show)
 
     @classmethod
     def get_names(cls, modules:  list[Union['DAQ_Move', 'DAQ_Viewer']]):
@@ -339,11 +346,11 @@ class ModulesManager(QObject, ParameterManager):
     def value_changed(self, param):
         if param.name() == 'detectors':
             # Previously probed channels no longer reflect the current selection
-            self.settings.child('probe_detectors').clearChildren()
+            self.settings.child('probe_detectors_results').clearChildren()
             self.detectors_changed.emit(param.value()['selected'])
 
         elif param.name() == 'actuators':
-            self.settings.child('probe_actuators').clearChildren()
+            self.settings.child('probe_actuators_results').clearChildren()
             self.actuators_changed.emit(param.value()['selected'])
 
     def get_det_data_list(self, add_to_this_param: Parameter = None) -> DataToExport:
@@ -353,7 +360,7 @@ class ModulesManager(QObject, ParameterManager):
             return DataToExport(name=__class__.__name__, control_module='DAQ_Viewer')
 
         if add_to_this_param is None:
-            add_to_this_param = self.settings.child('probe_detectors')
+            add_to_this_param = self.settings.child('probe_detectors_results')
 
         self.connect_detectors()
         self.timeout_signal.connect(self._on_detector_probe_timeout)
@@ -406,7 +413,7 @@ class ModulesManager(QObject, ParameterManager):
         names = []
         if dim is not None:
             dim = enum_checker(DataDim, dim)
-        for det_param in self.settings.child('probe_detectors').children():
+        for det_param in self.settings.child('probe_detectors_results').children():
             if dim is None or det_param.name() == dim.name:
                 names.extend([child.name() for child in det_param.children()])
         return names
@@ -619,7 +626,7 @@ class ModulesManager(QObject, ParameterManager):
             self.timeout_signal.disconnect(self._on_actuator_probe_timeout)
             self.connect_actuators(False)
 
-        test_actuator = self.settings.child('probe_actuators')
+        test_actuator = self.settings.child('probe_actuators_results')
         test_actuator.clearChildren()
         for dact in self.move_done_positions:
             test_actuator.addChild(

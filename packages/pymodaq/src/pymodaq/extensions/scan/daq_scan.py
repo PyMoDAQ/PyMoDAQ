@@ -243,8 +243,8 @@ class DAQScan(CustomExt):
         self.curvilinear_values = []
         self.plot_colors = PlotColors()
 
-        self.modules_manager.settings.child('probe_detectors').setOpts(expanded=False)
-        self.modules_manager.settings.child('probe_actuators').setOpts(expanded=False)
+        self.modules_manager.settings.child('probe_detectors_results').setOpts(expanded=False)
+        self.modules_manager.settings.child('probe_actuators_results').setOpts(expanded=False)
         self.modules_manager.detectors_changed.connect(self.clear_plot_from)
 
         self.h5_manager.get_h5saver(create_new_file=False).file_changed_sig.connect(self._on_file_changed)
@@ -288,6 +288,16 @@ class DAQScan(CustomExt):
         # Reuse the Detectors panel's probe button: probing already grabs the data
         # (populating its result tree), so just also refresh the plot selections from it
         self.modules_manager.settings.child('probe_detectors').sigActivated.connect(self.plot_from)
+        # selection_tree_height was fixed once, before any probe result existed; refresh it
+        # whenever a probe populates/clears its result tree so the box actually grows to fit
+        self.modules_manager.settings.child('probe_detectors_results').sigChildAdded.connect(
+            self._refresh_selection_tree_height)
+        self.modules_manager.settings.child('probe_detectors_results').sigChildRemoved.connect(
+            self._refresh_selection_tree_height)
+        self.modules_manager.settings.child('probe_actuators_results').sigChildAdded.connect(
+            self._refresh_selection_tree_height)
+        self.modules_manager.settings.child('probe_actuators_results').sigChildRemoved.connect(
+            self._refresh_selection_tree_height)
 
         self.scan_manager = ScanManager(self)
         self.scan_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('scan_manager'),
@@ -390,16 +400,20 @@ class DAQScan(CustomExt):
 
         self.set_scanner_settings(self.scanner.parent_widget)
 
-        self.actuators_settings_tree.addParameters(self.modules_manager.settings.child('actuators'))
+        # Probe button first (quick access), then the stable selection list, then the probe
+        # results last: results live in their own group now, not nested under the probe
+        # button, so they no longer push the selection list out of view when populated.
         self.actuators_settings_tree.addParameters(self.modules_manager.settings.child('probe_actuators'))
+        self.actuators_settings_tree.addParameters(self.modules_manager.settings.child('actuators'))
+        self.actuators_settings_tree.addParameters(
+            self.modules_manager.settings.child('probe_actuators_results'))
 
-        self.detectors_settings_tree.addParameters(self.modules_manager.settings.child('detectors'))
         self.detectors_settings_tree.addParameters(self.modules_manager.settings.child('probe_detectors'))
+        self.detectors_settings_tree.addParameters(self.modules_manager.settings.child('detectors'))
+        self.detectors_settings_tree.addParameters(
+            self.modules_manager.settings.child('probe_detectors_results'))
 
-        selection_tree_height = max(self._content_fit_height(self.actuators_settings_tree),
-                                    self._content_fit_height(self.detectors_settings_tree))
-        self.actuators_settings_tree.setFixedHeight(selection_tree_height)
-        self.detectors_settings_tree.setFixedHeight(selection_tree_height)
+        self._refresh_selection_tree_height()
 
         self.plotting_settings_tree.setParameters(self.settings.child('plot_options'))
 
@@ -698,6 +712,17 @@ class DAQScan(CustomExt):
         header_height = 0 if tree.header().isHidden() else tree.header().height()
         content_height = header_height + bottom + 2 * tree.frameWidth() + 4
         return max(min_height, min(content_height, hard_limit))
+
+    def _refresh_selection_tree_height(self, *_):
+        """ Recompute and reapply the Actuators/Detectors panels' fixed height.
+
+        Needs to be called again whenever a probe result tree is populated/cleared, not just
+        once at setup: the initial computation only sees the empty, unprobed state.
+        """
+        selection_tree_height = max(self._content_fit_height(self.actuators_settings_tree),
+                                    self._content_fit_height(self.detectors_settings_tree))
+        self.actuators_settings_tree.setFixedHeight(selection_tree_height)
+        self.detectors_settings_tree.setFixedHeight(selection_tree_height)
 
     def set_scanner_settings(self, settings_tree: QtWidgets.QWidget):
         while True:

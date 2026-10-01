@@ -120,6 +120,7 @@ class Overshooter(ManagerBase):
 
     def show_hide_module_manager_settings(self):
         to_hide = [('probe_actuators',), ('probe_detectors',),
+                   ('probe_actuators_results',), ('probe_detectors_results',),
                    ]
         for param_tuple in to_hide:
             self.modules_manager.settings.child(*param_tuple).hide()
