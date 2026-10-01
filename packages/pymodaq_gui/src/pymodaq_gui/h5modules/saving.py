@@ -597,7 +597,7 @@ class H5Saver(H5SaverBase, QObject):
         QObject.__init__(self)
         H5SaverBase.__init__(self, *args, **kwargs)
 
-        self.settings.child('new_file').sigActivated.connect(self.new_file_sig.emit)
+        self.settings.child('new_file').sigActivated.connect(lambda *_: self.new_file_sig.emit())
         self.settings.child('browse_file').sigActivated.connect(self.browse_file)
 
     def close(self):
