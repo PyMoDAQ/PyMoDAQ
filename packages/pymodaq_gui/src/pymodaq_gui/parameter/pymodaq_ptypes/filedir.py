@@ -1,9 +1,10 @@
 import os
 from pathlib import Path
-from qtpy import QtWidgets, QtCore, QtGui
+from qtpy import QtWidgets, QtCore
 from pyqtgraph.parametertree.Parameter import ParameterItem
 from pyqtgraph.parametertree.parameterTypes.basetypes import WidgetParameterItem
 from pymodaq_gui.parameter import Parameter
+from pymodaq_gui.utils.styling import create_icon
 
 
 class FileDirWidget(QtWidgets.QWidget):
@@ -98,9 +99,8 @@ class FileDirWidget(QtWidgets.QWidget):
         self.base_path_edit.setMaximumHeight(50)
         self.base_path_browse_pb = QtWidgets.QPushButton()
         self.base_path_browse_pb.setText("")
-        icon3 = QtGui.QIcon()
-        icon3.addPixmap(QtGui.QPixmap("icons:Browse_Dir_Path.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.base_path_browse_pb.setIcon(icon3)
+        icon_name = 'folder_open' if self.filetype is False else 'file_open'
+        self.base_path_browse_pb.setIcon(create_icon(icon_name))
         self.hor_layout.addWidget(self.base_path_edit)
 
         verlayout = QtWidgets.QVBoxLayout()
