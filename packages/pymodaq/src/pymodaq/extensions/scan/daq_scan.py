@@ -437,6 +437,11 @@ class DAQScan(CustomExt):
         self.add_action('batch', 'Show Batch Scanner', '', menu=MenuToolbarNames.TOOLS, auto_toolbar=False)
         self.set_action_visible('start_batch', False)
 
+        self.add_action('show_general_settings', 'Show General Settings', 'settings',
+                        "Show/hide the General settings panel (Time Flow, Scan options, Save...)",
+                        checkable=True, checked=True, icon_checked_color=self.get_theme().green,
+                        menu='actions', before=WorkFlowActions.LOG)
+
     def connect_things(self):
         self.scanner.scanner_updated_signal.connect(self.do_things_after_scanner_changed)
 
@@ -449,6 +454,7 @@ class DAQScan(CustomExt):
 
         self.connect_action('navigator', self.show_navigator)
         self.connect_action('batch', lambda: self.show_batcher(self.menubar))
+        self.connect_action('show_general_settings', self.toggle_general_settings)
 
     def process_cmds(self, cmd: utils.ThreadCommand):
         """Process commands sent by actions done in the ui
@@ -641,6 +647,10 @@ class DAQScan(CustomExt):
         else:
             res = True
         return res
+
+    def toggle_general_settings(self, show: bool = True):
+        """ Show/hide the General settings panel (Time Flow, Scan options, Save...) """
+        self.general_widget.setVisible(show)
 
     def show_navigator(self):
 
