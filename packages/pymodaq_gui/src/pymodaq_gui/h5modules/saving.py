@@ -380,6 +380,7 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
 
         except Exception as e:
             logger.exception(str(e))
+            raise
 
     @classmethod
     def find_part_in_path_and_subpath(cls, base_dir, part='', create=False, increment=True):
@@ -576,13 +577,13 @@ class H5Saver(H5SaverBase, QObject):
     status_sig: Signal
                 emits a signal of type Threadcommand in order to senf log information to a main UI
     new_file_sig: Signal
-                  emits a boolean signal to let the program know when the user pressed the new file button on the UI
+                  emitted to let the program know when the user pressed the new file button on the UI
     file_changed_sig: Signal
                       emits a str (file path) whenever the active h5 file changes (browse, new, reopen)
     """
 
     status_sig = Signal(utils.ThreadCommand)
-    new_file_sig = Signal(bool)
+    new_file_sig = Signal()
     file_changed_sig = Signal(str)
 
     def __init__(self, *args, **kwargs):
@@ -596,21 +597,11 @@ class H5Saver(H5SaverBase, QObject):
         QObject.__init__(self)
         H5SaverBase.__init__(self, *args, **kwargs)
 
-        self.settings.child('new_file').sigActivated.connect(lambda: self.emit_new_file(True))
+        self.settings.child('new_file').sigActivated.connect(self.new_file_sig.emit)
         self.settings.child('browse_file').sigActivated.connect(self.browse_file)
 
     def close(self):
         self.close_file()
-
-    def emit_new_file(self, status):
-        """Emits the new_file_sig
-
-        Parameters
-        ----------
-        status: bool
-                emits True if a new file has been asked by the user pressing the new file button on the UI
-        """
-        self.new_file_sig.emit(status)
 
     def browse_file(self):
         """Open a file dialog to select an existing h5 file to append to."""
