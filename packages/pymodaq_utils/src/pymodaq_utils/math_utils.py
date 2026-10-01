@@ -1,7 +1,7 @@
 import numbers
 from typing import Union
 
-import numpy
+
 import numpy as np
 from numbers import Number
 from typing import List, Union, Tuple
@@ -10,6 +10,31 @@ from collections.abc import Iterable
 from pint import Quantity
 
 logger = set_logger(get_module_name(__file__))
+
+
+
+def get_si_prefix(number) -> tuple[Number, str]:
+    if number == 0:
+        return 0, ""
+
+    # Standard SI prefixes organized by their 10^(3*tier) powers
+    prefixes = {
+        24: 'Y', 21: 'Z', 18: 'E', 15: 'P', 12: 'T', 9: 'G', 6: 'M', 3: 'k',
+        0: '',
+        -3: 'm', -6: 'µ', -9: 'n', -12: 'p', -15: 'f', -18: 'a', -21: 'z', -24: 'y'
+    }
+
+    # Calculate the exponent tier (multiples of 3)
+    exponent = np.floor(np.log10(abs(number)) / 3) * 3
+
+    # Clip to maximum/minimum available prefixes
+    exponent = max(-24, min(24, exponent))
+
+    # Calculate the scaled number component
+    scaled_value = number / (10 ** exponent)
+    prefix_symbol = prefixes[exponent]
+
+    return scaled_value, prefix_symbol
 
 
 def my_moment(x, y):
@@ -478,12 +503,12 @@ class LSqEllipse:
         coef (list): list of the coefficients describing an ellipse
            [a,b,c,d,f,g] corresponding to ax**2+2bxy+cy**2+2dx+2fy+g
         """
-        x, y = numpy.asarray(data, dtype=float)
+        x, y = np.asarray(data, dtype=float)
 
         # Quadratic part of design matrix [eqn. 15] from (*)
-        D1 = numpy.mat(numpy.vstack([x ** 2, x * y, y ** 2])).T
+        D1 = np.mat(np.vstack([x ** 2, x * y, y ** 2])).T
         # Linear part of design matrix [eqn. 16] from (*)
-        D2 = numpy.mat(numpy.vstack([x, y, numpy.ones(len(x))])).T
+        D2 = np.mat(np.vstack([x, y, np.ones(len(x))])).T
 
         # forming scatter matrix [eqn. 17] from (*)
         S1 = D1.T * D1
@@ -491,23 +516,23 @@ class LSqEllipse:
         S3 = D2.T * D2
 
         # Constraint matrix [eqn. 18]
-        C1 = numpy.mat('0. 0. 2.; 0. -1. 0.; 2. 0. 0.')
+        C1 = np.mat('0. 0. 2.; 0. -1. 0.; 2. 0. 0.')
 
         # Reduced scatter matrix [eqn. 29]
         M = C1.I * (S1 - S2 * S3.I * S2.T)
 
         # M*|a b c >=l|a b c >. Find eigenvalues and eigenvectors from this equation [eqn. 28]
-        eval, evec = numpy.linalg.eig(M)
+        eval, evec = np.linalg.eig(M)
 
         # eigenvector must meet constraint 4ac - b^2 to be valid.
-        cond = 4 * numpy.multiply(evec[0, :], evec[2, :]) - numpy.power(evec[1, :], 2)
-        a1 = evec[:, numpy.nonzero(cond.A > 0)[1]]
+        cond = 4 * np.multiply(evec[0, :], evec[2, :]) - np.power(evec[1, :], 2)
+        a1 = evec[:, np.nonzero(cond.A > 0)[1]]
 
         # |d f g> = -S3^(-1)*S2^(T)*|a b c> [eqn. 24]
         a2 = -S3.I * S2.T * a1
 
         # eigenvectors |a b c d f g>
-        self.coef = numpy.vstack([a1, a2])
+        self.coef = np.vstack([a1, a2])
         self._save_parameters()
 
     def _save_parameters(self):
@@ -543,14 +568,14 @@ class LSqEllipse:
 
         # Find the semi-axes lengths [eqn. 21 and 22] from (**)
         numerator = 2 * (a * f * f + c * d * d + g * b * b - 2 * b * d * f - a * c * g)
-        denominator1 = (b * b - a * c) * ((c - a) * numpy.sqrt(1 + 4 * b * b / ((a - c) * (a - c))) - (c + a))
-        denominator2 = (b * b - a * c) * ((a - c) * numpy.sqrt(1 + 4 * b * b / ((a - c) * (a - c))) - (c + a))
-        width = numpy.sqrt(numerator / denominator1)
-        height = numpy.sqrt(numerator / denominator2)
+        denominator1 = (b * b - a * c) * ((c - a) * np.sqrt(1 + 4 * b * b / ((a - c) * (a - c))) - (c + a))
+        denominator2 = (b * b - a * c) * ((a - c) * np.sqrt(1 + 4 * b * b / ((a - c) * (a - c))) - (c + a))
+        width = np.sqrt(numerator / denominator1)
+        height = np.sqrt(numerator / denominator2)
 
         # angle of counterclockwise rotation of major-axis of ellipse to x-axis [eqn. 23] from (**)
         # or [eqn. 26] from (***).
-        phi = .5 * numpy.arctan((2. * b) / (a - c))
+        phi = .5 * np.arctan((2. * b) / (a - c))
 
         self._center = [x0, y0]
         self._width = width
@@ -596,12 +621,12 @@ def make_test_ellipse(center=[1, 1], width=1, height=.6, phi=3.14 / 5):
     data (list:list:float): list of two lists containing the x and y data of the
         ellipse. of the form [[x1, x2, ..., xi],[y1, y2, ..., yi]]
     """
-    t = numpy.linspace(0, 2 * numpy.pi, 1000)
-    x_noise, y_noise = numpy.random.rand(2, len(t))
+    t = np.linspace(0, 2 * np.pi, 1000)
+    x_noise, y_noise = np.random.rand(2, len(t))
 
-    ellipse_x = center[0] + width * numpy.cos(t) * numpy.cos(phi) - height * numpy.sin(t) * numpy.sin(
+    ellipse_x = center[0] + width * np.cos(t) * np.cos(phi) - height * np.sin(t) * np.sin(
         phi) + x_noise / 2.
-    ellipse_y = center[1] + width * numpy.cos(t) * numpy.sin(phi) + height * numpy.sin(t) * numpy.cos(
+    ellipse_y = center[1] + width * np.cos(t) * np.sin(phi) + height * np.sin(t) * np.cos(
         phi) + y_noise / 2.
 
     return [ellipse_x, ellipse_y]
