@@ -68,6 +68,15 @@ class FileDirWidget(QtWidgets.QWidget):
         self.base_path_edit.setPlainText(path_file)
         self.path = path_file
 
+    def setReadOnly(self, readonly: bool):
+        """Lock only the text field; the browse button stays clickable regardless.
+
+        Without this, pyqtgraph's generic WidgetParameterItem.optsChanged() falls back to
+        disabling the whole widget on 'readonly' (no setReadOnly means no fine-grained
+        control), which also greys out the browse button -- not just the text edit.
+        """
+        self.base_path_edit.setReadOnly(readonly)
+
     def get_value(self):
         """
             Get the value of the base_path_edit attribute.
@@ -150,5 +159,4 @@ class FileDirParameter(Parameter):
         file_browserParameterItem
     """
     itemClass = FileDirParameterItem
-
 
