@@ -102,7 +102,7 @@ class ModulesManager(QObject, ParameterManager):
         self.move_done_positions: DataToExport = None
         self.move_done_flag = False
 
-        self.settings.child('probe_detectors').sigActivated.connect(self.get_det_data_list)
+        self.settings.child('probe_detectors').sigActivated.connect(lambda *_: self.get_det_data_list())
         self.settings.child('probe_actuators').sigActivated.connect(self.test_move_actuators)
 
         self._detectors = []
