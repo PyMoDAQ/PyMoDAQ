@@ -61,6 +61,8 @@ class PidLedState(StrEnum):
 class DAQ_PID(CustomExt):
     """ """
 
+    h5_base_group_name = 'PID'
+
     command_pid = Signal(ThreadCommand)
     curr_points_signal = Signal(dict)
     setpoints_signal = Signal(dict)

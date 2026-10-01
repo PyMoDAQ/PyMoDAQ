@@ -38,6 +38,7 @@ CLASS_NAME = 'DataMixer'  # this should be the name of your class defined below
 
 class DataMixer(CustomExt):
     settings_name = 'DataMixerSettings'
+    h5_base_group_name = 'DataMixer'
     models = get_models()
     params = [
         {'title': 'Models', 'name': 'models', 'type': 'group', 'expanded': True, 'visible': True,
