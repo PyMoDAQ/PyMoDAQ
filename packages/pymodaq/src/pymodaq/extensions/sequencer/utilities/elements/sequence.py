@@ -39,6 +39,11 @@ class SequenceElt(SeqEltBase):
         if sequence.title not in [seq.title for seq in cls.sequences]:
             cls.sequences.append(sequence)
 
+    @classmethod
+    def unregister_sequence(cls, sequence: 'Sequence'):
+        if sequence.title in [seq.title for seq in cls.sequences]:
+            cls.sequences.remove(sequence)
+
     def get_sequences(self) -> list['Sequence']:
         """ Get the list of Sequences that can be started, removing the one this element belong to"""
         sequences = list(self.sequences)
