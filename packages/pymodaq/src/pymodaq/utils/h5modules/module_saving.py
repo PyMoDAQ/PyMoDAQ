@@ -446,6 +446,11 @@ class TimeModuleSaver(ModuleSaver):
         # Fixed group name 'Timestamps' — no incremental index
         group = self._h5saver.get_set_group(where, 'Timestamps', title='Timestamps')
         self._h5saver.set_attr(group, 'type', 'time')
+        self._h5saver.set_attr(
+            group, 'description',
+            'Elapsed time (seconds) between scan start and when each scan point '
+            'was saved, measured with a monotonic clock (time.perf_counter). '
+            'Not an absolute/epoch timestamp.')
         settings_xml = ET.Element('All_settings', type='group')
         self._h5saver.set_attr(group, 'settings', ET.tostring(settings_xml))
         return group
@@ -464,6 +469,7 @@ class TimeModuleSaver(ModuleSaver):
             dte = DataToExport('Timestamps', data=[
                 DataRaw('ElapsedTime',
                         data=[np.array([elapsed_time], dtype=np.float32)],
+                        labels=['Elapsed time since scan start'],
                         units='s'),
             ])
             self._datatoexport_saver.add_data(

@@ -388,9 +388,8 @@ class GenericOptimization(CustomExt):
         self._module_and_data_saver = mod
         self._module_and_data_saver.h5saver = self.h5saver
 
-    def create_new_file(self, new_file):
-        if new_file:
-            self.close_file()
+    def create_new_file(self):
+        self.close_file()
         self.module_and_data_saver.h5saver = self.h5saver  # force all control modules to update their h5saver
 
     def close_file(self):
@@ -823,7 +822,7 @@ class GenericOptimization(CustomExt):
             self.module_and_data_saver = module_saving.OptimizerSaver(
                 self, enl_axis_names=self.modules_manager.selected_actuators_name,
                 enl_axis_units=[act.units for act in self.modules_manager.actuators])
-            self.create_new_file(True)
+            self.create_new_file()
             self.module_and_data_saver.h5saver = self.h5saver
             self.check_create_save_node()
         else:
