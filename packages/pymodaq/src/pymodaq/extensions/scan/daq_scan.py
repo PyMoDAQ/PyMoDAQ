@@ -199,10 +199,10 @@ class DAQScan(CustomExt):
             {'title': 'Plot 1Ds:', 'name': 'plot_1d', 'type': 'itemselect', 'checkbox': True},
             {'title': 'Prepare Viewers', 'name': 'prepare_viewers', 'type': 'action_led',
              'value': False, 'children': []},
-            {'title': 'Plot at each step?', 'name': 'plot_at_each_step', 'type': 'bool',
-             'value': True},
-            {'title': 'Refresh Plots (ms)', 'name': 'refresh_live', 'type': 'int',
-             'value': 1000, 'visible': False},
+            {'title': 'Plot every N steps:', 'name': 'plot_every_n_steps', 'type': 'int',
+             'value': 1, 'min': 0,
+             'tooltip': 'Refresh the live plot every N scan points (1 = every point). '
+                        '0 disables live plotting entirely during the scan.'},
             ]},
     ] + SaverWorker.params
 
@@ -281,8 +281,6 @@ class DAQScan(CustomExt):
 
         self.live_plotter = LoaderPlotter(None)
         self.live_plotter.dispatcher.dockarea.hide()
-        self.live_timer = QtCore.QTimer(self)
-        self.live_timer.timeout.connect(self.update_live_plots)
 
         self.settings.child('plot_options', 'prepare_viewers').sigActivated.connect(self.prepare_viewers)
         # Reuse the Detectors panel's probe button: probing already grabs the data
@@ -417,12 +415,14 @@ class DAQScan(CustomExt):
 
         self.plotting_settings_tree.setParameters(self.settings.child('plot_options'))
 
-        self.general_settings_tree.addParameters(self.settings.child(SaverWorker.worker_setting_name))
         self.general_settings_tree.addParameters(self.settings.child('time_flow'))
         self.general_settings_tree.addParameters(self.settings.child('scan_options'))
 
         self.h5saver.settings.setOpts(title='Save')
         self.general_settings_tree.addParameters(self.h5saver.settings)
+
+        # Worker diagnostics: rarely-glanced-at status, so it goes last, not first.
+        self.general_settings_tree.addParameters(self.settings.child(SaverWorker.worker_setting_name))
 
 
     def setup_actions(self):
@@ -897,8 +897,6 @@ class DAQScan(CustomExt):
         """
         if param.name() == 'scan_average':
             self.status_manager.show_average_step(param.value() > 1)
-        elif param.name() == 'plot_at_each_step':
-            self.settings.child('plot_options', 'refresh_live').show(not param.value())
 
     def clear_plot_from(self):
         self.settings.child('plot_options', 'plot_0d').setValue(dict(all_items=[], selected=[]))
@@ -994,7 +992,6 @@ class DAQScan(CustomExt):
         elif status.command == "Scan_done":
 
             self.modules_manager.reset_signals()
-            self.live_timer.stop()
             self.status_manager.set_scan_done()
             self.scan_done_signal.emit()
             try:
@@ -1063,7 +1060,8 @@ class DAQScan(CustomExt):
                                      scan_data.dte,
                                      scan_data.indexes,
                                      distribution=self.scanner.distribution)
-        if self.settings['plot_options', 'plot_at_each_step']:
+        n_steps = self.settings['plot_options', 'plot_every_n_steps']
+        if n_steps > 0 and scan_data.save_index % n_steps == 0:
             self.update_live_plots()
 
     def update_live_plots(self):
@@ -1225,8 +1223,6 @@ class DAQScan(CustomExt):
                 self.h5saver.set_swmr_flush_interval(interval)
 
             self.status_manager.set_scan_done(False)
-            if not self.settings['plot_options', 'plot_at_each_step']:
-                self.live_timer.start(self.settings['plot_options', 'refresh_live'])
             self.command_daq_signal.emit(utils.ThreadCommand('start_acquisition'))
             self.status_manager.set_permanent_status('Running acquisition')
             logger.info('Running acquisition')
