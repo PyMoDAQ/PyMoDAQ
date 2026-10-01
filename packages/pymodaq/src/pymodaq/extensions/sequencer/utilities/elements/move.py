@@ -46,6 +46,7 @@ class ActuatorScalableParameter(GroupParameter):
         child = {'title': f'{typ}',
                  'name': f'{typ}',
                  'type': 'float',
+                 'siPrefix': True,
                  'removable': True,
                  }
         self.addChild(child)
