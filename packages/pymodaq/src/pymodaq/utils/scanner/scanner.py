@@ -3,6 +3,7 @@ from typing import Tuple, List, TYPE_CHECKING, Any
 from collections import OrderedDict
 
 from serializall import SerializableFactory, SerializableBase
+from qtpy import QtCore
 from qtpy.QtCore import QObject, Signal
 from qtpy import QtWidgets
 
@@ -84,6 +85,8 @@ class Scanner(QObject, ParameterManager):
         ParameterManager.__init__(self)
 
         self._actuators: list[DAQ_Move] = selected_actuators
+        self._positions_dialog: QtWidgets.QDialog | None = None
+        self._positions_table: QtWidgets.QTableWidget | None = None
         self._actuators_all: list[DAQ_Move] = actuators
 
         self.orientation: Orientation = orientation
@@ -357,25 +360,69 @@ class Scanner(QObject, ParameterManager):
         labels = [axis.label if not axis.units else f'{axis.label} ({axis.units})'
                  for axis in self.get_nav_axes()]
 
+        if self._positions_dialog is not None:
+            self._positions_dialog.close()
+
         dialog = QtWidgets.QDialog()
         dialog.setWindowTitle(f'Scan positions ({self.n_steps} steps)')
         layout = QtWidgets.QVBoxLayout()
         dialog.setLayout(layout)
 
-        table = QtWidgets.QTableWidget(len(positions), len(labels))
-        table.setHorizontalHeaderLabels(labels)
+        table = QtWidgets.QTableWidget(len(positions), len(labels) + 1)
+        table.setHorizontalHeaderLabels(['Sampled'] + labels)
         table.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
         for row, pos in enumerate(positions):
+            status_item = QtWidgets.QTableWidgetItem('')
+            status_item.setTextAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+            table.setItem(row, 0, status_item)
             for col, value in enumerate(pos):
-                table.setItem(row, col, QtWidgets.QTableWidgetItem(f'{value:.6g}'))
+                table.setItem(row, col + 1, QtWidgets.QTableWidgetItem(f'{value:.6g}'))
         layout.addWidget(table)
 
         buttons = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.StandardButton.Close)
-        buttons.rejected.connect(dialog.reject)
+        buttons.rejected.connect(dialog.close)
         layout.addWidget(buttons)
 
+        dialog.setAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose)
+        dialog.destroyed.connect(self._on_positions_dialog_closed)
+        self._positions_dialog = dialog
+        self._positions_table = table
         dialog.resize(500, 400)
-        dialog.exec()
+        dialog.show()  # non modal so that it can follow the scan progress
+
+    def _on_positions_dialog_closed(self, *args):
+        self._positions_dialog = None
+        self._positions_table = None
+
+    def update_scan_progress(self, ind_scan: int, done: bool = False):
+        """Mark in the positions table (if shown) which positions have been sampled
+
+        Parameters
+        ----------
+        ind_scan: int
+            index of the position currently being reached/measured, all lower ones are considered sampled
+        done: bool
+            if True, all positions are marked as sampled
+        """
+        table = self._positions_table
+        if table is None:
+            return
+        for row in range(table.rowCount()):
+            item = table.item(row, 0)
+            if done or row < ind_scan:
+                item.setText('\u2713')
+            elif row == ind_scan:
+                item.setText('\u25b6')
+            else:
+                item.setText('')
+        if not done and 0 <= ind_scan < table.rowCount():
+            table.scrollToItem(table.item(ind_scan, 0))
+
+    def reset_scan_progress(self):
+        """Clear the sampled marks in the positions table (if shown)"""
+        if self._positions_table is not None:
+            for row in range(self._positions_table.rowCount()):
+                self._positions_table.item(row, 0).setText('')
 
     def update_from_scan_selector(self, scan_selector: Selector):
         self._scanner.update_from_scan_selector(scan_selector)
