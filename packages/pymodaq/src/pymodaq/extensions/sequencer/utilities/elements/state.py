@@ -6,6 +6,7 @@ from qtpy import QtCore
 from qt_themes import get_theme
 from serializall import SerializableFactory
 
+from pymodaq.utils.data import DataActuator
 from pymodaq_utils.logger import set_logger, get_module_name
 
 from pymodaq_data import DataToExport
@@ -82,9 +83,9 @@ class StateElt(SeqEltBase):
         self._states: list[str] = self.state_manager.entries
         self._experiment: str = self.state_manager.experiment_filename
 
-        self.state_manager.applied_entry.connect(
-            lambda: self.done_signal.emit())
+        self.state_manager.applied_entry.connect(self._on_state_executed)
         self.state_manager.new_entry.connect(self.set_states)
+        self.state_manager.actuator_moved.connect(self.save_actuator_moved)
         self.update_states()
 
     def update_states(self):
@@ -116,9 +117,17 @@ class StateElt(SeqEltBase):
 
         return base_widget
 
-    def _execute(self, dte: DataToExport):
+    def _execute(self, dte: DataToExport = None):
         self.state_manager.entry = self.state
         self.state_manager.execute_entry()
+
+    def _on_state_executed(self):
+
+        self.done_signal.emit()
+
+    def save_actuator_moved(self, dwa: DataActuator):
+        dte = DataToExport(dwa.origin, data=[dwa])
+        self.save_data(dte, done=False)
 
     def to_dict_custom(self) -> dict[str, Any]:
         """ adds attribute to a dict in order to produce a human readable
