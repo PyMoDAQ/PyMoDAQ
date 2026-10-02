@@ -695,7 +695,7 @@ class DAQScan(CustomExt):
         box.layout().setContentsMargins(8, 18, 8, 8)
         box.setAlignment(QtCore.Qt.AlignmentFlag.AlignHCenter)
         box.setStyleSheet(
-            'QGroupBox { font-weight: bold; font-size: 11pt; margin-top: 6px; } '
+            'QGroupBox { font-weight: bold; font-size: 12pt; margin-top: 6px; } '
             'QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top center; '
             'padding: 0 6px; }')
         return box
@@ -704,7 +704,7 @@ class DAQScan(CustomExt):
     def _section_label(text: str) -> QtWidgets.QLabel:
         label = QtWidgets.QLabel(text)
         label.setAlignment(QtCore.Qt.AlignmentFlag.AlignHCenter)
-        label.setStyleSheet('font-weight: bold; font-size: 10pt;')
+        label.setStyleSheet('font-weight: bold; font-size: 11pt;')
         return label
 
     @staticmethod
@@ -998,11 +998,14 @@ class DAQScan(CustomExt):
             self.status_manager.set_scan_step(status.attribute[0] + 1)
             self.ind_average = status.attribute[1]
             self.status_manager.set_scan_step_average(status.attribute[1] + 1)
+            self.scanner.update_scan_progress(self.ind_scan)
 
         elif status.command == "Scan_done":
 
             self.modules_manager.reset_signals()
             self.status_manager.set_scan_done()
+            self.scanner.update_scan_progress(self.ind_scan, done=True)
+            self._set_selection_enabled(True)
             self.scan_done_signal.emit()
             try:
                 self.module_and_data_saver.flush()
@@ -1209,7 +1212,9 @@ class DAQScan(CustomExt):
             scan_node = self.module_and_data_saver.get_set_node(new=True)
             self.save_metadata(scan_node, 'scan_info')
 
+            self._set_selection_enabled(False)
             self._init_live()
+            self.scanner.reset_scan_progress()
             Naverage = self.settings['scan_options', 'scan_average']
             nav_axes = self.scanner.get_nav_axes()
             if Naverage > 1:
@@ -1236,6 +1241,14 @@ class DAQScan(CustomExt):
             self.command_daq_signal.emit(utils.ThreadCommand('start_acquisition'))
             self.status_manager.set_permanent_status('Running acquisition')
             logger.info('Running acquisition')
+
+    def _set_selection_enabled(self, enabled: bool):
+        """Lock/unlock the actuators, detectors and scan definition while a scan is running
+
+        The plotting options stay editable.
+        """
+        for widget in (self.actuators_settings_tree, self.detectors_settings_tree):
+            widget.setEnabled(enabled)
 
     def ini_scan_acquisition(self):
         self.scan_acquisition = DAQScanAcquisition(self)
