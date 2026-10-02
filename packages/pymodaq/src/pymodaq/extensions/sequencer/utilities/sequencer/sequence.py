@@ -165,7 +165,7 @@ class Sequence(CustomExt):
     def root_elt(self) -> RootElt:
         return self._model.root_elt
 
-    def iterate_elts(self, elt: SeqEltBase = None) -> Generator[SeqEltBase]:
+    def iterate_elts(self, elt: SeqEltBase = None) -> Generator[SeqEltBase, None, None]:
         if elt is None:
             elt = self.root_elt
         for elt_child in elt.children:
