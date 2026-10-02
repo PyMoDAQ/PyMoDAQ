@@ -54,3 +54,8 @@ wait_time_between = 0
 [launcher]
 max_history_size = 20
 keep_duplicates = false
+
+[ramping]
+duration_units = [ "s", "min",]
+ramp_setting = [ "duration", "velocity",]
+

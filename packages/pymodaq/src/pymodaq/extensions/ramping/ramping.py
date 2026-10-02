@@ -124,11 +124,11 @@ class RampExtension(CustomExt):
             {'title': 'Start:', 'name': 'start', 'type': 'float', 'value': 500.},
             {'title': 'Stop:', 'name': 'stop', 'type': 'float', 'value': 560.},
             {'title': 'Duration:', 'name': 'duration', 'type': 'float', 'value': 20,
-             'suffix': config('ramping', 'duration_units')[0], 'siPrefix': True,
-             'readonly': config('ramping', 'ramp_setting')[0] != 'duration'},
+             'suffix': config('pymodaq', 'ramping', 'duration_units')[0], 'siPrefix': True,
+             'readonly': config('pymodaq', 'ramping', 'ramp_setting')[0] != 'duration'},
             {'title': 'Velocity:', 'name': 'velocity', 'type': 'float', 'value': 0,
              'suffix': '', 'siPrefix': True,
-             'readonly': config('ramping', 'ramp_setting')[0] != 'velocity'},
+             'readonly': config('pymodaq', 'ramping', 'ramp_setting')[0] != 'velocity'},
         ]},
         {'title': 'Use Steps:', 'name': 'use_steps', 'type': 'bool', 'value': True},
         {'title': 'Steps:', 'name': 'steps', 'type': 'group', 'children': [
@@ -318,7 +318,7 @@ class RampExtension(CustomExt):
         elif param.name() == 'use_steps':
             self.settings.child('steps').show(param.value())
         if param.name() in ('start', 'stop', 'time_step'):
-            if config('ramping', 'ramp_setting')[0] == 'duration':
+            if config('pymodaq', 'ramping', 'ramp_setting')[0] == 'duration':
                 self.update_velocity()
             else:
                 self.update_duration()
@@ -331,7 +331,7 @@ class RampExtension(CustomExt):
 
     @property
     def duration_units(self) -> str:
-        return config('ramping', 'duration_units')[0]
+        return config('pymodaq', 'ramping', 'duration_units')[0]
 
     def update_n_steps(self):
         self.settings['steps', 'nsteps'] = (self.q_from_param(('ramp', 'duration')) /
