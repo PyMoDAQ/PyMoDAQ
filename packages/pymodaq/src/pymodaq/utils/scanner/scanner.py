@@ -103,7 +103,7 @@ class Scanner(QObject, ParameterManager):
             self.settings.child('n_steps').setValue(self._scanner.evaluate_steps())
 
     def __repr__(self):
-        return f'Scanner {self.scan_type}/{self.scan_sub_type} {self.n_steps} steps of {self.actuators}'
+        return f"Scanner {self.scan_type}/{self.scan_sub_type} {self.settings['n_steps']} steps of {self.actuators}"
 
     def to_dict(self, use_real_actuators = False) -> dict[str, Any]:
         """ Dictionary representation of the scanner object

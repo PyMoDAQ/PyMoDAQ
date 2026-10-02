@@ -167,9 +167,15 @@ class DAQ_Move(ParameterControlModule):
 
     @property
     def current_value(self) -> DataActuator:
-        if self._current_value.origin is None:
+        if self._current_value.origin is None or self._current_value.origin == '':
             self.current_value.origin = self.title
         return self._current_value
+
+    @property
+    def target_value(self) -> DataActuator:
+        if self._target_value.origin is None or self._target_value.origin == '':
+            self._target_value.origin = self.title
+        return self._target_value
 
     @property
     def epsilon(self) -> float:

@@ -30,7 +30,7 @@ class ActuatorScalableParameter(GroupParameter):
     """
 
     def __init__(self, **opts):
-        opts['type'] = 'act_move'
+        opts['type'] = 'act_move_elt'
         opts['addText'] = 'Add'
 
         opts['addMenu'] = categorize_items(opts['actuators'])
@@ -46,11 +46,13 @@ class ActuatorScalableParameter(GroupParameter):
         child = {'title': f'{typ}',
                  'name': f'{typ}',
                  'type': 'float',
+                 'siPrefix': True,
                  'removable': True,
                  }
         self.addChild(child)
 
 registerParameterType('act_move_elt', ActuatorScalableParameter, override=True)
+
 
 @dataclasses.dataclass
 class ValueUnits:

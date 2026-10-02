@@ -31,7 +31,7 @@ def ini_daq_viewer_ui(qtbot):
     qtbot.addWidget(roi_dock)
     widget = QtWidgets.QWidget()
     win.setCentralWidget(widget)
-    prog = DAQ_Viewer_UI(widget, rois_dock=roi_dock)
+    prog = DAQ_Viewer_UI(app=None,parent=widget, rois_dock=roi_dock)
     win.show()
     yield prog, qtbot
     prog.close()

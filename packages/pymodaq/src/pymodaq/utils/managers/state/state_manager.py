@@ -7,6 +7,7 @@ import toml
 from qtpy import QtWidgets, QtCore, QtGui
 from serializall import SerializableFactory, SerializableBase
 
+from pymodaq.utils.data import DataActuator
 from pymodaq.utils.managers.modules import ModuleType
 from pymodaq.utils.managers.modules.module_settings_manager import ModulesSettingsManager
 from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager
@@ -64,6 +65,7 @@ class StateManager(SettingsManager):
     entry_extension ='.state'
     icon_name = 'discover_tune'
     settings_handler = StateSubEntryHandlerTypes.SETTINGS
+    actuator_moved = QtCore.Signal(DataActuator)
 
     def __init__(self,
                  dashboard: 'DashBoard' = None):
@@ -233,6 +235,12 @@ class StateManager(SettingsManager):
             self.finalize()
 
     def _on_executed(self, ind_subentry):
+        entry: SubEntry = self.config_subentries[self._ind_subentry]
+        if entry.entry_type == StateSubEntryHandlerTypes.ACTUATOR_VALUE:
+            module = self.modules_manager.get_mod_from_name(entry.module_name,
+                                                            mod=ModuleType.Actuator)
+            self.actuator_moved.emit(module.target_value)
+
         self._processed_subentries += 1
         self.subentries_model.set_status(ind_subentry, True)
         if not self.is_action_checked('parallel_execution'):
