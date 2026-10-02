@@ -151,7 +151,7 @@ class Sequencer(CustomExt):
                                        text=f'The Sequence Elt id {elt.id} in sequence {seq.title} '
                                             f'was set on a sequence '
                                             f'that has been deleted, please review it!!!')
-                            
+
                         elt.sequence = new_name
                         index = seq.model.index_from_element(elt)
 

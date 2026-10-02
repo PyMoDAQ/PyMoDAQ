@@ -82,8 +82,8 @@ class Scan2DLinear(Scan2DBase):
         self.settings['axis1', 'stop_axis1'] = scanner_dict['axis1']['stop']
         self.settings['axis1', 'step_axis1'] = scanner_dict['axis1']['step']
         self.settings['axis2', 'start_axis2'] = scanner_dict['axis2']['start']
-        self.settings['axis2', 'stop_axis2'] = scanner_dict['axis2']['start']
-        self.settings['axis2', 'step_axis2'] = scanner_dict['axis2']['start']
+        self.settings['axis2', 'stop_axis2'] = scanner_dict['axis2']['stop']
+        self.settings['axis2', 'step_axis2'] = scanner_dict['axis2']['step']
 
     def set_units(self):
         """ Update settings units depending on the scanner type and the display_units boolean"""
@@ -107,6 +107,8 @@ class Scan2DLinear(Scan2DBase):
         n_steps = 1
         for ind in range(starts.size):
             n_steps *= np.abs((stops[ind] - starts[ind]) / steps[ind]) + 1
+        if np.isnan(n_steps) or np.isinf(n_steps):
+            n_steps = -1
         return int(n_steps)
 
     def set_scan(self):
