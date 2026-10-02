@@ -137,12 +137,13 @@ class ExperimentManager(ManagerBase):
         self.dashboard.mainwindow.setWindowTitle(f"PyMoDAQ Dashboard: {self.dashboard.title}")
 
 
+
         self.dashboard.update_status(
             f"{self.entry_type.capitalize()} ({self.entry_filepath.name}) has been loaded",
             log_type="log",
         )
-        self.dashboard.actuators_modules = [mod for mod in modules if isinstance(mod, DAQ_Move)]
-        self.dashboard.detector_modules = [mod for mod in modules if isinstance(mod, DAQ_Viewer)]
+
+        self.dashboard.modules_manager.add_modules(modules)  # trigger an update of the master list
 
         self.dashboard.mainwindow.setVisible(True)
         for area in self.dashboard.dockarea.tempAreas:
