@@ -644,7 +644,7 @@ class ScanSaver(ExtensionSaver):
 
 
 class LoggerSaver(ExtensionSaver):
-    """Implementation of the ModuleSaver class dedicated to H5Logger module
+    """Implementation of the ModuleSaver class dedicated to Logger module
 
     H5Logger is the special logger to h5file of the DAQ_Logger extension
 
@@ -654,6 +654,7 @@ class LoggerSaver(ExtensionSaver):
     module
     """
     group_type = GroupModuleType.DATALOGGER
+
     def __init__(self, module):
         super().__init__(module)
 
