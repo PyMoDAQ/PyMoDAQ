@@ -73,8 +73,8 @@ def select_file(start_path=config('data', 'data_saving', 'h5file', 'save_path'),
     ext: str
         the extension string, e.g. xml, h5, png ...
     filter: string
-        list of possible extensions, if you need several you can separate them by ;;
-        for example: "Images (*.png *.xpm *.jpg);;Text files (*.txt);;XML files (*.xml)"
+        list of possible extensions, if you need several you can separate them by ``;;``
+        for example: ``"Images (*.png *.xpm *.jpg);;Text files (*.txt);;XML files (*.xml)"``
     force_save_extension: bool
         if True force the extension of the saved file to be set to ext
 

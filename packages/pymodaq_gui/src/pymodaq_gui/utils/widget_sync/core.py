@@ -1618,10 +1618,12 @@ class DictSync(BaseWidgetSync):
             Each key maps to a dict with:
 
             **Shortcut for parameter value** (most common case):
+
             - 'param': Parameter - Automatically uses sigValueChanged, value(), setValue()
               This is equivalent to specifying signal/getter/setter manually
 
             **OR Manual specification**:
+
             - 'getter': callable () -> value - Function to get parameter value
             - 'setter': callable (value) -> None - Function to set parameter value
             - 'signal': Signal (optional) - Parameter signal for bidirectional sync

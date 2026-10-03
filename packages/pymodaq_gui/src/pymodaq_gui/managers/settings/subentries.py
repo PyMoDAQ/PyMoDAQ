@@ -224,8 +224,10 @@ class SettingsEntryHandler(SubEntryHandler):
 
         Examples
         --------
-        module = self.get_module(entry, *args, **kwargs)
-        module.settings.child(*entry.setting.path).setValue(entry.setting.value())
+        ::
+
+            module = self.get_module(entry, *args, **kwargs)
+            module.settings.child(*entry.setting.path).setValue(entry.setting.value())
         """
         raise NotImplementedError
 

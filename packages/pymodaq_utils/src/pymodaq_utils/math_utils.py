@@ -487,21 +487,22 @@ def flatten(xs):
 class LSqEllipse:
 
     def fit(self, data):
-        """Lest Squares fitting algorithm
+        """Least Squares fitting algorithm
 
         Theory taken from (*)
-        Solving equation Sa=lCa. with a = |a b c d f g> and a1 = |a b c>
-            a2 = |d f g>
+        Solving equation ``Sa=lCa``, with ``a = |a b c d f g>``, ``a1 = |a b c>`` and ``a2 = |d f g>``
 
-        Args
-        ----
-        data (list:list:float): list of two lists containing the x and y data of the
-            ellipse. of the form [[x1, x2, ..., xi],[y1, y2, ..., yi]]
+        Parameters
+        ----------
+        data: list of list of float
+            list of two lists containing the x and y data of the ellipse, of the form
+            ``[[x1, x2, ..., xi],[y1, y2, ..., yi]]``
 
         Returns
-        ------
-        coef (list): list of the coefficients describing an ellipse
-           [a,b,c,d,f,g] corresponding to ax**2+2bxy+cy**2+2dx+2fy+g
+        -------
+        list
+            the coefficients ``[a,b,c,d,f,g]`` describing an ellipse corresponding to
+            ``ax**2+2bxy+cy**2+2dx+2fy+g``
         """
         x, y = np.asarray(data, dtype=float)
 
@@ -540,17 +541,22 @@ class LSqEllipse:
 
         Theory taken form http://mathworld.wolfram
 
-        Args
-        -----
-        coef (list): list of the coefficients describing an ellipse
-           [a,b,c,d,f,g] corresponding to ax**2+2bxy+cy**2+2dx+2fy+g
+        Parameters
+        ----------
+        coef: list
+            list of the coefficients describing an ellipse ``[a,b,c,d,f,g]`` corresponding to
+            ``ax**2+2bxy+cy**2+2dx+2fy+g``
 
         Returns
-        _______
-        center (List): of the form [x0, y0]
-        width (float): major axis
-        height (float): minor axis
-        phi (float): rotation of major axis form the x-axis in radians
+        -------
+        center: list
+            of the form [x0, y0]
+        width: float
+            major axis
+        height: float
+            minor axis
+        phi: float
+            rotation of major axis form the x-axis in radians
         """
 
         # eigenvectors are the coefficients of an ellipse in general form
@@ -608,18 +614,22 @@ class LSqEllipse:
 def make_test_ellipse(center=[1, 1], width=1, height=.6, phi=3.14 / 5):
     """Generate Elliptical data with noise
 
-    Args
-    ----
-    center (list:float): (<x_location>, <y_location>)
-    width (float): semimajor axis. Horizontal dimension of the ellipse (**)
-    height (float): semiminor axis. Vertical dimension of the ellipse (**)
-    phi (float:radians): tilt of the ellipse, the angle the semimajor axis
-        makes with the x-axis
+    Parameters
+    ----------
+    center: list of float
+        (<x_location>, <y_location>)
+    width: float
+        semimajor axis. Horizontal dimension of the ellipse
+    height: float
+        semiminor axis. Vertical dimension of the ellipse
+    phi: float
+        tilt of the ellipse in radians, the angle the semimajor axis makes with the x-axis
 
     Returns
     -------
-    data (list:list:float): list of two lists containing the x and y data of the
-        ellipse. of the form [[x1, x2, ..., xi],[y1, y2, ..., yi]]
+    list of list of float
+        list of two lists containing the x and y data of the ellipse, of the form
+        ``[[x1, x2, ..., xi],[y1, y2, ..., yi]]``
     """
     t = np.linspace(0, 2 * np.pi, 1000)
     x_noise, y_noise = np.random.rand(2, len(t))

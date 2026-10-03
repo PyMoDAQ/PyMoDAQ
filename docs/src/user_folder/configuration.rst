@@ -91,10 +91,6 @@ Below is a non exhaustive list of configuration entries stored in the *config_py
             ip = "10.47.3.22"
             port = 5432
 
-        [network.tcp-server]
-        ip = "10.47.0.39"
-        port = 6341
-
 
 .. important::
 

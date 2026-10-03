@@ -361,7 +361,6 @@ signal/navigation, see :ref:`DataND <navigation_signal>`.
 .. |roi_select2D| image:: plotting_data/viewer2D_roi_select.png
 .. |orientation| image:: plotting_data/viewer2D_orientation.png
 .. |legend| image:: plotting_data/viewer2D_legend.png
-.. |Showing Data2D with saturation and crosshair| image::
 
 .. code:: ipython3
 
@@ -572,7 +571,7 @@ Such an object is a ViewerDispatcher:
 
 .. code:: ipython3
 
-    from pymodaq.utils.plotting.data_viewers.viewer import ViewerDispatcher
+    from pymodaq_gui.plotting.data_viewers.viewer import ViewerDispatcher
 
 It allows to generate on the fly `Docks` containing a data
 viewers adapted to the particular dwa is contains. Such a dispatcher is

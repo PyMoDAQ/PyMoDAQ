@@ -65,7 +65,6 @@ extensions = [
     "sphinx_qt_documentation",
     "sphinx_design",
     "sphinx_favicon",
-    "sphinxext.rediraffe",
     "sphinxcontrib.images",
     "sphinx_autodoc_typehints",
     'sphinx.ext.doctest',
@@ -88,7 +87,15 @@ qt_documentation = "PyQt6"
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
     'numpy': ('https://numpy.org/doc/stable/', None),
+    'pyqtgraph': ('https://pyqtgraph.readthedocs.io/en/latest/', None),
 }
+
+# forward references and guarded imports (under TYPE_CHECKING, to avoid circular imports) that
+# sphinx_autodoc_typehints cannot resolve: the annotations are still displayed
+suppress_warnings = [
+    'sphinx_autodoc_typehints.forward_reference',
+    'sphinx_autodoc_typehints.guarded_import',
+]
 
 nitpick_ignore_regex = [
     ("py:class", r"re\.Pattern"),  # doesn't seem to be a good ref in python docs
@@ -98,7 +105,7 @@ napoleon_preprocess_types = True
 napoleon_type_aliases = {
     "callable": ":class:`collections.abc.Callable`",
     "np.ndarray": ":class:`numpy.ndarray`",
-    'array_like': ':term:`array_like`',
+    'array_like': ':term:`numpy:array_like`',
     'color_like': ':func:`pyqtgraph.mkColor`',
     # 'ColorMapSpecifier': ':class:`str`, (:class:`str`, :class:`str`), or :class:`~pyqtgraph.ColorMap`',
 }
@@ -124,6 +131,10 @@ numpydoc_class_members_toctree = False
 
 napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = False
+# render docstring "Attributes" sections as fields: as directives they duplicate the members documented by autodoc
+napoleon_use_ivar = True
+# same for "Methods" sections, rendered as a list instead of method directives
+napoleon_custom_sections = [("Methods", "params_style")]
 
 primary_domain = 'py'
 
@@ -156,13 +167,7 @@ pygments_style = 'sphinx'
 
 autodoc_inherit_docstrings = False
 autodoc_mock_imports = [
-    "scipy",
-    "h5py",
     "matplotlib",
-    "qtpy",
-    "qtpy.QtCore",
-    "qtpy.QtGui",
-    "qtpy.QtWidgets",
 ]
 
 
@@ -248,10 +253,6 @@ texinfo_documents = [
 
 # -- Extension configuration -------------------------------------------------
 
-# -- Options for intersphinx extension ---------------------------------------
-
-# Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'python': ('https://docs.python.org/', None)}
 
 # DATATABLES.NET option
 datatables_options = {
@@ -259,3 +260,26 @@ datatables_options = {
 }
 
 
+
+
+def _guard_process_signature_handlers(app):
+    """ Only let extensions process a signature when autodoc found one
+
+    Some extensions return a signature for objects documented as attributes (with no signature found by autodoc): Qt
+    Signals for sphinx_qt_documentation, Enum members whose value is a type for numpydoc... Sphinx >= 9 then fails with
+    "list assignment index out of range" when storing it.
+    """
+    def guarded(handler):
+        def process_signature(app, what, name, obj, options, signature, return_annotation):
+            if signature is None:
+                return None
+            return handler(app, what, name, obj, options, signature, return_annotation)
+        return process_signature
+
+    for listener in list(app.events.listeners.get('autodoc-process-signature', [])):
+        app.disconnect(listener.id)
+        app.connect('autodoc-process-signature', guarded(listener.handler), priority=listener.priority)
+
+
+def setup(app):
+    _guard_process_signature_handlers(app)

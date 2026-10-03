@@ -441,15 +441,19 @@ class ActionManager:
             set the current state of the action
         toolbar: str or QToolBar or None
             a toolbar where action should be added. Can be:
-            - None: adds to the default menu (self._toolbar)
+
+            - None: adds to the default toolbar (self._toolbar)
             - str: toolbar name as registered via add_toolbar()
             - QToolbar: direct QToolbar instance
-              Actions can also be added later see *affect_to*
+
+            Actions can also be added later see *affect_to*
         menu: str or QMenu or None
             Where to add the action. Can be:
+
             - None: adds to the default menu (self._menu)
             - str: menu name as registered via add_menu()
             - QMenu: direct QMenu instance
+
             Actions can also be added later see *affect_to*
         visible: bool
             display or not the action in the toolbar/menu
@@ -461,7 +465,7 @@ class ActionManager:
             if True add this action to the defined menu
         enabled: bool
             set the enabled state of this action
-        icon_checked: : str / Path / QtGui.QIcon / enum name
+        icon_checked: str / Path / QtGui.QIcon / enum name
             str/Path: the png file name/path to produce the icon
             QtGui.QIcon: the instance of a QIcon element
             ThemeIcon enum: the value of QtGui.QIcon.ThemeIcon (requires Qt>=6.7)
@@ -487,8 +491,7 @@ class ActionManager:
 
         See Also
         --------
-        affect_to, pymodaq.resources.QtDesigner_Ressources.icon_library,
-        pymodaq.utils.managers.action_manager.add_action
+        affect_to
         """
         toolbar = self._resolve_toolbar(toolbar, auto=auto_toolbar)
         menu = self._resolve_menu(menu, auto=auto_menu)

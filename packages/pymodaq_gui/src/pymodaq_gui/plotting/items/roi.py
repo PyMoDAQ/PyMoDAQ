@@ -451,7 +451,7 @@ class EllipseROI(ROI):
     **Arguments**
     pos            (length-2 sequence) The position of the ROI's origin.
     size           (length-2 sequence) The size of the ROI's bounding rectangle.
-    **args         All extra keyword arguments are passed to ROI()
+    \*\*args       All extra keyword arguments are passed to ROI()
     ============== =============================================================
 
     """

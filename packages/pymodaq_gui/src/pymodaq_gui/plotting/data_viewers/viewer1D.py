@@ -541,14 +541,15 @@ class View1D(ActionManager, QObject):
 
 
 class Viewer1D(ViewerBase):
-    """ DataWithAxis of type Data1D can be plotted using this data viewer
+    """ DataWithAxes of type Data1D can be plotted using this data viewer
 
     Methods
     -------
     show_data:
-        parameter:
-        * dwa: a DataWithaxis
-        * scatter_dwa: an optional extra DataWithAxis to be plotted with scatter points
+        parameters:
+
+        * dwa: a DataWithAxes
+        * scatter_dwa: an optional extra DataWithAxes to be plotted with scatter points
           it could define extra_attributes such as symbol: str (to define the symbol layout
           default: 'o') and symbol_size: int (to define the symbol size)
 

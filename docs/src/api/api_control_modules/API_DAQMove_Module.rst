@@ -2,7 +2,7 @@
 .. autosummary::
 
     pymodaq.control_modules.daq_move.DAQ_Move
-    pymodaq.control_modules.daq_move.DAQ_Move_Hardware
+    pymodaq.control_modules.daq_move.ActuatorWorker
     pymodaq.control_modules.move_utility_classes.params
 
 
@@ -24,7 +24,17 @@ The DAQ_Move UI class
 This object is the User Interface of the DAQ_Viewer, allowing easy access to all of the DAQ_Viewer functionnalities
 in a generic interface.
 
-.. autoclass:: pymodaq.control_modules.daq_move_ui::DAQ_Move_UI
+.. autoclass:: pymodaq.control_modules.daq_move_ui.ui_base::DAQMoveUI
+   :members:
+
+
+The ActuatorWorker class
+************************
+
+The worker object living in the plugin thread and responsible for the communication between DAQ_Move
+and the plugin itself
+
+.. autoclass:: pymodaq.control_modules.daq_move::ActuatorWorker
    :members:
 
 
