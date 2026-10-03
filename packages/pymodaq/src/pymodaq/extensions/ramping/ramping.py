@@ -404,9 +404,11 @@ class RampingWorker(ExtensionWorker):
         return self.app.h5_histogrammer
 
     def _on_data_processed(self, dte: DataToExport):
-        self.app.viewer.show_data(dte)
-        if self._running:
-            self.run_plot_timer()
+        try:
+            self.app.viewer.show_data(dte)
+        finally:  # keep the live histogram going even if one display failed
+            if self._running:
+                self.run_plot_timer()
 
     def run_plot_timer(self):
         QtCore.QTimer.singleShot(int(self.app.q_from_param(('refresh_plot',)).m_as('ms')), self.update_histogramer)
@@ -424,14 +426,12 @@ class RampingWorker(ExtensionWorker):
             self.histo_settings['histo', 'start'] = self.ramp.start.m_as(self.actuator.units)
             self.histo_settings['histo', 'stop'] = self.ramp.end.m_as(self.actuator.units)
 
-            self.histo_settings['histo', 'actuators'] = dict(
-                all_items=self.settings['actuators']['all_items'],
-                selected=self.settings['actuators']['selected'])
-            self.histo_settings['histo', 'detectors'] = dict(
-                all_items=self.settings['detectors']['all_items'],
-                selected=self.settings['detectors']['selected'])
-            self.histo_settings['histo', 'autobin'] = True
-        self.histo_settings.setOpts(enabled=False)
+            # only the saved modules can be plotted, keep the user selection among them
+            self.histo_settings['histo', 'actuators'] = self.h5_browser.get_selection(
+                'actuators', self.settings['actuators']['selected'])
+            self.histo_settings['histo', 'detectors'] = self.h5_browser.get_selection(
+                'detectors', self.settings['detectors']['selected'])
+        self.h5_browser.live = True
 
     def update_histogramer(self):
         if not self._running:  # the plot timer may fire after the ramp has been stopped
@@ -441,8 +441,9 @@ class RampingWorker(ExtensionWorker):
             self.actuator.title,
             self.ramp.start.m_as(self.actuator.units),
             self.ramp.end.m_as(self.actuator.units),
-            other_names=[act.title for act in self.actuators] + [det.title for det in self.detectors],
-            bins='auto')
+            other_names=(self.histo_settings['histo', 'actuators']['selected'] +
+                         self.histo_settings['histo', 'detectors']['selected']),
+            bins='auto' if self.histo_settings['histo', 'autobin'] else self.histo_settings['histo', 'nbins'])
 
         # count the job before emitting it so that the number of pending tasks never gets negative
         self.thread_manager.n_jobs[HistogramProcessor.name] += 1
@@ -501,7 +502,6 @@ class RampingWorker(ExtensionWorker):
         self._app.set_action_enabled('update_histogram', True)
 
         self.go_to_ini_ramp(callback=self._on_ini_ramp_done)
-        self.app.histogramer_settings_dock.setEnabled(False)
 
     def _on_ini_ramp_done(self, dte: DataToExport):
         self.modules_manager.forget_callback(self._on_ini_ramp_done,
@@ -668,7 +668,7 @@ class RampingWorker(ExtensionWorker):
             self.status_manager.is_ramping = True
 
     def _on_workers_terminated(self):
-        self.app.histogramer_settings_dock.setEnabled(True)
+        self.h5_browser.live = False
         self.h5_browser.update_settings_from_file(self.h5_manager.get_h5saver(mode='r').file_path)
 
 

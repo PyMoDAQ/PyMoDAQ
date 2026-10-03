@@ -44,6 +44,10 @@ class H5Histogramming(QObject, ParameterManager):
         {'title': 'Compute Histogram', 'name': 'compute_histogram', 'type': 'action'}
     ]
 
+    # settings that cannot be changed while ramping (the other ones are used by the live histogram)
+    live_locked_settings = (('h5info', 'node_path'), ('histo', 'actuator'), ('histo', 'start'), ('histo', 'stop'),
+                            ('compute_histogram',))
+
     def __init__(self, h5_manager: H5Manager, viewer: ViewerDispatcher, parent=None):
         QObject.__init__(self, parent)
         ParameterManager.__init__(self)
@@ -55,6 +59,7 @@ class H5Histogramming(QObject, ParameterManager):
         self._data_loader: DataLoader = None
 
         self._histogram_processor: HistogramProcessor = None
+        self._live = False
 
         self._h5_manager.file_loaded_signal.connect(self.update_settings_from_file)
 
@@ -71,6 +76,37 @@ class H5Histogramming(QObject, ParameterManager):
 
             self._histogram_processor.data_processed_signal.connect(self._viewer.show_data)
         return self._histogram_processor
+
+    @property
+    def live(self) -> bool:
+        """ True while ramping: the histogram is computed by the ramping worker, not from here"""
+        return self._live
+
+    @live.setter
+    def live(self, live: bool):
+        self._live = live
+        for path in self.live_locked_settings:
+            self.settings.child(*path).setOpts(enabled=not live)
+
+    def get_selection(self, modules_type: str, available: list[str]) -> dict:
+        """ Get the itemselect value of the detectors or actuators to plot, keeping the current selection
+
+        Parameters
+        ----------
+        modules_type: str
+            either 'detectors' or 'actuators'
+        available: list of str
+            the names of the modules having data
+
+        Returns
+        -------
+        dict: all_items are the available modules, selected the ones already selected and still available, plus the
+        ones that were not listed before (all of them the first time)
+        """
+        current = self.settings['histo', modules_type]
+        selected = [name for name in available
+                    if name in current['selected'] or name not in current['all_items']]
+        return dict(all_items=list(available), selected=selected)
 
     def update_histogramer(self):
         self.histogram_processor.data_to_process_signal.emit(
@@ -161,7 +197,8 @@ class H5Histogramming(QObject, ParameterManager):
         elif param.name()  == 'autobin':
             self.settings.child('histo', 'nbins').setReadonly(param.value())
 
-        self.update_histogramer()
+        if not self._live:  # while ramping, the settings are used at the next refresh of the live histogram
+            self.update_histogramer()
 
     def get_set_bounds(self, actuator_name: str):
         dwa = self.data_loader.load_all(where=self._actuators[actuator_name])[0]
@@ -190,10 +227,8 @@ class H5Histogramming(QObject, ParameterManager):
         with tree_change_blocker(self.settings, keep=set()):
             group_histo.child('actuator').setOpts(limits=[actuator_name] + actuators_name)
 
-            group_histo.child('actuators').setValue(dict(all_items=actuators_name,
-                                                                    selected=actuators_name, ))
-            group_histo.child('detectors').setValue(dict(all_items=detectors_name,
-                                                                    selected=detectors_name, ))
+            group_histo.child('actuators').setValue(self.get_selection('actuators', actuators_name))
+            group_histo.child('detectors').setValue(self.get_selection('detectors', detectors_name))
             group_histo.child('actuator').setValue(actuator_name)
 
         self._on_actuator_changed(actuator_name)

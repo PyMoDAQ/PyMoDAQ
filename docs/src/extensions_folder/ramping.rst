@@ -374,7 +374,12 @@ Live histogram
 
 During a logged ramp, the histogram of the current ramp node is recomputed every *Refresh Plot* period from the data
 already written in the file. The h5 file being opened in SWMR mode (Single Writer Multiple Readers), the data can be
-read while they are being saved, see :ref:`h5manager`. The histogram settings are disabled while ramping.
+read while they are being saved, see :ref:`h5manager`.
+
+While ramping, the *Node*, *Ramping Actuator*, *Start* and *Stop* settings are locked to the current ramp. The
+*Detectors to Plot* / *Actuators to Plot* selections and the binning (*AutoBin*, *Nbin*) can still be changed: they
+are used at the next refresh of the live histogram. The modules to plot are chosen among the saved ones, and your
+selection is kept from one ramp to the next (modules saved for the first time are selected by default).
 
 .. _ramping_offline_analysis:
 
