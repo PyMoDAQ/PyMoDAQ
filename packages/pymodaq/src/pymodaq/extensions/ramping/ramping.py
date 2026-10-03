@@ -296,14 +296,10 @@ class RampExtension(CustomExt):
             self.status_manager.set_step_units(self.actuator.units)
 
     def value_changed(self, param):
-        """ Actions to perform when one of the param's value in self.settings is changed from the
-        user interface
+        """ Update the dependent settings when one of the settings is changed from the user interface
 
-        For instance:
-        if param.name() == 'do_something':
-            if param.value():
-                print('Do something')
-                self.settings.child('main_settings', 'something_done').setValue(False)
+        Recomputes the number of steps and the duration or velocity of the ramp, and updates the
+        units and the lists of modules when the ramping actuator is changed.
 
         Parameters
         ----------
