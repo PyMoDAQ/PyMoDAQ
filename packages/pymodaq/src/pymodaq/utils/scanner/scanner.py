@@ -3,6 +3,7 @@ from typing import Tuple, List, TYPE_CHECKING, Any
 from collections import OrderedDict
 
 from serializall import SerializableFactory, SerializableBase
+from qtpy import QtCore
 from qtpy.QtCore import QObject, Signal
 from qtpy import QtWidgets
 
@@ -57,8 +58,7 @@ class Scanner(QObject, ParameterManager):
 
     params = [
         {'title': 'Actuators:', 'name': 'actuators', 'type': 'itemselect', 'checkbox': True, 'visible': False},
-        {'title': 'Calculate positions:', 'name': 'calculate_positions', 'type': 'bool_push',
-         'label': 'Calculate positions'},
+        {'title': 'Show positions', 'name': 'show_positions', 'type': 'action'},
         {'title': 'N steps:', 'name': 'n_steps', 'type': 'int', 'value': 0, 'readonly': True},
         {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list',
          'limits': scanner_factory.scan_types()},
@@ -85,6 +85,8 @@ class Scanner(QObject, ParameterManager):
         ParameterManager.__init__(self)
 
         self._actuators: list[DAQ_Move] = selected_actuators
+        self._positions_dialog: QtWidgets.QDialog | None = None
+        self._positions_table: QtWidgets.QTableWidget | None = None
         self._actuators_all: list[DAQ_Move] = actuators
 
         self.orientation: Orientation = orientation
@@ -98,7 +100,7 @@ class Scanner(QObject, ParameterManager):
         self._scanner: ScannerBase = None
 
         self.setup_ui()
-        self.actuators = actuators
+        self.actuators = selected_actuators
         if self._scanner is not None:
             self.settings.child('n_steps').setValue(self._scanner.evaluate_steps())
 
@@ -133,6 +135,7 @@ class Scanner(QObject, ParameterManager):
         self.parent_widget.setLayout(QtWidgets.QVBoxLayout() if self.orientation == Orientation.VERTICAl
                                      else QtWidgets.QHBoxLayout())
         self.parent_widget.layout().setContentsMargins(0, 0, 0, 0)
+        self._settings_tree.collapsible_widget.setVisible(False)
         self.parent_widget.layout().addWidget(self.settings_tree)
         self._scanner_settings_widget = QtWidgets.QWidget()
         self._scanner_settings_widget.setLayout(QtWidgets.QVBoxLayout())
@@ -156,6 +159,7 @@ class Scanner(QObject, ParameterManager):
                 child.widget().deleteLater()
                 QtWidgets.QApplication.processEvents()
 
+            self._scanner._settings_tree.collapsible_widget.setVisible(False)
             self._scanner_settings_widget.layout().addWidget(self._scanner.settings_tree)
             self._scanner.settings.sigTreeStateChanged.connect(self._update_steps)
 
@@ -171,14 +175,10 @@ class Scanner(QObject, ParameterManager):
         return self._scanner.settings
 
     def value_changed(self, param: Parameter):
-        if param.name() == 'calculate_positions':
-            if param.value():
-
-                param.setValue(False)
         if param.name() == 'scan_type':
             self.settings.child('scan_sub_type').setOpts(
                 limits=scanner_factory.scan_sub_types(param.value()))
-        if param.name() in ['scan_sub_type']:
+        if param.name() in ['scan_type', 'scan_sub_type']:
             self.settings.child('units_handling', 'display_units').show()
             self.set_scanner()
             self.settings.child('scan_type').setOpts(tip=self._scanner.__doc__)
@@ -272,6 +272,7 @@ class Scanner(QObject, ParameterManager):
 
     def connect_things(self):
         self.scanner_updated_signal.connect(self.save_scanner_settings)
+        self.settings.child('show_positions').sigActivated.connect(self.show_positions)
 
     def save_scanner_settings(self):
         self._scanner.save_scan_parameters()
@@ -342,6 +343,86 @@ class Scanner(QObject, ParameterManager):
         self.settings.child('n_steps').setValue(self.n_steps)
         self.scanner_updated_signal.emit()
         return False
+
+    def show_positions(self):
+        """Compute the current scan and preview the resulting positions in a read-only table"""
+        if self.set_scan():
+            messagebox(text='This scan would generate more steps than the configured limit '
+                            f"({config('pymodaq', 'scan', 'steps_limit')}). Reduce the range or "
+                            'increase the step size before previewing.')
+            return
+
+        positions = self.positions
+        if positions is None or len(positions) == 0:
+            messagebox(text='No positions to show for the current scan settings.')
+            return
+
+        labels = [axis.label if not axis.units else f'{axis.label} ({axis.units})'
+                 for axis in self.get_nav_axes()]
+
+        if self._positions_dialog is not None:
+            self._positions_dialog.close()
+
+        dialog = QtWidgets.QDialog()
+        dialog.setWindowTitle(f'Scan positions ({self.n_steps} steps)')
+        layout = QtWidgets.QVBoxLayout()
+        dialog.setLayout(layout)
+
+        table = QtWidgets.QTableWidget(len(positions), len(labels) + 1)
+        table.setHorizontalHeaderLabels(['Sampled'] + labels)
+        table.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
+        for row, pos in enumerate(positions):
+            status_item = QtWidgets.QTableWidgetItem('')
+            status_item.setTextAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+            table.setItem(row, 0, status_item)
+            for col, value in enumerate(pos):
+                table.setItem(row, col + 1, QtWidgets.QTableWidgetItem(f'{value:.6g}'))
+        layout.addWidget(table)
+
+        buttons = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.StandardButton.Close)
+        buttons.rejected.connect(dialog.close)
+        layout.addWidget(buttons)
+
+        dialog.setAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose)
+        dialog.destroyed.connect(self._on_positions_dialog_closed)
+        self._positions_dialog = dialog
+        self._positions_table = table
+        dialog.resize(500, 400)
+        dialog.show()  # non modal so that it can follow the scan progress
+
+    def _on_positions_dialog_closed(self, *args):
+        self._positions_dialog = None
+        self._positions_table = None
+
+    def update_scan_progress(self, ind_scan: int, done: bool = False):
+        """Mark in the positions table (if shown) which positions have been sampled
+
+        Parameters
+        ----------
+        ind_scan: int
+            index of the position currently being reached/measured, all lower ones are considered sampled
+        done: bool
+            if True, all positions are marked as sampled
+        """
+        table = self._positions_table
+        if table is None:
+            return
+        for row in range(table.rowCount()):
+            item = table.item(row, 0)
+            if done or row < ind_scan:
+                item.setText('\u2713')
+            elif row == ind_scan:
+                item.setText('\u25b6')
+            else:
+                item.setText('')
+        if not done and 0 <= ind_scan < table.rowCount():
+            table.scrollToItem(table.item(ind_scan, 0))
+
+    def reset_scan_progress(self):
+        """Clear the sampled marks in the positions table (if shown)"""
+        if self._positions_table is not None:
+            for row in range(self._positions_table.rowCount()):
+                self._positions_table.item(row, 0).setText('')
 
     def update_from_scan_selector(self, scan_selector: Selector):
         self._scanner.update_from_scan_selector(scan_selector)

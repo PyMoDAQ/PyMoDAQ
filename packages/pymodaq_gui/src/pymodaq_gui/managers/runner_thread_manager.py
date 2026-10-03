@@ -9,9 +9,13 @@ from pymodaq_data import DataToExport
 
 def get_thread_params(worker_setting_name: str) -> list[dict]:
     return [
-        {'title': worker_setting_name, 'name': worker_setting_name, 'type': 'group', 'children': [
+        {'title': worker_setting_name.replace('_', ' ').title(), 'name': worker_setting_name, 'type': 'group',
+         'children': [
             {'title': 'Worker Running:', 'name': 'worker_running', 'type': 'led', 'value': False, 'readonly': True},
-            {'title': 'Worker tasks:', 'name': 'worker_tasks', 'type': 'int', 'value': 0, 'readonly': True},
+            {'title': 'Pending save tasks:', 'name': 'worker_tasks', 'type': 'int', 'value': 0, 'readonly': True,
+             'tooltip': 'Scan points queued to be written but not yet saved to disk. Usually near 0 since '
+                        'saving is normally faster than acquisition; a sustained non-zero value means the '
+                        'saver is falling behind the scan.'},
         ]},
     ]
 

@@ -52,6 +52,7 @@ class DAQ_Logger(CustomExt):
     """
     Main class initializing a DAQ_Logger module
     """
+    h5_base_group_name = 'Logger'
     command_DAQ_signal = Signal(list)
 
     params = [

@@ -161,6 +161,7 @@ class DAQScan(CustomExt):
     settings_name = 'daq_scan_settings'
     show_h5file_statusbar_widgets = True
     show_workflow_actions = True
+    h5_base_group_name = 'Scan'
 
     command_daq_signal = Signal(utils.ThreadCommand)
     scan_done_signal = QtCore.Signal()
@@ -193,15 +194,15 @@ class DAQScan(CustomExt):
         ]},
 
         {'title': 'Plotting options', 'name': 'plot_options', 'type': 'group', 'children': [
-            {'title': 'Get data', 'name': 'plot_probe', 'type': 'bool_push'},
             {'title': 'Group 0D data:', 'name': 'group0D', 'type': 'bool', 'value': True},
             {'title': 'Plot 0Ds:', 'name': 'plot_0d', 'type': 'itemselect', 'checkbox': True},
             {'title': 'Plot 1Ds:', 'name': 'plot_1d', 'type': 'itemselect', 'checkbox': True},
-            {'title': 'Prepare Viewers', 'name': 'prepare_viewers', 'type': 'bool_push'},
-            {'title': 'Plot at each step?', 'name': 'plot_at_each_step', 'type': 'bool',
-             'value': True},
-            {'title': 'Refresh Plots (ms)', 'name': 'refresh_live', 'type': 'int',
-             'value': 1000, 'visible': False},
+            {'title': 'Prepare Viewers', 'name': 'prepare_viewers', 'type': 'action_led',
+             'value': False, 'children': []},
+            {'title': 'Plot every N steps:', 'name': 'plot_every_n_steps', 'type': 'int',
+             'value': 1, 'min': 0,
+             'tooltip': 'Refresh the live plot every N scan points (1 = every point). '
+                        '0 disables live plotting entirely during the scan.'},
             ]},
     ] + SaverWorker.params
 
@@ -218,6 +219,8 @@ class DAQScan(CustomExt):
         """
         
         logger.info('Initializing DAQScan')
+
+        self._ui_ready = False  # important to be here before super is called, see do_things_after_experiment_set
 
         super().__init__(parent=dockarea,
                          dashboard=dashboard,
@@ -240,8 +243,8 @@ class DAQScan(CustomExt):
         self.curvilinear_values = []
         self.plot_colors = PlotColors()
 
-        self.modules_manager.settings.child('probe_data').setOpts(expanded=False)
-        self.modules_manager.settings.child('test_actuator').setOpts(expanded=False)
+        self.modules_manager.settings.child('probe_detectors_results').setOpts(expanded=False)
+        self.modules_manager.settings.child('probe_actuators_results').setOpts(expanded=False)
         self.modules_manager.detectors_changed.connect(self.clear_plot_from)
 
         self.h5_manager.get_h5saver(create_new_file=False).file_changed_sig.connect(self._on_file_changed)
@@ -268,8 +271,7 @@ class DAQScan(CustomExt):
         self.status_manager = ScanStatusBarManager(self)
 
         self.setup_ui()
-
-
+        self._ui_ready = True
 
         self.h5_manager.command_sig.connect(self.process_cmds)
 
@@ -277,9 +279,23 @@ class DAQScan(CustomExt):
 
         self.set_config()
 
-        self.live_plotter = LoaderPlotter(self.dockarea)
-        self.live_timer = QtCore.QTimer(self)
-        self.live_timer.timeout.connect(self.update_live_plots)
+        self.live_plotter = LoaderPlotter(None)
+        self.live_plotter.dispatcher.dockarea.hide()
+
+        self.settings.child('plot_options', 'prepare_viewers').sigActivated.connect(self.prepare_viewers)
+        # Reuse the Detectors panel's probe button: probing already grabs the data
+        # (populating its result tree), so just also refresh the plot selections from it
+        self.modules_manager.settings.child('probe_detectors').sigActivated.connect(self.plot_from)
+        # selection_tree_height was fixed once, before any probe result existed; refresh it
+        # whenever a probe populates/clears its result tree so the box actually grows to fit
+        self.modules_manager.settings.child('probe_detectors_results').sigChildAdded.connect(
+            self._refresh_selection_tree_height)
+        self.modules_manager.settings.child('probe_detectors_results').sigChildRemoved.connect(
+            self._refresh_selection_tree_height)
+        self.modules_manager.settings.child('probe_actuators_results').sigChildAdded.connect(
+            self._refresh_selection_tree_height)
+        self.modules_manager.settings.child('probe_actuators_results').sigChildRemoved.connect(
+            self._refresh_selection_tree_height)
 
         self.scan_manager = ScanManager(self)
         self.scan_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('scan_manager'),
@@ -305,7 +321,8 @@ class DAQScan(CustomExt):
         return [self.toolbar, self.get_toolbar('scan_manager')]
 
     def plot_from(self):
-        self.modules_manager.get_det_data_list()
+        """ Refresh the Plot 0Ds/1Ds selections from the data already probed by the
+        Detectors panel's probe button (this is connected to its sigActivated) """
         data0D_names = self.modules_manager.get_probed_data_full_names(DataDim.Data0D)
         data1D_names = self.modules_manager.get_probed_data_full_names(DataDim.Data1D)
         self.settings.child('plot_options', 'plot_0d').setValue(
@@ -335,50 +352,77 @@ class DAQScan(CustomExt):
         self.dock_command.addWidget(widget_command)
 
         splitter_widget = QtWidgets.QSplitter(QtCore.Qt.Orientation.Horizontal)
-        splitter_v_widget = QtWidgets.QSplitter(QtCore.Qt.Orientation.Vertical)
         widget_command.layout().addWidget(splitter_widget)
-        splitter_widget.addWidget(splitter_v_widget)
-        self.module_widget = QtWidgets.QWidget()
-        self.module_widget.setLayout(QtWidgets.QVBoxLayout())
-        self.module_widget.setMinimumWidth(220)
-        self.module_widget.setMaximumWidth(400)
 
-        self.plotting_widget = QtWidgets.QWidget()
-        self.plotting_widget.setLayout(QtWidgets.QVBoxLayout())
-        self.plotting_widget.setMinimumWidth(220)
-        self.plotting_widget.setMaximumWidth(400)
+        # Column 1: Actuators (selection + probe, and scan geometry)
+        self.actuators_widget = self._make_section_groupbox('Actuators')
+        self.actuators_widget.setMinimumWidth(220)
+        self.actuators_widget.setMaximumWidth(400)
 
+        self.actuators_settings_tree = ParameterTree()
+        self.actuators_widget.layout().addWidget(self.actuators_settings_tree)
+
+        self.actuators_widget.layout().addWidget(self._section_label('Scan Parameters'))
+        self.scanner_widget = QtWidgets.QWidget()
+        self.scanner_widget.setLayout(QtWidgets.QVBoxLayout())
+        self.actuators_widget.layout().addWidget(self.scanner_widget)
+
+        # Column 2: Detectors (selection + probe, and what/how to plot from them)
+        self.detectors_widget = self._make_section_groupbox('Detectors')
+        self.detectors_widget.setMinimumWidth(220)
+        self.detectors_widget.setMaximumWidth(400)
+
+        self.detectors_settings_tree = ParameterTree()
+        self.detectors_widget.layout().addWidget(self.detectors_settings_tree)
+
+        self.detectors_widget.layout().addWidget(self._section_label('Plotting Parameters'))
         self.plotting_settings_tree = ParameterTree()
-        self.plotting_widget.layout().addWidget(self.plotting_settings_tree)
+        self.detectors_widget.layout().addWidget(self.plotting_settings_tree)
 
-        settings_widget = QtWidgets.QWidget()
-        settings_widget.setLayout(QtWidgets.QVBoxLayout())
-        settings_widget.setMinimumWidth(220)
+        # Column 3: General (infrequently-touched, cross-cutting settings, including Save)
+        self.general_widget = self._make_section_groupbox('General')
+        self.general_widget.setMinimumWidth(220)
+        self.general_widget.setMaximumWidth(400)
 
-        splitter_v_widget.addWidget(self.module_widget)
-        splitter_v_widget.addWidget(self.plotting_widget)
+        self.general_settings_tree = ParameterTree()
+        self.general_widget.layout().addWidget(self.general_settings_tree)
 
-        splitter_v_widget.setSizes([400, 400])
-        splitter_widget.addWidget(settings_widget)
+        splitter_widget.addWidget(self.actuators_widget)
+        splitter_widget.addWidget(self.detectors_widget)
+        splitter_widget.addWidget(self.general_widget)
+        splitter_widget.setSizes([300, 300, 300])
 
         self.populate_status_bar()
 
-        self.settings_toolbox = QtWidgets.QToolBox()
-        settings_widget.layout().addWidget(self.settings_toolbox)
-        self.scanner_widget = QtWidgets.QWidget()
-        self.scanner_widget.setLayout(QtWidgets.QVBoxLayout())
-        self.settings_toolbox.addItem(self.scanner_widget, 'Scanner Settings')
-
         self.create_dashboard_toolbar(add_break=False)
 
-        self.populate_toolbox_widget([self.settings_tree,
-                                      self.h5_manager.get_h5saver().settings_tree],
-                                     ['General Settings', 'Save Settings'])
-
         self.set_scanner_settings(self.scanner.parent_widget)
-        self.set_modules_settings(self.modules_manager.settings_tree)
+
+        # Probe button first (quick access), then the stable selection list, then the probe
+        # results last: results live in their own group now, not nested under the probe
+        # button, so they no longer push the selection list out of view when populated.
+        self.actuators_settings_tree.addParameters(self.modules_manager.settings.child('probe_actuators'))
+        self.actuators_settings_tree.addParameters(self.modules_manager.settings.child('actuators'))
+        self.actuators_settings_tree.addParameters(
+            self.modules_manager.settings.child('probe_actuators_results'))
+
+        self.detectors_settings_tree.addParameters(self.modules_manager.settings.child('probe_detectors'))
+        self.detectors_settings_tree.addParameters(self.modules_manager.settings.child('detectors'))
+        self.detectors_settings_tree.addParameters(
+            self.modules_manager.settings.child('probe_detectors_results'))
+
+        self._refresh_selection_tree_height()
 
         self.plotting_settings_tree.setParameters(self.settings.child('plot_options'))
+
+        self.general_settings_tree.addParameters(self.settings.child('time_flow'))
+        self.general_settings_tree.addParameters(self.settings.child('scan_options'))
+
+        self.h5saver.settings.setOpts(title='Save')
+        self.general_settings_tree.addParameters(self.h5saver.settings)
+
+        # Worker diagnostics: rarely-glanced-at status, so it goes last, not first.
+        self.general_settings_tree.addParameters(self.settings.child(SaverWorker.worker_setting_name))
 
 
     def setup_actions(self):
@@ -393,6 +437,11 @@ class DAQScan(CustomExt):
         self.add_action('batch', 'Show Batch Scanner', '', menu=MenuToolbarNames.TOOLS, auto_toolbar=False)
         self.set_action_visible('start_batch', False)
 
+        self.add_action('show_general_settings', 'Show General Settings', 'settings',
+                        "Show/hide the General settings panel (Time Flow, Scan options, Save...)",
+                        checkable=True, checked=True, icon_checked_color=self.get_theme().green,
+                        menu='actions', before=WorkFlowActions.LOG)
+
     def connect_things(self):
         self.scanner.scanner_updated_signal.connect(self.do_things_after_scanner_changed)
 
@@ -405,6 +454,7 @@ class DAQScan(CustomExt):
 
         self.connect_action('navigator', self.show_navigator)
         self.connect_action('batch', lambda: self.show_batcher(self.menubar))
+        self.connect_action('show_general_settings', self.toggle_general_settings)
 
     def process_cmds(self, cmd: utils.ThreadCommand):
         """Process commands sent by actions done in the ui
@@ -598,6 +648,10 @@ class DAQScan(CustomExt):
             res = True
         return res
 
+    def toggle_general_settings(self, show: bool = True):
+        """ Show/hide the General settings panel (Time Flow, Scan options, Save...) """
+        self.general_widget.setVisible(show)
+
     def show_navigator(self):
 
         if self.navigator is None:
@@ -633,9 +687,52 @@ class DAQScan(CustomExt):
 
         self.scan_selector.scan_select_signal.connect(self.scanner.update_from_scan_selector)
 
-    def populate_toolbox_widget(self, widgets: List[QtWidgets.QWidget], names: List[str]):
-        for widget, name in zip(widgets, names):
-            self.settings_toolbox.addItem(widget, name)
+    @staticmethod
+    def _make_section_groupbox(title: str) -> QtWidgets.QGroupBox:
+        """A QGroupBox whose title is bold, larger and centered, for clear section identification"""
+        box = QtWidgets.QGroupBox(title)
+        box.setLayout(QtWidgets.QVBoxLayout())
+        box.layout().setContentsMargins(8, 18, 8, 8)
+        box.setAlignment(QtCore.Qt.AlignmentFlag.AlignHCenter)
+        box.setStyleSheet(
+            'QGroupBox { font-weight: bold; font-size: 12pt; margin-top: 6px; } '
+            'QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top center; '
+            'padding: 0 6px; }')
+        return box
+
+    @staticmethod
+    def _section_label(text: str) -> QtWidgets.QLabel:
+        label = QtWidgets.QLabel(text)
+        label.setAlignment(QtCore.Qt.AlignmentFlag.AlignHCenter)
+        label.setStyleSheet('font-weight: bold; font-size: 11pt;')
+        return label
+
+    @staticmethod
+    def _content_fit_height(tree: ParameterTree, hard_limit: int = 250, min_height: int = 60) -> int:
+        """ Height needed to show all of a populated tree's current (non-collapsed) rows
+        without a scrollbar, capped at hard_limit rather than guessed """
+        tree.expandAll()
+        tree.doItemsLayout()
+        if tree.topLevelItemCount() == 0:
+            return min_height
+        last_item = tree.topLevelItem(tree.topLevelItemCount() - 1)
+        while last_item.childCount() > 0:
+            last_item = last_item.child(last_item.childCount() - 1)
+        bottom = tree.visualItemRect(last_item).bottom()
+        header_height = 0 if tree.header().isHidden() else tree.header().height()
+        content_height = header_height + bottom + 2 * tree.frameWidth() + 4
+        return max(min_height, min(content_height, hard_limit))
+
+    def _refresh_selection_tree_height(self, *_):
+        """ Recompute and reapply the Actuators/Detectors panels' fixed height.
+
+        Needs to be called again whenever a probe result tree is populated/cleared, not just
+        once at setup: the initial computation only sees the empty, unprobed state.
+        """
+        selection_tree_height = max(self._content_fit_height(self.actuators_settings_tree),
+                                    self._content_fit_height(self.detectors_settings_tree))
+        self.actuators_settings_tree.setFixedHeight(selection_tree_height)
+        self.detectors_settings_tree.setFixedHeight(selection_tree_height)
 
     def set_scanner_settings(self, settings_tree: QtWidgets.QWidget):
         while True:
@@ -646,9 +743,6 @@ class DAQScan(CustomExt):
             QtWidgets.QApplication.processEvents()
 
         self.scanner_widget.layout().addWidget(settings_tree)
-
-    def set_modules_settings(self, settings_widget):
-        self.module_widget.layout().addWidget(settings_widget)
 
     def populate_status_bar(self):
         super().populate_status_bar()
@@ -813,12 +907,6 @@ class DAQScan(CustomExt):
         """
         if param.name() == 'scan_average':
             self.status_manager.show_average_step(param.value() > 1)
-        elif param.name() == 'prepare_viewers':
-            self.prepare_viewers()
-        elif param.name() == 'plot_probe':
-            self.plot_from()
-        elif param.name() == 'plot_at_each_step':
-            self.settings.child('plot_options', 'refresh_live').show(not param.value())
 
     def clear_plot_from(self):
         self.settings.child('plot_options', 'plot_0d').setValue(dict(all_items=[], selected=[]))
@@ -872,6 +960,20 @@ class DAQScan(CustomExt):
         """
         viewers_enum, data_names, _ = self.check_number_type_viewers()
         self.live_plotter.prepare_viewers(viewers_enum, viewers_name=data_names)
+        self.live_plotter.dispatcher.dockarea.show()
+        self.live_plotter.dispatcher.dockarea.raise_()
+
+    def toggle_viewers_window(self):
+        """ Show or hide the independent window holding the live plot viewers
+
+        Showing always goes through prepare_viewers() first, so the viewers are rebuilt
+        from the current Plotting options selection rather than raising a stale/empty window.
+        """
+        dockarea = self.live_plotter.dispatcher.dockarea
+        if dockarea.isVisible():
+            dockarea.hide()
+        else:
+            self.prepare_viewers()
 
     def thread_status(self, status: utils.ThreadCommand):
         """ General function to get datas/infos from child thread back to the main.
@@ -896,12 +998,14 @@ class DAQScan(CustomExt):
             self.status_manager.set_scan_step(status.attribute[0] + 1)
             self.ind_average = status.attribute[1]
             self.status_manager.set_scan_step_average(status.attribute[1] + 1)
+            self.scanner.update_scan_progress(self.ind_scan)
 
         elif status.command == "Scan_done":
 
             self.modules_manager.reset_signals()
-            self.live_timer.stop()
             self.status_manager.set_scan_done()
+            self.scanner.update_scan_progress(self.ind_scan, done=True)
+            self._set_selection_enabled(True)
             self.scan_done_signal.emit()
             try:
                 self.module_and_data_saver.flush()
@@ -969,7 +1073,8 @@ class DAQScan(CustomExt):
                                      scan_data.dte,
                                      scan_data.indexes,
                                      distribution=self.scanner.distribution)
-        if self.settings['plot_options', 'plot_at_each_step']:
+        n_steps = self.settings['plot_options', 'plot_every_n_steps']
+        if n_steps > 0 and scan_data.save_index % n_steps == 0:
             self.update_live_plots()
 
     def update_live_plots(self):
@@ -1107,7 +1212,9 @@ class DAQScan(CustomExt):
             scan_node = self.module_and_data_saver.get_set_node(new=True)
             self.save_metadata(scan_node, 'scan_info')
 
+            self._set_selection_enabled(False)
             self._init_live()
+            self.scanner.reset_scan_progress()
             Naverage = self.settings['scan_options', 'scan_average']
             nav_axes = self.scanner.get_nav_axes()
             if Naverage > 1:
@@ -1131,11 +1238,17 @@ class DAQScan(CustomExt):
                 self.h5saver.set_swmr_flush_interval(interval)
 
             self.status_manager.set_scan_done(False)
-            if not self.settings['plot_options', 'plot_at_each_step']:
-                self.live_timer.start(self.settings['plot_options', 'refresh_live'])
             self.command_daq_signal.emit(utils.ThreadCommand('start_acquisition'))
             self.status_manager.set_permanent_status('Running acquisition')
             logger.info('Running acquisition')
+
+    def _set_selection_enabled(self, enabled: bool):
+        """Lock/unlock the actuators, detectors and scan definition while a scan is running
+
+        The plotting options stay editable.
+        """
+        for widget in (self.actuators_settings_tree, self.detectors_settings_tree):
+            widget.setEnabled(enabled)
 
     def ini_scan_acquisition(self):
         self.scan_acquisition = DAQScanAcquisition(self)
