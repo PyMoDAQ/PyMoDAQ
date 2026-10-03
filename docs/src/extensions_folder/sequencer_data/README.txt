@@ -18,3 +18,12 @@ elt_choice.png            Choice element editor with the "threshold" model selec
                           target combo boxes.
 elt_sequence.png          Sequence element editor with the combo box listing the other sequences.
 elt_state.png             State element editor with the state combo box and the "Show Manager" button.
+
+Other screenshots referenced by pages updated in the same PR (place them at the given paths):
+
+docs/src/data_management/h5manager_data/h5manager_toolbar.png
+                          File toolbar of the H5Manager (as in the Sequencer or DAQ_Logger window) and the
+                          File LED / SWMR label in the status bar. Can be a composite of both.
+docs/src/image/dashboard/dashboard_external_toolbar.png
+                          The Dashboard toolbar of an extension: Show/Hide Dashboard, Experiment (open manager,
+                          list, apply) and State (open manager, list, apply).
