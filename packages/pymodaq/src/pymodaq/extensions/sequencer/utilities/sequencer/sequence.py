@@ -145,22 +145,6 @@ class Sequence(CustomExt):
         self.title = name
         self.name_changed.emit(old_name, name)
 
-    def value_changed(self, param):
-        """ Actions to perform when one of the param's value in self.settings is changed from the
-        user interface
-
-        For instance:
-        if param.name() == 'do_something':
-            if param.value():
-                print('Do something')
-                self.settings.child('main_settings', 'something_done').setValue(False)
-
-        Parameters
-        ----------
-        param: (Parameter) the parameter whose value just changed
-        """
-        pass
-
     @property
     def root_elt(self) -> RootElt:
         return self._model.root_elt

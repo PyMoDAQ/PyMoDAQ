@@ -79,7 +79,9 @@ class Filter1DFromCrosshair(Filter):
                 self.update_axis(axis)
 
                 self._x, self._y = self.crosshair.get_positions()
-                dwa = data.isig[data.axes[0].find_indexes([self._x])[0]]
+                # find_index returns len(axis) beyond the last value (to be used as a slice stop)
+                ind_x = min(data.axes[0].find_indexes([self._x])[0], len(data.axes[0]) - 1)
+                dwa = data.isig[ind_x]
                 dwa.axes = [Axis('x', data=np.array([self._x]))]
                 dte.append(dwa)
                 # for label, dat in zip(data.labels, data.data):

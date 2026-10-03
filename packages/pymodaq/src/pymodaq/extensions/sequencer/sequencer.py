@@ -272,22 +272,6 @@ class Sequencer(CustomExt):
                     sort_keys=False,
                     allow_unicode=True
                 )
-    def value_changed(self, param):
-        """ Actions to perform when one of the param's value in self.settings is changed from the
-        user interface
-
-        For instance:
-        if param.name() == 'do_something':
-            if param.value():
-                print('Do something')
-                self.settings.child('main_settings', 'something_done').setValue(False)
-
-        Parameters
-        ----------
-        param: (Parameter) the parameter whose value just changed
-        """
-        pass
-
     @property
     def main_sequence(self) -> Sequence:
         return self.sequences[0]
