@@ -171,7 +171,7 @@ class Sequence(CustomExt):
         for elt_child in elt.children:
             yield elt_child
             if elt_child.children_allowed:
-                self.iterate_elts(elt_child)
+                yield from self.iterate_elts(elt_child)
 
     def setup_machine(self):
         for child in self.machine.children():

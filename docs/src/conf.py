@@ -77,7 +77,10 @@ extensions = [
     'numpydoc',
     "sphinxcontrib.jquery",
     "sphinx_datatables",
+    "sphinx.ext.graphviz",
 ]
+
+graphviz_output_format = "svg"
 
 qt_documentation = "PyQt6"
 
