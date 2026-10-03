@@ -58,6 +58,7 @@ class StatusBarManager:
 class Sequencer(CustomExt):
     show_h5file_statusbar_widgets = True
     show_workflow_actions = True
+    h5_base_group_name = 'Sequence'
 
     params = [] + SaverWorker.params
 
