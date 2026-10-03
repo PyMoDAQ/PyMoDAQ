@@ -50,16 +50,17 @@ class DAQMoveUI(ControlModuleUI):
     command_sig: Signal[Threadcommand]
         This signal is emitted whenever some actions done by the user has to be
         applied on the main module. Possible commands are:
-            * init
-            * get_value
-            * loop_get_value
-            * find_home
-            * stop
-            * move_abs
-            * move_rel
-            * actuator_changed
-            * rel_value
-            * show_plugin_config
+
+        * init
+        * get_value
+        * loop_get_value
+        * find_home
+        * stop
+        * move_abs
+        * move_rel
+        * actuator_changed
+        * rel_value
+        * show_plugin_config
 
     Methods
     -------
