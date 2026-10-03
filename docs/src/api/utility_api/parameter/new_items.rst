@@ -53,5 +53,6 @@ Other widgets for ParameterTree have been introduced:
 
 
 .. automodule:: pymodaq_gui.parameter.pymodaq_ptypes
+   :no-index:
    :members:
 

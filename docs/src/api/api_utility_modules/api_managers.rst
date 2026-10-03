@@ -29,14 +29,17 @@ the CustomApp and CustomExt classes.
 .. currentmodule:: pymodaq_gui.managers.action_manager
 
 .. autoclass:: QAction
+   :no-index:
    :members:
 
 .. autofunction:: addaction
+   :no-index:
 
 
    .. _actionmanager_api:
 
 .. autoclass:: ActionManager
+   :no-index:
    :members:
 
 .. _api-managers_parameter_manager:
@@ -44,6 +47,7 @@ the CustomApp and CustomExt classes.
 .. currentmodule:: pymodaq_gui.managers.parameter_manager
 
 .. autoclass:: ParameterManager
+   :no-index:
    :members:
 
 

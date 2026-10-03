@@ -12,6 +12,7 @@ The H5Backend is a wrapper around three hdf5 python packages: pytables, h5py and
 of any of these with PyMoDAQ features.
 
 .. autoclass:: H5Backend
+   :no-index:
    :members:
 
 
@@ -31,11 +32,13 @@ To save and load data, one should use higher level objects, see :ref:`data_savin
 .. currentmodule:: pymodaq_data.h5modules.saving
 
 .. automodule:: pymodaq_data.h5modules.saving
+   :no-index:
    :members: H5SaverLowLevel
 
 .. currentmodule:: pymodaq_gui.h5modules.saving
 
 .. automodule:: pymodaq_gui.h5modules.saving
+   :no-index:
    :members: H5SaverBase, H5Saver
 
 
@@ -53,12 +56,15 @@ the file while a scan is in progress.
 .. currentmodule:: pymodaq_data.h5modules
 
 .. autofunction:: open_h5_file_for_reading
+   :no-index:
 
 .. autofunction:: is_file_swmr_active
+   :no-index:
 
 .. currentmodule:: pymodaq_data.h5modules.swmr
 
 .. automodule:: pymodaq_data.h5modules.swmr
+   :no-index:
    :members: collect_datasets, refresh_datasets, refresh_cached
 
 
@@ -80,6 +86,7 @@ Base data class saver/loader
 .. currentmodule:: pymodaq_data.h5modules.data_saving
 
 .. automodule:: pymodaq_data.h5modules.data_saving
+   :no-index:
    :members: DataManagement, AxisSaverLoader, DataSaverLoader, DataToExportSaver
 
 
@@ -96,6 +103,7 @@ is not known at the moment of creation, for instance when logging or continuousl
 .. currentmodule:: pymodaq_data.h5modules.data_saving
 
 .. automodule:: pymodaq_data.h5modules.data_saving
+   :no-index:
    :members: BkgSaver, DataExtendedSaver, DataEnlargeableSaver, DataToExportEnlargeableSaver, DataToExportTimedSaver, DataToExportExtendedSaver
 
 
@@ -107,6 +115,7 @@ Data saved from a ``DAQ_Scan`` will naturally include navigation axes shared bet
 using the standard data loader. Hence this ``DataLoader`` object.
 
 .. autoclass:: DataLoader
+   :no-index:
    :members:
 
 Browsing Data
@@ -121,6 +130,7 @@ file.
 .. currentmodule:: pymodaq_gui.h5modules.browsing
 
 .. automodule:: pymodaq_gui.h5modules.browsing
+   :no-index:
    :members: H5BrowserUtil, H5Browser
 
 

@@ -19,21 +19,26 @@ Summary of the data viewers classes
 .. currentmodule:: pymodaq_gui.plotting.data_viewers.base
 
 .. autoclass:: ViewerBase
+   :no-index:
    :members:
 
 .. currentmodule:: pymodaq_gui.plotting.data_viewers.viewer0D
 .. autoclass:: Viewer0D
+   :no-index:
    :members:
 
 .. currentmodule:: pymodaq_gui.plotting.data_viewers.viewer1D
 .. autoclass:: Viewer1D
+   :no-index:
    :members:
 
 .. currentmodule:: pymodaq_gui.plotting.data_viewers.viewer2D
 .. autoclass:: Viewer2D
+   :no-index:
    :members:
 
 .. currentmodule:: pymodaq_gui.plotting.data_viewers.viewerND
 .. autoclass:: ViewerND
+   :no-index:
    :members:
 

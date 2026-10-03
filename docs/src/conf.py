@@ -121,6 +121,10 @@ numpydoc_class_members_toctree = False
 
 napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = False
+# render docstring "Attributes" sections as fields: as directives they duplicate the members documented by autodoc
+napoleon_use_ivar = True
+# same for "Methods" sections, rendered as a list instead of method directives
+napoleon_custom_sections = [("Methods", "params_style")]
 
 primary_domain = 'py'
 

@@ -7,4 +7,5 @@ The CustomApp base class
    CustomApp
 
 .. autoclass:: CustomApp
+   :no-index:
    :members:

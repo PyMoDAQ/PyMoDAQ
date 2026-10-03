@@ -44,6 +44,7 @@ Data Characteristics
 --------------------
 
 .. automodule:: pymodaq_data.data
+   :no-index:
    :members: DataDim, DataSource, DataDistribution
 
 
@@ -55,4 +56,5 @@ Union of Data
 When exporting multiple set of Data objects, one should use a DataToExport
 
 .. automodule:: pymodaq_data.data
+   :no-index:
    :members: DataToExport
