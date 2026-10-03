@@ -254,3 +254,22 @@ def test_ParameterWithPath_serialize():
     assert putils.compareParameters(param_back.parameter, p1_with_path.parameter, with_self=False)
     assert type(p1_with_path.parameter) == type(param_back.parameter)
 
+
+
+@pytest.mark.parametrize('has_keep', [True, False])
+@pytest.mark.parametrize('keep, expected', [(None, {'value', 'limits'}), (set(), set()), ({'value'}, {'value'})])
+def test_tree_change_blocker(monkeypatch, has_keep, keep, expected):
+    if has_keep and not putils._TREE_CHANGE_BLOCKER_HAS_KEEP:
+        pytest.skip('installed pyqtgraph has no keep argument')
+    monkeypatch.setattr(putils, '_TREE_CHANGE_BLOCKER_HAS_KEEP', has_keep)
+    settings = Parameter.create(name='settings', type='group', children=[
+        {'name': 'a_list', 'type': 'list', 'limits': ['a', 'b']},
+        {'name': 'a_float', 'type': 'float', 'value': 0.}])
+    emitted = []
+    settings.sigTreeStateChanged.connect(lambda param, changes: emitted.extend(changes))
+
+    with putils.tree_change_blocker(settings, keep=keep):
+        settings.child('a_list').setLimits(['a', 'b', 'c'])
+        settings['a_float'] = 1.
+    assert {change[1] for change in emitted} == expected
+    assert settings['a_float'] == 1.

@@ -17,6 +17,7 @@ from pymodaq_data.h5modules.data_saving import DataLoader, GROUP
 
 from pymodaq_gui.h5modules.saving import H5Saver
 from pymodaq_gui.managers.parameter_manager import ParameterManager, Parameter
+from pymodaq_gui.parameter.utils import tree_change_blocker
 from pymodaq_gui.plotting.data_viewers import ViewerDispatcher
 from pymodaq_utils.math_utils import find_index
 
@@ -95,7 +96,7 @@ class H5Histogramming(QObject, ParameterManager):
                                        swmr_mode=False)
         self.settings['h5info', 'h5path'] = str(file_path)
         nodes = self.get_main_nodes()
-        with self.settings.treeChangeBlocker(keep=set()):
+        with tree_change_blocker(self.settings, keep=set()):
             self.settings.child('h5info', 'node_path').setValue(node_param)
             node_param.setLimits(nodes)
             node_param.setValue(nodes[-1] if len(nodes) > 0 else None)
@@ -135,7 +136,7 @@ class H5Histogramming(QObject, ParameterManager):
         return self.data_loader.load_all(self._actuators[actuator_name])[0]
 
     def get_detector_dte(self, detector_name: str) -> DataToExport:
-        return self.data_loader.load_all(self._actuators[detector_name], with_bkg=False)
+        return self.data_loader.load_all(self._detectors[detector_name], with_bkg=False)
 
     def _on_node_path_change(self):
         self.update_control_modules()
@@ -186,7 +187,7 @@ class H5Histogramming(QObject, ParameterManager):
             actuator_name = self.settings['histo', 'actuator']
             actuators_name.remove(self.settings['histo', 'actuator'])
 
-        with self.settings.treeChangeBlocker(keep=set()):
+        with tree_change_blocker(self.settings, keep=set()):
             group_histo.child('actuator').setOpts(limits=[actuator_name] + actuators_name)
 
             group_histo.child('actuators').setValue(dict(all_items=actuators_name,
@@ -253,6 +254,11 @@ class HistogramProcessor(ProcessorWorker):
         dte = self._data_loader.load_all(where=info.node_path)
         if len(dte) >= 2: # one for the xaxis and the other(s) for the y axes
             xdwa = dte.pop(dte.index_from_name_origin(info.xaxis_name))
+            # keep only the data of the selected modules (actuators data are named after their module)
+            dte = DataToExport(dte.name, data=[dwa for dwa in dte
+                                               if dwa.origin in info.other_names or dwa.name in info.other_names])
+            if len(dte) == 0:
+                return dte_out
 
             ((istart, vstart), (istop, vstop)) = find_index(
                 xdwa[0], threshold=[info.start, info.stop])
