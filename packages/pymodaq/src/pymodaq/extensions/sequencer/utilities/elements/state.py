@@ -94,11 +94,11 @@ class StateElt(SeqEltBase):
         self.filter_state_wrt_manager()
 
     def filter_state_wrt_manager(self):
-        """  Filter selected given the presence of the detector in the manager """
+        """  Reset the state to 'default' if not declared in the StateManager of the DashBoard """
         if self.state not in self.state_manager.entries:
-            self.state = 'default'
             logger.warning(f'Could not select this state: {self.state} as not declared in '
-                               f'the StateManager instance of the DashBoard')
+                           f'the StateManager instance of the DashBoard, falling back to "default"')
+            self.state = 'default'
 
     def _create_widget(self, base_widget:WidgetWithToolbar) -> WidgetWithToolbar:
 

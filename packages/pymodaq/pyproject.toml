@@ -78,6 +78,7 @@ daq_scan = "pymodaq.extensions.scan.daq_scan:main"
 daq_viewer = "pymodaq.control_modules.daq_viewer:main"
 dashboard = "pymodaq.dashboard:main"
 pymodaq = "pymodaq.launcher.launcher:main"
+sequencer = "pymodaq.extensions.sequencer.sequencer:main"
 
 [project.urls]
 Homepage = "http://pymodaq.cnrs.fr"

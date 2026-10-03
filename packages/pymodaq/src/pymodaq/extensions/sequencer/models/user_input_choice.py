@@ -17,7 +17,7 @@ class UserInput(ChoiceModelBase):
         msgBox.setInformativeText("Are you ok to proceed or go back?")
         button_proceed = msgBox.addButton('Proceed', QtWidgets.QMessageBox.ButtonRole.AcceptRole)
         button_goback = msgBox.addButton('Go back', QtWidgets.QMessageBox.ButtonRole.RejectRole)
-        msgBox.setDefaultButton(QtWidgets.QMessageBox.Yes)
+        msgBox.setDefaultButton(button_proceed)
         msgBox.exec()
 
         self.parent_elt.go_to_signal.emit(msgBox.clickedButton() == button_proceed)

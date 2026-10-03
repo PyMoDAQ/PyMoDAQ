@@ -150,7 +150,7 @@ class GrabElt(SeqEltBase):
     def clean_signals(self):
         for mod in self.get_selected_detectors():
             try:
-                mod.grab_done_signal.disconnect(self.save_data)
+                mod.grab_done_signal.disconnect(self._save_grabbed_data)
             except TypeError as e:
                 pass
 
@@ -178,8 +178,7 @@ class GrabElt(SeqEltBase):
         else:
             # trigger a grab and immediately move on to the next state!
             for mod in self.get_selected_detectors():
-                mod.grab_done_signal.connect(self.save_data)  # without underscore to trigger whatever is necessary in
-                # base class. You can do specific things in the _save_data reimplemented method
+                mod.grab_done_signal.connect(self._save_grabbed_data)
                 mod.grab()
             self.done_signal.emit()
 
@@ -188,8 +187,16 @@ class GrabElt(SeqEltBase):
                                              module_type=ModuleType.Detector,
                                              disconnect_modules=True)
         dte.name = dte[0].origin
-        self.save_data(dte)
-        self.done_signal.emit()
+        self.save_data(dte)  # emits the done_signal
+
+    def _save_grabbed_data(self, dte: DataToExport):
+        """ Log data of a running grab without emitting the done_signal
+
+        The element is already done (it moved on just after starting the grab). Calls save_data (without
+        underscore) to trigger whatever is necessary in base class. You can do specific things in the
+        _save_data reimplemented method
+        """
+        self.save_data(dte, done=False)
 
     def _save_data(self, dte: DataToExport):
         #todo: do whatever is needed with those data,
