@@ -44,10 +44,6 @@ if TYPE_CHECKING:
 logger = set_logger(get_module_name(__file__))
 config = GlobalConfig()
 
-EXTENSION_NAME = 'Ramping'  # the name that will be displayed in the extension list in the
-# dashboard
-CLASS_NAME = 'RampExtension'  # this should be the name of your class defined below
-
 
 class StatusBarManager:
     def __init__(self, app: 'RampExtension'):
