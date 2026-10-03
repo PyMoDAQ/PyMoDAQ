@@ -84,17 +84,12 @@ class TableParameterItem(WidgetParameterItem):
     #     self.setExpanded(self.param.opts.get('expanded', True))
 
     def makeWidget(self):
-        """
-            Make and initialize an instance of TableWidget.
+        """Make and initialize an instance of TableWidget.
 
-            Returns
-            -------
-            table : instance of TableWidget.
-                The initialized table.
-
-            See Also
-            --------
-            TableWidget
+        Returns
+        -------
+        TableWidget
+            The initialized table.
         """
         self.asSubItem = True
         self.hideWidget = False
@@ -117,15 +112,8 @@ class TableParameterItem(WidgetParameterItem):
 
 
 class TableParameter(Parameter):
-    """
-        =============== =================================
-        **Attributes**    **Type**
-        *itemClass*       instance of TableParameterItem
-        *Parameter*       instance of pyqtgraph parameter
-        =============== =================================
-    """
+    """ Parameter holding a dict displayed as a two columns table, see TableParameterItem """
     itemClass = TableParameterItem
-    """Editable string; displayed as large text box in the tree."""
 
     # def __init(self):
     #     super(TableParameter,self).__init__()

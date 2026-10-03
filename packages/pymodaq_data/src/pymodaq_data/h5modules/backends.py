@@ -1227,15 +1227,19 @@ class H5Backend:
         Add a node in the h5 file tree of the group type
         Parameters
         ----------
-        group_name: (str) a custom name for this group
+        group_name: str
+            a custom name for this group
         group_type: str or GroupType enum
             one of the possible values of GroupType, should be enforced by higher level modules not here
-        where: (str or node) parent node where to create the new group
-        metadata: (dict) extra metadata to be saved with this new group node
+        where: str or Node
+            parent node where to create the new group
+        metadata: dict
+            extra metadata to be saved with this new group node
 
         Returns
         -------
-        (node): newly created group node
+        GROUP
+            newly created group node
         """
         if metadata is None:
             metadata = {}
