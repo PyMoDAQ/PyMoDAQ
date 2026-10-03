@@ -145,14 +145,15 @@ class Sequencer(CustomExt):
             for elt in seq.iterate_elts():
                 if isinstance(elt, SequenceElt):
                     if elt.sequence == old_name:
-                        if new_name is None:
-                            new_name = self.sequences[-1].title
+                        target_name = new_name
+                        if target_name is None:
+                            target_name = self.sequences[-1].title
                             messagebox(title='Sequence removed',
                                        text=f'The Sequence Elt id {elt.id} in sequence {seq.title} '
                                             f'was set on a sequence '
                                             f'that has been deleted, please review it!!!')
 
-                        elt.sequence = new_name
+                        elt.sequence = target_name
                         index = seq.model.index_from_element(elt)
 
                         # Notify the view that the DisplayRole has changed for this index
@@ -366,7 +367,7 @@ def main():
     from pymodaq.dashboard import load_dashboard_with_arguments
     from pymodaq.utils.gui_utils.loader_utils import create_extension
 
-    app = mkQApp('Custom Ext')
+    app = mkQApp('Sequencer')
 
     win, dashboard, ext = load_dashboard_with_arguments(show_dashboard=False,
                                                         load_extension=False,
