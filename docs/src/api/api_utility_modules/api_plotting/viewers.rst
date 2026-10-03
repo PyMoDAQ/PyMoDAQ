@@ -9,11 +9,11 @@ from the base class `ViewerBase` and then offers options and interactions depend
 Summary of the data viewers classes
 
 .. autosummary::
-   pymodaq_gui.plotting.data_viewers.base.ViewerBase
-   pymodaq_gui.plotting.data_viewers.viewer0D.Viewer0D
-   pymodaq_gui.plotting.data_viewers.viewer1D.Viewer1D
-   pymodaq_gui.plotting.data_viewers.viewer2D.Viewer2D
-   pymodaq_gui.plotting.data_viewers.viewerND.ViewerND
+   base.ViewerBase
+   viewer0D.Viewer0D
+   viewer1D.Viewer1D
+   viewer2D.Viewer2D
+   viewerND.ViewerND
 
 
 .. currentmodule:: pymodaq_gui.plotting.data_viewers.base
