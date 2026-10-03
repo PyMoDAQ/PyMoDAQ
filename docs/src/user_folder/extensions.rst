@@ -15,4 +15,5 @@ The DashBoard module can load extensions to perform dedicated tasks, such as aut
    /extensions_folder/bayesian
    /extensions_folder/adaptive
    /extensions_folder/data_mixer
+   /extensions_folder/sequencer
    /extensions_folder/console
