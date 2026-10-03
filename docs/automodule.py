@@ -19,8 +19,8 @@ if __name__ == "__main__":
 
         excluded = [module_path / path for path in EXCLUDED.get(module.name, [])]
 
-        subprocess.run(["sphinx-apidoc", "-e", "-t", template_path, "-o", output_path, module_path, *excluded],
-                       check=True)
+        subprocess.run(["sphinx-apidoc", "-e", "--no-toc", "-t", template_path, "-o", output_path, module_path,
+                        *excluded], check=True)
 
     with open(doc_path / "src" / "api" / "pymodaq_data" / "pymodaq_data.h5modules.exporter.rst", 'a') as file:
         file.write('   :exclude-members: H5Exporter\n')

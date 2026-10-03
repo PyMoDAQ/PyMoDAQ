@@ -12,7 +12,6 @@ sphinxcontrib-images
 sphinx-favicon
 sphinx-autodoc-typehints
 sphinx-qt-documentation
-sphinxext-rediraffe
 numpy
 pymodaq_plugins_utils
 qtmonaco

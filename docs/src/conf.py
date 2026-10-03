@@ -65,7 +65,6 @@ extensions = [
     "sphinx_qt_documentation",
     "sphinx_design",
     "sphinx_favicon",
-    "sphinxext.rediraffe",
     "sphinxcontrib.images",
     "sphinx_autodoc_typehints",
     'sphinx.ext.doctest',
