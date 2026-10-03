@@ -67,6 +67,7 @@ class TableWidget(QtWidgets.QTableWidget):
 
 
 class TableParameterItem(WidgetParameterItem):
+    """ ParameterItem displaying a dict as a two columns table (keys and values) """
 
     # def treeWidgetChanged(self):
     #     """

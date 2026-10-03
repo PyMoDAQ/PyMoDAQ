@@ -18,10 +18,12 @@ class WidgetSyncFactories:
     Mixin class providing factory methods for common Qt widgets.
 
     Users can create their own factory methods by:
+
     1. Inheriting from WidgetSync
     2. Adding their own @classmethod factories
 
-    Example:
+    Example::
+
         class MyWidgetSync(WidgetSync):
             @classmethod
             def for_my_custom_widget(cls, widget, initial=None):

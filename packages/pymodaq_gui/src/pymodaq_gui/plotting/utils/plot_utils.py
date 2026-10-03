@@ -249,10 +249,11 @@ def makeAlphaTriangles(data, lut=None, levels=None, scale=None, useRGBA=False):
 
     Returns the ARGB array (unsigned byte) and a boolean indicating whether
     there is alpha channel data. This is a two stage process:
-        0) compute the polygons (triangles) from triangulation of the points
-        1) Rescale the data based on the values in the *levels* argument (min, max).
-        2) Determine the final output by passing the rescaled values through a
-           lookup table.
+
+    0) compute the polygons (triangles) from triangulation of the points
+    1) Rescale the data based on the values in the *levels* argument (min, max).
+    2) Determine the final output by passing the rescaled values through a
+       lookup table.
 
     Both stages are optional.
 
