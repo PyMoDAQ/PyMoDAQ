@@ -25,7 +25,7 @@ Monorepo of five independently published packages under `packages/<name>/` (each
 3. `pymodaq_scripting` – client to drive a running Dashboard from another process
 4. `pymodaq_gui` – Qt toolkit: pyqtgraph-based `Parameter` trees and custom ptypes, data viewers, managers
    (ROI, action, parameter managers), h5 browser
-5. `pymodaq` – control modules, Dashboard, extensions, TCP/IP and LECO remote control, scanners
+5. `pymodaq` – control modules, Dashboard, extensions, LECO remote control, scanners
 
 When changing an API in a lower package, check usages in the packages above it. `README.rst` files are
 **generated from `README.rst.tpl`** by CI – edit the `.tpl`, never the `.rst`.
@@ -90,8 +90,8 @@ and launches **extensions** (`extensions/`: scan, logger, PID, ramping, sequence
 optimisers built on `optimizers_base`, console, h5browser). Extensions receive the Dashboard and act on its
 modules; third-party extensions register through the `pymodaq.extensions` entry point.
 
-**Remote control**: TCP/IP (`utils/tcp_ip`) and LECO (`utils/leco`, pyleco) let control modules be driven from
-other processes; `pymodaq_scripting` is the client side.
+**Remote control**: LECO (`utils/leco`, pyleco) lets control modules be driven from other processes (TCP/IP was
+removed in 5.3); `pymodaq_scripting` and other control modules GUI can be used to control a Dashboard remotely.
 
 ## Conventions
 

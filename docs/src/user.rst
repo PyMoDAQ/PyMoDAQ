@@ -19,4 +19,3 @@ User's Guide
    user_folder/plugin_manager
    user_folder/backup_environments
    user_folder/other_modules
-   user_folder/tcpip

@@ -339,7 +339,7 @@ to tailor the module's behaviour. The various field are written below together w
     [actuator]
     ui = ['Simple', 'Relative', 'Binary'] #other eventual options will be added programmaticaly at startup
     epsilon_default = 1
-    polling_interval_ms = 100  # ms Careful when using TCP/IP connection as you can saturate the connection with too much polling
+    polling_interval_ms = 100  # ms Careful when using a remote (LECO) connection as you can saturate the connection with too much polling
     polling_timeout_s = 20  # s
     refresh_timeout_ms = 500  # ms
     siprefix = true  # tell if printing of current value use a SI prefix or not (µ, m, k, M...)

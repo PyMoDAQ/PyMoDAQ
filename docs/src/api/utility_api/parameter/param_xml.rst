@@ -1,7 +1,7 @@
 Parameter and XML
 +++++++++++++++++
 
-Within PyMoDAQ, Parameter state are often saved or transferred (for instance when using TCP/IP) as a XML string whose
+Within PyMoDAQ, Parameter state are often saved or transferred (for instance when using LECO) as a XML string whose
 Tree structure is well adapted to represent the Parameter tree structure. Below are all the functions used to convert
 from a Parameter to a XML string (or file) and vice-versa.
 
