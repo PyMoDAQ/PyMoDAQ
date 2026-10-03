@@ -10,7 +10,9 @@ build:
   tools:
     python: "3.12"
   apt_packages:
-    - libnss3  # needed by QtWebEngine (qtmonaco editor) when importing modules for the API doc
+    # needed by QtWebEngine (qtmonaco editor) when importing modules for the API doc
+    - libnss3
+    - libasound2t64
 
   jobs:
     post_checkout:
