@@ -487,21 +487,22 @@ def flatten(xs):
 class LSqEllipse:
 
     def fit(self, data):
-        """Lest Squares fitting algorithm
+        """Least Squares fitting algorithm
 
         Theory taken from (*)
-        Solving equation Sa=lCa. with a = |a b c d f g> and a1 = |a b c>
-            a2 = |d f g>
+        Solving equation ``Sa=lCa``, with ``a = |a b c d f g>``, ``a1 = |a b c>`` and ``a2 = |d f g>``
 
-        Args
-        ----
-        data (list:list:float): list of two lists containing the x and y data of the
-            ellipse. of the form [[x1, x2, ..., xi],[y1, y2, ..., yi]]
+        Parameters
+        ----------
+        data: list of list of float
+            list of two lists containing the x and y data of the ellipse, of the form
+            ``[[x1, x2, ..., xi],[y1, y2, ..., yi]]``
 
         Returns
-        ------
-        coef (list): list of the coefficients describing an ellipse
-           [a,b,c,d,f,g] corresponding to ax**2+2bxy+cy**2+2dx+2fy+g
+        -------
+        list
+            the coefficients ``[a,b,c,d,f,g]`` describing an ellipse corresponding to
+            ``ax**2+2bxy+cy**2+2dx+2fy+g``
         """
         x, y = np.asarray(data, dtype=float)
 
