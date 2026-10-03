@@ -89,7 +89,7 @@ The toolbar, :numref:`figure_DAQ_Viewer_toolbar` allows data acquisition and oth
     :width: 20pt
     :height: 20pt
 
-.. |log| image:: /image/DAQ_Move/log.PNG
+.. |log| image:: /image/DAQ_Scan/log.PNG
     :width: 20pt
     :height: 20pt
 

@@ -32,7 +32,7 @@ Finally, under the header, there is a material tree, who expose actuators and de
 
 
 Launcher features
-------------
+-----------------
 
 Launcher has graphical shortcuts to launch empty interface, such as command line. (see 1 part of illustration)
 
@@ -43,7 +43,7 @@ Launcher has graphical shortcuts to launch empty interface, such as command line
 
 .. note::
 
-    If you want to launch a ``default`` dashboard with default experiment and state, you can refer to the `Restore an experiment`_ section.
+    If you want to launch a ``default`` dashboard with default experiment and state, you can refer to the :ref:`Restore an experiment <launcher_restore_experiment>` section.
 
 For all shortcuts, please refer you to appropriate section for more details on how it works.
 
@@ -51,6 +51,8 @@ To load an extension, select one in the combo box widget and click to arrow butt
 Multiple extensions can be launched simultaneously. Extensions run in separate process from each other, as well as from the launcher and dashboard.
 So, if an extension encounter an issue, other modules are not affected.
 
+
+.. _launcher_restore_experiment:
 
 To restore an experiment click on |open_in_new| ``Launch`` button. The launcher will load a dashboard with selected experiment and state.
 You can modify experiment or state before restore an experiment, for exemple if the last time PyMoDAQ used an experiment and a state, the launcher suggests that but you can just modify state.

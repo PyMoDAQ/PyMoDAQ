@@ -121,7 +121,7 @@ Toolbar:
 .. |ini| image:: bayesian_data/ini.png
 .. |run| image:: bayesian_data/run.png
 .. |goto| image:: bayesian_data/goto.png
-.. |go_to_best| image:: bayesian_data/go_to_best.png
+.. |go_to_best| image:: bayesian_data/go_to_best.PNG
 .. |stop| image:: bayesian_data/stop.png
 .. |restart| image:: bayesian_data/restart.png
 
@@ -208,7 +208,7 @@ But it could converge before! Therefore you can choose some more intelligent sto
 * the *Predict* one. In this mode, if the last Npoints proposed coordinates have a relative standard deviation of less than
   the *tolerance* settings, the algorithm will stop!
 * The *Best* one. In this mode, the Npoints best fitness value will be used to extract the corresponding coordinates.
-  If those coordinates have a relative standard deviation of less than *toleranceù, the alorithm will stop!
+  If those coordinates have a relative standard deviation of less than *tolerance*, the algorithm will stop!
 * The *None* one: no stopping unless manually (not the cleverest one I guess...)
 
 Observable and Probed Data

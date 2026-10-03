@@ -361,7 +361,6 @@ signal/navigation, see :ref:`DataND <navigation_signal>`.
 .. |roi_select2D| image:: plotting_data/viewer2D_roi_select.png
 .. |orientation| image:: plotting_data/viewer2D_orientation.png
 .. |legend| image:: plotting_data/viewer2D_legend.png
-.. |Showing Data2D with saturation and crosshair| image::
 
 .. code:: ipython3
 

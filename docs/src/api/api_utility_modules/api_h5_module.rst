@@ -42,8 +42,7 @@ To save and load data, one should use higher level objects, see :ref:`data_savin
    :members: H5SaverBase, H5Saver
 
 
-They both inherit from the ``ParameterManager`` MixIn class that deals with Parameter and ParameterTree,
-see :numref:`saving_settings_fig`.
+They both inherit from the ``ParameterManager`` MixIn class that deals with Parameter and ParameterTree.
 
 .. _swmr_utilities:
 

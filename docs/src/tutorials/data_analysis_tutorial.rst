@@ -272,8 +272,8 @@ where data and axes have been sliced. Then we `immediately` apply the mean metho
 
 .. parsed-literal::
 
-    <DataWithAxes: MAG <len:1> (|320)>
-    <DataWithAxes: MAG <len:1> (|200)>
+    <DataWithAxes: MAG <len:1> (\|320)>
+    <DataWithAxes: MAG <len:1> (\|200)>
     
 
 .. code:: ipython3
@@ -286,8 +286,8 @@ where data and axes have been sliced. Then we `immediately` apply the mean metho
 .. parsed-literal::
 
     DataToExport: mydata <len:2>
-        * <DataWithAxes: MAG <len:1> (|320)>
-        * <DataWithAxes: MAG <len:1> (|200)>
+        * <DataWithAxes: MAG <len:1> (\|320)>
+        * <DataWithAxes: MAG <len:1> (\|200)>
     
 
 .. figure:: /image/tutorial_data_analysis/data_femto_extracted.png

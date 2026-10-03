@@ -140,7 +140,7 @@ Basic Usage
 -----------
 
 Simple Synchronization
-~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
 
 Keep multiple checkboxes in sync:
 
@@ -167,7 +167,7 @@ Keep multiple checkboxes in sync:
    - Enable/disable patterns and many widget types (Tabs 4, 6, 7)
 
 Different Widget Types
-~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
 
 Sync different widget types representing the same value:
 
@@ -257,7 +257,7 @@ Factory Methods
 ---------------
 
 Built-in Factories
-~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~
 
 Convenient factories for common widget types:
 
@@ -280,7 +280,7 @@ Convenient factories for common widget types:
     sync = WidgetSync.for_lineedit(edit, initial="Hello")
 
 Generic Factory
-~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~
 
 For any Qt property:
 
@@ -547,7 +547,7 @@ Advanced Usage
 --------------
 
 Manual Connection
-~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
 
 For complete control:
 
@@ -1578,13 +1578,6 @@ Manage widgets that are created and destroyed dynamically:
             self.widgets.append(slider)
             self.layout().addWidget(slider)
 
-.. tip::
-   **Example:** :file:`examples/widget_sync/4_dynamic_widgets_example.py` demonstrates:
-
-   - Dynamic add/remove of synchronized sliders (Tab 1 - Audio mixer)
-   - Widget cloning with automatic sync (Tab 2 - Control panel duplication)
-   - Automatic cleanup when widgets are destroyed
-
         def remove_widget(self, slider):
             """Remove a widget from the panel"""
             self.sync.unbind(slider)
@@ -1605,6 +1598,13 @@ Manage widgets that are created and destroyed dynamically:
                 'count': self.sync.connection_count,
                 'widgets': self.sync.connected_widgets
             }
+
+.. tip::
+   **Example:** :file:`examples/widget_sync/4_dynamic_widgets_example.py` demonstrates:
+
+   - Dynamic add/remove of synchronized sliders (Tab 1 - Audio mixer)
+   - Widget cloning with automatic sync (Tab 2 - Control panel duplication)
+   - Automatic cleanup when widgets are destroyed
 
 Extending Widget Sync (Advanced)
 ---------------------------------
@@ -1675,7 +1675,7 @@ Complete examples demonstrating widget synchronization are available:
 See Also
 --------
 
-* :ref:`contributing` - Contributing guidelines
-* :ref:`api` - Full API reference
+* :ref:`contributors` - Contributing guidelines
+* :ref:`library_reference` - Full API reference
 
 

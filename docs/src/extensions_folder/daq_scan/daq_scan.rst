@@ -23,7 +23,6 @@ The flow of this module is as follow:
 
 
 .. toctree::
-   :numbered:
    :maxdepth: 3
    :caption: Contents:
 

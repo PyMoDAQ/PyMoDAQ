@@ -25,7 +25,7 @@ Once the download is finished, we should run the installer:
 
    * On Linux, the `.sh` files are executed using the `bash` command.
    * The "$(uname)" and "$(uname -m)" variables are here to get the filename that corresponds to our machine
-     configuration. Run `uname` and `uname -m   ` commands in a terminal to understand!
+     configuration. Run ``uname`` and ``uname -m`` commands in a terminal to understand!
 
 The installer will ask us several questions in the terminal, we will keep the default choices except for the last
 question, for which we should answer "yes".
@@ -55,7 +55,7 @@ environment into brackets.
    It will also create a folder ~/miniforge3 in our home directory, where all our Python environments will be stored.
 
 
-.. _section_installation:
+.. _section_installation_ubuntu:
 
 Set up a new Python environment
 -------------------------------

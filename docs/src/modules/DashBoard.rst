@@ -97,11 +97,11 @@ The **Tools** menu will allow you to:
 * Load Extensions of the DashBoard
 * Look at the current log file in the default editor. The older logs can be found in the *.pymodaq* folder,
   see :ref:`section_configuration`.
-* Open and modify the Preferences related to all pymodaq modules and plugins (see Fig. :numref:`edit_config`)
+* Open and modify the Preferences related to all pymodaq modules and plugins (see Fig. :numref:`dashboard_edit_config`)
 * Run the leco Coordinator (see :ref:`leco_communication`)
 
 
-  .. _edit_config:
+  .. _dashboard_edit_config:
 
 .. figure:: /image/configuration/edit_config.png
    :alt: config_file
