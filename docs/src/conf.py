@@ -153,13 +153,7 @@ pygments_style = 'sphinx'
 
 autodoc_inherit_docstrings = False
 autodoc_mock_imports = [
-    "scipy",
-    "h5py",
     "matplotlib",
-    "qtpy",
-    "qtpy.QtCore",
-    "qtpy.QtGui",
-    "qtpy.QtWidgets",
 ]
 
 
@@ -256,3 +250,26 @@ datatables_options = {
 }
 
 
+
+
+def _guard_process_signature_handlers(app):
+    """ Only let extensions process a signature when autodoc found one
+
+    Some extensions return a signature for objects documented as attributes (with no signature found by autodoc): Qt
+    Signals for sphinx_qt_documentation, Enum members whose value is a type for numpydoc... Sphinx >= 9 then fails with
+    "list assignment index out of range" when storing it.
+    """
+    def guarded(handler):
+        def process_signature(app, what, name, obj, options, signature, return_annotation):
+            if signature is None:
+                return None
+            return handler(app, what, name, obj, options, signature, return_annotation)
+        return process_signature
+
+    for listener in list(app.events.listeners.get('autodoc-process-signature', [])):
+        app.disconnect(listener.id)
+        app.connect('autodoc-process-signature', guarded(listener.handler), priority=listener.priority)
+
+
+def setup(app):
+    _guard_process_signature_handlers(app)
