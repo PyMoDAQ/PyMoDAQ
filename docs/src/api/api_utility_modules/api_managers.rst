@@ -76,10 +76,10 @@ API of the various managers, special classes easing the experimental orchestrati
 .. currentmodule:: pymodaq.utils.managers
 
 .. autosummary::
-    experiment.experiment_manager::ExperimentManager
-    state.state_manager::StateManager
+    experiment.experiment_manager.ExperimentManager
+    state.state_manager.StateManager
 
-.. currentmodule:: pymodaq.utils.experiment.experiment_manager
+.. currentmodule:: pymodaq.utils.managers.experiment.experiment_manager
 
 .. autoclass:: ExperimentManager
 

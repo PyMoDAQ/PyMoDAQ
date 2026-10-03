@@ -9,23 +9,27 @@ Summary of the main classes for the Bayesian Optimization extension
 
 .. autosummary::
 
-   BayesianOptimisation
-   BayesianModelGeneric
-   BayesianModelDefault
+   BayesianOptimization
+   optimizers_base.models.OptimizerModelGeneric
+   optimizers_base.models.OptimizerModelDefault
 
 
 The Extension module
 --------------------
 
-.. autoclass:: BayesianOptimisation
+.. autoclass:: BayesianOptimization
    :members:
 
 The Base Models
 ---------------
 
-.. autoclass:: BayesianModelGeneric
+The models are shared by all the optimizer extensions (see :mod:`pymodaq.extensions.optimizers_base`).
+
+.. py:currentmodule:: pymodaq.extensions.optimizers_base.models
+
+.. autoclass:: OptimizerModelGeneric
    :members:
 
-.. autoclass:: BayesianModelDefault
+.. autoclass:: OptimizerModelDefault
    :members:
 

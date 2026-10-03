@@ -160,7 +160,7 @@ see bottom of :numref:`bayesian_gui_settings_fig`.
 
 .. note::
 
-  Here the models should derive from `OptimizerModelDefault` located in the **pymodaq.extensions.optimizers_base.utils**
+  Here the models should derive from `OptimizerModelDefault` located in the **pymodaq.extensions.optimizers_base.models**
   module. That include many base class allowing to implement extensions behaving like the Bayesian one. For instance,
   the :ref:`adaptive_extension` extension, which is a kind of optimizer (it's optimizing the sampling), is using the same
   base classes than the Bayesian for its GUI, its

@@ -17,10 +17,6 @@ Summary of the data viewers classes
 
 
 .. currentmodule:: pymodaq_gui.plotting.data_viewers.base
-.. autodata:: DATATYPES
-
-
-.. currentmodule:: pymodaq_gui.plotting.data_viewers.base
 
 .. autoclass:: ViewerBase
    :members:

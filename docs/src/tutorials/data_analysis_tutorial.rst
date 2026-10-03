@@ -318,7 +318,7 @@ Electrons:
 
 .. parsed-literal::
 
-    <pymodaq.utils.plotting.data_viewers.viewer1D.Viewer1D at 0x2ae0556cb80>
+    <pymodaq_gui.plotting.data_viewers.viewer1D.Viewer1D at 0x2ae0556cb80>
 
 
 

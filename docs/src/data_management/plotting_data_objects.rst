@@ -572,7 +572,7 @@ Such an object is a ViewerDispatcher:
 
 .. code:: ipython3
 
-    from pymodaq.utils.plotting.data_viewers.viewer import ViewerDispatcher
+    from pymodaq_gui.plotting.data_viewers.viewer import ViewerDispatcher
 
 It allows to generate on the fly `Docks` containing a data
 viewers adapted to the particular dwa is contains. Such a dispatcher is
