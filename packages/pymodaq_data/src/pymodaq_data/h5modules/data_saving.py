@@ -1217,8 +1217,8 @@ class DataLoader:
 
         Returns
         -------
-        GROUP: returns the group named SPECIAL_GROUP_NAMES['nav_axes'] holding all NavAxis for
-        those data
+        GROUP
+            the group named ``SPECIAL_GROUP_NAMES['nav_axes']`` holding all NavAxis for those data
 
         See Also
         --------

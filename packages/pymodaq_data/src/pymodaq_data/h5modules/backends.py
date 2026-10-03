@@ -387,8 +387,8 @@ class EARRAY(CARRAY):
         The data to append could be:
 
         * a single element (without the enlargeable shape index that is always the first
-        index, that is of shape length n). In that case the first index of the enlargeable array
-        is increased by one.
+          index, that is of shape length n). In that case the first index of the enlargeable array
+          is increased by one.
         * an ensemble of elements (a ndarray) of shape length of (n+1).
 
         Parameters
