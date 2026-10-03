@@ -95,7 +95,7 @@ napoleon_preprocess_types = True
 napoleon_type_aliases = {
     "callable": ":class:`collections.abc.Callable`",
     "np.ndarray": ":class:`numpy.ndarray`",
-    'array_like': ':term:`array_like`',
+    'array_like': ':term:`numpy:array_like`',
     'color_like': ':func:`pyqtgraph.mkColor`',
     # 'ColorMapSpecifier': ':class:`str`, (:class:`str`, :class:`str`), or :class:`~pyqtgraph.ColorMap`',
 }
@@ -243,10 +243,6 @@ texinfo_documents = [
 
 # -- Extension configuration -------------------------------------------------
 
-# -- Options for intersphinx extension ---------------------------------------
-
-# Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'python': ('https://docs.python.org/', None)}
 
 # DATATABLES.NET option
 datatables_options = {
