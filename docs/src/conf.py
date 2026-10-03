@@ -85,7 +85,15 @@ qt_documentation = "PyQt6"
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
     'numpy': ('https://numpy.org/doc/stable/', None),
+    'pyqtgraph': ('https://pyqtgraph.readthedocs.io/en/latest/', None),
 }
+
+# forward references and guarded imports (under TYPE_CHECKING, to avoid circular imports) that
+# sphinx_autodoc_typehints cannot resolve: the annotations are still displayed
+suppress_warnings = [
+    'sphinx_autodoc_typehints.forward_reference',
+    'sphinx_autodoc_typehints.guarded_import',
+]
 
 nitpick_ignore_regex = [
     ("py:class", r"re\.Pattern"),  # doesn't seem to be a good ref in python docs
