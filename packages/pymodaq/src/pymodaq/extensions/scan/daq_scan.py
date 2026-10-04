@@ -203,6 +203,12 @@ class DAQScan(CustomExt):
              'value': 1, 'min': 0,
              'tooltip': 'Refresh the live plot every N scan points (1 = every point). '
                         '0 disables live plotting entirely during the scan.'},
+            {'title': 'Auto-show on scan start:', 'name': 'auto_show_live_plots', 'type': 'bool',
+             'value': config('pymodaq', 'scan', 'auto_show_live_plots'),
+             'tooltip': 'Automatically show the Live Plots dock when a scan starts, if at '
+                        'least one Plot0D/Plot1D is selected. Defaults to the '
+                        "'auto_show_live_plots' config entry, but can be overridden here "
+                        'per-session without touching the config file.'},
             ]},
     ] + SaverWorker.params
 
@@ -281,7 +287,8 @@ class DAQScan(CustomExt):
 
         self.live_plotter = LoaderPlotter(self.live_plot_dockarea)
 
-        self.settings.child('plot_options', 'prepare_viewers').sigActivated.connect(self.prepare_viewers)
+        self.settings.child('plot_options', 'prepare_viewers').sigActivated.connect(
+            lambda: self.toggle_live_plots(True))
         # Reuse the Detectors panel's probe button: probing already grabs the data
         # (populating its result tree), so just also refresh the plot selections from it
         self.modules_manager.settings.child('probe_detectors').sigActivated.connect(self.plot_from)
@@ -353,6 +360,7 @@ class DAQScan(CustomExt):
 
         self.dock_general_settings = gutils.Dock('General Settings')
         self.dockarea.addDock(self.dock_general_settings, 'right', self.live_plot_dock)
+        self.dock_general_settings.setVisible(config('pymodaq', 'scan', 'show_general_settings'))
 
         widget_command = QtWidgets.QWidget()
         widget_command.setLayout(QtWidgets.QVBoxLayout())
@@ -443,7 +451,8 @@ class DAQScan(CustomExt):
         self.add_action('show_general_settings', 'Show General Settings', 'settings',
                         "Show/hide the General settings panel (Time Flow, Scan options, Save..."
                         " - double-click its title bar to detach it into its own window)",
-                        checkable=True, checked=True, icon_checked_color=self.get_theme().green,
+                        checkable=True, checked=config('pymodaq', 'scan', 'show_general_settings'),
+                        icon_checked_color=self.get_theme().green,
                         menu='actions', before=WorkFlowActions.LOG)
         self.add_action('show_live_plots', 'Show Live Plots', 'bid_landscape_disabled',
                         "Show/hide the Live Plots panel (double-click its title bar to detach "
@@ -967,28 +976,40 @@ class DAQScan(CustomExt):
 
     def prepare_viewers(self):
         """ Assert from selected options the number and type of needed viewers for live plotting
-        and prepare them on the live plot panel
+        and (re)build them.
+
+        Only rebuilds the viewer objects - doesn't touch the Live Plots dock's visibility or
+        the 'show_live_plots' action. See toggle_live_plots, the single place that does: every
+        caller that wants the dock shown goes through it instead of poking the dock directly, so
+        the action's checked state/icon can't drift out of sync with what's actually on screen.
         """
         viewers_enum, data_names, _ = self.check_number_type_viewers()
         self.live_plotter.prepare_viewers(viewers_enum, viewers_name=data_names)
-        self.live_plot_dock.setVisible(True)
-        container = self.live_plot_dock.container()
-        if hasattr(container, 'raiseDock'):
-            # only meaningful if the user has since dragged this dock into a tab group;
-            # its container is a plain (non-tabbed) VContainer/HContainer otherwise, which
-            # has no raiseDock to call
-            container.raiseDock(self.live_plot_dock)
 
     def toggle_live_plots(self, show: bool = True):
-        """ Show/hide the Live Plots panel
+        """ Show/hide the Live Plots panel, keeping the 'show_live_plots' action's checked
+        state in sync with it
 
         Showing always goes through prepare_viewers() first, so the viewers are rebuilt
         from the current Plotting options selection rather than raising a stale/empty dock.
         """
         if show:
             self.prepare_viewers()
+            self.live_plot_dock.setVisible(True)
+            container = self.live_plot_dock.container()
+            if hasattr(container, 'raiseDock'):
+                # only meaningful if the user has since dragged this dock into a tab group;
+                # its container is a plain (non-tabbed) VContainer/HContainer otherwise, which
+                # has no raiseDock to call
+                container.raiseDock(self.live_plot_dock)
         else:
             self.live_plot_dock.setVisible(False)
+        self.set_action_checked('show_live_plots', show)
+
+    def _has_live_plot_selection(self) -> bool:
+        """ True if at least one Plot0D or Plot1D is currently checked in Plotting options """
+        return (bool(self.settings['plot_options', 'plot_0d']['selected'])
+               or bool(self.settings['plot_options', 'plot_1d']['selected']))
 
     def thread_status(self, status: utils.ThreadCommand):
         """ General function to get datas/infos from child thread back to the main.
@@ -1293,7 +1314,18 @@ class DAQScan(CustomExt):
             data_saving.DataToExportExtendedSaver(self.h5temp, extended_shape=scan_shape)
         self.live_plotter.h5saver = self.h5temp
 
-        self.prepare_viewers()
+        # Viewers are always (re)built so live plotting works during the scan; whether the dock
+        # pops open on its own is gated by the Plotting options' 'Auto-show on scan start'
+        # setting (itself defaulted from the 'auto_show_live_plots' config entry, but
+        # overridable per-session) + whether anything is actually selected to plot, so we don't
+        # steal focus/space for a scan with no Plot0D/Plot1D selected, and don't fight a user
+        # who explicitly hid the dock when nothing new warrants reopening it.
+        auto_show = (self.settings['plot_options', 'auto_show_live_plots']
+                    and self._has_live_plot_selection())
+        if auto_show:
+            self.toggle_live_plots(True)  # also rebuilds the viewers
+        else:
+            self.prepare_viewers()
         QtWidgets.QApplication.processEvents()
 
     def set_ini_positions(self):
