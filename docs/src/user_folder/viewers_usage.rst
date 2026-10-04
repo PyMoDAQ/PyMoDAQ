@@ -135,8 +135,10 @@ Crosshair
 
 The crosshair is a vertical line (Viewer1D) or a pair of lines (Viewer2D) that you can drag, or move with a double
 click on the plot. In a Viewer1D, its position (*x*) and the values of each trace at this position (*y*, separated by
-``/``) are printed in the toolbar, see :numref:`viewer1D_crosshair_fig`. In a Viewer2D, it also displays the horizontal
-and vertical lineouts of the image along its lines, and the value at its position, see :numref:`saturated_fig`.
+``/``) are printed in the toolbar, see :numref:`viewer1D_crosshair_fig`. In a Viewer2D, its position and the value of
+each channel at this position are printed on the left of the toolbar, and it displays the lineouts of the image along
+its lines: the horizontal one below the image, the vertical one on its right, and the history of the value at its
+position in the bottom right corner, see :numref:`viewer2D_crosshair_fig`.
 
    .. _viewer1D_crosshair_fig:
 
@@ -145,6 +147,14 @@ and vertical lineouts of the image along its lines, and the value at its positio
 
    A Viewer1D with the crosshair (yellow line). The toolbar prints its position and the value of the two traces at
    this position.
+
+   .. _viewer2D_crosshair_fig:
+
+.. figure:: /image/viewers/viewer2D_crosshair.png
+   :alt: Viewer2D with the crosshair
+
+   A Viewer2D (one channel) with the crosshair and its horizontal, vertical and history lineouts. The top left of the
+   toolbar prints its position and the value of the channel at this position.
 
 Its position is sent to the instrument plugin each time it is moved, so that a plugin can use it (for instance to
 point a scanner to the selected position), see :ref:`plugin_roi_select`.
@@ -217,8 +227,8 @@ ROI select
 The ROI select (|roiselect1D| / |roiselect2D| button) is a single extra selection, independent of the ROI manager:
 
 * in a Viewer1D, a region delimited by two draggable lines;
-* in a Viewer2D, a rectangle, that you can move and resize (it can't be rotated). When shown, it covers the central
-  part of the view.
+* in a Viewer2D, a rectangle, that you can move by dragging it and resize from its corner and side handles (it can't
+  be rotated). When shown, it covers the central part of the view, see :numref:`viewer2D_roi_select_fig`.
 
 It doesn't produce any data by itself. Instead, each time you release it after moving or resizing it, its position
 and size are sent to the instrument plugin of the DAQ_Viewer (in the units of the viewer axes). What happens then
@@ -230,10 +240,13 @@ depends on the plugin. Typical uses are:
 If a plugin doesn't use it, moving the ROI select has no effect. To use it in your own plugin, see
 :ref:`plugin_roi_select`.
 
-.. figure:: /data_management/plotting_data/viewer2D_roi_select.png
-   :alt: ROI select button
+   .. _viewer2D_roi_select_fig:
 
-   The ROI select button of the Viewer2D toolbar.
+.. figure:: /image/viewers/viewer2D_roi_select.png
+   :alt: Viewer2D with the ROI select
+
+   A Viewer2D with the ROI select (white rectangle) shown. Its handles resize it, the selection is sent to the
+   instrument plugin each time it is released.
 
 
 .. |clear0D| image:: /image/viewers/viewer0D_clear.png
