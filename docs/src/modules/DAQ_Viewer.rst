@@ -201,7 +201,7 @@ Other utilities
 There are other functionalities that can be triggered in specific conditions. Among those, you'll find:
 
 * The LCD screen to display 0D Data
-* The ROI_select button and ROI on a Viewer2D
+* The crosshair, the regions of interest (ROIs) and the ROI select of the data viewers, see :ref:`viewers_usage`
 
 
 
