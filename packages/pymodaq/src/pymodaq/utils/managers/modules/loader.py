@@ -77,6 +77,9 @@ class ModuleLoader(QtCore.QObject):
         self._modules: list[DAQ_Move | DAQ_Viewer] = []
         self._current_plugin: 'PluginInfo' = None
         self._current_master_controller: ControllerAndThread = None
+        self._stopped = False
+        self._finished = False
+        self.creator.register_loader(self)
 
         self._init_timeout_timer = QtCore.QTimer()
         self._init_timeout_timer.setInterval(config('pymodaq', 'control_modules', 'control_module_ini_polling') * 1000)
@@ -91,12 +94,36 @@ class ModuleLoader(QtCore.QObject):
     def start(self):
         self._advance()
 
+    def stop(self) -> list['DAQ_Move | DAQ_Viewer']:
+        """Stop loading: no more module will be created nor initialized
+
+        Returns
+        -------
+        list of DAQ_Move or DAQ_Viewer: the modules already created but not yet handed over through
+        :attr:`all_instruments_added`. The caller is responsible for quitting them.
+        """
+        self._stopped = True
+        self._init_timeout_timer.stop()
+        self._set_type_timeout_timer.stop()
+        if self._current_module is not None:
+            for signal, slot in ((self._current_module.instrument_changed, self._on_type_set),
+                                 (self._current_module.init_signal, self._on_init_done)):
+                try:
+                    signal.disconnect(slot)
+                except (TypeError, RuntimeError):
+                    pass
+        return [] if self._finished else self._modules[:]
+
     def _advance(self):
         self._init_timeout_timer.stop()
         self._set_type_timeout_timer.stop()
+        if self._stopped:
+            return
 
         self._ind += 1
         if self._ind == len(self._queue):
+            self._finished = True
+            self.creator.unregister_loader(self)
             self.all_instruments_added.emit(self._modules)
             return
 
@@ -127,6 +154,8 @@ class ModuleLoader(QtCore.QObject):
 
     def _on_type_set(self):
         self._set_type_timeout_timer.stop()
+        if self._stopped:
+            return
         self._current_module.instrument_changed.disconnect(self._on_type_set)
 
         # affecting the right controller and thread object (important for later initialization)

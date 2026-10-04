@@ -535,7 +535,8 @@ class DashBoard(CustomApp, LECOComponentMixin):
                 except TypeError:
                     pass
 
-            # Removing control modules
+            # Removing control modules, including the ones still being loaded (not yet in the ModulesManager)
+            self.remove_modules(self.module_creator.stop_loading())
             self.remove_actuators(self.actuators_modules)
             self.remove_detectors(self.detector_modules)
 
