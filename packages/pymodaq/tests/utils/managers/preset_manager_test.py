@@ -69,8 +69,9 @@ class TestExperimentManager:
         experiment_manager, qtbot = ini_experiment
         experiment_manager.entry = 'default'
 
-        default_state = experiment_manager.settings.saveState()
-
+        # compare the xml serializations: saveState would also compare options added when reading an xml file
+        # (e.g. showTop), absent from the default experiment if it comes from an older file
+        default_state = ioxml.parameter_to_xml_string(experiment_manager.settings)
 
         copy_name = 'acopy'
 
@@ -79,7 +80,7 @@ class TestExperimentManager:
         assert copy_name == experiment_manager.entry
         assert copy_name in experiment_manager.list_managed_entries()
 
-        copy_state = experiment_manager.settings.saveState()
+        copy_state = ioxml.parameter_to_xml_string(experiment_manager.settings)
 
         assert default_state == copy_state
 
