@@ -596,20 +596,26 @@ see :py:meth:`thread_status<pymodaq.control_modules.utils.ControlModule.thread_s
 * **close**: close the current thread and delete corresponding attribute on cascade.
 * **update_main_settings**: update the *main settings* in the UI settings tree. See below for an exemple.
   The attribute argument is a list containing:
+
   * the setting path as a tuple of strings (with the 'main_setting' parent setting)
   * the new value, limit or option of the setting
   * the type of change of the setting as a string, either:
+
     * 'value': to change the setting value
     * 'limits': to change the limits of the setting
     * 'options': any option of the setting
+
 * **update_settings**: update the *actuator's settings* in the UI settings tree. The attribute argument is a list
   containing:
+
   * the setting path as a tuple of strings (with the 'main_setting' parent setting)
   * the new value, limit or option of the setting
   * the type of change of the setting as a string, either:
+
     * *value*: to change the setting value
     * *limits*: to change the limits of the setting
     * *options*: any option of the setting
+
 * **raise_timeout**: call the raise_timeout method
 * **show_splash**: show the splash screen displaying info. The attribute argument is a string that will
   be displayed on the splash screen

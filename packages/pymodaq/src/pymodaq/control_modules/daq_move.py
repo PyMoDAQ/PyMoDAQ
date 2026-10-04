@@ -167,9 +167,15 @@ class DAQ_Move(ParameterControlModule):
 
     @property
     def current_value(self) -> DataActuator:
-        if self._current_value.origin is None:
+        if self._current_value.origin is None or self._current_value.origin == '':
             self.current_value.origin = self.title
         return self._current_value
+
+    @property
+    def target_value(self) -> DataActuator:
+        if self._target_value.origin is None or self._target_value.origin == '':
+            self._target_value.origin = self.title
+        return self._target_value
 
     @property
     def epsilon(self) -> float:
@@ -842,15 +848,17 @@ class DAQ_Move(ParameterControlModule):
 class ActuatorWorker(HardwareWorkerBase):
     """Worker class mediating between DAQ_Move and the actuator plugin instance.
 
-    ================== ========================
-    **Attributes**      **Type**
-    *status_sig*        instance of Signal (inherited)
-    *plugin*            actuator plugin instance
-    *plugin_name*       string (inherited property)
-    *controller_address* int or None
-    *axis_address*      string
-    *motion_stopped*    boolean
-    ================== ========================
+    Attributes
+    ----------
+    status_sig: Signal
+        inherited
+    plugin: DAQ_Move_base
+        actuator plugin instance
+    plugin_name: str
+        inherited property
+    controller_address: int or None
+    axis_address: str
+    motion_stopped: bool
     """
 
     _kind = 'actuator'

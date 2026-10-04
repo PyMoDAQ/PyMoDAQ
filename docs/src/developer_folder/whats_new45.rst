@@ -89,7 +89,7 @@ Figure :numref:`pymodaq_gui_hierarchy` show the layout of this package.
 
    Layout of the ``GUI`` module
 
-.. _Managers:
+.. _whats_new45_managers:
 
 Managers
 ++++++++
@@ -100,7 +100,8 @@ Managers
 * ``ModulesManager`` : DAQ_Moves, DAQ_Viewers...
 
 
-.. _Plotting:
+.. _whats_new45_plotting:
+
 Plotting
 ++++++++
 *(for detailed library information check* :doc:`Plotting</api/api_utility_modules/api_plotting/viewers>` *)*

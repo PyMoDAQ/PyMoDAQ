@@ -18,6 +18,7 @@ from pymodaq_gui import utils as gutils
 from pymodaq_gui.managers.h5manager import FileAction
 from pymodaq_gui.messenger import messagebox
 from pymodaq_gui.parameter import Parameter
+from pymodaq_gui.parameter.utils import tree_change_blocker
 from pymodaq_gui.plotting.data_viewers import ViewerDispatcher
 from pymodaq_gui.utils import Dock, QSpinBox_ro
 from pymodaq_gui.utils.custom_app import WorkFlowActions
@@ -42,10 +43,6 @@ if TYPE_CHECKING:
 
 logger = set_logger(get_module_name(__file__))
 config = GlobalConfig()
-
-EXTENSION_NAME = 'Ramp'  # the name that will be displayed in the extension list in the
-# dashboard
-CLASS_NAME = 'RampExtension'  # this should be the name of your class defined below
 
 
 class StatusBarManager:
@@ -124,11 +121,11 @@ class RampExtension(CustomExt):
             {'title': 'Start:', 'name': 'start', 'type': 'float', 'value': 500.},
             {'title': 'Stop:', 'name': 'stop', 'type': 'float', 'value': 560.},
             {'title': 'Duration:', 'name': 'duration', 'type': 'float', 'value': 20,
-             'suffix': config('ramping', 'duration_units')[0], 'siPrefix': True,
-             'readonly': config('ramping', 'ramp_setting')[0] != 'duration'},
+             'suffix': config('pymodaq', 'ramping', 'duration_units')[0], 'siPrefix': True,
+             'readonly': config('pymodaq', 'ramping', 'ramp_setting')[0] != 'duration'},
             {'title': 'Velocity:', 'name': 'velocity', 'type': 'float', 'value': 0,
              'suffix': '', 'siPrefix': True,
-             'readonly': config('ramping', 'ramp_setting')[0] != 'velocity'},
+             'readonly': config('pymodaq', 'ramping', 'ramp_setting')[0] != 'velocity'},
         ]},
         {'title': 'Use Steps:', 'name': 'use_steps', 'type': 'bool', 'value': True},
         {'title': 'Steps:', 'name': 'steps', 'type': 'group', 'children': [
@@ -296,29 +293,23 @@ class RampExtension(CustomExt):
             self.status_manager.set_step_units(self.actuator.units)
 
     def value_changed(self, param):
-        """ Actions to perform when one of the param's value in self.settings is changed from the
-        user interface
+        """ Update the dependent settings when one of the settings is changed from the user interface
 
-        For instance:
-        if param.name() == 'do_something':
-            if param.value():
-                print('Do something')
-                self.settings.child('main_settings', 'something_done').setValue(False)
+        Recomputes the number of steps and the duration or velocity of the ramp, and updates the
+        units and the lists of modules when the ramping actuator is changed.
 
         Parameters
         ----------
         param: (Parameter) the parameter whose value just changed
         """
-        if param.name() in ('duration', 'velocity', 'time_step'):
-            self.update_n_steps()
-        elif param.name() == 'actuator':
+        if param.name() == 'actuator':
             self._actuator: 'DAQ_Move' = None
             self.display_control_modules()
             self.update_ramp_settings()
         elif param.name() == 'use_steps':
             self.settings.child('steps').show(param.value())
-        if param.name() in ('start', 'stop', 'time_step'):
-            if config('ramping', 'ramp_setting')[0] == 'duration':
+        elif param.name() in ('start', 'stop', 'duration', 'velocity', 'time_step'):
+            if config('pymodaq', 'ramping', 'ramp_setting')[0] == 'duration':
                 self.update_velocity()
             else:
                 self.update_duration()
@@ -331,16 +322,19 @@ class RampExtension(CustomExt):
 
     @property
     def duration_units(self) -> str:
-        return config('ramping', 'duration_units')[0]
+        return config('pymodaq', 'ramping', 'duration_units')[0]
 
     def update_n_steps(self):
         self.settings['steps', 'nsteps'] = (self.q_from_param(('ramp', 'duration')) /
                                             self.q_from_param(('steps', 'time_step'))).to_reduced_units().magnitude
     def update_duration(self):
+        if self.actuator is None:
+            return
         if not np.allclose(self.settings['ramp', 'velocity'], 0):
             self.settings.child('ramp', 'velocity').setOpts(
                 suffix=f'{self.actuator.units}/{self.duration_units}')
-            self.settings['ramp', 'duration'] = (
+            # the sign of the velocity is given by start and stop, the duration is always positive
+            self.settings['ramp', 'duration'] = abs(
                     (self.q_from_param(('ramp', 'stop')) -
                      self.q_from_param(('ramp', 'start'))) /
                     self.q_from_param(('ramp', 'velocity'))).m_as(self.duration_units)
@@ -349,7 +343,7 @@ class RampExtension(CustomExt):
             self.settings['ramp', 'duration'] = 0
 
     def update_velocity(self):
-        if self.actuator is not None:
+        if self.actuator is not None and not np.allclose(self.settings['ramp', 'duration'], 0):
             self.settings.child('ramp', 'velocity').setOpts(
                 suffix=f'{self.actuator.units}/{self.duration_units}')
             self.settings['ramp', 'velocity'] = (
@@ -410,10 +404,11 @@ class RampingWorker(ExtensionWorker):
         return self.app.h5_histogrammer
 
     def _on_data_processed(self, dte: DataToExport):
-        self.thread_manager.n_jobs[HistogramProcessor.name] += 1
-        self.app.viewer.show_data(dte)
-        if self._running:
-            self.run_plot_timer()
+        try:
+            self.app.viewer.show_data(dte)
+        finally:  # keep the live histogram going even if one display failed
+            if self._running:
+                self.run_plot_timer()
 
     def run_plot_timer(self):
         QtCore.QTimer.singleShot(int(self.app.q_from_param(('refresh_plot',)).m_as('ms')), self.update_histogramer)
@@ -423,32 +418,35 @@ class RampingWorker(ExtensionWorker):
         return self.app.h5_histogrammer.settings
 
     def update_histogramer_settings(self):
-        with self.histo_settings.treeChangeBlocker(keep=set()):
+        with tree_change_blocker(self.histo_settings, keep=set()):
             self.histo_settings['h5info', 'h5path'] = str(self.h5_manager.h5saver.file_path)
             self.histo_settings['h5info', 'node_path'] = self.current_node.path
             self.histo_settings.child('histo', 'actuator').setLimits([self.actuator.title])
 
             self.histo_settings['histo', 'start'] = self.ramp.start.m_as(self.actuator.units)
-            self.histo_settings['histo', 'stop'] = self.ramp.start.m_as(self.actuator.units)
+            self.histo_settings['histo', 'stop'] = self.ramp.end.m_as(self.actuator.units)
 
-            self.histo_settings['histo', 'actuators'] = dict(
-                all_items=self.settings['actuators']['all_items'],
-                selected=self.settings['actuators']['selected'])
-            self.histo_settings['histo', 'detectors'] = dict(
-                all_items=self.settings['detectors']['all_items'],
-                selected=self.settings['detectors']['selected'])
-            self.histo_settings['histo', 'autobin'] = True
-        self.histo_settings.setOpts(enabled=False)
+            # only the saved modules can be plotted, keep the user selection among them
+            self.histo_settings['histo', 'actuators'] = self.h5_browser.get_selection(
+                'actuators', self.settings['actuators']['selected'])
+            self.histo_settings['histo', 'detectors'] = self.h5_browser.get_selection(
+                'detectors', self.settings['detectors']['selected'])
+        self.h5_browser.live = True
 
     def update_histogramer(self):
+        if not self._running:  # the plot timer may fire after the ramp has been stopped
+            return
         info = InfoForHistogram(
             self.current_node.path,
             self.actuator.title,
             self.ramp.start.m_as(self.actuator.units),
             self.ramp.end.m_as(self.actuator.units),
-            other_names=[act.title for act in self.actuators] + [det.title for det in self.detectors],
-            bins='auto')
+            other_names=(self.histo_settings['histo', 'actuators']['selected'] +
+                         self.histo_settings['histo', 'detectors']['selected']),
+            bins='auto' if self.histo_settings['histo', 'autobin'] else self.histo_settings['histo', 'nbins'])
 
+        # count the job before emitting it so that the number of pending tasks never gets negative
+        self.thread_manager.n_jobs[HistogramProcessor.name] += 1
         self.processor_worker.data_to_process_signal.emit(info)
 
 
@@ -504,7 +502,6 @@ class RampingWorker(ExtensionWorker):
         self._app.set_action_enabled('update_histogram', True)
 
         self.go_to_ini_ramp(callback=self._on_ini_ramp_done)
-        self.app.histogramer_settings_dock.setEnabled(False)
 
     def _on_ini_ramp_done(self, dte: DataToExport):
         self.modules_manager.forget_callback(self._on_ini_ramp_done,
@@ -652,10 +649,10 @@ class RampingWorker(ExtensionWorker):
         self.status_manager.set_permanent_status('Stopped Ramping')
 
 
-        if self.app.is_action_checked(WorkFlowActions.LOG):
+        try:  # the processor thread itself is terminated in terminate_workers, once all its jobs are done
             self.processor_worker.data_processed_signal.disconnect(self._on_data_processed)
-            self.thread_manager.exit_worker_thread('histogramer')
-            self._histogram_processor = None
+        except (TypeError, RuntimeError, AttributeError):  # not connected (Log unchecked)
+            pass
 
     def _pause(self, do_pause=True):
         if do_pause:
@@ -671,22 +668,25 @@ class RampingWorker(ExtensionWorker):
             self.status_manager.is_ramping = True
 
     def _on_workers_terminated(self):
-        self.app.histogramer_settings_dock.setEnabled(True)
+        self.h5_browser.live = False
         self.h5_browser.update_settings_from_file(self.h5_manager.get_h5saver(mode='r').file_path)
 
 
 def main():
     import sys
     from pymodaq_gui.qt_utils import mkQApp
-    from pymodaq.dashboard import create_load_dashboard
+    from pymodaq.dashboard import load_dashboard_with_arguments
     from pymodaq.utils.gui_utils.loader_utils import create_extension
 
-    app = mkQApp('Custom Ext')
+    app = mkQApp('Ramping')
 
-    win, dashboard = create_load_dashboard()
+    win, dashboard, ext = load_dashboard_with_arguments(show_dashboard=False,
+                                                        load_extension=False,
+                                                        )
     win.mainwindow.setVisible(False)
 
     win_ext, ext = create_extension(dashboard, RampExtension)
+    win_ext.show()
 
     sys.exit(app.exec())
 

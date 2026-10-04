@@ -410,9 +410,12 @@ def walk_xml_to_parameter(params=[], XML_elt=None):
 
 def set_dict_from_el(el):
     """Convert an element into a dict
+
+    Parameters
     ----------
     el: xml element
-    param_dict: dictionnary from which the parameter will be constructed
+    param_dict: dict
+        dictionnary from which the parameter will be constructed
     """
     param_dict = elt_to_dict(el)
     set_txt_from_elt(el, param_dict)  

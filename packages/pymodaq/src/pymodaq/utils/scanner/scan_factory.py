@@ -126,8 +126,10 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
         To be reimplemented if needed
 
         """
-        return DataActuator(self.actuators[axis_index].title, data=float(self.positions[scan_index, axis_index]),
-                            units=self.actuators[axis_index].units)
+        return DataActuator(self.actuators[axis_index].title,
+                            data=float(self.positions[scan_index, axis_index]),
+                            units=self.actuators[axis_index].units,
+                            origin=self.actuators[axis_index].title)
 
     @property
     def current_scan_index(self) -> int:

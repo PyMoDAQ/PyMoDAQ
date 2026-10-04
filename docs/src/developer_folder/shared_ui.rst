@@ -22,7 +22,8 @@ create a MainWindow either directly or using the `make_window` method. The Share
 object take this window as an argument and will build on it the menus and actions,
 see :numref:`naked_shared_ui`
 
-.. code-block::
+.. code-block:: python
+
     from pymodaq_gui.utils.widgets.window import make_window
     from pymodaq_gui.utils.shared_ui import SharedUI
     from pymodaq_gui.qt_utils import mkQApp

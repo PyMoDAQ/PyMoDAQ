@@ -276,7 +276,7 @@ The General Settings are comprised of:
     * if checked, update the live plots at each step in the scan
     * if not, display a **Refresh plots** integer parameter, say T. Will update the live plots every T milliseconds
 
-*  **Save Settings**: See :ref:`h5saver_settings`
+*  **Save Settings**: See :ref:`h5saver_module`
 
 
 .. _daq_scan_saving:

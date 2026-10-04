@@ -709,13 +709,16 @@ class DAQ_Viewer(ParameterControlModule):
         Slot receiving data from plugins emitted with the `data_grabed_signal`
         Process the data as specified in the settings, display them into the dedicated data viewers depending on the
         settings:
-            * create a container (DataToExport `_data_to_save_export`) with info from this DAQ_Viewer (title), a timestamp...
-            * call `_process_data`
-            * do background subtraction if any
-            * check refresh time (if set in the settings) to send or not data to data viewers
-            * either send to the data viewers (if refresh time is ok and/or show data option in settings is set)
-            * either
-                * send grab_done_signal (to the slot _save_export_data ) to save the data
+
+        * create a container (DataToExport ``_data_to_save_export``) with info from this DAQ_Viewer (title), a
+          timestamp...
+        * call ``_process_data``
+        * do background subtraction if any
+        * check refresh time (if set in the settings) to send or not data to data viewers
+        * either send to the data viewers (if refresh time is ok and/or show data option in settings is set)
+        * either
+
+          * send grab_done_signal (to the slot _save_export_data ) to save the data
 
         Parameters
         ----------

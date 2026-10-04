@@ -253,6 +253,7 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
                   metadata=dict([]),
                   mode: str = 'a'):
         """Initializes a new h5 file.
+
         Could set the h5_file attributes as:
 
         * a file with a name following a template if ``custom_naming`` is ``False`` and ``addhoc_file_path`` is ``None``
@@ -262,22 +263,21 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
         Parameters
         ----------
         update_h5: bool
-                   create a new h5 file with name specified by other parameters
-                   if false try to open an existing file and will append new data to it or just read it
+            create a new h5 file with name specified by other parameters
+            if false try to open an existing file and will append new data to it or just read it
         custom_naming: bool
-                       if True, a selection file dialog opens to set a new file name
+            if True, a selection file dialog opens to set a new file name
         addhoc_file_path: Path or str
-                          supplied name by the user for the new file
+            supplied name by the user for the new file
         metadata: dict
-                    dictionnary with pair of key, value that should be saved as attributes of the root group
-       mode: str
+            dictionnary with pair of key, value that should be saved as attributes of the root group
+        mode: str
             valid if update_h5 is False. Then could be 'r' for readonly or 'a' to append data
-
 
         Returns
         -------
-        update_h5: bool
-                   True if new file has been created, False otherwise
+        bool
+            True if new file has been created, False otherwise
         """
         datetime_now = datetime.datetime.now()
         if addhoc_file_path is None:

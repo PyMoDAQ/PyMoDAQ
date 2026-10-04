@@ -226,7 +226,7 @@ your new commands:
        else:
            super().queue_command(command)
 
-.. info::
+.. note::
    ``binary_serialization_to_kwargs`` (from
    :mod:`pymodaq.utils.leco.utils`) returns either
    ``{"data": <json_value>, "additional_payload" : None}`` for plain Python types or

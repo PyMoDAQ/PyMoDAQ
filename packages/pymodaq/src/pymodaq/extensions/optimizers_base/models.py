@@ -95,6 +95,7 @@ class OptimizerModelGeneric(ABC):
     def convert_input(self, measurements: DataToExport) -> float:
         """
         Convert the measurements in the units to be fed to the Optimisation Controller
+
         Parameters
         ----------
         measurements: DataToExport

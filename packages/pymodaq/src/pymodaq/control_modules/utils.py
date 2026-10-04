@@ -47,11 +47,12 @@ class HardwareWorkerBase(QObject):
     worker classes share (ini_hardware, close).
 
     Subclasses must implement:
-        ini_hardware(params_state, controller) -> edict
-        close() -> str
-    and set class attribute:
-        _kind: str  e.g. 'actuator' or 'detector'
-    The settings key is derived automatically as "<kind>_settings".
+
+    * ``ini_hardware(params_state, controller) -> edict``
+    * ``close() -> str``
+
+    and set the class attribute ``_kind: str``, e.g. 'actuator' or 'detector'.
+    The settings key is derived automatically as ``"<kind>_settings"``.
     """
 
     status_sig = Signal(ThreadCommand)
@@ -347,19 +348,21 @@ class ControlModule(QObject):
         """Get back info (using the ThreadCommand object) from the hardware
 
         And re-emit this ThreadCommand using the custom_sig signal if it should be used in a higher level module
+
         Parameters
         ----------
         status: ThreadCommand
             The info returned from the hardware, the command (str) can be either:
-                * Update_Status: display messages and log info (deprecated)
-                * update_status: display info on the UI status bar
-                * close: close the current thread and delete corresponding attribute on cascade.
-                * update_settings: Update the "detector setting" node in the settings tree.
-                * update_main_settings: update the "main setting" node in the settings tree
-                * raise_timeout:
-                * show_splash: Display the splash screen with attribute as message
-                * close_splash
-                * show_config: display the plugin configuration
+
+            * Update_Status: display messages and log info (deprecated)
+            * update_status: display info on the UI status bar
+            * close: close the current thread and delete corresponding attribute on cascade.
+            * update_settings: Update the "detector setting" node in the settings tree.
+            * update_main_settings: update the "main setting" node in the settings tree
+            * raise_timeout:
+            * show_splash: Display the splash screen with attribute as message
+            * close_splash
+            * show_config: display the plugin configuration
         """
 
         if status.command == "Update_Status":

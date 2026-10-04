@@ -24,41 +24,41 @@ visual vocabulary is familiar to developers.
 Color Definitions
 -----------------
 
-+------------------+--------+--------------------+----------------------+
-| State            | Color  | logging analogy    | Meaning              |
-+==================+========+====================+======================+
-| ``off``          | grey   | —                  | Module absent, not   |
-|                  |        |                    | initialized, or      |
-|                  |        |                    | hardware not yet     |
-|                  |        |                    | connected.           |
-+------------------+--------+--------------------+----------------------+
-| ``idle``         | green  | —                  | Initialized and      |
-|                  |        |                    | ready — waiting for  |
-|                  |        |                    | a command or trigger.|
-+------------------+--------+--------------------+----------------------+
-| ``running``      | blue   | —                  | A command is in      |
-|                  |        |                    | flight: moving,      |
-|                  |        |                    | acquiring, or        |
-|                  |        |                    | processing data.     |
-|                  |        |                    | Hex fallback: blue   |
-|                  |        |                    | ``#0078d4``.         |
-+------------------+--------+--------------------+----------------------+
-| ``warning``      | yellow | ``logging.WARNING``| A non-fatal issue.   |
-|                  |        |                    | Still functional;    |
-|                  |        |                    | user attention       |
-|                  |        |                    | advised.  Fallback:  |
-|                  |        |                    | amber ``#ccaa00``.   |
-+------------------+--------+--------------------+----------------------+
-| ``error``        | orange | ``logging.ERROR``  | An operation failed. |
-|                  |        |                    | Module may still     |
-|                  |        |                    | recover. Fallback:   |
-|                  |        |                    | ``#dc6400``.         |
-+------------------+--------+--------------------+----------------------+
-| ``critical``     | red    | ``logging.CRITICAL``| Unrecoverable fault.|
-|                  |        |                    | Timeout, hardware    |
-|                  |        |                    | error, or fatal      |
-|                  |        |                    | exception.           |
-+------------------+--------+--------------------+----------------------+
++------------------+--------+----------------------+----------------------+
+| State            | Color  | logging analogy      | Meaning              |
++==================+========+======================+======================+
+| ``off``          | grey   | —                    | Module absent, not   |
+|                  |        |                      | initialized, or      |
+|                  |        |                      | hardware not yet     |
+|                  |        |                      | connected.           |
++------------------+--------+----------------------+----------------------+
+| ``idle``         | green  | —                    | Initialized and      |
+|                  |        |                      | ready — waiting for  |
+|                  |        |                      | a command or trigger.|
++------------------+--------+----------------------+----------------------+
+| ``running``      | blue   | —                    | A command is in      |
+|                  |        |                      | flight: moving,      |
+|                  |        |                      | acquiring, or        |
+|                  |        |                      | processing data.     |
+|                  |        |                      | Hex fallback: blue   |
+|                  |        |                      | ``#0078d4``.         |
++------------------+--------+----------------------+----------------------+
+| ``warning``      | yellow | ``logging.WARNING``  | A non-fatal issue.   |
+|                  |        |                      | Still functional;    |
+|                  |        |                      | user attention       |
+|                  |        |                      | advised.  Fallback:  |
+|                  |        |                      | amber ``#ccaa00``.   |
++------------------+--------+----------------------+----------------------+
+| ``error``        | orange | ``logging.ERROR``    | An operation failed. |
+|                  |        |                      | Module may still     |
+|                  |        |                      | recover. Fallback:   |
+|                  |        |                      | ``#dc6400``.         |
++------------------+--------+----------------------+----------------------+
+| ``critical``     | red    | ``logging.CRITICAL`` | Unrecoverable fault. |
+|                  |        |                      | Timeout, hardware    |
+|                  |        |                      | error, or fatal      |
+|                  |        |                      | exception.           |
++------------------+--------+----------------------+----------------------+
 
 Usage with MultistateLED
 ------------------------

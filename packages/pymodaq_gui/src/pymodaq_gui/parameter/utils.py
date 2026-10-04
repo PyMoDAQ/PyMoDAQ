@@ -1,4 +1,6 @@
 from __future__ import annotations
+from contextlib import contextmanager
+import inspect
 from typing import List, Tuple, Union
 import numpy as np
 from collections import OrderedDict
@@ -9,6 +11,8 @@ from pymodaq_gui.parameter import ioxml
 from pymodaq_gui.parameter import Parameter
 
 ser_factory = SerializableFactory()
+
+_TREE_CHANGE_BLOCKER_HAS_KEEP = 'keep' in inspect.signature(Parameter.treeChangeBlocker).parameters
 
 
 @SerializableFactory.register_decorator()
@@ -496,3 +500,32 @@ if __name__ == '__main__':              # pragma: no cover
     d['readonly'] = False
     print(parent[0]['children'][1]['children'])
 
+
+
+
+@contextmanager
+def tree_change_blocker(param: Parameter, keep: set[str] = None):
+    """ Block and accumulate the tree change signals of param, keeping only some change types
+
+    Backward compatible version of ``Parameter.treeChangeBlocker(keep=...)``, whose ``keep`` argument is only
+    available in recent pyqtgraph versions.
+
+    Parameters
+    ----------
+    param: Parameter
+        the parameter whose tree change signals are blocked
+    keep: set of str
+        the change types (``'value'``, ``'limits'``...) emitted once unblocked. None keeps them all, an empty set
+        discards all the changes made within the block
+    """
+    if _TREE_CHANGE_BLOCKER_HAS_KEEP:
+        with param.treeChangeBlocker(keep=keep):
+            yield
+        return
+    param.blockTreeChangeSignal()
+    try:
+        yield
+    finally:
+        if keep is not None and param.blockTreeChangeEmit == 1:  # outermost block: filter what will be emitted
+            param.treeStateChanges = [change for change in param.treeStateChanges if change[1] in keep]
+        param.unblockTreeChangeSignal()

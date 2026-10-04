@@ -10,7 +10,7 @@ from pymodaq_gui.messenger import messagebox
 from pymodaq_gui.utils import select_file
 from pymodaq.extensions.sequencer.utilities.sequencer.sequence import Sequence
 
-from qtpy import QtWidgets
+from qtpy import QtWidgets, QtCore
 
 from pymodaq_gui import utils as gutils
 from pymodaq_gui.utils.custom_app import WorkFlowActions
@@ -67,8 +67,7 @@ class Sequencer(CustomExt):
         self.sequence_worker = SequenceWorker(self)
         super().__init__(parent, dashboard, add_toolbar_break=False)
 
-        self.sequences: dict[str, Sequence] = {}
-        self.sequence_names: list[str] = []
+        self.sequences: list[Sequence] = []
         self.sequence_container: QtWidgets.QWidget = None
         self.status_manager = StatusBarManager(self)
 
@@ -76,6 +75,10 @@ class Sequencer(CustomExt):
         self.setup_ui()
 
         self._current_path: Path = get_set_sequencer_path()
+
+    @property
+    def sequence_names(self) -> list[str]:
+        return [seq.title for seq in self.sequences]
 
     def do_things_after_ui_setup(self):
         self.add_sequence('Main')
@@ -120,20 +123,42 @@ class Sequencer(CustomExt):
 
         widget = QtWidgets.QWidget()
         self.sequence_names.append(name.lower())
-        self.sequences[name.lower()] = Sequence(name.lower(), widget, self.dashboard)
+        self.sequences.append(Sequence(name.lower(), widget, self.dashboard))
         self.sequence_container.layout().addWidget(widget)
-        SequenceElt.register_sequence(self.sequences[name.lower()])
+        SequenceElt.register_sequence(self.sequences[-1])
+        self.sequences[-1].name_changed.connect(self.update_sequence_name)
         self.set_action_enabled('remove_sequence', len(self.sequences) > 1)
 
-    def remove_sequence(self, name: str = None):
-        if name is None:
-            name = list(self.sequences.keys())[-1]
-
-        seq = self.sequences.pop(name.lower())
+    def remove_sequence(self):
+        seq = self.sequences.pop(-1)
+        SequenceElt.unregister_sequence(seq)
         self.sequence_container.layout().removeWidget(seq.parent)
         seq.parent.setParent(None)
         seq.parent.deleteLater()
         self.set_action_enabled('remove_sequence', len(self.sequences) > 1)
+        self.update_sequence_name(seq.title, None)
+
+    def update_sequence_name(self, old_name: str, new_name: str | None):
+        """browse all elts in the sequences for SequenceElt and modify the current
+        seq name if it has been changed!
+        """
+        for seq in self.sequences:
+            for elt in seq.iterate_elts():
+                if isinstance(elt, SequenceElt):
+                    if elt.sequence == old_name:
+                        target_name = new_name
+                        if target_name is None:
+                            target_name = self.sequences[-1].title
+                            messagebox(title='Sequence removed',
+                                       text=f'The Sequence Elt id {elt.id} in sequence {seq.title} '
+                                            f'was set on a sequence '
+                                            f'that has been deleted, please review it!!!')
+
+                        elt.sequence = target_name
+                        index = seq.model.index_from_element(elt)
+
+                        # Notify the view that the DisplayRole has changed for this index
+                        seq.model.dataChanged.emit(index, index, [QtCore.Qt.ItemDataRole.DisplayRole])
 
     def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
         """Non mandatory method to be subclassed in order to create a menubar
@@ -219,14 +244,14 @@ class Sequencer(CustomExt):
             for seq_name in sequence_dict['sequences']:
                 # first, creates all the Sequence objects
                 self.add_sequence(seq_name)
-            for seq_name, seq_dict in sequence_dict['sequences'].items():
+            for ind_seq, (seq_name, seq_dict) in enumerate(sequence_dict['sequences'].items()):
                 # then load the sequence content (eventually containing other sequences references,
                 # hence creating all of them first
-                self.sequences[seq_name].load_sequence(seq_dict)
+                self.sequences[ind_seq].load_sequence(seq_dict)
         else:
             while len(self.sequences) > 1:
                 self.remove_sequence()
-            self.sequences[list(self.sequences.keys())[0]].load_sequence(sequence_dict)
+            self.sequences[0].load_sequence(sequence_dict)
 
     def save_sequence(self, path: Path = None):
         if path is None:
@@ -236,8 +261,8 @@ class Sequencer(CustomExt):
         if path is not None and path != '':
             self._current_path = path.parent
             sequence_dict = {'sequences': {}}
-            for sequence_name, sequence in self.sequences.items():
-                sequence_dict['sequences'][sequence_name] = sequence.root_elt.to_dict()
+            for sequence in self.sequences:
+                sequence_dict['sequences'][sequence.title] = sequence.root_elt.to_dict()
 
             with open(path, 'w') as file:
                 yaml.dump(
@@ -248,25 +273,9 @@ class Sequencer(CustomExt):
                     sort_keys=False,
                     allow_unicode=True
                 )
-    def value_changed(self, param):
-        """ Actions to perform when one of the param's value in self.settings is changed from the
-        user interface
-
-        For instance:
-        if param.name() == 'do_something':
-            if param.value():
-                print('Do something')
-                self.settings.child('main_settings', 'something_done').setValue(False)
-
-        Parameters
-        ----------
-        param: (Parameter) the parameter whose value just changed
-        """
-        pass
-
     @property
     def main_sequence(self) -> Sequence:
-        return self.sequences[self.sequence_names[0]]
+        return self.sequences[0]
 
     def _quit_fun(self) -> bool:
         if self.sequence_worker.is_running:
@@ -301,7 +310,7 @@ class SequenceWorker(ExtensionWorker):
 
     def _start(self):
         self.module_and_data_saver.get_set_node(new=True)
-        for sequence in self.app.sequences.values():
+        for sequence in self.app.sequences:
             sequence.set_log_callback(self.save_callback if self.app.is_action_checked(WorkFlowActions.LOG)
                                       else None)
 
@@ -314,19 +323,19 @@ class SequenceWorker(ExtensionWorker):
         self.app.main_sequence.get_action(WorkFlowActions.START).trigger()
 
     def _pause(self, do_pause: bool = True):
-        for sequence in self.app.sequences.values():
+        for sequence in self.app.sequences:
             sequence.get_action(WorkFlowActions.PAUSE).trigger()
 
 
     def stop(self, msg: str = None):
-        for sequence in self.app.sequences.values():
+        for sequence in self.app.sequences:
             sequence.get_action(WorkFlowActions.STOP).trigger()
 
     def stopped(self, msg: str = None):
         super().stop(msg)
 
     def _stop(self, msg: str = None):
-        for sequence in self.app.sequences.values():
+        for sequence in self.app.sequences:
             sequence.recursive_disconnect_elts()
 
         self.app.enable_workflow_actions(True,
@@ -343,7 +352,7 @@ def main():
     from pymodaq.dashboard import load_dashboard_with_arguments
     from pymodaq.utils.gui_utils.loader_utils import create_extension
 
-    app = mkQApp('Custom Ext')
+    app = mkQApp('Sequencer')
 
     win, dashboard, ext = load_dashboard_with_arguments(show_dashboard=False,
                                                         load_extension=False,

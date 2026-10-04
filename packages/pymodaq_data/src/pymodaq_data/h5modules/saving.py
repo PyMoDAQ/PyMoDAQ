@@ -99,6 +99,7 @@ class H5SaverLowLevel(H5Backend):
 
         Convenience factory that combines the constructor and :meth:`init_file`
         call into a single expression.
+
         Parameters
         ----------
         path: Path or str
@@ -283,6 +284,7 @@ class H5SaverLowLevel(H5Backend):
                   title: str = '', metadata=dict([])):
 
         """save data arrays on the hdf5 file together with metadata
+
         Parameters
         ----------
         where: GROUP
@@ -294,7 +296,7 @@ class H5SaverLowLevel(H5Backend):
         data_shape: Iterable
             the shape of the array to save, mandatory if array_to_save is None
         data_dimension: DataDim
-         The data's dimension
+            The data's dimension
         scan_shape: Iterable
             the shape of the scan dimensions
         title: str
@@ -310,12 +312,13 @@ class H5SaverLowLevel(H5Backend):
             if False, data are saved as a CARRAY, otherwise as a EARRAY (for ragged data, see add_string_array)
         metadata: dict
             dictionnary whose keys will be saved as the array attributes
-        add_scan_dim: if True, the scan axes dimension (scan_shape iterable) is prepended to the array shape on the hdf5
-                      In that case, the array is usually initialized as zero and further populated
+        add_scan_dim: bool
+            if True, the scan axes dimension (scan_shape iterable) is prepended to the array shape on the hdf5
+            In that case, the array is usually initialized as zero and further populated
 
         Returns
         -------
-        array (CARRAY or EARRAY)
+        CARRAY or EARRAY
 
         See Also
         --------

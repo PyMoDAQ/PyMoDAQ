@@ -13,7 +13,7 @@ no exception is raised.
 
 .. seealso::
 
-   :ref:`hardware_discovery_plugin` in the plugin development tutorial for
+   :ref:`Shared hardware discovery <hardware_discovery_plugin>` in the plugin development tutorial for
    migration examples.
 
 Base cache class

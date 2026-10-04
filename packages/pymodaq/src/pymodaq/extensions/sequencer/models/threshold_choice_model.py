@@ -44,7 +44,7 @@ class ThresholdChoiceModel(ChoiceModelBase):
             self.settings['data_name'] = data0D_names[0]
 
     def execute(self, dte: DataToExport):
-        if len(self.selected) > 0:
+        if len(self.settings['detectors']['selected']) > 0:
             self.modules_manager.selected_detectors_name = self.settings['detectors']['selected']
             self.modules_manager.connect_detectors()
             dte = self.modules_manager.grab_data()
@@ -68,11 +68,12 @@ class ThresholdChoiceModel(ChoiceModelBase):
         """
         if not self.parent_elt.dashboard.experiment_manager.entry_applied:
             raise ElementError('No Experiment has been applied in the DashBoard')
-        if len(self.settings['detectors']['selected']) != 0:
+        if len(self.settings['detectors']['selected']) == 0:
             raise ElementError(f'Element {self.parent_elt} has no detector selected ')
-        if (self.settings['detectors']['selected'] not in
-                self.parent_elt.dashboard.modules_manager.detectors_name):
-            raise ElementError(f'Element {self.parent_elt} : the selected detector is not existing in the DashBoard')
+        for det_name in self.settings['detectors']['selected']:
+            if det_name not in self.parent_elt.dashboard.modules_manager.detectors_name:
+                raise ElementError(f'Element {self.parent_elt} : the selected detector {det_name} is not existing '
+                                   f'in the DashBoard')
         if self.settings['data_name'] is None or self.settings['data_name'] == '':
             raise ElementError(f'Element {self.parent_elt} has no data name set')
 

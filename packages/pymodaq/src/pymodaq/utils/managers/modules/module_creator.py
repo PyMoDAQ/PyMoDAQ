@@ -43,17 +43,16 @@ class ModuleCreator:
                                                   add_menu_entries=build_menu_for_module_creation(self._get_masters()),
                                                   update_button_text=False)
         self.menu_button.triggered.connect(self._add_module)
-        self.dashboard.modules_manager.modules_added_signal.connect(self._update_masters)
+        self.dashboard.modules_manager.modules_added_signal.connect(self.update_masters)
 
     def _get_masters(self):
         return [mod.title for mod in self.dashboard.modules_manager.modules_all if mod.master]
 
-    def _update_masters(self):
+    def update_masters(self):
         self.menu_button.update_entries(build_menu_for_module_creation(self._get_masters()))
 
-    def create_menu_to_add_modules(self) -> MenuButton:
-        masters = [mod for mod in self.dashboard.modules_manager.modules_all if mod.master]
-        return build_menu_for_module_creation(masters)
+    def create_menu_to_add_modules(self) -> dict:
+        return build_menu_for_module_creation(self._get_masters())
 
     def _add_module(self, path: tuple[str]):
         path = list(path)
