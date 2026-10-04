@@ -28,6 +28,7 @@ country = "UnitedStates"
     fill = [false, true]  # pymodaq uses the first elt in config
     size = [40, 20]  # pymodaq uses the first elt in config
     style = ['rounded']  # pymodaq uses the first elt in config
+toolbar_button_style = ['icon_only', 'text_only', 'text_beside_icon', 'text_under_icon', 'follow_style']  # pymodaq uses the first elt in config; changeable live from the View > Toolbar style menu
 
 [viewer]
 rois_as_popup = false
