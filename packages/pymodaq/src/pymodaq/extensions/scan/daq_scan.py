@@ -161,6 +161,7 @@ class DAQScan(CustomExt):
     settings_name = 'daq_scan_settings'
     show_h5file_statusbar_widgets = True
     show_workflow_actions = True
+    help_markdown = Path(__file__).parent.joinpath('help.md')
 
     command_daq_signal = Signal(utils.ThreadCommand)
     scan_done_signal = QtCore.Signal()
