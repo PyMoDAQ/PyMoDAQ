@@ -209,27 +209,32 @@ class DAQ_Viewer_base(PluginBase):
         raise NotImplementedError
 
     def roi_select(self, roi_info: RoiInfo, ind_viewer: int = 0):
-        """ Every time a ROISelect is updated on a 2D Viewer,
-        this method receive the corresponding info
+        """ Every time the ROIselect of a Viewer1D or Viewer2D is moved or resized (on release),
+        this method receives the corresponding info
 
-        To be subclassed in a plugin to use the info
+        To be subclassed in a plugin to use the info, for instance to crop the emitted data with
+        ``dwa.vsig[roi_info.to_slices(False)]`` or to set a hardware ROI.
 
         Parameters
         ----------
         roi_info: RoiInfo
+            origin (corner) and size of the selection, in the units of the viewer axes and in the (y, x) order
+            for a Viewer2D
         ind_viewer: int
             The index of the viewer (if multiple) in which the roi is declared
         """
         pass
 
     def crosshair(self, crosshair_info: Iterable[float], ind_viewer: int = 0):
-        """ Every time a crosshair is updated, this method receive the corresponding info
+        """ Every time the crosshair of a viewer is moved, this method receives its position
 
         To be subclassed in a plugin to use the info
 
         Parameters
         ----------
-        crosshair_info: list of float
+        crosshair_info: tuple of float
+            the (x, y) position of the crosshair, in the units of the viewer axes (only x is meaningful for a
+            Viewer1D)
         ind_viewer: int
             The index of the viewer (if multiple) in which the crosshair is declared
         """

@@ -72,6 +72,7 @@ class RoiParameter(GroupParameter):
         if self.roi_dim == ROIDim.ROI2D:
             options.width = self['size', 'width']
             options.height = self['size', 'height']
+            options.angle = self['angle']
         return options
 
 

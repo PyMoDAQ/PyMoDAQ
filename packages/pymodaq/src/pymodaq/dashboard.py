@@ -33,7 +33,6 @@ from pymodaq_gui.parameter import ParameterTree, Parameter
 from pymodaq_gui.utils import DockArea, Dock
 import pymodaq_gui.utils.layout as layout_mod
 from pymodaq_gui.parameter import utils as putils
-from pymodaq_gui.managers.roi_viewer_manager import ROISaver
 from pymodaq_gui.utils.custom_app import CustomApp
 from pymodaq_gui.utils.enums import MenuToolbarNames
 from pymodaq_gui.config import get_set_layout_path
@@ -180,7 +179,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
         self.title = ""
 
-        self.roi_saver: ROISaver = None
 
         self.remote_timer = QtCore.QTimer(self)
         self.remote_manager = None

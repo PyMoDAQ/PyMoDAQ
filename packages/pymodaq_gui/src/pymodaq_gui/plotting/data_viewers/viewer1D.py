@@ -301,7 +301,8 @@ class View1D(ActionManager, QObject):
         self.plot_widget = PlotWidget()
         self.roi_manager = ROIViewerManager(self.plotitem.vb, ROIDim.ROI1D)
         self.roi_widget = WidgetWithLabelTitle(self.title, self.roi_manager.roiwidget,
-                                               closable=True, attachable=True)
+                                               closable=True, attachable=True,
+                                               expand_subwidget=True)
         self.roi_widget.sig_close.connect(lambda: self.get_action('do_math').trigger())
         self.roi_widget.closeEvent = lambda event: self.set_action_checked('do_math', False)
         self._rois_panel = DetachablePanel(
