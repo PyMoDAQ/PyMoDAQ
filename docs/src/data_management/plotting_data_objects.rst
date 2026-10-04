@@ -143,7 +143,8 @@ As for the buttons in the toolbar (you can try them from the notebook):
    represented as a scrambled solid line, using this button will reorder
    the data by ascending values of its axis. See below and figure xx
 -  |errors|: when activated, will display errors (error bars) in the form of a area around the curve
--  |roiselect|: extra ROI that can be used independantly of the ROI manager
+-  |roiselect|: extra ROI that can be used independantly of the ROI manager, its position is sent to the
+   instrument plugin of a DAQ_Viewer, see :ref:`viewers_roi_select`
 
 .. figure:: plotting_data/viewer1D_with_roi_crosshair_dot.png
    :alt: Showing Data1D as dots and with an activated ROI and crosshair
@@ -318,7 +319,7 @@ As for the buttons in the toolbar (you can try them from the notebook):
 -  |aspect2D|: set the aspect ratio to one
 -  |crosshair2D|: activate the crosshair (see figure below)
 -  |roi_select2D|: extra rectangular ROI that can be used independently of the
-   ROI manager
+   ROI manager, its position is sent to the instrument plugin of a DAQ_Viewer, see :ref:`viewers_roi_select`
 -  |orientation|: flip or rotate the image
 -  |legend|: show/hide the legend (see figure below)
 
