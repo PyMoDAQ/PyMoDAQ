@@ -120,6 +120,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     log_signal = QtCore.Signal(str)
     show_h5file_statusbar_widgets = False
     show_workflow_actions = False
+    help_markdown: Union[str, Path, None] = None  # path to a markdown file, defaults to the class docstring
 
     h5_base_group_name = 'AppData'  # rename that in your app/extension to give a meaningful name to your base group
     params = []
@@ -186,6 +187,12 @@ class CustomApp(QObject, ActionManager, ParameterManager):
 
         self._h5_manager = H5Manager(self, show_not=h5_actions_not)
         self._worker_thread_manager = WorkerThreadManager(parent=self)
+
+    def get_help_markdown(self) -> str:
+        """Markdown text describing how to use this application, shown by the Help action"""
+        if self.help_markdown is not None:
+            return Path(self.help_markdown).read_text(encoding='utf8')
+        return inspect.cleandoc(self.__class__.__doc__ or '')
 
     @property
     def thread_manager(self) -> WorkerThreadManager:

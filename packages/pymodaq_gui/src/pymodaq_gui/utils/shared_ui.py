@@ -90,6 +90,8 @@ class SharedUI(CustomApp):
     The second argument is the module file path from where the app has been launched: allows simple restart
     """
 
+    _help_dialog: QtWidgets.QDialog | None = None
+
     def __init__(self, widget: Union[QtWidgets.QWidget, DockArea],
                  show=True, title: str = None):
 
@@ -214,6 +216,11 @@ class SharedUI(CustomApp):
 
         self.get_menu(MenuToolbarNames.HELP).addSeparator()
 
+        self.add_action(short_name="app_help", name="Application help", icon_name="help",
+                        tip="Show how to use this application", toolbar=MenuToolbarNames.RUNTIME,
+                        menu=MenuToolbarNames.HELP, checkable=True,
+                        icon_checked_color=self.get_theme().green)
+
         self.add_action(short_name="check_updates", name="Check updates", icon_name="update",
                         auto_toolbar=False, menu=MenuToolbarNames.HELP)
 
@@ -231,6 +238,7 @@ class SharedUI(CustomApp):
 
         self.connect_action("about", self.show_about)
         self.connect_action("documentation", self.show_help)
+        self.connect_action("app_help", self.show_app_help)
         self.connect_action("check_updates", lambda: self.check_update(True))
 
     def quit_fun(self):
@@ -348,6 +356,35 @@ class SharedUI(CustomApp):
 
     def show_help(self):
         QtGui.QDesktopServices.openUrl(QtCore.QUrl("http://pymodaq.cnrs.fr"))
+
+    def show_app_help(self):
+        if not self.get_action('app_help').isChecked():
+            if self._help_dialog is not None:
+                self._help_dialog.close()
+            return
+
+        if self._help_dialog is None:
+            self._help_dialog = self._create_help_dialog()
+        markdown = self._main_application.get_help_markdown() \
+            if isinstance(self._main_application, CustomApp) else ''
+        self._help_dialog.findChild(QtWidgets.QTextBrowser).setMarkdown(
+            markdown or 'No help available for this application.')
+        self._help_dialog.show()
+
+    def _create_help_dialog(self) -> QtWidgets.QDialog:
+        browser = QtWidgets.QTextBrowser()
+        browser.setOpenExternalLinks(True)
+        close_button = QtWidgets.QPushButton('Close')
+
+        dialog = QtWidgets.QDialog(self.mainwindow)
+        dialog.setWindowTitle(f'{self.title} help')
+        dialog.resize(640, 520)
+        layout = QtWidgets.QVBoxLayout(dialog)
+        layout.addWidget(browser)
+        layout.addWidget(close_button, alignment=Qt.AlignmentFlag.AlignRight)
+        close_button.clicked.connect(dialog.close)
+        dialog.finished.connect(lambda: self.get_action('app_help').setChecked(False))
+        return dialog
 
 
 def main():
