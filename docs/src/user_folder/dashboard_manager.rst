@@ -173,22 +173,27 @@ each with their given State. However, only one at a time is activated.
 ROI manager
 -----------
 
-.. note::
+The *ROI* manager saves and restores in one click the regions of interest (ROIs) defined in the viewers of the
+detectors of the Dashboard (see :ref:`viewers_rois` for how to define ROIs in a viewer).
 
-  As of version 5.2.0 the *ROI* manager will be rewritten to use the general framework described above.
+Its entries are attached to the current Experiment: an entry named after the Experiment is created automatically
+when the Experiment is loaded. Entries are stored in the *rois* folder of the user *.pymodaq* folder (see
+:ref:`section_configuration`).
 
-The *ROI* manager is used to save and load in one click all ROIs or Lineouts defined in the current detector's viewers,
-see :numref:`roi_manager_fig`.
-The file name will be derived from the preset configuration file, so that at start up, it will automatically be loaded,
-and ROIs and Lineouts will be restored.
+Its window shows two lists:
 
-  .. _roi_manager_fig:
+* *Viewers*: the viewers of all the detectors of the Dashboard (use the *Update viewers* button to refresh it after
+  adding or removing detectors). Select the ones whose ROIs should be listed;
+* *ROIs*: the ROIs of the selected viewers, named ``detector/viewer/ROI_xx/type``. The checked ones are the ones
+  saved in the entry when saving it.
 
-.. figure:: /image/managers/roi_manager.PNG
-   :alt: roi_manager_fig
+Executing an entry (from the ROI manager or from the *ROIs* menu and toolbar of the Dashboard) re-creates its ROIs in
+the corresponding viewers and shows their ROI panel. Detectors or viewers of the entry that no longer exist in the
+Dashboard are skipped.
 
-   An example of ROI manager modification named from the preset *preset_adaptive* (and corresponding xml file)
-   containing all ROIs and lineouts defined on the detectors's viewers.
+By default, the ROIs are not restored when an Experiment is loaded. Set ``restore_rois = true`` in the ``[viewer]``
+section of the *pymodaq* preferences (see :ref:`configfile`) to execute the ROI manager entry of the Experiment
+each time it is loaded.
 
 
 .. _Remote_module:
