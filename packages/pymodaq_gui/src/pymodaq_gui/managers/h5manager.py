@@ -165,14 +165,15 @@ class H5Manager(QtCore.QObject, ActionManager):
         self.connect_action(FileAction.SHOW_SETTINGS, lambda: self.command_sig.emit(ThreadCommand(FileAction.SHOW_SETTINGS)))
 
     def show_settings(self, show: bool = True):
+        self._init_h5_saver()
 
-        widget = self.h5saver.settings_tree
+        widget = self._h5saver.settings_tree
         while widget is not None:
             widget = widget.parent()
             if isinstance(widget, Dock):
                 break
         if widget is None:
-            widget = self.h5saver.settings_tree
+            widget = self._h5saver.settings_tree
 
         widget.setVisible(show)
         widget.closeEvent = lambda event: self.set_action_checked(FileAction.SHOW_SETTINGS, False)
