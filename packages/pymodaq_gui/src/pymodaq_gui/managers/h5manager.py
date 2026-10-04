@@ -74,7 +74,7 @@ class H5Manager(QtCore.QObject, ActionManager):
 
         self._file_open_LED: MultistateLED = None
 
-        self._show_h5file_statusbar_widgets = getattr(app, '.show_h5file_statusbar_widgets', True)
+        self._show_h5file_statusbar_widgets = getattr(app, 'show_h5file_statusbar_widgets', True)
 
         self.create_file_toolbar_and_menu()
 
@@ -166,13 +166,13 @@ class H5Manager(QtCore.QObject, ActionManager):
 
     def show_settings(self, show: bool = True):
 
-        widget = self._h5saver.settings_tree
+        widget = self.h5saver.settings_tree
         while widget is not None:
             widget = widget.parent()
             if isinstance(widget, Dock):
                 break
         if widget is None:
-            widget = self._h5saver.settings_tree
+            widget = self.h5saver.settings_tree
 
         widget.setVisible(show)
         widget.closeEvent = lambda event: self.set_action_checked(FileAction.SHOW_SETTINGS, False)
@@ -225,6 +225,7 @@ class H5Manager(QtCore.QObject, ActionManager):
         Also connected to ``new_file_sig`` (``Signal(bool)``); Qt allows a signal to connect to
         a slot taking fewer arguments than it emits, so no bool parameter is needed here.
         """
+        self._init_h5_saver()
         self.close_file()
         # Explicitly create a new file (don't reopen existing)
         try:
@@ -252,6 +253,8 @@ class H5Manager(QtCore.QObject, ActionManager):
         return FileStatus.REOPENED
 
     def close_file(self):
+        if self._h5saver is None:
+            return
         self._h5saver.flush()
         self._h5saver.close_file()
         self.update_file_status_led()
@@ -335,6 +338,7 @@ class H5Manager(QtCore.QObject, ActionManager):
             if not isinstance(file_path, Path):
                 file_path = Path(file_path)
             self.current_folder = file_path.parent
+            self._init_h5_saver()
             file_status = self._try_open_existing_file(file_path, mode=mode)
             self.update_file_status_led()
             if file_status not in (FileStatus.NO_FILE, FileStatus.CLOSED):
