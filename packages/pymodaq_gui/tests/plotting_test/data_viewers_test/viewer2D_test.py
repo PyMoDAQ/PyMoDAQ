@@ -619,6 +619,16 @@ class TestRoiSelect:
         assert blocker.args[0].size == Point(SIZE[-1::-1])
 
 
+def test_crosshair_position_readout(init_viewer2d):
+    prog, qtbot = init_viewer2d
+    prog.show_data(init_data())
+    prog.view.get_action('crosshair').trigger()
+    with qtbot.waitSignal(prog.crosshair_dragged, timeout=1000):
+        prog.view.crosshair.set_crosshair_position(24, 75)
+    text = prog.view.get_action('position').text()
+    assert text.startswith('(2.4e+01, 7.5e+01)')
+
+
 def test_crosshair_and_roiselect_above_images(init_viewer2d):
     """The crosshair lines and the ROIselect should be drawn above the image items"""
     prog, qtbot = init_viewer2d

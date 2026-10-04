@@ -1045,7 +1045,7 @@ class Viewer2D(ViewerBase):
             posx, posy = self.view.get_crosshair_position()
             (posx_scaled, posy_scaled) = self.view.scale_axis(posx, posy)
 
-            dat = f'({posx_scaled:.1e}{posy_scaled:.1e})\n'
+            dat = f'({posx_scaled:.1e}, {posy_scaled:.1e})\n'
             dwa_int = crosshair_dte.get_data_from_name(Lineouts.INT)
             if dwa_int is not None:
                 for ind_data in range(len(dwa_int)):
