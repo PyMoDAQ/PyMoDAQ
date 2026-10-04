@@ -279,8 +279,7 @@ class DAQScan(CustomExt):
 
         self.set_config()
 
-        self.live_plotter = LoaderPlotter(None)
-        self.live_plotter.dispatcher.dockarea.hide()
+        self.live_plotter = LoaderPlotter(self.live_plot_dockarea)
 
         self.settings.child('plot_options', 'prepare_viewers').sigActivated.connect(self.prepare_viewers)
         # Reuse the Detectors panel's probe button: probing already grabs the data
@@ -347,6 +346,14 @@ class DAQScan(CustomExt):
         self.dock_command = gutils.Dock('Scan Command')
         self.dockarea.addDock(self.dock_command)
 
+        self.live_plot_dockarea = gutils.DockArea()
+        self.live_plot_dock = gutils.Dock('Live Plots')
+        self.dockarea.addDock(self.live_plot_dock, 'right', self.dock_command)
+        self.live_plot_dock.addWidget(self.live_plot_dockarea)
+
+        self.dock_general_settings = gutils.Dock('General Settings')
+        self.dockarea.addDock(self.dock_general_settings, 'right', self.live_plot_dock)
+
         widget_command = QtWidgets.QWidget()
         widget_command.setLayout(QtWidgets.QVBoxLayout())
         self.dock_command.addWidget(widget_command)
@@ -379,18 +386,14 @@ class DAQScan(CustomExt):
         self.plotting_settings_tree = ParameterTree()
         self.detectors_widget.layout().addWidget(self.plotting_settings_tree)
 
-        # Column 3: General (infrequently-touched, cross-cutting settings, including Save)
-        self.general_widget = self._make_section_groupbox('General')
-        self.general_widget.setMinimumWidth(220)
-        self.general_widget.setMaximumWidth(400)
-
-        self.general_settings_tree = ParameterTree()
-        self.general_widget.layout().addWidget(self.general_settings_tree)
-
         splitter_widget.addWidget(self.actuators_widget)
         splitter_widget.addWidget(self.detectors_widget)
-        splitter_widget.addWidget(self.general_widget)
-        splitter_widget.setSizes([300, 300, 300])
+        splitter_widget.setSizes([300, 300])
+
+        self.general_widget = self._make_section_groupbox('General')
+        self.general_settings_tree = ParameterTree()
+        self.general_widget.layout().addWidget(self.general_settings_tree)
+        self.dock_general_settings.addWidget(self.general_widget)
 
         self.populate_status_bar()
 
@@ -438,8 +441,15 @@ class DAQScan(CustomExt):
         self.set_action_visible('start_batch', False)
 
         self.add_action('show_general_settings', 'Show General Settings', 'settings',
-                        "Show/hide the General settings panel (Time Flow, Scan options, Save...)",
+                        "Show/hide the General settings panel (Time Flow, Scan options, Save..."
+                        " - double-click its title bar to detach it into its own window)",
                         checkable=True, checked=True, icon_checked_color=self.get_theme().green,
+                        menu='actions', before=WorkFlowActions.LOG)
+        self.add_action('show_live_plots', 'Show Live Plots', 'bid_landscape_disabled',
+                        "Show/hide the Live Plots panel (double-click its title bar to detach "
+                        "it into its own window)",
+                        checkable=True, checked=True, icon_checked='bid_landscape',
+                        icon_checked_color=self.get_theme().green,
                         menu='actions', before=WorkFlowActions.LOG)
 
     def connect_things(self):
@@ -455,6 +465,7 @@ class DAQScan(CustomExt):
         self.connect_action('navigator', self.show_navigator)
         self.connect_action('batch', lambda: self.show_batcher(self.menubar))
         self.connect_action('show_general_settings', self.toggle_general_settings)
+        self.connect_action('show_live_plots', self.toggle_live_plots)
 
     def process_cmds(self, cmd: utils.ThreadCommand):
         """Process commands sent by actions done in the ui
@@ -650,7 +661,7 @@ class DAQScan(CustomExt):
 
     def toggle_general_settings(self, show: bool = True):
         """ Show/hide the General settings panel (Time Flow, Scan options, Save...) """
-        self.general_widget.setVisible(show)
+        self.dock_general_settings.setVisible(show)
 
     def show_navigator(self):
 
@@ -960,20 +971,24 @@ class DAQScan(CustomExt):
         """
         viewers_enum, data_names, _ = self.check_number_type_viewers()
         self.live_plotter.prepare_viewers(viewers_enum, viewers_name=data_names)
-        self.live_plotter.dispatcher.dockarea.show()
-        self.live_plotter.dispatcher.dockarea.raise_()
+        self.live_plot_dock.setVisible(True)
+        container = self.live_plot_dock.container()
+        if hasattr(container, 'raiseDock'):
+            # only meaningful if the user has since dragged this dock into a tab group;
+            # its container is a plain (non-tabbed) VContainer/HContainer otherwise, which
+            # has no raiseDock to call
+            container.raiseDock(self.live_plot_dock)
 
-    def toggle_viewers_window(self):
-        """ Show or hide the independent window holding the live plot viewers
+    def toggle_live_plots(self, show: bool = True):
+        """ Show/hide the Live Plots panel
 
         Showing always goes through prepare_viewers() first, so the viewers are rebuilt
-        from the current Plotting options selection rather than raising a stale/empty window.
+        from the current Plotting options selection rather than raising a stale/empty dock.
         """
-        dockarea = self.live_plotter.dispatcher.dockarea
-        if dockarea.isVisible():
-            dockarea.hide()
-        else:
+        if show:
             self.prepare_viewers()
+        else:
+            self.live_plot_dock.setVisible(False)
 
     def thread_status(self, status: utils.ThreadCommand):
         """ General function to get datas/infos from child thread back to the main.
