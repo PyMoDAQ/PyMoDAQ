@@ -36,7 +36,7 @@ from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.managers.roi_viewer_manager import ROISaver
 from pymodaq_gui.utils.custom_app import CustomApp
 from pymodaq_gui.utils.enums import MenuToolbarNames
-from pymodaq_gui.config import get_set_layout_path, get_set_roi_path
+from pymodaq_gui.config import get_set_layout_path
 from pymodaq_gui.utils.widgets.window import make_window
 
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager

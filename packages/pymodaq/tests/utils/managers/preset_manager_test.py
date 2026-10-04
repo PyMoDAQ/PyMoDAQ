@@ -69,8 +69,9 @@ class TestExperimentManager:
         experiment_manager, qtbot = ini_experiment
         experiment_manager.entry = 'default'
 
-        default_state = experiment_manager.settings.saveState()
-
+        # compare the xml serializations: saveState would also compare options added when reading an xml file
+        # (e.g. showTop), absent from the default experiment if it comes from an older file
+        default_state = ioxml.parameter_to_xml_string(experiment_manager.settings)
 
         copy_name = 'acopy'
 
@@ -79,7 +80,7 @@ class TestExperimentManager:
         assert copy_name == experiment_manager.entry
         assert copy_name in experiment_manager.list_managed_entries()
 
-        copy_state = experiment_manager.settings.saveState()
+        copy_state = ioxml.parameter_to_xml_string(experiment_manager.settings)
 
         assert default_state == copy_state
 
@@ -125,3 +126,25 @@ class TestExperimentManager:
 
 
 
+
+
+def test_remove_preset_related_files():
+    from pymodaq.utils.config import (get_set_state_path, get_set_overshoot_path, get_set_roi_manager_path,
+                                      get_set_remote_path)
+    from pymodaq_gui.config import get_set_layout_path
+
+    name = 'test_remove_preset_related_files'
+    files = [get_set_state_path(name).joinpath(f'{name}.state'),
+             get_set_overshoot_path(name).joinpath(f'{name}.xml'),
+             get_set_roi_manager_path().joinpath(f'{name}.rois'),
+             get_set_layout_path().joinpath(f'{name}.dock'),
+             get_set_remote_path().joinpath(name)]
+    for file in files:
+        file.write_text('')
+
+    ExperimentManager.remove_preset_related_files(name)
+
+    for file in files:
+        assert not file.exists()
+    assert not get_set_state_path().joinpath(name).exists()
+    assert not get_set_overshoot_path().joinpath(name).exists()
