@@ -458,6 +458,32 @@ class TestROI:
         assert np.any(vlineout.data[0] == approx(np.mean(data[0], 1)))
         assert np.any(intlineout.data[0] == approx(np.mean(data[0])))
 
+    def test_process_data_led(self, init_viewer2d):
+        """The Process data LED of a ROI activates/deactivates its processing"""
+        prog, qtbot = init_viewer2d
+        data = init_data()
+        prog.show_data(data)
+        index_roi, roi_meta, roi_type = create_one_roi(prog, qtbot, roitype='RectROI')
+        assert roi_meta.roi.compute
+
+        roi_meta.param.child('process_data').setValue(False)
+        assert not roi_meta.roi.compute
+        with qtbot.waitSignal(prog.data_to_export_signal, timeout=1000) as blocker:
+            prog.show_data(data)
+        assert 'Integrated' not in blocker.args[0].get_names()
+
+        roi_meta.param.child('process_data').setValue(True)
+        assert roi_meta.roi.compute
+        with qtbot.waitSignal(prog.data_to_export_signal, timeout=1000) as blocker:
+            prog.show_data(data)
+        assert 'Integrated' in blocker.args[0].get_names()
+
+    def test_roi_angle_from_param(self, init_viewer2d):
+        prog, qtbot = init_viewer2d
+        index_roi, roi_meta, roi_type = create_one_roi(prog, qtbot, roitype='RectROI')
+        roi_meta.param.child('angle').setValue(30.)
+        assert roi_meta.param.to_options().angle == approx(30.)
+
     def test_data_from_roi_spread(self, init_viewer2d):
         prog, qtbot = init_viewer2d
         data = init_data(uniform=False)

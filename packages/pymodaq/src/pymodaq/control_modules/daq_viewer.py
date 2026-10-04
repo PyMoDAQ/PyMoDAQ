@@ -53,6 +53,7 @@ from pymodaq.control_modules.thread_commands import (ThreadStatus, ThreadStatusV
                                                      ControlToHardwareViewer, UiToMainViewer)
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerBase
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
+from pymodaq_gui.plotting.items.roi import RoiInfo
 from pymodaq_utils.enums import enum_checker
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base
 
@@ -91,9 +92,9 @@ class DAQ_Viewer(ParameterControlModule):
 
     Notes
     -----
-    A particular signal from the 2D DataViewer is directly connected to the plugin: ROI_select_signal. The position and
-    size of the corresponding ROI is then directly transferred to a plugin function named `ROISelect` that you have to
-    create if one want to receive infos from the ROI
+    The ROIselect and the crosshair of the data viewers are forwarded to the plugin: each time the user moves them, the
+    plugin methods `roi_select(roi_info, ind_viewer)` and `crosshair(crosshair_info, ind_viewer)` are called (they do
+    nothing by default and can be overridden in the plugin).
     """
     settings_name = 'daq_viewer_settings'
     _hw_kind = 'detector'
@@ -134,6 +135,7 @@ class DAQ_Viewer(ParameterControlModule):
 
         self._viewer_types: List[ViewersEnum] = []
         self._viewers: List[ViewerBase] = []
+        self._viewer_connections: List[Tuple[Signal, callable]] = []  # (signal, slot) to disconnect on viewers change
 
         self.override_grab_from_extension = False  # boolean allowing an extension to tell to init a grab or not
         # (see DataMixer for reasons and use case in ModulesManager and dashboard method add_det_from_extension)
@@ -229,6 +231,20 @@ class DAQ_Viewer(ParameterControlModule):
     def do_bkg(self, doit: bool):
         self._do_bkg = doit
 
+    def _connect_viewer_signal(self, signal: Signal, slot: callable):
+        signal.connect(slot)
+        self._viewer_connections.append((signal, slot))
+
+    def _send_roi_select(self, roi_info: RoiInfo, ind_viewer: int):
+        """Forward the ROIselect info of a viewer to the plugin roi_select method"""
+        self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.ROI_SELECT,
+                                                 dict(roi_info=roi_info, ind_viewer=ind_viewer)))
+
+    def _send_crosshair(self, posx: float, posy: float, ind_viewer: int):
+        """Forward the crosshair position of a viewer to the plugin crosshair method"""
+        self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.CROSSHAIR,
+                                                 dict(crosshair_info=(posx, posy), ind_viewer=ind_viewer)))
+
     @property
     def viewers(self) -> List[ViewerBase]:
         """:obj:`list`: Get/Set the Viewers (instances of real implementation of ViewerBase class) from the UI"""
@@ -242,20 +258,23 @@ class DAQ_Viewer(ParameterControlModule):
                 viewer.data_to_export_signal.disconnect()
             except TypeError as e:
                 pass
+        for signal, slot in self._viewer_connections:
+            try:
+                signal.disconnect(slot)
+            except (TypeError, RuntimeError):
+                pass
+        self._viewer_connections = []
+
         for ind_viewer, viewer in enumerate(viewers):
             viewer.data_to_export_signal.connect(self._get_data_from_viewer)
 
-            viewer.roi_select_signal.connect(
-                lambda roi_info: self.command_hardware.emit(
-                    ThreadCommand(ControlToHardwareViewer.ROI_SELECT,
-                                  dict(roi_info=roi_info,
-                                       ind_viewer=ind_viewer))))
-            viewer.crosshair_dragged.connect(
-                lambda crosshair_info: self.command_hardware.emit(
-                    ThreadCommand(ControlToHardwareViewer.CROSSHAIR,
-                                  dict(crosshair_info=crosshair_info,
-                                       ind_viewer=ind_viewer))))
-
+            # ind_viewer bound as default argument (evaluated now, not when the slot is called)
+            self._connect_viewer_signal(
+                viewer.roi_select_signal,
+                lambda roi_info, ind_viewer=ind_viewer: self._send_roi_select(roi_info, ind_viewer))
+            self._connect_viewer_signal(
+                viewer.crosshair_dragged,
+                lambda posx, posy, ind_viewer=ind_viewer: self._send_crosshair(posx, posy, ind_viewer))
 
         self._viewers = viewers
         self.instrument_changed.emit()

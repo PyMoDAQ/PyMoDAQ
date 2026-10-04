@@ -48,7 +48,8 @@ class ControlModuleUI(CustomApp):
         self.config = config
         self._ini_state = False
 
-        self._settings_widget = WidgetWithLabelTitle(self.title, closable=True, attachable=True)
+        self._settings_widget = WidgetWithLabelTitle(self.title, closable=True, attachable=True,
+                                                     expand_subwidget=True)
         self._settings_widget.sig_close.connect(lambda: self.show_settings(False))
         self._settings_widget.closeEvent = lambda event: self.set_action_checked('show_settings', False)
         self._settings_panel = DetachablePanel(

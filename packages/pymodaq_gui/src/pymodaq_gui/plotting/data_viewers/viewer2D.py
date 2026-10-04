@@ -355,7 +355,8 @@ class View2D(ActionManager, QtCore.QObject):
         self.image_widget = ImageWidget()
         self.roi_manager = ROIViewerManager(self.image_widget.plotitem.vb, ROIDim.ROI2D)
         self.roi_widget = WidgetWithLabelTitle(self.title, self.roi_manager.roiwidget,
-                                               closable=True, attachable=True)
+                                               closable=True, attachable=True,
+                                               expand_subwidget=True)
         self.roi_widget.sig_close.connect(lambda: self.get_action('roi').trigger())
         self.roi_widget.closeEvent = lambda event: self.set_action_checked('roi', False)
         self._rois_panel = DetachablePanel(
@@ -1144,9 +1145,11 @@ class Viewer2D(ViewerBase):
 
                     QtWidgets.QApplication.processEvents()
 
-                if not self._display_temporary:
-                    self.data_to_export_signal.emit(self.data_to_export)
-                self.ROI_changed.emit()
+            # emit even without ROI data (e.g. all ROIs with Process data off), otherwise the DAQ_Viewer
+            # would wait forever for this viewer's data
+            if not self._display_temporary:
+                self.data_to_export_signal.emit(self.data_to_export)
+            self.ROI_changed.emit()
 
 
 def main_spread():

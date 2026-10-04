@@ -30,6 +30,7 @@ revolutions_per_minute = 'revolutions_per_minute'
 daq_type = 'DAQ0D' #either "DAQ0D", "DAQ1D", "DAQ2D", "DAQND"
 timeout = 10000  # default duration in ms to wait for data to be acquirred
 allow_settings_edition = false  # during grab
+restore_rois = false  # apply the ROI Manager entry of an experiment (re-create its viewers' ROIs) when it is loaded
 
 [scan]
 show_popups = true

@@ -113,3 +113,33 @@ class TestWithUI:
             prog.detector = 'Mock'
         assert len(prog.viewers) == 1
         assert prog.viewers[0].viewer_type == f'Data{daq_type[3:]}'
+
+def test_viewers_roi_select_and_crosshair_forwarding(ini_daq_viewer_ui):
+    """ROIselect and crosshair of each viewer are forwarded to the plugin with the right viewer index"""
+    from pymodaq_gui.plotting.data_viewers.viewer2D import Viewer2D
+    from pymodaq_gui.plotting.items.roi import RoiInfo, RectROI
+    from pymodaq.control_modules.thread_commands import ControlToHardwareViewer
+
+    prog, qtbot, win = ini_daq_viewer_ui
+    viewers = [Viewer2D(QtWidgets.QWidget()) for _ in range(3)]
+    commands = []
+    prog.command_hardware.connect(commands.append)
+
+    prog.viewers = viewers[:2]
+    roi_info = RoiInfo((1., 2.), (3., 4.), roi_class=RectROI)
+    viewers[1].roi_select_signal.emit(roi_info)
+    viewers[0].crosshair_dragged.emit(5., 6.)
+
+    roi_cmds = [cmd for cmd in commands if cmd.command == ControlToHardwareViewer.ROI_SELECT]
+    cross_cmds = [cmd for cmd in commands if cmd.command == ControlToHardwareViewer.CROSSHAIR]
+    assert roi_cmds[-1].attribute == dict(roi_info=roi_info, ind_viewer=1)
+    assert cross_cmds[-1].attribute == dict(crosshair_info=(5., 6.), ind_viewer=0)
+
+    # after a change of viewers, the old ones are no more forwarded
+    prog.viewers = viewers[2:]
+    commands.clear()
+    viewers[1].roi_select_signal.emit(roi_info)
+    viewers[0].crosshair_dragged.emit(5., 6.)
+    assert len(commands) == 0
+    viewers[2].crosshair_dragged.emit(7., 8.)
+    assert commands[-1].attribute == dict(crosshair_info=(7., 8.), ind_viewer=0)
