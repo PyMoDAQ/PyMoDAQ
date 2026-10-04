@@ -180,12 +180,21 @@ Its entries are attached to the current Experiment: an entry named after the Exp
 when the Experiment is loaded. Entries are stored in the *rois* folder of the user *.pymodaq* folder (see
 :ref:`section_configuration`).
 
-Its window shows two lists:
+Its window shows two lists, see :numref:`roi_manager_fig`:
 
-* *Viewers*: the viewers of all the detectors of the Dashboard (use the *Update viewers* button to refresh it after
-  adding or removing detectors). Select the ones whose ROIs should be listed;
-* *ROIs*: the ROIs of the selected viewers, named ``detector/viewer/ROI_xx/type``. The checked ones are the ones
+* *Viewers*: the viewers of all the detectors of the Dashboard (use the *Update viewers* button, first of the
+  toolbar, to refresh it after adding or removing detectors);
+* *ROIs*: the ROIs defined in these viewers, named ``detector/viewer/ROI_xx/type``. The checked ones are the ones
   saved in the entry when saving it.
+
+   .. _roi_manager_fig:
+
+.. figure:: /image/managers/roi_manager_window.png
+   :alt: roi_manager_fig
+
+   The ROI manager with the entry of the *default* Experiment. The toolbar gives the usual manager actions
+   (refresh the viewers list, browse, copy, create, delete, save, reload and execute an entry). On the left the viewers
+   of the Dashboard detectors, on the right the ROIs defined in these viewers.
 
 Executing an entry (from the ROI manager or from the *ROIs* menu and toolbar of the Dashboard) re-creates its ROIs in
 the corresponding viewers and shows their ROI panel. Detectors or viewers of the entry that no longer exist in the
