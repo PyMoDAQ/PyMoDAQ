@@ -619,6 +619,20 @@ class TestRoiSelect:
         assert blocker.args[0].size == Point(SIZE[-1::-1])
 
 
+def test_crosshair_and_roiselect_above_images(init_viewer2d):
+    """The crosshair lines and the ROIselect should be drawn above the image items"""
+    prog, qtbot = init_viewer2d
+    prog.show_data(init_data(Ndata=3))
+    prog.view.get_action('crosshair').trigger()
+    prog.view.get_action('ROIselect').trigger()
+
+    assert prog.view.ROIselect.parentItem() is prog.view.plotitem.vb.childGroup
+    z_images = max(image.zValue() for image in prog.view.data_displayer.get_images().values())
+    assert prog.view.crosshair.vLine.zValue() > z_images
+    assert prog.view.crosshair.hLine.zValue() > z_images
+    assert prog.view.ROIselect.zValue() > z_images
+
+
 class TestImageDisplayer:
     def test_get_image(self, init_viewer2d):
         prog, qtbot = init_viewer2d
