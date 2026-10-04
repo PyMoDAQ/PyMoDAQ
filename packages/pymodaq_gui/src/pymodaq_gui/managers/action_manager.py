@@ -48,6 +48,20 @@ class ToolbarStyleSignaller(QtCore.QObject):
 toolbar_style_signaller = ToolbarStyleSignaller()
 
 
+class ToolbarStyleChecks(QtCore.QObject):
+    """Keeps the checkable toolbar style actions in sync, lives as long as the menu it is parented to"""
+
+    def __init__(self, actions: dict[str, QtGui.QAction], parent: QtCore.QObject):
+        super().__init__(parent)
+        self._actions = actions
+        toolbar_style_signaller.style_changed.connect(self.sync)
+
+    @QtCore.Slot(object)
+    def sync(self, style: QtCore.Qt.ToolButtonStyle):
+        for name, action in self._actions.items():
+            action.setChecked(TOOLBAR_BUTTON_STYLES[name] == style)
+
+
 resource_folder = Path(__file__).parent.parent.joinpath('resources')
 QtCore.QDir.addSearchPath('icons', str(resource_folder.joinpath('icon_library')))
 
@@ -753,26 +767,22 @@ class ActionManager:
         group = QtGui.QActionGroup(style_menu)
         group.setExclusive(True)
 
-        current_name = config('gui', 'style', 'toolbar_button_style')[0]
-        self._toolbar_style_actions = {}
+        current_name = config.get(('gui', 'style', 'toolbar_button_style'), ['icon_only'])[0]
+        actions = {}
         for name, label in TOOLBAR_BUTTON_STYLE_LABELS.items():
             action = style_menu.addAction(label)
             action.setCheckable(True)
             action.setChecked(name == current_name)
             action.setActionGroup(group)
             action.triggered.connect(lambda _checked, n=name: self.apply_toolbar_style(n))
-            self._toolbar_style_actions[name] = action
-        toolbar_style_signaller.style_changed.connect(self._sync_toolbar_style_checks)
+            actions[name] = action
+        ToolbarStyleChecks(actions, parent=style_menu)
 
     def apply_toolbar_style(self, name: str):
         """Persist the toolbar button style and apply it to all toolbars"""
         config['gui', 'style', 'toolbar_button_style'] = [name]
         config.save()
         toolbar_style_signaller.style_changed.emit(TOOLBAR_BUTTON_STYLES[name])
-
-    def _sync_toolbar_style_checks(self, style: QtCore.Qt.ToolButtonStyle):
-        for name, action in self._toolbar_style_actions.items():
-            action.setChecked(TOOLBAR_BUTTON_STYLES[name] == style)
 
     def set_toolbar(self, toolbar: Union[QtWidgets.QToolBar, str]):
         """Set the default toolbar
