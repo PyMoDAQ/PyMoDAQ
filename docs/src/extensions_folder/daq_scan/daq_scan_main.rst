@@ -204,19 +204,43 @@ duplicates the actions of the scan toolbar.
 
 Menu Bar Description
 ++++++++++++++++++++
-There are two entries in the menu bar: *File* and *Settings*
+The menu bar has five entries: *File*, *View*, *Tools*, *Actions* and *Help*.
 
 The *File* entry will let you:
 
-* Load a previously saved scan file (and keep saving scans on it)
-* Save the current file in another filename than the default one
-* Load the content of the current file into the *H5Browser*
-* Open / Close the current h5 file (useful to release the file lock or reopen after closing)
+* Show the content of the current file in the *H5Browser* (*Show file content*)
+* Create a new file (*New file*)
+* Load a previously saved scan file and keep saving scans on it (*Open file to append...*)
+* Save a copy of the current file in another filename than the default one (*Save copy as...*)
+* Show the settings of the h5 file saver (*Show h5 settings*)
+* Restart or quit the application (*Restart*, *Quit*: the latter shuts down all modules)
 
-The *Settings* entry will let you:
+The *View* entry will let you show or hide each of the toolbars (*Toolbars*) and change their style.
 
-* display the *Navigator* see :ref:`navigator_paragrah`
-* Display and activate the *Scan Batch Manager*
+The *Tools* entry will let you:
+
+* show the *Scan Manager* toolbar, to save and reload complete scan settings (selected modules, scanner and scan
+  parameters) as ``.scan`` files
+* display the *Navigator* (see :ref:`navigator_paragrah`)
+* open the log file (*Logs*) and the PyMoDAQ *Preferences*
+* use the tools shared by all the PyMoDAQ applications: enable the scripting, run a LECO coordinator or start the
+  Plugin Manager
+
+The *Actions* entry gathers the actions of the extension, see :numref:`daq_scan_actions_menu`. It starts with the
+workflow actions common to the extensions (*Start Workflow*, *Stop Workflow* and *Pause Workflow*, that are the **Start**,
+**Stop** and **Pause** buttons of the toolbar), followed by the actions specific to the extension: for the ``DAQ_Scan``
+*Show General Settings*, *Show Live Plots*, *Init Positions* and *Move at doubleClicked*, see :ref:`daq_scan_toolbar`.
+Most of the extensions put their own actions in this menu.
+
+   .. _daq_scan_actions_menu:
+
+.. figure:: /image/DAQ_Scan/scan_actions_menu.png
+   :alt: Actions menu
+
+   The *Actions* menu of the DAQ_Scan.
+
+The *Help* entry gives access to the online documentation (``F1``), to the check for new PyMoDAQ versions and to the
+*About* window.
 
 Status Bar
 ++++++++++
