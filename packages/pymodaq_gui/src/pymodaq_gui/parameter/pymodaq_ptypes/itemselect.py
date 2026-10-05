@@ -74,7 +74,7 @@ class ItemSelect(QtWidgets.QListWidget):
         allitems = [item.text() for item in self.all_items()]
         if self.hasCheckbox:   
             # Clean up list with non existing entries      
-            [self.selItems.remove(item) for item in self.selItems if item not in allitems]        
+            self.selItems[:] = [item for item in self.selItems if item in allitems]
             for item in self.all_items():
                 if item.checkState() != QtCore.Qt.CheckState(0):  # Item is selected
                     if item.text() not in self.selItems:  # if item not in list then add it
@@ -121,8 +121,7 @@ class ItemSelect(QtWidgets.QListWidget):
         """
         # Remove values in selected if they do not exist in all
         values = deepcopy(values)
-        [values['selected'].remove(value) for value in values['selected'] if value
-         not in values['all_items']]
+        values['selected'] = [value for value in values['selected'] if value in values['all_items']]
         
         allitems_text = []
         # Check existing items and remove unused ones
