@@ -145,8 +145,9 @@ of selected actuators.
    :alt: scan1D_1D
    :figwidth: 500 px
 
-   An example of a detector exporting 1D live data (the lineout of the ROI) plotted as a function of the actuator
-   *position*. Channel CH0 is plotted in red while channel CH1 is plotted in green.
+   An example of a detector exporting 1D live data plotted as a function of the actuator *position* (here a
+   *Temperature* scan in progress). The two channels of the 1D detector are plotted in red and green, the vertical
+   white rectangle shows the position reached by the scan.
 
 
 * if the scan is 2D:
