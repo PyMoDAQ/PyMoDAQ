@@ -102,11 +102,11 @@ type of live data.
 
    .. _det1D:
 
-.. figure:: /image/DAQ_Scan/scan_det1D_viewer.png
+.. figure:: /image/viewers/viewer1D_rois.png
    :alt: 1Ddetector
 
-   An example of a 1D detector having 2 channels. A region of interest (ROI_00) has been defined on channel CH00: its
-   integration (0D data) is plotted in the lower panel.
+   An example of a 1D detector having 2 channels, with two regions of interest (set from the *ROIs* panel on the right,
+   one on each channel). The bottom panel plots the history of their mean value (0D data).
 
 
 It will export the raw 1D data and, if ROIs are declared, the 1D lineouts and integrated 0D data from them. The
