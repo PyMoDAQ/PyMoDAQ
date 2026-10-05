@@ -82,9 +82,9 @@ class TestVariableBase:
         assert var.label == ''
         assert var.units == ''
 
-    def test_to_dict_has_kind_variable(self):
+    def test_to_dict_has_type_variable(self):
         var = Variable(name='x')
-        assert var.to_dict()['kind'] == 'variable'
+        assert var.to_dict()['type'] == 'variable'
 
     def test_roundtrip(self):
         var = Variable(name='gain', label='Gain', units='dB')
@@ -106,9 +106,9 @@ class TestContinuousVariable:
         assert cv.hi is None
         assert cv.epsilon == 0.0
 
-    def test_to_dict_has_kind_continuous(self):
+    def test_to_dict_has_type_continuous(self):
         cv = ContinuousVariable(name='pos')
-        assert cv.to_dict()['kind'] == 'continuous'
+        assert cv.to_dict()['type'] == 'continuous'
 
     def test_to_dict_is_json_compatible(self):
         cv = ContinuousVariable(name='pos', lo=None, hi=None, epsilon=0.001)
@@ -148,9 +148,9 @@ class TestDiscreteVariable:
         dv = DiscreteVariable(name='mode')
         assert dv.choices == []
 
-    def test_to_dict_has_kind_discrete(self):
+    def test_to_dict_has_type_discrete(self):
         dv = DiscreteVariable(name='mode')
-        assert dv.to_dict()['kind'] == 'discrete'
+        assert dv.to_dict()['type'] == 'discrete'
 
     def test_roundtrip_string_choices(self):
         dv = DiscreteVariable(name='coupling', choices=['AC', 'DC', 'GND'])
@@ -411,3 +411,31 @@ class TestInferCapabilities:
         caps = infer_capabilities(MockMove())
         assert caps.variables[0].epsilon == pytest.approx(0.1)
         assert caps.variables[1].epsilon == 0.0  # padded
+
+
+class TestValidation:
+    def test_empty_observable_name_rejected(self):
+        with pytest.raises(ValueError):
+            Observable(name='')
+
+    def test_non_positive_shape_rejected(self):
+        with pytest.raises(ValueError):
+            Observable(name='x', shape=(0,))
+
+    def test_none_shape_dimension_allowed(self):
+        assert Observable(name='x', shape=(None,)).shape == (None,)
+
+    def test_inverted_bounds_rejected(self):
+        with pytest.raises(ValueError):
+            ContinuousVariable(name='x', lo=5, hi=1)
+
+    def test_partial_bounds_allowed(self):
+        assert ContinuousVariable(name='x', lo=5).lo == 5
+
+    def test_negative_epsilon_rejected(self):
+        with pytest.raises(ValueError):
+            ContinuousVariable(name='x', epsilon=-0.1)
+
+    def test_duplicate_names_rejected(self):
+        with pytest.raises(ValueError, match='duplicated'):
+            Capabilities(observables=[Observable(name='x')], variables=[ContinuousVariable(name='x')])

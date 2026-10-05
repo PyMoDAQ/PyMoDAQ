@@ -63,6 +63,12 @@ class Observable:
     dtype: str = 'float64'
     shape: tuple[int | None, ...] = (1,)
 
+    def __post_init__(self):
+        if not self.name:
+            raise ValueError('name must be a non-empty string')
+        if any(dim is not None and dim < 1 for dim in self.shape):
+            raise ValueError(f'shape dimensions must be positive or None, got {self.shape}')
+
     def to_dict(self) -> dict:
         """Serialize to a JSON-compatible dict."""
         return {
@@ -100,7 +106,7 @@ class Variable(Observable):
 
     def to_dict(self) -> dict:
         d = super().to_dict()
-        d['kind'] = 'variable'
+        d['type'] = 'variable'
         return d
 
     @classmethod
@@ -132,9 +138,16 @@ class ContinuousVariable(Variable):
     hi: float | None = None
     epsilon: float = 0.0
 
+    def __post_init__(self):
+        super().__post_init__()
+        if self.lo is not None and self.hi is not None and self.lo > self.hi:
+            raise ValueError(f"'{self.name}': lo ({self.lo}) is greater than hi ({self.hi})")
+        if self.epsilon < 0:
+            raise ValueError(f"'{self.name}': epsilon must be non-negative, got {self.epsilon}")
+
     def to_dict(self) -> dict:
         d = super().to_dict()
-        d['kind'] = 'continuous'
+        d['type'] = 'continuous'
         d['lo'] = self.lo
         d['hi'] = self.hi
         d['epsilon'] = self.epsilon
@@ -168,7 +181,7 @@ class DiscreteVariable(Variable):
 
     def to_dict(self) -> dict:
         d = super().to_dict()
-        d['kind'] = 'discrete'
+        d['type'] = 'discrete'
         d['choices'] = list(self.choices)
         return d
 
@@ -186,7 +199,7 @@ class DiscreteVariable(Variable):
 
 # ── Deserialization dispatcher ────────────────────────────────────────────────
 
-_KIND_MAP = {
+_TYPE_MAP = {
     'variable': Variable,
     'continuous': ContinuousVariable,
     'discrete': DiscreteVariable,
@@ -194,9 +207,9 @@ _KIND_MAP = {
 
 
 def _variable_from_dict(d: dict) -> Variable:
-    """Deserialize a Variable subclass using the ``'kind'`` discriminator."""
-    kind = d.get('kind', 'variable')
-    cls:Variable = _KIND_MAP.get(kind, Variable)
+    """Deserialize a Variable subclass using the ``'type'`` discriminator."""
+    type_ = d.get('type', 'variable')
+    cls:Variable = _TYPE_MAP.get(type_, Variable)
     return cls.from_dict(d)
 
 
@@ -206,8 +219,7 @@ def _variable_from_dict(d: dict) -> Variable:
 class Capabilities:
     """Hardware capabilities declared or inferred for a plugin.
 
-    Serializes to/from a JSON-compatible dict so it can be returned by the
-    ``get_capabilities()`.
+    Serializes to and from a JSON-compatible dict, so it can be stored in a preset.
 
     Parameters
     ----------
@@ -219,6 +231,12 @@ class Capabilities:
 
     observables: list[Observable] = field(default_factory=list)
     variables: list[Variable] = field(default_factory=list)
+
+    def __post_init__(self):
+        names = [o.name for o in self.observables] + [v.name for v in self.variables]
+        duplicates = sorted({n for n in names if names.count(n) > 1})
+        if duplicates:
+            raise ValueError(f'capability names must be unique, duplicated: {duplicates}')
 
     def to_dict(self) -> dict:
         return {
@@ -233,11 +251,11 @@ class Capabilities:
         return cls(observables=observables, variables=variables)
 
     def has_observables(self) -> bool:
-        """True if the actor exposes at least one readable quantity."""
+        """True if the device exposes at least one readable quantity."""
         return bool(self.observables or self.variables)
 
     def has_variables(self) -> bool:
-        """True if the actor exposes at least one writable quantity."""
+        """True if the device exposes at least one writable quantity."""
         return bool(self.variables)
 
 
