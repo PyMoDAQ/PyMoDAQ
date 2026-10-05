@@ -186,7 +186,8 @@ or hide panels and to move the actuators:
 .. figure:: /image/DAQ_Scan/scan_toolbar.png
    :alt: scan toolbar
 
-   The scan toolbar and the *Scan Manager* toolbar.
+   The scan toolbar while a scan is running (*Start* is disabled). From left to right: Start, Stop, Pause, Show General
+   Settings, Show Live Plots, Init. Positions and Move at double clicked.
 
 * **Start**: will start the currently set scan (first it will set it then start it)
 * **Stop**: stop the currently running scan
