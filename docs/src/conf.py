@@ -64,6 +64,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx_qt_documentation",
     "sphinx_design",
+    "myst_parser",
     "sphinx_favicon",
     "sphinxcontrib.images",
     "sphinx_autodoc_typehints",
@@ -95,6 +96,7 @@ intersphinx_mapping = {
 suppress_warnings = [
     'sphinx_autodoc_typehints.forward_reference',
     'sphinx_autodoc_typehints.guarded_import',
+    'myst.header',  # headings of the help.md files included in the module pages start at H2
 ]
 
 nitpick_ignore_regex = [

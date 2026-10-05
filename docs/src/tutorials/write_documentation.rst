@@ -26,6 +26,28 @@ This kind of documentation is standardized. PyMoDAQ follows the `Numpy docstring
 
 __ https://numpydoc.readthedocs.io/en/latest/format.html
 
+Help of the modules: ``help.md``
+++++++++++++++++++++++++++++++++
+
+Each module (control module, manager, extension...) can provide a short introductory help, aimed at being displayed
+in the user interface as well as being the first paragraph of the module documentation. It is a markdown file named
+``help.md`` stored in the same folder as the python file defining the module, for instance
+``pymodaq/extensions/scan/help.md`` for the DAQ_Scan. It is made of a title (``# Module name``), a one sentence
+description, a *Typical workflow* and a *Good to know* section. Optionally, a *Full documentation* section with a link
+to the documentation website can end the file; it is preceded by the marker ``<!-- end of intro -->`` (invisible in
+the user interface) that stops the inclusion in the documentation.
+
+In the code, the text is retrieved with :func:`pymodaq_utils.help.get_help_text`, from a class, an instance or a module
+(Qt displays markdown natively, see ``QTextBrowser.setMarkdown``). In the module documentation page, the file is
+included with the ``myst_parser`` markdown parser:
+
+.. code-block:: rst
+
+    .. include:: ../../../../packages/pymodaq/src/pymodaq/extensions/scan/help.md
+       :parser: myst_parser.sphinx_
+       :start-line: 2
+       :end-before: <!-- end of intro -->
+
 Tests
 +++++
 
