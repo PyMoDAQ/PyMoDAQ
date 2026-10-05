@@ -70,15 +70,16 @@ Selecting the type of scan
 
 All specifics of the upcoming scan are configured in the *Scan Parameters* panel, using the :ref:`scanner_paragraph`
 module interface, as seen on :numref:`scan2D_fig2` in the case of a Scan2D scan configuration. Once the actuators are selected, choose the scan
-type (1D, 2D, ...), its subtype (linear, adaptive, ...) and set the start, stop and step values of each actuator.
+type (1D, 2D, ...), its subtype (linear, random, spiral, ...) and set the start, stop and step values of each actuator.
 
   .. _scan2D_fig2:
 
 .. figure:: /image/DAQ_Scan/scan_scanner2D.png
    :alt: scanner_fig
 
-   The Scanner user interface set on a *Scan2D* scan type and a *Linear* scan subtype with two actuators (*Theta*
-   and *Xaxis*), 100 steps in total.
+   The *Scan Parameters* panel set on a *Scan2D* scan type with two actuators (*Temperature* and *Power*), 121 steps in
+   total. The list of the available scan subtypes (*Linear*, *LinearBackForce*, *Random*, *RandomSpread*, *Spiral*) is open;
+   the start, stop and step values of each actuator are set in the lower table.
 
 
 Selecting the data to render live
