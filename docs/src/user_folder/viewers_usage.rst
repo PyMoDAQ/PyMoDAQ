@@ -216,7 +216,8 @@ DAQ_Logger...) as any other data, and are saved in the h5 files unless the *Save
 
 The *save* and *load* buttons of the panel store or restore the ROIs of a viewer as an xml file (by default in the
 *settings* folder of the user *.pymodaq* folder). To save and restore the ROIs of all the detectors of an experiment
-at once, use the Dashboard :ref:`roi_manager`.
+at once, use the Dashboard :ref:`roi_manager`. With the ``restore_rois`` preference (``[viewer]`` section of the
+*pymodaq* preferences), these ROIs are restored automatically each time the experiment is loaded.
 
 
 .. _viewers_roi_select:
