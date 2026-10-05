@@ -1,11 +1,5 @@
 Introduction
 ------------
-The dashboard gives you full control for manual adjustments (using the UI)
-of each actuator, checking their impact on live data from the detectors. Once all is set, one can move to
-an automated scan using the main control window of the ``DAQ_Scan``, see :numref:`daq_scan_main`.
-
-Summary
-+++++++
 
 .. include:: ../../../../packages/pymodaq/src/pymodaq/extensions/scan/help.md
    :parser: myst_parser.sphinx_
