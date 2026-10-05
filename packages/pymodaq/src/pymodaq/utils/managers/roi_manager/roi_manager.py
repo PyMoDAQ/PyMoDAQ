@@ -30,8 +30,36 @@ logger = set_logger(get_module_name(__file__))
 ser_factory = SerializableFactory()
 
 
+class _ResizeFilter(QtCore.QObject):
+    def __init__(self, callback: Callable, parent: QtCore.QObject = None):
+        super().__init__(parent)
+        self._callback = callback
+
+    def eventFilter(self, obj, event):
+        if event.type() == QtCore.QEvent.Type.Resize:
+            QtCore.QTimer.singleShot(0, self._callback)
+        return False
+
+
 class ROIList(ParameterManager):
     params = [{'title': 'ROIs', 'name': 'rois', 'type': 'itemselect', 'checkbox': True}]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._resize_filter = _ResizeFilter(self.fit_list_to_tree, self.tree.viewport())
+        self.tree.viewport().installEventFilter(self._resize_filter)
+
+    def fit_list_to_tree(self):
+        """ Make the list of ROIs use all the vertical space available in the tree"""
+        item = self.settings.child('rois').items
+        item = next(iter(item), None)
+        sub_item = getattr(item, 'subItem', None)
+        if sub_item is None or self.tree.viewport() is None:
+            return
+        top = self.tree.visualItemRect(sub_item).top()
+        height = max(self.tree.viewport().height() - top - 6, 70)
+        if sub_item.sizeHint(0).height() != height:
+            sub_item.setSizeHint(0, QtCore.QSize(10, height))
 
 
 class ROIManager(ManagerBase):
