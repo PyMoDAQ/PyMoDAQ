@@ -108,8 +108,8 @@ type of live data.
    integration (0D data) is plotted in the lower panel.
 
 
-It will export the raw 1D data and the 1D lineouts and integrated 0D data from the declared ROI as shown
-on :numref:`det1D_data_probe`
+It will export the raw 1D data and, if ROIs are declared, the 1D lineouts and integrated 0D data from them. The
+data of a 0D and a 1D detector (without ROI) are listed as shown on :numref:`det1D_data_probe`
 
 
    .. _det1D_data_probe:
@@ -117,9 +117,9 @@ on :numref:`det1D_data_probe`
 .. figure:: /image/DAQ_Scan/scan_plot_options.png
    :alt: 1Ddetector_data
 
-   The *Plotting Parameters* after probing a 0D and a 1D detector. The 0D data (*Plot 0Ds*)
-   are the one of the 0D detector and the integration of the ROI of the 1D detector. The 1D data (*Plot 1Ds*) are the raw
-   data of the 1D detector and the lineout of its ROI.
+   The *Plotting Parameters* after probing a 0D and a 1D detector. The 0D data (*Plot 0Ds*) are the one of the 0D
+   detector and the 1D data (*Plot 1Ds*) are the raw data of the 1D detector. With ROIs defined in the viewer of the
+   detectors, their integrations (0D) and lineouts (1D) are listed as well.
 
 Once the data to plot are selected, click on **Prepare Viewers** to generate the live plot panels (this is also done
 when starting a scan). One live plot panel will be created by selected data to be rendered with some
