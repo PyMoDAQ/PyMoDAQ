@@ -339,5 +339,3 @@ Settings* are hidden by default, use the **Show General Settings** button of the
 
    The *Save* settings (orange rectangle) of the DAQ_Scan, in the lower part of the *General Settings* panel.
 
-
-In order to save correctly your datas, saving modules are to be used, see :ref:`module_savers`.
