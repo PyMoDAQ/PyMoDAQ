@@ -1,17 +1,26 @@
 .. _viewers_usage:
+.. _data_viewers:
 
-Using the data viewers
-======================
+Data viewers
+============
 
-Each :ref:`DAQ_Viewer <DAQ_Viewer_module>` displays its data in one or several data viewers, depending on the
-dimensionality of the data sent by its instrument plugin: *Viewer0D* for scalars, *Viewer1D* for waveforms,
-*Viewer2D* for images and *ViewerND* for anything else. The same viewers are used everywhere in PyMoDAQ (scans,
-H5Browser, extensions...).
+PyMoDAQ displays its data in *data viewers*. Each :ref:`DAQ_Viewer <DAQ_Viewer_module>` uses one or several of them,
+depending on the dimensionality of the data sent by its instrument plugin. The same viewers are used everywhere in
+PyMoDAQ (scans, H5Browser, extensions...):
 
-This page explains how to use them from their toolbar: the crosshair, the Regions Of Interest (ROIs) that produce
+* *Viewer0D*, for scalars, plots their history;
+* *Viewer1D*, for waveforms and any one dimensional data;
+* *Viewer2D*, for images and any two dimensional data, either on a regular grid (*uniform* data) or not (*spread* data);
+* *ViewerND*, for anything else: it combines the other viewers to explore the *navigation* and *signal* parts of the
+  data, see :ref:`navigation_signal`.
+
+When several data objects have to be displayed at once (a :class:`~pymodaq_data.data.DataToExport`), a
+*ViewerDispatcher* creates on the fly one dock with the adapted viewer for each of them. This is what the DAQ_Viewer
+and the DAQ_Scan do.
+
+This page explains how to use the viewers from their toolbar: the crosshair, the Regions Of Interest (ROIs) that produce
 new data from the displayed ones, and the *ROI select*, a selection sent back to the instrument plugin.
-For the programmatic use of the viewers (plotting your own data objects) and the ViewerND, see
-:ref:`data_viewers`.
+To plot your own data objects from a script or a notebook, see :ref:`plotting_data`.
 
 .. note::
 
@@ -126,6 +135,45 @@ Viewer2D
 
 Images are displayed in the units of their axes: the coordinates read on the viewer (mouse position, crosshair,
 ROIs, ROI select) are given in these units, or in pixels when the data has no axes.
+
+
+.. _NDviewer:
+
+ViewerND
+++++++++
+
+The ViewerND plots data that doesn't fit in the other viewers: the data is split into a *navigation* part and a
+*signal* part (of dimension 0, 1 or 2), see :ref:`navigation_signal`. It is made of a *navigation panel* and a
+*signal panel*, each of them being a Viewer1D or Viewer2D (or several Viewer1D when there are more than two
+navigation axes), see :numref:`viewerND_fig`. The signal panel shows the signal data indexed at the position of the
+crosshair of the navigation panel, the navigation panel shows the result of a math operation applied on the ROI of the
+signal panel for all navigation positions. The panel on the left displays the shape of the data and lets you change
+which axes are navigation or signal.
+
+   .. _viewerND_fig:
+
+.. figure:: /data_management/plotting_data/viewerND_4D_2D_2D.png
+   :alt: ViewerND with two navigation axes
+
+   A ViewerND showing 4D data with two navigation axes: a Viewer2D for the navigation (left) and one for the
+   signal (right).
+
+.. list-table::
+   :header-rows: 1
+   :widths: 15 85
+
+   * - Button
+     - Action
+   * - |indexesND|
+     - Open a side window to control which axes are navigation axes
+   * - |mathND|
+     - Select the math operator applied on the signal ROI to compute the navigation data
+   * - |integrateND|
+     - Add another signal plot showing the signal integrated over all the navigation axes, instead of the one indexed
+       at the crosshair position
+
+With *spread* data, all navigation axes are plotted in the same Viewer1D. The toolbars of the Viewer1D and Viewer2D
+panels are the ones described above.
 
 
 .. _viewers_crosshair:
@@ -279,3 +327,6 @@ If a plugin doesn't use it, moving the ROI select has no effect. To use it in yo
 .. |orientation2D| image:: /data_management/plotting_data/viewer2D_orientation.png
 .. |opposite2D| image:: /data_management/plotting_data/viewer2D_opposite.png
 .. |legend2D| image:: /data_management/plotting_data/viewer2D_legend.png
+.. |indexesND| image:: /data_management/plotting_data/viewerND_indexes.png
+.. |mathND| image:: /data_management/plotting_data/viewerND_math.png
+.. |integrateND| image:: /data_management/plotting_data/viewerND_integrate.png

@@ -1,5 +1,4 @@
 .. _plotting_data:
-.. _data_viewers:
 
 Plotting Data
 =============
@@ -13,7 +12,8 @@ plot your data using your favorite backend (matplotlib, plotly, qt,
 tkinter, …) However because PyMoDAQ is highly graphical you won't need
 that. PyMoDAQ is featured with various data viewers allowing you to plot
 any kind of data. You'll see below some nice examples of how to plot
-your PyMoDAQ's data using the builtin data viewers.
+your PyMoDAQ's data using the builtin data viewers. How to use the viewers
+themselves (toolbar buttons, crosshair, ROIs...) is explained in :ref:`data_viewers`.
 
 .. note:: The content of this chapter is available as a `notebook <https://github.com/PyMoDAQ/notebooks/tree/main/notebooks>`__.
 
@@ -120,46 +120,14 @@ You can see the legends correspond to the data labels, while the axis
 shows both the label and the units in scientific notation (notice the k
 before ‘my units' standing for kilo).
 
-As for the buttons in the toolbar (you can try them from the notebook):
-
--  |Showing Data1D|: opens the ROI (region of interest) manager, to
-   load, save and define ROI to apply to the data. This will create
-   cropped Data0D from the application of an operation on the
-   cropped data such as *mean*, *sum*, *std*\ … See figure below, showing
-   the mean value on the bottom panel. ROI can be applied to one of the
-   trace or to both as reflected by the legends
--  |crosshair1D|: activate the crosshair (yellow vertical line) that can be
-   grabed and translated. The data at the crosshair position is printed
-   on the right of the toolbar.
--  |aspect1D|: fix the horizontal/vertical aspect ratio (usefull for xy
-   plot see below)
--  |dot|: as shown on the figure below, one can switch between solid
-   line or only dots.
--  |xy|: when data contains two waveforms, using this button will
-   display them in XY mode.
--  |overlay|: when activated, an overlay of the current data will be
-   depicted with a dash line.
--  |sort|: if the axis data is not monotonous, data will be
-   represented as a scrambled solid line, using this button will reorder
-   the data by ascending values of its axis. See below and figure xx
--  |errors|: when activated, will display errors (error bars) in the form of a area around the curve
--  |roiselect|: extra ROI that can be used independantly of the ROI manager, its position is sent to the
-   instrument plugin of a DAQ_Viewer, see :ref:`viewers_roi_select`
+The toolbar buttons (ROI manager, crosshair, dots, XY mode, overlay, errors, sort...) are described in
+:ref:`data_viewers`.
 
 .. figure:: plotting_data/viewer1D_with_roi_crosshair_dot.png
    :alt: Showing Data1D as dots and with an activated ROI and crosshair
 
    Showing Data1D as dots and with an activated ROI and crosshair
 
-.. |Showing Data1D| image:: plotting_data/viewer1D_roi.png
-.. |crosshair1D| image:: plotting_data/viewer1D_crosshair.png
-.. |aspect1D| image:: plotting_data/viewer1D_zoom.png
-.. |dot| image:: plotting_data/viewer1D_dot.png
-.. |xy| image:: plotting_data/viewer1D_xy.png
-.. |overlay| image:: plotting_data/viewer1D_overlay.png
-.. |sort| image:: plotting_data/viewer1D_sort.png
-.. |errors| image:: plotting_data/viewer1D_errors.png
-.. |roiselect| image:: plotting_data/viewer1D_roi_select.png
 
 
 If :ref:`errors` are defined in the data object, the Viewer1D can easily plot them:
@@ -301,29 +269,7 @@ to the same `navigation` dimension of the data.
 Toolbar
 ~~~~~~~
 
-As for the buttons in the toolbar (you can try them from the notebook):
-
--  |Viewer2D|: Show/Hide the corresponding data
--  |autoscale|: Autoscale on the color scale (between 0 and max or between
-   -max and max)
--  |histogram|: display the histogram panel, allowing manual control of the
-   colors and color saturation. See figure below.
--  |roi2D|: Open the ROI manager allowing to load, save and define
-   rectangular of elliptical regions of interest. Each of these ROI will
-   produce `Data1D` data (lineouts by vertical and horizontal
-   application of a mathematical function: mean, sum… along horizontal
-   or vertical axis of the ROI) and `Data0D` by application of the
-   same mathematical function along both axes of the ROI.
--  |isocurve|: shows an isocurve specified by the position of a green line
-   on the histogram
--  |aspect2D|: set the aspect ratio to one
--  |crosshair2D|: activate the crosshair (see figure below)
--  |roi_select2D|: extra rectangular ROI that can be used independently of the
-   ROI manager, its position is sent to the instrument plugin of a DAQ_Viewer, see :ref:`viewers_roi_select`
--  |orientation|: flip or rotate the image
--  |legend|: show/hide the legend (see figure below)
-
-
+The toolbar buttons of the `Viewer2D` are described in :ref:`data_viewers`.
 
 .. _saturated_fig:
 
@@ -340,8 +286,6 @@ appear. We also activated the crosshair that induced the plotting of `Data1D`
 (taken for both channel along the crosshair lines) and
 `Data0D` (at the crosshair position and plotted on the bottom right).
 
-.. _NDviewer:
-
 Plotting all other data
 -----------------------
 
@@ -352,16 +296,6 @@ The figure below shows the basic look of the `ViewerND`. It consists
 in a Navigation panel and a Signal panel, dealing with the notion of
 signal/navigation, see :ref:`DataND <navigation_signal>`.
 
-.. |Viewer2D| image:: plotting_data/viewer2D_rgb.png
-.. |autoscale| image:: plotting_data/viewer2D_autoscale.png
-.. |histogram| image:: plotting_data/viewer2D_histogram.png
-.. |roi2D| image:: plotting_data/viewer2D_roi.png
-.. |isocurve| image:: plotting_data/viewer2D_isocurve.png
-.. |aspect2D| image:: plotting_data/viewer2D_aspect.png
-.. |crosshair2D| image:: plotting_data/viewer2D_crosshair.png
-.. |roi_select2D| image:: plotting_data/viewer2D_roi_select.png
-.. |orientation| image:: plotting_data/viewer2D_orientation.png
-.. |legend| image:: plotting_data/viewer2D_legend.png
 
 .. code:: ipython3
 
@@ -430,15 +364,8 @@ data object has been constructed). In the notebook, you can change this,
 selecting one, two or even the three indexes and see how it's impacting
 on the `ViewerND`.
 
-Some buttons in the toolbar can be used to better control the data
-exploration:
-
--  |Indexes selection|: opens a side window to control navigation axes
--  |image1|: select which mathematical operator to apply to the signal
-   ROI in order to plot meaningfull navigation data
--  |image2|: if activated, another signal plot will be generated
-   depicting not the data indexed at the position of the crosshair but
-   integrated over all navigation axes
+The toolbar buttons of the `ViewerND` (navigation axes selection, math operator, integration) are described in
+:ref:`data_viewers`.
 
 Signal data dimension cannot exeed 2, meaning you can only plot signal
 that are `Data0D`, `Data1D` or `Data2D` which make sense as only
@@ -452,9 +379,6 @@ Uniform Data
 Le'ts first create a 4D Data object, we'll then see various
 representations as a function of its navigation indexes
 
-.. |Indexes selection| image:: plotting_data/viewerND_indexes.png
-.. |image1| image:: plotting_data/viewerND_math.png
-.. |image2| image:: plotting_data/viewerND_integrate.png
 
 .. code:: ipython3
 
