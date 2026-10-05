@@ -44,6 +44,9 @@ the scan can be started manually.
 Defining a scan
 +++++++++++++++
 
+.. TODO: add a screenshot of the Scan Manager window here (needs the ProbeData bug of the Scan Manager fixed).
+   Check the numbered steps below against it.
+
 The Scan Manager window is divided in numbered steps:
 
 #. **Configure a Scan**: select the actuators and the detectors and set the scanner, as in the DAQ_Scan main window
