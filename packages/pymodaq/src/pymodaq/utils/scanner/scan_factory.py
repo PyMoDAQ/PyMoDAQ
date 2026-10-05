@@ -294,10 +294,16 @@ class ScannerFactory(ObjectFactory):
         return inner_wrapper
 
     @classmethod
-    def create(cls, key, sub_key, **kwargs) -> ScannerBase:
+    def get_builder(cls, key, sub_key) -> type:
+        """Return the registered scanner class itself, without instantiating it"""
         builder = cls._builders[cls.__name__].get(key).get(sub_key)
         if not builder:
             raise ValueError(key)
+        return builder
+
+    @classmethod
+    def create(cls, key, sub_key, **kwargs) -> ScannerBase:
+        builder = cls.get_builder(key, sub_key)
         return builder(**kwargs)
 
     def get(self, scan_type, scan_sub_type, **kwargs):

@@ -216,7 +216,8 @@ class ScanManager(SettingsManager):
         widget.layout().addWidget(self.scanner.parent_widget)
         self.main_widget.layout().insertWidget(0, configure_scan_widget)
         configure_scan_widget.insert_widget(get_data_widget, 2)
-        for child_name in ('probe_data', 'test_actuator'):
+        for child_name in ('probe_detectors', 'probe_actuators',
+                          'probe_detectors_results', 'probe_actuators_results'):
             self.modules_manager.settings.child(child_name).show(False)
         self.main_widget.layout().setStretch(0, 1)
         self.main_widget.layout().setStretch(1, 3)
