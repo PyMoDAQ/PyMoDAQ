@@ -162,8 +162,9 @@ of selected actuators.
    :alt: scan2D_0D
    :figwidth: 500 px
 
-   An example of a detector exporting 0D live data (the integrated ROI of a 1D detector) plotted as a function of the
-   2 actuators's *position*.
+   An example of a detector exporting 0D live data (two channels, in red and green) plotted as a function of the 2
+   actuators's *position* (*Temperature* and *Power*), scan in progress. The white rectangle is the last acquired
+   point.
 
 So at maximum, 2D dimensionality can be represented. In order to see live data from 2D detectors, one
 should therefore export lineouts from ROIs or integrate data. All these operations are extremely simple
