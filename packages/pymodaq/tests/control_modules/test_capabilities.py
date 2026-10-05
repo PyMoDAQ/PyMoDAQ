@@ -10,6 +10,7 @@ from pymodaq.control_modules.capabilities import (
     Quantity,
     control,
     measurement,
+    toolbar_widgets,
 )
 
 
@@ -130,3 +131,42 @@ class TestSerialization:
         q = Quantity.from_dict(Spectrometer.exposure.to_dict())
         assert q.name == 'exposure'
         assert q.access is Access.CONTROL
+
+
+class TestToolbarWidgets:
+
+    def test_continuous_control_follows_the_move_toolbar(self):
+        assert toolbar_widgets(Spectrometer.exposure) == ['value', 'move_done_led', 'stop', 'show_controls']
+
+    def test_discrete_control_gets_a_selector(self):
+        assert toolbar_widgets(Spectrometer.trigger) == ['selector']
+
+    def test_discrete_measurement_gets_a_label(self):
+        assert toolbar_widgets(Spectrometer.status) == ['label']
+
+    def test_scalar_measurement_gets_read_and_graph(self):
+        assert toolbar_widgets(Spectrometer.temperature) == ['read', 'show_graph']
+
+    def test_array_measurement_gets_the_viewer_toolbar(self):
+        assert toolbar_widgets(Spectrometer.spectrum) == ['snap', 'grab', 'show_graph', 'save']
+
+    def test_declaration_adds_widgets(self):
+        q = control(lo=0, hi=1, ui_add=('slider',))
+        assert toolbar_widgets(q)[-1] == 'slider'
+
+    def test_declaration_removes_widgets(self):
+        q = control(lo=0, hi=1, ui_remove=('show_controls',))
+        assert 'show_controls' not in toolbar_widgets(q)
+
+    def test_added_widget_already_in_defaults_is_not_duplicated(self):
+        q = measurement(ui_add=('show_graph',))
+        assert toolbar_widgets(q).count('show_graph') == 1
+
+    def test_unknown_widget_rejected(self):
+        with pytest.raises(ValueError, match='unknown widgets'):
+            control(ui_add=('spinner_of_doom',))
+
+    def test_overrides_survive_serialization(self):
+        q = Quantity.from_dict(control(lo=0, hi=1, ui_add=('slider',), ui_remove=('stop',)).to_dict())
+        assert q.ui_add == ('slider',)
+        assert 'stop' not in toolbar_widgets(q)
