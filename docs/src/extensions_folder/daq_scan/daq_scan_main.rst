@@ -6,9 +6,6 @@ Introduction
    :start-line: 2
    :end-before: <!-- end of intro -->
 
-Metadata can be saved for each dataset and then for each scan and be later retrieved from the saved file
-(see :ref:`module_savers` and :ref:`H5Browser_module`).
-
 
 Main Control Window
 -------------------
