@@ -20,6 +20,6 @@ Metadata can be saved for each dataset and then for each scan and be later retri
    daq_scan_main
    scanner
    navigator
-   scan_batch
+   scan_manager
 
 

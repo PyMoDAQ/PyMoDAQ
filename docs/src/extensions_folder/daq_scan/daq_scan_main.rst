@@ -82,6 +82,8 @@ type (1D, 2D, ...), its subtype (linear, random, spiral, ...) and set the start,
    the start, stop and step values of each actuator are set in the lower table.
 
 
+.. _daq_scan_live_data:
+
 Selecting the data to render live
 +++++++++++++++++++++++++++++++++
 
@@ -219,8 +221,8 @@ The *View* entry will let you show or hide each of the toolbars (*Toolbars*) and
 
 The *Tools* entry will let you:
 
-* show the *Scan Manager* toolbar, to save and reload complete scan settings (selected modules, scanner and scan
-  parameters) as ``.scan`` files
+* show the *Scan Manager* toolbar, to save and reload complete scans (selected modules, scanner and scan
+  parameters) as ``.scan`` files, see :ref:`scan_manager`
 * display the *Navigator* (see :ref:`navigator_paragrah`)
 * open the log file (*Logs*) and the PyMoDAQ *Preferences*
 * use the tools shared by all the PyMoDAQ applications: enable the scripting, run a LECO coordinator or start the
