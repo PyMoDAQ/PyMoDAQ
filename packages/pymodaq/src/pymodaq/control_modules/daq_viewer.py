@@ -16,12 +16,11 @@ from typing import List, Tuple, Union, Optional
 import time
 
 from easydict import EasyDict as edict
-import numpy as np
 from qtpy import QtWidgets
 from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal
 
 
-from pymodaq_data.data import DataToExport, Axis, DataDistribution, Averaging
+from pymodaq_data.data import DataToExport, Averaging
 from pymodaq.utils.data import DataFromPlugins
 
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -37,7 +36,7 @@ from pymodaq.utils.h5modules import module_saving
 from pymodaq_data.h5modules.backends import Node, SaveType
 from pymodaq_utils.utils import ThreadCommand, find_dict_in_list_from_key_val
 
-from pymodaq_gui.parameter import ioxml, Parameter
+from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.parameter import utils as putils
 from pymodaq.control_modules.viewer_utility_classes import params as daq_viewer_params
 from pymodaq_utils import utils
@@ -82,9 +81,6 @@ class DAQ_Viewer(ParameterControlModule):
         used by connected objects.
     custom_sig: Signal[ThreadCommand]
         use this to propagate info/data coming from the hardware plugin to another object
-    overshoot_signal: Signal[bool]
-        This signal is emitted when some 0D data from the plugin is higher than the overshoot threshold set in the
-        settings
 
     See Also
     --------
@@ -103,7 +99,6 @@ class DAQ_Viewer(ParameterControlModule):
 
     grab_done_signal = Signal(DataToExport)
 
-    overshoot_signal = Signal(bool)
     data_saved = Signal()
     grab_status = Signal(bool)
 
@@ -162,13 +157,12 @@ class DAQ_Viewer(ParameterControlModule):
 
         self._module_and_data_saver: Union[None,
                                           module_saving.DetectorSaver,
-                                          module_saving.DetectorTimeSaver,
-                                          module_saving.DetectorExtendedSaver] = None
+                                          module_saving.DetectorTimeSaver] = None
         self._h5saver_continuous: Optional[H5Saver] = None
         self._ind_continuous_grab = 0
 
-        self.settings.child('main_settings', 'DAQ_type').setValue(self._detector.module_name)
-        self.settings.child('main_settings', 'detector_type').setValue(self._detector.daq_type)
+        self.settings.child('main_settings', 'DAQ_type').setValue(self._detector.daq_type.name)
+        self.settings.child('main_settings', 'detector_type').setValue(self._detector.module_name)
 
         self._grabing: bool = False
         self._do_bkg: bool = False
@@ -298,6 +292,8 @@ class DAQ_Viewer(ParameterControlModule):
         if isinstance(det, str):
             det = SelectedModule(self._detector.daq_type, det)
         self._detector = det
+        self.settings.child('main_settings', 'DAQ_type').setValue(det.daq_type.name)
+        self.settings.child('main_settings', 'detector_type').setValue(det.module_name)
         self._reload_plugin_settings()
         if self.ui is not None:
             self.ui.detector = det
@@ -579,31 +575,6 @@ class DAQ_Viewer(ParameterControlModule):
 
         self.settings.child('saver_settings', 'N_saved').setValue(self.settings['saver_settings', 'N_saved'] + 1)
 
-    def insert_data(self, indexes: Tuple[int], where: Union[Node, str] = None,
-                    distribution=DataDistribution.uniform,
-                    extra_data: DataToExport = None):
-        """Insert DataToExport to a DetectorExtendedSaver at specified indexes
-
-        Method to be used when saving into an already initialized array within a h5file (DAQ_Scan for instance)
-
-        Parameters
-        ----------
-        indexes: tuple(int)
-            The indexes within the extended array where to place these data
-        where: Node or str
-        distribution: DataDistribution enum
-        extra_data: DataToExport
-            If not None add its content to the saved data
-
-        See Also
-        --------
-        DAQ_Scan, DetectorExtendedSaver
-        """
-        if extra_data is not None:
-            self._data_to_save_export.append(extra_data.data)
-        self._add_data_to_saver(self._data_to_save_export, init_step=np.all(np.array(indexes) == 0), where=where,
-                                indexes=indexes, distribution=distribution)
-
     def _add_data_to_saver(self, dte: DataToExport, init_step=False, where=None, **kwargs):
         """Adds DataToExport data to the current node using the declared module_and_data_saver
 
@@ -620,7 +591,7 @@ class DAQ_Viewer(ParameterControlModule):
 
         See Also
         --------
-        DetectorSaver, DetectorTimeSaver, DetectorExtendedSaver
+        DetectorSaver, DetectorTimeSaver
 
         """
         if dte is not None:
@@ -805,19 +776,12 @@ class DAQ_Viewer(ParameterControlModule):
     def _init_show_data(self, dte: DataToExport):
         """Processing before showing data
 
-        * process the data to check if they overshoot
         * check the data dimensionality to update the dedicated viewers
 
         Parameters
         ----------
         dte: DataToExport
-
-        See Also
-        --------
-        _process_overshoot
         """
-        self._process_overshoot(dte)
-
         self._viewer_types = [ViewersEnum(dwa.dim.name) for dwa in dte if
                               ('do_plot' not in dwa.extra_attributes) or
                               ('do_plot' in dwa.extra_attributes and dwa.do_plot)]
@@ -887,7 +851,6 @@ class DAQ_Viewer(ParameterControlModule):
         path = self.settings.childPath(param)
         if param.name() == 'DAQ_type':
             self.settings.child('saver_settings', 'do_save').setValue(False)
-            self.settings.child('main_settings', 'axes').show(param.value() == 'DAQ2D')
 
         elif param.name() == 'show_averaging':
             self.settings.child('main_settings', 'live_averaging').setValue(False)
@@ -905,20 +868,6 @@ class DAQ_Viewer(ParameterControlModule):
             else:
                 self.settings.child('main_settings', 'N_live_averaging').hide()
 
-        elif param.name() in putils.iter_children(self.settings.child('main_settings', 'axes'), []):
-            if self.daq_type.name == "DAQ2D":
-                if param.name() == 'use_calib':
-                    if param.value() != 'None':
-                        params = ioxml.XML_file_to_parameter(
-                            os.path.join(local_path, 'camera_calibrations', param.value() + '.xml'))
-                        param_obj = Parameter.create(name='calib', type='group', children=params)
-                        self.settings.child('main_settings', 'axes').restoreState(
-                            param_obj.child('axes').saveState(), addChildren=False, removeChildren=False)
-                        self.settings.child('main_settings', 'axes').show()
-                else:
-                    for viewer in self.viewers:
-                        viewer.x_axis, viewer.y_axis = self.get_scaling_options()
-
         elif param.name() == 'wait_time':
             self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.UPDATE_WAIT_TIME,
                                                      [param.value()]))
@@ -930,33 +879,6 @@ class DAQ_Viewer(ParameterControlModule):
                     self._h5saver_continuous.settings.child(*path[1:]).setValue(param.value())
             except KeyError:
                 pass
-
-    def get_scaling_options(self):
-        """Create axes scaling options depending on the ('main_settings', 'axes') settings
-
-        Returns
-        -------
-        Tuple[Axis]
-        """
-        scaled_xaxis = Axis(label=self.settings['main_settings', 'axes', 'xaxis', 'xlabel'],
-                            units=self.settings['main_settings', 'axes', 'xaxis', 'xunits'],
-                            offset=self.settings['main_settings', 'axes', 'xaxis', 'xoffset'],
-                            scaling=self.settings['main_settings', 'axes', 'xaxis', 'xscaling'])
-        scaled_yaxis = Axis(label=self.settings['main_settings', 'axes', 'yaxis', 'ylabel'],
-                            units=self.settings['main_settings', 'axes', 'yaxis', 'yunits'],
-                            offset=self.settings['main_settings', 'axes', 'yaxis', 'yoffset'],
-                            scaling=self.settings['main_settings', 'axes', 'yaxis', 'yscaling'])
-        return scaled_xaxis, scaled_yaxis
-
-    def _process_overshoot(self, dte: DataToExport):
-        """Compare data value (0D) to the given overshoot setting
-        """
-        if self.settings.child('main_settings', 'overshoot', 'stop_overshoot').value():
-            for dwa in dte:
-                for data_array in dwa.data:
-                    if np.any(data_array >= self.settings['main_settings', 'overshoot',
-                                                          'overshoot_value']):
-                        self.overshoot_signal.emit(True)
 
     # -------------------------------------------------------------------------
     # Thread status handler

@@ -438,9 +438,6 @@ class ControlModule(QObject):
     def append_data(self, *args, **kwargs):
         raise NotImplementedError
 
-    def insert_data(self, *args, **kwargs):
-        raise NotImplementedError
-
     def quit_fun(self):
         """Programmatic entry to quit the control module"""
         raise NotImplementedError
