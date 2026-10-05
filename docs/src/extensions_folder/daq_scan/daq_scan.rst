@@ -5,9 +5,6 @@ DAQ Scan
 ========
 
 
-DAQ_Scan is an extension of the :ref:`Dashboard <Dashboard_module>` that automates data acquisition: a summary of its use is
-given at the beginning of the first page below.
-
 .. toctree::
    :maxdepth: 3
    :caption: Contents:
