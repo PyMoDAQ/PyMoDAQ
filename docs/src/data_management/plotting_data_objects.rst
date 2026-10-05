@@ -93,7 +93,7 @@ will translate into rich plots:
 
 .. code:: ipython3
 
-    from pymodaq_utils.utils import math_utils as mutils
+    from pymodaq_utils import math_utils as mutils
     from pymodaq_data.data import Axis
     
     axis = Axis('my axis', units='my units', data=np.linspace(-10000, 10000, 100))

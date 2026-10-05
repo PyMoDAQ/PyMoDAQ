@@ -172,20 +172,6 @@ Main settings refers to settings common to all instrument plugin. They are mostl
   data logging
 * **LECO options**: to connect the module to a LECO server (host, port and name of the module) and let other
   processes control it or receive its data, see :ref:`leco_communication`.
-* **Overshoot options**: useful to protect the experiment. If this is activated, then as soon as any value of the datas
-  exported by this detector reaches the *overshoot value*, the module will throw a ``overshoot_signal`` (boolean
-  Signal). The overshoot manager of the *Dashboard* generalize this feature (see :ref:`overshoot_manager`) by
-  triggering actions on actuators if overshoot signals are detected.
-* **Axis options**: only valid for 2D detector (see :numref:`figure_DAQ_Viewer_axes`). You can add labels, units,
-  scaling and offset (with respect to pixels) to both x and y axis of the detector. Redundant with the plugin data
-  export feature (see :ref:`data_emission`)
-
-   .. _figure_DAQ_Viewer_axes:
-
-.. figure:: /image/DAQ_Viewer/daq_viewer_main_settings_axes.png
-   :alt: axis options
-
-   The *Axis options* of a 2D detector.
 
 
 .. _dock_layout:
@@ -237,7 +223,7 @@ Saving data
 -----------
 
 Data saved from the DAQ_Viewer are data objects has described in :ref:`data_objects` and their saving mechanism
-use one of the objects defined in :ref:`module_savers`. There are three possibilities to save data within the
+use one of the objects defined in :ref:`module_savers`. There are two possibilities to save data within the
 DAQ_Viewer.
 
 *  The first one is a direct one using the |save| button to save the current data from the detector, it uses a
@@ -245,15 +231,8 @@ DAQ_Viewer.
 *  The second one is the continuous saving mode. It uses a ``DetectorTimeSaver`` object (a variation of the
    ``DetectorEnlargeableSaver``) to *continuously* save data within enlargeable arrays, indexed by their timestamps.
    Methods related to this are: ``append_data`` and ``_init_continuous_save``
-*  The third one is not used directly from the ``DAQ_Viewer`` but triggered by extensions such as the ``DAQ_Scan``.
-   Data are indexed within an already defined array using a ``DetectorExtendedSaver``. Methods related to this are:
-   ``insert_data`` and some code in the ``DAQ_Scan``, see below.
 
-.. code-block::
-
-    for det in self.modules_manager.detectors:
-        det.module_and_data_saver = module_saving.DetectorExtendedSaver(det, self.scan_shape)
-    self.module_and_data_saver.h5saver = self.h5saver  # will update its h5saver and all submodules's h5saver
+Data are also saved by extensions such as the DAQ_Scan, see :ref:`daq_scan_saving`.
 
 
 .. _daq_viewer_saving_single:

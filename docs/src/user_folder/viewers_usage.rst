@@ -73,6 +73,15 @@ The Viewer0D plots the history of scalar data: each new value is added at the en
 Viewer1D
 ++++++++
 
+The Viewer1D plots one or several waveforms against their axis, see :numref:`viewer1D_fig`.
+
+   .. _viewer1D_fig:
+
+.. figure:: /image/viewers/viewer1D.png
+   :alt: Viewer1D with two traces
+
+   A Viewer1D showing two waveforms. The legend gives the labels of the data, the axis its label and units.
+
 .. list-table::
    :header-rows: 1
    :widths: 15 85
@@ -100,6 +109,16 @@ Viewer1D
 
 Viewer2D
 ++++++++
+
+The Viewer2D plots images, see :numref:`viewer2D_fig`. When the data object holds several arrays, they are displayed as
+the red, green and blue layers of the image.
+
+   .. _viewer2D_fig:
+
+.. figure:: /image/viewers/viewer2D.png
+   :alt: Viewer2D with two channels
+
+   A Viewer2D showing two arrays (red and green layers) of the same image.
 
 .. list-table::
    :header-rows: 1
@@ -181,7 +200,7 @@ panels are the ones described above.
 Crosshair
 ---------
 
-The crosshair is a vertical line (Viewer1D) or a pair of lines (Viewer2D) that you can drag, or move with a double
+The crosshair (|crosshair2D| button) is a vertical line (Viewer1D) or a pair of lines (Viewer2D) that you can drag, or move with a double
 click on the plot. In a Viewer1D, its position (*x*) and the values of each trace at this position (*y*, separated by
 ``/``) are printed in the toolbar, see :numref:`viewer1D_crosshair_fig`. In a Viewer2D, its position and the value of
 each channel at this position are printed on the left of the toolbar, and it displays the lineouts of the image along
@@ -213,7 +232,7 @@ point a scanner to the selected position), see :ref:`plugin_roi_select`.
 Regions of interest
 -------------------
 
-The ROI manager (|roi1D| / |roi2D| button) is a panel listing the ROIs of the viewer. In the Dashboard, it is shown
+The ROI manager (|roi2D| button) is a panel listing the ROIs of the viewer. In the Dashboard, it is shown
 in the *ROIs* dock, on the right of the detectors, see :numref:`viewers_rois_fig`. Its title gives the detector and
 the viewer it belongs to, its buttons detach it as a separate window or close it (which unchecks the ROI button).
 Whether it starts docked or detached, and the horizontal or vertical layout of the dock, are set by the
@@ -273,7 +292,7 @@ at once, use the Dashboard :ref:`roi_manager`. With the ``restore_rois`` prefere
 ROI select
 ----------
 
-The ROI select (|roiselect1D| / |roiselect2D| button) is a single extra selection, independent of the ROI manager:
+The ROI select (|roiselect2D| button) is a single extra selection, independent of the ROI manager:
 
 * in a Viewer1D, a region delimited by two draggable lines;
 * in a Viewer2D, a rectangle, that you can move by dragging it and resize from its corner and side handles (it can't
