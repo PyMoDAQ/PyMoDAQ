@@ -12,8 +12,8 @@ from the selected detectors at each position, in hierarchical HDF5 files.
 3. In the [**Scanner**](https://pymodaq.cnrs.fr/en/latest/extensions_folder/daq_scan/scanner.html) settings, choose the scan type (1D, 2D, ...) and its subtype, then set the start, stop and
    step values of each actuator.
 4. In the [**Live plots selection**](https://pymodaq.cnrs.fr/en/latest/extensions_folder/daq_scan/daq_scan_main.html#selecting-the-data-to-render-live)
-   panel, use the data button to list the data available from the selected
-   detectors, and tick what should be plotted live. Nothing is plotted by default.
+   panel, use the **Get data** button to list the data available from the selected
+   detectors (all are ticked), and untick what should not be plotted live. Nothing is listed or plotted until then.
 5. In the [**Save settings**](https://pymodaq.cnrs.fr/en/latest/extensions_folder/daq_scan/daq_scan_main.html#saving-dataset-and-scans), check what is saved, how and where.
 6. Press **Start** to run the scan. **Stop** ends it
    ([scan flow](https://pymodaq.cnrs.fr/en/latest/extensions_folder/daq_scan/daq_scan_main.html#scan-flow)).
@@ -30,5 +30,4 @@ from the selected detectors at each position, in hierarchical HDF5 files.
 ## Full documentation
 
 See the [DAQ_Scan documentation](https://pymodaq.cnrs.fr/en/latest/extensions_folder/daq_scan/daq_scan.html)
-for scanner types, the [navigator](https://pymodaq.cnrs.fr/en/latest/extensions_folder/daq_scan/navigator.html) and
-[batch scans](https://pymodaq.cnrs.fr/en/latest/extensions_folder/daq_scan/scan_batch.html).
+for scanner types and the [navigator](https://pymodaq.cnrs.fr/en/latest/extensions_folder/daq_scan/navigator.html).
