@@ -8,29 +8,29 @@ an automated scan using the main control window of the ``DAQ_Scan``, see :numref
 Main Control Window
 -------------------
 The main control window is comprised of various toolbars, a *Scan Command* panel to set all parameters and
-dockable panels displaying live data taken during a scan.
+a *Live Plots* panel displaying live data taken during a scan.
 
    .. _daq_scan_main:
 
 .. figure:: /image/DAQ_Scan/scan_main_ui.png
    :alt: daq_scan_main
 
-   Main DAQ_Scan user interface at the end of a 1D scan. Left: the *Scan Command* panel with the *Instrument
-   selection* (top left), the *Plotting options* (bottom left) and the *Scanner Settings* (center); the
-   *General Settings* and *Save Settings* are collapsed below them. Right: the live plots.
+   Main DAQ_Scan user interface during a 1D scan. Left: the *Scan Command* panel with the *Actuators* and *Detectors*
+   selection (top), the *Scan Parameters* and the *Plotting Parameters* (bottom). Right: the *Live Plots* panel.
 
 
-*  The toolbars (top) allow to start, stop and pause a scan, see :ref:`daq_scan_toolbar`
-*  The *Instrument selection* panel allows to quickly select the detectors and the actuators to use for the next scan
-*  The *Scanner Settings* panel allows to select the type of scan and to set its values
-*  The *Plotting options* panel allows to select which data produced from the selected detectors should be rendered
-   live (these are the *Live plots selection* options)
-*  The *General Settings* and *Save Settings* sections (see :ref:`settings_paragraph` for more details):
-
-   *  General settings: options on timing, scan averaging and plotting.
-   *  Save settings: everything about what should be saved, how and where.
-*  The live plots panels render the data as a function of the varying parameters, as selected in the *Plotting
-   options*. They can be moved, resized or detached like any other dock.
+*  The toolbars (top) allow to start, stop and pause a scan and to show or hide some panels, see
+   :ref:`daq_scan_toolbar`
+*  The *Actuators* and *Detectors* panels allow to quickly select the actuators and the detectors to use for the next
+   scan, and to probe them
+*  The *Scan Parameters* panel allows to select the type of scan and to set its values
+*  The *Plotting Parameters* panel allows to select which data produced from the selected detectors should be rendered
+   live
+*  The *Live Plots* panel renders the data as a function of the varying parameters, as selected in the *Plotting
+   Parameters*. It is shown automatically when a scan starts (see *Auto-show on scan start* below) and can be
+   hidden or detached from the window (double-click on its title bar).
+*  The *General Settings* panel (hidden by default, see :ref:`settings_paragraph` for more details) gathers the
+   options on timing, scan averaging, saving and the saver worker.
 
 Scan Flow
 ---------
@@ -41,25 +41,26 @@ Performing a scan is typically done by:
 * Selecting which actuators will be the scan varying parameters
 * Selecting the type of scan (see :ref:`daq_scan_scanner`): 1D, 2D, ... and subtypes
 * For a given type and subtype, setting the start, stop, ... of the selected actuators
-* Selecting data to be rendered live (nothing is listed until you ask for it)
+* Selecting data to be rendered live (nothing is listed until you probe the detectors)
 * Starting the scan with the **Start** button of the toolbar (**Stop** ends it, **Pause** suspends it)
 
 
 Selecting detectors and actuators
 +++++++++++++++++++++++++++++++++
 
-The *Instrument selection* panel is the user interface of the module manager (see :ref:`module_manager` for details).
-It lists the detectors and the actuators declared in the experiment loaded in the Dashboard and allows the user to
-select the ones for the next scan by ticking them (see :numref:`list_modules`). The *Probe detectors* and
-*Probe actuators* rows can be used to check that the selected modules respond (the LED turns green when they do).
-This interface is also used for the ``DAQ_Logger`` extension.
+The *Actuators* and *Detectors* panels are the user interface of the module manager (see :ref:`module_manager` for
+details). They list the actuators and the detectors declared in the experiment loaded in the Dashboard and allow the
+user to select the ones for the next scan by ticking them (see :numref:`list_modules`). The *Probe actuators* and
+*Probe detectors* buttons read the current positions of the selected actuators and do a snap of the selected
+detectors: the results are listed in the *Probed actuator positions* and *Probed detector data* sections below. The LED
+turns green when the probe is done. This interface is also used for the ``DAQ_Logger`` extension.
 
    .. _list_modules:
 
 .. figure:: /image/DAQ_Scan/scan_instruments.png
    :alt: list_modules
 
-   List of declared modules from an experiment, with two detectors and one actuator selected.
+   The *Actuators* and *Detectors* panels: one actuator and two detectors are selected and have been probed.
 
 
 .. _daq_scan_scanner:
@@ -67,8 +68,8 @@ This interface is also used for the ``DAQ_Logger`` extension.
 Selecting the type of scan
 ++++++++++++++++++++++++++
 
-All specifics of the upcoming scan are configured using the :ref:`scanner_paragraph` module interface, as seen on
-:numref:`scan2D_fig2` in the case of a Scan2D scan configuration. Once the actuators are selected, choose the scan
+All specifics of the upcoming scan are configured in the *Scan Parameters* panel, using the :ref:`scanner_paragraph`
+module interface, as seen on :numref:`scan2D_fig2` in the case of a Scan2D scan configuration. Once the actuators are selected, choose the scan
 type (1D, 2D, ...), its subtype (linear, adaptive, ...) and set the start, stop and step values of each actuator.
 
   .. _scan2D_fig2:
@@ -88,12 +89,12 @@ experiment behaviour and check if something is going wrong or successfully witho
 full data analysis. For this PyMoDAQ live data display will allows the user to select data to be plotted from
 the selected detectors.
 
-The list of all possible data to be plotted can be obtained by clicking on the **Get data** button of the *Plotting
-options*. The selected detectors are probed (a snap is done) and all the data they generate are listed and classified by
-dimensionality (0D, 1D). They are all ticked by default: untick what should not be plotted. The total dimensionality
-of the data + the scan dimensions (1 for scan1D and 2 for Scan2D...) should not exceed 2 (this means one cannot plot
-more complex plots than 2D intensity plots). It also means that you should use ROI to generate lower dimensionality data
-from your raw data for a proper live plot.
+The list of all possible data to be plotted is obtained by clicking on the *Probe detectors* button: the selected
+detectors are probed (a snap is done) and all the data they generate are listed in the *Probed detector data* section and
+in the *Plotting options* of the *Plotting Parameters* panel, classified by dimensionality (0D, 1D). They are all ticked by
+default: untick what should not be plotted. The total dimensionality of the data + the scan dimensions (1 for scan1D and 2
+for Scan2D...) should not exceed 2 (this means one cannot plot more complex plots than 2D intensity plots). It also means
+that you should use ROI to generate lower dimensionality data from your raw data for a proper live plot.
 
 For instance, if the chosen detector is a 1D one, see :numref:`det1D`. Such a detector can generate various
 type of live data.
@@ -116,14 +117,16 @@ on :numref:`det1D_data_probe`
 .. figure:: /image/DAQ_Scan/scan_plot_options.png
    :alt: 1Ddetector_data
 
-   The *Plotting options* after clicking on **Get data** with a 0D and a 1D detector selected. The 0D data (*Plot 0Ds*)
+   The *Plotting Parameters* after probing a 0D and a 1D detector. The 0D data (*Plot 0Ds*)
    are the one of the 0D detector and the integration of the ROI of the 1D detector. The 1D data (*Plot 1Ds*) are the raw
    data of the 1D detector and the lineout of its ROI.
 
 Once the data to plot are selected, click on **Prepare Viewers** to generate the live plot panels (this is also done
 when starting a scan). One live plot panel will be created by selected data to be rendered with some
 specificities. One of these is that by default, all 0D data will be grouped on a single viewer panel,
-as shown on :numref:`daq_scan_main` (this can be changed using the :ref:`general_settings_daq_scan`)
+as shown on :numref:`daq_scan_main` (this can be changed using the *Group 0D data* option). Two more options control the
+live plots: **Plot every N steps** sets how often they are refreshed (1 for each scan point, 0 to disable live plotting
+during the scan) and **Auto-show on scan start** shows the *Live Plots* panel automatically when a scan starts.
 
 The viewer type will be chosen (Viewer1D or 2D) given the dimensionality of the data to be ploted and the number
 of selected actuators.
@@ -172,8 +175,8 @@ Various settings
 
 Toolbar
 +++++++
-The scan toolbar (see :numref:`daq_scan_toolbar_fig`) is comprised of buttons to start, pause and stop a scan. Some other
-functionalities can also be triggered with other buttons as described below:
+The scan toolbar (see :numref:`daq_scan_toolbar_fig`) is comprised of buttons to start, pause and stop a scan, to show
+or hide panels and to move the actuators:
 
    .. _daq_scan_toolbar_fig:
 
@@ -185,6 +188,8 @@ functionalities can also be triggered with other buttons as described below:
 * **Start**: will start the currently set scan (first it will set it then start it)
 * **Stop**: stop the currently running scan
 * **Pause**: toggle pause/resume on a running scan. The scan loop will wait until unpaused or stopped.
+* **Show General Settings**: show or hide the *General Settings* panel, see :ref:`general_settings_daq_scan`
+* **Show Live Plots**: show or hide the *Live Plots* panel
 * **Init. Positions**: will move all selected actuators to their initial positions as defined by the currently set scan.
 * **Move at double clicked**: when checked, allows currently selected actuators to be moved by double clicking on a
   position in the live plots
@@ -238,7 +243,8 @@ needed to define a given scan, save data and plot live information.
 General Settings
 ****************
 
-The General Settings are comprised of:
+The *General Settings* panel is shown or hidden with the **Show General Settings** button of the toolbar (double-click on its
+title bar to detach it into its own window). It is comprised of:
 
 * **Time Flow**
 
@@ -250,21 +256,18 @@ The General Settings are comprised of:
 * **Scan options** :
 
   * **N average**: Select how many scans to average. Save all individual scans.
+  * **Plot on top**: at the second iteration, plot the averaged scan on top of the current one (checked) or in a second
+    panel
   * **Go to ini. positions**: when checked (default), actuators are moved back to their initial positions
     when the scan ends or is stopped.
+  * **Stop on timeout**: if a hardware timeout occurs while waiting for an actuator or a detector, stop the scan. If
+    unchecked, the scan moves on to the next step.
 
-* **Plotting options** :
-  * **Get Data** probe selected detectors to get info on the data they are generating (including processed data from ROI)
-  * **Group 0D data**: Will group all generated 0D data to be plotted on the same viewer panel (work only for 0D data)
-  * **Plot 0D** shows the list of data that are 0D
-  * **Plot 1D** shows the list of data that are 1D
-  * **Prepare Viewers** generates viewer panels depending on the selected data to be live ploted
-  * **Plot at each step**
+* **Save Settings**: See :ref:`h5saver_module`
+* **Saver Worker**: status of the thread saving the data during the scan (running LED and number of pending save tasks)
 
-    * if checked, update the live plots at each step in the scan
-    * if not, display a **Refresh plots** integer parameter, say T. Will update the live plots every T milliseconds
-
-*  **Save Settings**: See :ref:`h5saver_module`
+The plotting options (*Plot 0Ds*, *Plot 1Ds*, *Prepare Viewers*...) are in the *Plotting Parameters* panel, see
+:ref:`daq_scan_scanner`.
 
 
 .. _daq_scan_saving:

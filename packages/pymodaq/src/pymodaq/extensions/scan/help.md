@@ -7,14 +7,15 @@ from the selected detectors at each position, in hierarchical HDF5 files.
 
 1. Define or load an experiment in the [Dashboard](https://pymodaq.cnrs.fr/en/latest/modules/DashBoard.html) first (see the
    [experiment manager](https://pymodaq.cnrs.fr/en/latest/user_folder/dashboard_manager.html#experiment-manager)).
-2. In the [**Instrument selection**](https://pymodaq.cnrs.fr/en/latest/extensions_folder/daq_scan/daq_scan_main.html#selecting-detectors-and-actuators)
-   panel, pick the detectors and actuators for the next scan.
-3. In the [**Scanner**](https://pymodaq.cnrs.fr/en/latest/extensions_folder/daq_scan/scanner.html) settings, choose the scan type (1D, 2D, ...) and its subtype, then set the start, stop and
-   step values of each actuator.
-4. In the [**Live plots selection**](https://pymodaq.cnrs.fr/en/latest/extensions_folder/daq_scan/daq_scan_main.html#selecting-the-data-to-render-live)
-   panel, use the **Get data** button to list the data available from the selected
-   detectors (all are ticked), and untick what should not be plotted live. Nothing is listed or plotted until then.
-5. In the [**Save settings**](https://pymodaq.cnrs.fr/en/latest/extensions_folder/daq_scan/daq_scan_main.html#saving-dataset-and-scans), check what is saved, how and where.
+2. In the [**Actuators** and **Detectors**](https://pymodaq.cnrs.fr/en/latest/extensions_folder/daq_scan/daq_scan_main.html#selecting-detectors-and-actuators)
+   panels, pick the actuators and detectors for the next scan.
+3. In the [**Scan Parameters**](https://pymodaq.cnrs.fr/en/latest/extensions_folder/daq_scan/scanner.html) panel, choose the scan type (1D, 2D, ...) and its subtype, then set the
+   start, stop and step values of each actuator.
+4. Use the **Probe detectors** button to list the data available from the selected detectors in the
+   [**Plotting Parameters**](https://pymodaq.cnrs.fr/en/latest/extensions_folder/daq_scan/daq_scan_main.html#selecting-the-data-to-render-live) (all are ticked), and untick what
+   should not be plotted live. Nothing is listed or plotted until then.
+5. In the [**General Settings**](https://pymodaq.cnrs.fr/en/latest/extensions_folder/daq_scan/daq_scan_main.html#saving-dataset-and-scans) panel (gear button of the toolbar),
+   check what is saved, how and where.
 6. Press **Start** to run the scan. **Stop** ends it
    ([scan flow](https://pymodaq.cnrs.fr/en/latest/extensions_folder/daq_scan/daq_scan_main.html#scan-flow)).
 
