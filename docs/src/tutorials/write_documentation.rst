@@ -38,10 +38,13 @@ to the documentation website can end the file; it is preceded by the marker ``<!
 the user interface) that stops the inclusion in the documentation.
 
 In the code, the text is retrieved with :func:`pymodaq_utils.help.get_help_text`, from a class, an instance or a module
-(Qt displays markdown natively, see ``QTextBrowser.setMarkdown``). In the module documentation page, the file is
-included with the ``myst_parser`` markdown parser:
+(Qt displays markdown natively, see ``QTextBrowser.setMarkdown``). In the module documentation, the file is included in a *Summary* subsection of the *Introduction* of the main page of
+the module (the first page listed in its table of contents), with the ``myst_parser`` markdown parser:
 
 .. code-block:: rst
+
+    Summary
+    +++++++
 
     .. include:: ../../../../packages/pymodaq/src/pymodaq/extensions/scan/help.md
        :parser: myst_parser.sphinx_

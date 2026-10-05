@@ -4,6 +4,17 @@ The dashboard gives you full control for manual adjustments (using the UI)
 of each actuator, checking their impact on live data from the detectors. Once all is set, one can move to
 an automated scan using the main control window of the ``DAQ_Scan``, see :numref:`daq_scan_main`.
 
+Summary
++++++++
+
+.. include:: ../../../../packages/pymodaq/src/pymodaq/extensions/scan/help.md
+   :parser: myst_parser.sphinx_
+   :start-line: 2
+   :end-before: <!-- end of intro -->
+
+Metadata can be saved for each dataset and then for each scan and be later retrieved from the saved file
+(see :ref:`module_savers` and :ref:`H5Browser_module`).
+
 
 Main Control Window
 -------------------
@@ -34,16 +45,6 @@ a *Live Plots* panel displaying live data taken during a scan.
 
 Scan Flow
 ---------
-
-Performing a scan is typically done by:
-
-* Selecting which detectors to save data from
-* Selecting which actuators will be the scan varying parameters
-* Selecting the type of scan (see :ref:`daq_scan_scanner`): 1D, 2D, ... and subtypes
-* For a given type and subtype, setting the start, stop, ... of the selected actuators
-* Selecting data to be rendered live (nothing is listed until you probe the detectors)
-* Starting the scan with the **Start** button of the toolbar (**Stop** ends it, **Pause** suspends it)
-
 
 Selecting detectors and actuators
 +++++++++++++++++++++++++++++++++
@@ -111,8 +112,8 @@ type of live data.
    one on each channel). The bottom panel plots the history of their mean value (0D data).
 
 
-It will export the raw 1D data and, if ROIs are declared, the 1D lineouts and integrated 0D data from them. The
-data of a 0D and a 1D detector (without ROI) are listed as shown on :numref:`det1D_data_probe`
+It will export the raw 1D data and the 1D lineouts and integrated 0D data from the declared ROI as shown
+on :numref:`det1D_data_probe`
 
 
    .. _det1D_data_probe:
@@ -120,9 +121,9 @@ data of a 0D and a 1D detector (without ROI) are listed as shown on :numref:`det
 .. figure:: /image/DAQ_Scan/scan_plot_options.png
    :alt: 1Ddetector_data
 
-   The *Plotting Parameters* after probing a 0D and a 1D detector. The 0D data (*Plot 0Ds*) are the one of the 0D
-   detector and the 1D data (*Plot 1Ds*) are the raw data of the 1D detector. With ROIs defined in the viewer of the
-   detectors, their integrations (0D) and lineouts (1D) are listed as well.
+   The *Plotting Parameters* after probing a 0D and a 1D detector having an ROI (*ROI_00*). The 0D data (*Plot 0Ds*) are
+   the one of the 0D detector and the integration of the ROI of the 1D detector. The 1D data (*Plot 1Ds*) are the raw data
+   of the 1D detector and the lineout of its ROI.
 
 Once the data to plot are selected, click on **Prepare Viewers** to generate the live plot panels (this is also done
 when starting a scan). One live plot panel will be created by selected data to be rendered with some
@@ -273,8 +274,20 @@ needed to define a given scan, save data and plot live information.
 General Settings
 ****************
 
-The *General Settings* panel is shown or hidden with the **Show General Settings** button of the toolbar (double-click on its
-title bar to detach it into its own window). It is comprised of:
+The *General Settings* panel (see :numref:`general_settings_fig`) is hidden by default. It is shown or hidden with the
+**Show General Settings** button of the toolbar (or of the *Actions* menu), and double-clicking on its title bar detaches
+it into its own window. To have it shown when the DAQ_Scan starts, set ``show_general_settings = true`` in the ``[scan]``
+section of the *pymodaq* configuration file (see :ref:`configfile`).
+
+   .. _general_settings_fig:
+
+.. figure:: /image/DAQ_Scan/scan_general_settings.png
+   :alt: General settings
+   :figwidth: 400 px
+
+   The *General Settings* panel of the DAQ_Scan.
+
+It is comprised of:
 
 * **Time Flow**
 
@@ -293,7 +306,7 @@ title bar to detach it into its own window). It is comprised of:
   * **Stop on timeout**: if a hardware timeout occurs while waiting for an actuator or a detector, stop the scan. If
     unchecked, the scan moves on to the next step.
 
-* **Save Settings**: See :ref:`h5saver_module`
+* **Save**: everything about what is saved, how and where, see :ref:`daq_scan_saving` and :ref:`h5saver_module`.
 * **Saver Worker**: status of the thread saving the data during the scan (running LED and number of pending save tasks)
 
 The plotting options (*Plot 0Ds*, *Plot 1Ds*, *Prepare Viewers*...) are in the *Plotting Parameters* panel, see
@@ -320,15 +333,17 @@ and metadata is used by the :ref:`H5Browser_module` to display the info to the u
    h5 browser and arrows to explain how each data or metadata is being displayed
 
 
-The Save Settings (see :numref:`save_settings_fig`) is the user interface of the :ref:`h5saver_module`, it is a general
-interface to parametrize data saving in the hdf5 file:
+The *Save* settings, in the lower part of the *General Settings* panel (see :numref:`save_settings_fig`), are the user
+interface of the :ref:`h5saver_module`, a general interface to parametrize data saving in the hdf5 file. As the *General
+Settings* are hidden by default, use the **Show General Settings** button of the toolbar to display them:
 
    .. _save_settings_fig:
 
-.. figure:: /image/Utils/h5saver_settings.PNG
-   :alt: list_modules
+.. figure:: /image/DAQ_Scan/scan_general_settings_save.png
+   :alt: Save settings
+   :figwidth: 400 px
 
-   Save settings for the DAQ_Scan extension
+   The *Save* settings (orange rectangle) of the DAQ_Scan, in the lower part of the *General Settings* panel.
 
 
 In order to save correctly your datas, saving modules are to be used, see :ref:`module_savers`.
