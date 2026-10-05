@@ -34,6 +34,8 @@ __all__ = [
     'Capabilities',
     'measurement',
     'control',
+    'toolbar_widgets',
+    'UI_WIDGETS',
 ]
 
 
@@ -52,6 +54,31 @@ class Domain(str, Enum):
 
 
 _IDENTIFIER = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
+
+UI_WIDGETS = frozenset({
+    'value', 'move_done_led', 'stop', 'show_controls', 'selector', 'label',
+    'read', 'show_graph', 'snap', 'grab', 'save', 'history', 'slider',
+})
+
+_DEFAULT_WIDGETS = {
+    (Access.CONTROL, Domain.CONTINUOUS): ('value', 'move_done_led', 'stop', 'show_controls'),
+    (Access.CONTROL, Domain.DISCRETE): ('selector',),
+    (Access.MEASUREMENT, Domain.DISCRETE): ('label',),
+    (Access.MEASUREMENT, Domain.CONTINUOUS, 'scalar'): ('read', 'show_graph'),
+    (Access.MEASUREMENT, Domain.CONTINUOUS, 'array'): ('snap', 'grab', 'show_graph', 'save'),
+}
+
+
+def toolbar_widgets(quantity: 'Quantity') -> list[str]:
+    """Widgets for a channel group: the defaults of the existing modules, adjusted by the declaration."""
+    if quantity.access is Access.MEASUREMENT and quantity.domain is Domain.CONTINUOUS:
+        scalar = len(quantity.shape) == 1 and quantity.shape[0] == 1
+        defaults = _DEFAULT_WIDGETS[(Access.MEASUREMENT, Domain.CONTINUOUS, 'scalar' if scalar else 'array')]
+    else:
+        defaults = _DEFAULT_WIDGETS[(quantity.access, quantity.domain)]
+    widgets = [w for w in defaults if w not in quantity.ui_remove]
+    widgets += [w for w in quantity.ui_add if w not in widgets]
+    return widgets
 
 
 class Quantity:
@@ -74,6 +101,8 @@ class Quantity:
         epsilon: float = 0.0,
         values: tuple | list = (),
         docs: str = '',
+        ui_add: tuple | list = (),
+        ui_remove: tuple | list = (),
     ) -> None:
         self.access = Access(access)
         self.units = units
@@ -85,6 +114,8 @@ class Quantity:
         self.epsilon = float(epsilon)
         self.values = list(values)
         self.docs = docs
+        self.ui_add = tuple(ui_add)
+        self.ui_remove = tuple(ui_remove)
         self.name: str | None = None
         self._validate()
 
@@ -97,6 +128,9 @@ class Quantity:
             raise ValueError(f'lo ({self.lo}) is greater than hi ({self.hi})')
         if self.epsilon < 0:
             raise ValueError(f'epsilon must be non-negative, got {self.epsilon}')
+        unknown = (set(self.ui_add) | set(self.ui_remove)) - UI_WIDGETS
+        if unknown:
+            raise ValueError(f'unknown widgets: {sorted(unknown)}; allowed: {sorted(UI_WIDGETS)}')
 
     def __set_name__(self, owner: type, name: str) -> None:
         if not _IDENTIFIER.match(name):
@@ -125,6 +159,8 @@ class Quantity:
             'epsilon': self.epsilon,
             'values': list(self.values),
             'docs': self.docs,
+            'ui_add': list(self.ui_add),
+            'ui_remove': list(self.ui_remove),
         }
 
     @classmethod
@@ -141,6 +177,8 @@ class Quantity:
             epsilon=d.get('epsilon', 0.0),
             values=d.get('values', []),
             docs=d.get('docs', ''),
+            ui_add=d.get('ui_add', []),
+            ui_remove=d.get('ui_remove', []),
         )
         quantity.name = d['name']
         return quantity
@@ -154,10 +192,12 @@ def measurement(
     shape: tuple[int | None, ...] = (1,),
     values: tuple | list = (),
     docs: str = '',
+    ui_add: tuple | list = (),
+    ui_remove: tuple | list = (),
 ) -> Quantity:
     """Declare a read-only quantity: a sensor reading, a detector channel, a status."""
     return Quantity(Access.MEASUREMENT, units=units, label=label, dtype=dtype, shape=shape,
-                    values=values, docs=docs)
+                    values=values, docs=docs, ui_add=ui_add, ui_remove=ui_remove)
 
 
 def control(
@@ -169,6 +209,8 @@ def control(
     epsilon: float = 0.0,
     values: tuple | list = (),
     docs: str = '',
+    ui_add: tuple | list = (),
+    ui_remove: tuple | list = (),
 ) -> Quantity:
     """Declare a readable and writable quantity.
 
@@ -176,7 +218,7 @@ def control(
     ``values`` describes a discrete set instead.
     """
     return Quantity(Access.CONTROL, units=units, label=label, lo=lo, hi=hi, epsilon=epsilon,
-                    values=values, docs=docs)
+                    values=values, docs=docs, ui_add=ui_add, ui_remove=ui_remove)
 
 
 @dataclass
