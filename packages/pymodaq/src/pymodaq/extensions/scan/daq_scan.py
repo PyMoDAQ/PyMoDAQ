@@ -1034,13 +1034,11 @@ class DAQScan(CustomExt):
             self.status_manager.set_scan_step(status.attribute[0] + 1)
             self.ind_average = status.attribute[1]
             self.status_manager.set_scan_step_average(status.attribute[1] + 1)
-            self.scanner.update_scan_progress(self.ind_scan)
 
         elif status.command == "Scan_done":
 
             self.modules_manager.reset_signals()
             self.status_manager.set_scan_done()
-            self.scanner.update_scan_progress(self.ind_scan, done=True)
             self._set_selection_enabled(True)
             self.scan_done_signal.emit()
             try:
@@ -1250,7 +1248,6 @@ class DAQScan(CustomExt):
 
             self._set_selection_enabled(False)
             self._init_live()
-            self.scanner.reset_scan_progress()
             Naverage = self.settings['scan_options', 'scan_average']
             nav_axes = self.scanner.get_nav_axes()
             if Naverage > 1:
