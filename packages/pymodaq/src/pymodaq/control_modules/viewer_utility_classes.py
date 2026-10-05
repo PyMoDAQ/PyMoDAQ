@@ -7,7 +7,7 @@ from typing import Iterable, Union
 from pymodaq_data.data import DataToExport
 from pymodaq_gui.plotting.items.roi import RoiInfo
 from pymodaq_gui.qt_utils import mkQApp
-from pymodaq_utils.config import GlobalConfig, get_set_local_dir
+from pymodaq_utils.config import GlobalConfig
 from pymodaq_utils.warnings import deprecation_msg
 from qtpy.QtCore import Signal
 
@@ -15,15 +15,6 @@ from pymodaq.control_modules.utils import create_controller_param, create_remote
 from pymodaq.control_modules.plugin_base import PluginBase
 
 config = GlobalConfig()
-
-local_path = get_set_local_dir()
-# look for eventual calibration files
-calibs = ['None']
-if local_path.joinpath('camera_calibrations').is_dir():
-    for file in local_path.joinpath('camera_calibrations').iterdir():
-        if 'xml' in file.suffix:
-            calibs.append(file.stem)
-
 
 
 comon_parameters = [create_controller_param()]  #
@@ -47,26 +38,6 @@ params = [
          'visible': False},
         {'title': 'Wait time (ms):', 'name': 'wait_time', 'type': 'int', 'default': 0, 'value': 00, 'min': 0},
     ] + create_remote_connection_params() + [
-        {'title': 'Overshoot options:', 'name': 'overshoot', 'type': 'group', 'visible': True, 'expanded': False,
-         'children': [
-             {'title': 'Overshoot:', 'name': 'stop_overshoot', 'type': 'bool', 'value': False},
-             {'title': 'Overshoot value:', 'name': 'overshoot_value', 'type': 'float', 'value': 0}]},
-        {'title': 'Axis options:', 'name': 'axes', 'type': 'group', 'visible': False, 'expanded': False, 'children': [
-            {'title': 'Use calibration?:', 'name': 'use_calib', 'type': 'list', 'limits': calibs},
-            {'title': 'X axis:', 'name': 'xaxis', 'type': 'group', 'children': [
-                {'title': 'Label:', 'name': 'xlabel', 'type': 'str', 'value': "x axis"},
-                {'title': 'Units:', 'name': 'xunits', 'type': 'str', 'value': "pxls"},
-                {'title': 'Offset:', 'name': 'xoffset', 'type': 'float', 'default': 0., 'value': 0.},
-                {'title': 'Scaling', 'name': 'xscaling', 'type': 'float', 'default': 1., 'value': 1.},
-            ]},
-            {'title': 'Y axis:', 'name': 'yaxis', 'type': 'group', 'children': [
-                {'title': 'Label:', 'name': 'ylabel', 'type': 'str', 'value': "y axis"},
-                {'title': 'Units:', 'name': 'yunits', 'type': 'str', 'value': "pxls"},
-                {'title': 'Offset:', 'name': 'yoffset', 'type': 'float', 'default': 0., 'value': 0.},
-                {'title': 'Scaling', 'name': 'yscaling', 'type': 'float', 'default': 1., 'value': 1.},
-            ]},
-        ]},
-
     ]},
     {'title': 'Detector Settings', 'name': HW_SETTINGS_KEY, 'type': 'group', 'children': []}
 ]
