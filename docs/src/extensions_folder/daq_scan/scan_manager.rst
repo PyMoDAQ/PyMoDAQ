@@ -44,8 +44,13 @@ the scan can be started manually.
 Defining a scan
 +++++++++++++++
 
-.. TODO: add a screenshot of the Scan Manager window here (needs the ProbeData bug of the Scan Manager fixed).
-   Check the numbered steps below against it.
+   .. _scan_manager_main_fig:
+
+.. figure:: /image/DAQ_Scan/scan_manager.png
+   :alt: Scan Manager Main UI
+
+   The Scan Manager toolbar of the DAQ_Scan: open the manager, list of the saved scans and execute the selected one.
+
 
 The Scan Manager window is divided in numbered steps:
 
