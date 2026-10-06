@@ -133,7 +133,7 @@ Every plugin module found in the package is checked individually (``pytest -v`` 
 * the naming convention of the modules and of the classes (see above), and that no module is wrongly named
 * the plugin modules can be imported *without the instrument vendor SDK* (guard these imports with *try/except*)
 * the plugin class derives from the right base class and overrides the mandatory methods
-  (*ini_stage*, *get_actuator_value*, *stop_motion*, *close* for an actuator; *ini_detector*, *grab_data*, *stop*,
+  (*ini_stage*, *get_actuator_value*, *close* for an actuator, and a warning if *stop_motion* is not implemented; *ini_detector*, *grab_data*, *stop*,
   *close* for a detector)
 * for an actuator, ``_axis_names``, ``_controller_units`` and ``_epsilons`` are consistent and the units are known
   from `pint`
@@ -170,7 +170,7 @@ PMQ304-6 (module that cannot be imported) inconsistent axes/units, unknown unit,
 PMQ307   import of the removed ``pymodaq.daq_utils``
 PMQ308   no ``if __name__ == '__main__': main(__file__)`` block to run the plugin standalone
 PMQ309   ``ini_stage`` / ``ini_detector`` do not return ``(info, initialized)``
-PMQ310   the plugin class has no docstring
+PMQ310   the plugin class has no docstring. PMQ311: *stop_motion* not overridden, the Stop of the actuator does nothing
 ======== =================================================================================================
 
 From the root of your plugin repository you can also print this report from the command line, the exit code being

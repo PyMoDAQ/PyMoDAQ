@@ -42,7 +42,7 @@ PLACEHOLDER_AUTHORS = ('Name Surname', 'myname@test.fr')
 PLACEHOLDER_NAMES_RE = re.compile(r'python_wrapper_file_of_your_instrument|PythonWrapperObjectOfYourInstrument|'
                                   r'your_method_to_\w+|a_method_or_atttribute_to_check_if_init')
 
-MANDATORY_MOVE_METHODS = ('ini_stage', 'get_actuator_value', 'stop_motion', 'close')
+MANDATORY_MOVE_METHODS = ('ini_stage', 'get_actuator_value', 'close')  # stop_motion has a default that does nothing
 MANDATORY_VIEWER_METHODS = ('ini_detector', 'grab_data', 'stop', 'close')
 
 # features of [features] in pyproject.toml -> folders (relative to the package) holding the corresponding code
