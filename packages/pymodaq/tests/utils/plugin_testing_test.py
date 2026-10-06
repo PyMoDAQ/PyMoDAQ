@@ -162,3 +162,37 @@ def test_cli(capsys, monkeypatch):
     assert pt.main(['pymodaq_plugins_mock', '--fail-on', 'todo', '-v']) == 1
     out = capsys.readouterr().out
     assert 'pymodaq_plugins_mock' in out and 'PMQ201' in out
+
+
+@pytest.fixture
+def repo(tmp_path, monkeypatch):
+    """A plugin repository not installed, whose pyproject.toml still has the template name"""
+    pkg = tmp_path / 'src' / 'pymodaq_plugins_notinstalled'
+    (pkg / 'daq_move_plugins').mkdir(parents=True)
+    (pkg / '__init__.py').write_text('config = None\n__version__ = "0"')
+    (pkg / 'utils.py').write_text('')
+    (pkg / 'daq_move_plugins' / '__init__.py').write_text('')
+    (pkg / 'daq_move_plugins' / 'daq_move_Good.py').write_text(textwrap.dedent(GOOD_MOVE))
+    (tmp_path / 'pyproject.toml').write_text('[project]\nname = "pymodaq_plugins_template"\n'
+                                             'dynamic = ["entry-points"]\n')
+    monkeypatch.setattr(sys, 'path', list(sys.path))  # resolve_target changes it
+    yield tmp_path
+    for name in [n for n in sys.modules if n.startswith('pymodaq_plugins_notinstalled')]:
+        del sys.modules[name]
+
+
+def test_resolve_target(repo):
+    assert pt.resolve_target(str(repo)) == ('pymodaq_plugins_notinstalled', repo)  # the repository
+    assert pt.resolve_target(str(repo / 'src' / 'pymodaq_plugins_notinstalled'))[0] == 'pymodaq_plugins_notinstalled'
+    assert pt.resolve_target('pymodaq_plugins_mock') == ('pymodaq_plugins_mock', None)  # a package name
+    (repo / 'empty').mkdir()
+    with pytest.raises(ValueError):
+        pt.resolve_target(str(repo / 'empty'))  # no package in it
+
+
+def test_check_a_plugin_not_installed(repo, capsys):
+    assert pt.main([str(repo)]) == 1  # PMQ103: the pyproject name is not the package one
+    out = capsys.readouterr().out
+    assert 'PMQ102' in out and 'PMQ103' in out  # the pyproject.toml is checked although its name is wrong
+    assert 'the plugin is not installed' in out and 'No entry point' not in out
+    assert '[ok] daq_move_Good' in out

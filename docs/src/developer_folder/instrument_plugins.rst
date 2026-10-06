@@ -173,7 +173,11 @@ non zero when the checks fail:
 
 .. code-block:: bash
 
-    check_plugin [pymodaq_plugins_xxxx] [--fail-on error|warning|todo] [--strict-imports] [-v]
+    check_plugin [package name or folder] [--fail-on error|warning|todo] [--strict-imports] [-v]
+
+The argument is either the name of an installed plugin package, or a folder: the plugin repository or its package
+folder (the current folder by default). The plugin does not need to be installed, and the *pyproject.toml* can still
+have the template name, which is then reported; only the entry points cannot be checked before the installation.
 
 The functions behind these tests (*check_package_layout*, *check_move_class*, *check_viewer_class*) return the list of
 problems found and can be used from a script. To get a full report of an installed plugin package without pytest, use

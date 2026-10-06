@@ -24,6 +24,7 @@ import importlib.util
 import inspect
 import pkgutil
 import re
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
@@ -135,8 +136,16 @@ def _is_overridden(klass: type, base: type, method: str) -> bool:
     return getattr(klass, method, None) is not None and getattr(klass, method) is not getattr(base, method, None)
 
 
-def check_package_layout(package: str) -> list[str]:
-    """Package name, entry points, mandatory sub-modules and naming of the plugin modules"""
+def is_installed(package: str) -> bool:
+    """Whether an entry point of the instrument groups points to the package (so the plugin is installed)"""
+    return package in {ep.value.split(':')[0] for group in ENTRYPOINT_GROUPS for ep in get_entrypoints(group)}
+
+
+def check_package_layout(package: str, check_entry_points: bool = True) -> list[str]:
+    """Package name, entry points, mandatory sub-modules and naming of the plugin modules
+
+    The entry points only exist once the plugin is installed: set ``check_entry_points`` to False before.
+    """
     problems = []
     if not PACKAGE_NAME_RE.match(package):
         problems.append(f"Package name '{package}' should be of the form pymodaq_plugins_<name>")
@@ -152,8 +161,7 @@ def check_package_layout(package: str) -> list[str]:
     except Exception as e:
         problems.append(f'{package}.utils cannot be imported: {e!r}')
 
-    entry_names = {ep.value.split(':')[0] for group in ENTRYPOINT_GROUPS for ep in get_entrypoints(group)}
-    if package not in entry_names:
+    if check_entry_points and not is_installed(package):
         problems.append(f'No entry point of groups {ENTRYPOINT_GROUPS} points to {package}: is the plugin installed, '
                         f'and does its pyproject.toml declare the entry points?')
     for group in OPTIONAL_ENTRYPOINT_GROUPS:
@@ -393,21 +401,26 @@ class PluginReport:
         return self.format()
 
 
-def check_package_sources(package: str) -> CheckResult:
-    """Static rules on the packaging (pyproject.toml...) and on the leftovers of the template"""
+def check_package_sources(package: str, project: Optional[Path] = None) -> CheckResult:
+    """Static rules on the packaging (pyproject.toml...) and on the leftovers of the template
+
+    ``project`` is the folder of the pyproject.toml, found from the package if not given (only possible if its name
+    matches the package one).
+    """
     result = CheckResult('package sources')
     root = package_root(package)
     if root is None:
         result.problems.append(f'package {package} not found')
         return result
-    project = project_root(package)  # None if installed from a wheel: there is no pyproject.toml to check
+    project = project or project_root(package)  # None if installed from a wheel: no pyproject.toml to check
     if project is not None:
         result.findings.extend(check_pyproject(package, project))
     result.findings.extend(check_leftovers(package, root, project))
     return result
 
 
-def check_plugin_package(package: str, fail_on: str = 'error', strict_imports: bool = False) -> PluginReport:
+def check_plugin_package(package: str, fail_on: str = 'error', strict_imports: bool = False,
+                         project: Optional[Path] = None, check_entry_points: bool = True) -> PluginReport:
     """Run all the checks on an installed plugin package and return a report, without using pytest
 
     Parameters
@@ -420,6 +433,10 @@ def check_plugin_package(package: str, fail_on: str = 'error', strict_imports: b
     strict_imports: bool
         if True the modules that cannot be imported because of the environment (missing third party module, SDK or
         OS specific error) also fail instead of being reported as warnings
+    project: Path
+        folder of the pyproject.toml of the plugin, if not found from the package
+    check_entry_points: bool
+        set to False for a plugin that is not installed yet (see :func:`resolve_target`)
 
     Examples
     --------
@@ -429,8 +446,11 @@ def check_plugin_package(package: str, fail_on: str = 'error', strict_imports: b
     """
     if fail_on not in FAIL_LEVELS:
         raise ValueError(f'fail_on should be one of {list(FAIL_LEVELS)}')
-    report = PluginReport(package, [CheckResult('package layout', check_package_layout(package)),
-                                    check_package_sources(package)], fail_on, strict_imports)
+    layout = CheckResult('package layout', check_package_layout(package, check_entry_points))
+    if not check_entry_points:
+        layout.warnings.append('the plugin is not installed: its entry points were not checked, run pip install -e . '
+                               'in the plugin folder to check them')
+    report = PluginReport(package, [layout, check_package_sources(package, project)], fail_on, strict_imports)
     try:
         modules = find_plugin_modules(package)
     except Exception as e:
@@ -488,6 +508,47 @@ class PluginPackageChecks:
             pytest.skip('; '.join(result.warnings))
 
 
+def resolve_target(target: Optional[str] = None) -> tuple[str, Optional[Path]]:
+    """Find the plugin package to check from a package name or from a folder, without needing it to be installed
+
+    Parameters
+    ----------
+    target: str
+        either the name of an importable package, or a folder: the plugin repository (holding the pyproject.toml and
+        the package, in ``src`` or not) or the package folder itself. The current folder if not given.
+
+    Returns
+    -------
+    str: the package name, as found in the folder name (so it does not depend on the project name in the
+        pyproject.toml, that may not have been modified yet)
+    Path: the folder of the pyproject.toml, if any. The folder holding the package is added to ``sys.path``
+
+    Raises
+    ------
+    ValueError
+        if no, or several, ``pymodaq_plugins_*`` package are found in the folder
+    """
+    path = Path(target) if target is not None else Path.cwd()
+    if target is not None and not path.is_dir():
+        return target, None  # a package name
+    path = path.resolve()
+
+    def packages_in(base: Path) -> list[Path]:
+        return sorted(p for p in base.glob('pymodaq_plugins_*') if (p / '__init__.py').is_file())
+
+    if path.name.startswith('pymodaq_plugins_') and (path / '__init__.py').is_file():
+        folders = [path]
+    else:
+        folders = packages_in(path / 'src') or packages_in(path)
+    if len(folders) != 1:
+        raise ValueError(f'{len(folders)} pymodaq_plugins_* packages found in {path}: expected one. Give the folder of '
+                         f'the plugin repository or of the package, or the name of an installed package')
+    folder = folders[0]
+    sys.path.insert(0, str(folder.parent))
+    project = next((d for d in (folder.parent, *folder.parent.parents) if (d / 'pyproject.toml').is_file()), None)
+    return folder.name, project
+
+
 def main(argv=None) -> int:
     """Print the report of a plugin package, for the developer: the ``check_plugin`` command (or
     ``python -m pymodaq.utils.plugin_testing``)
@@ -498,7 +559,8 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog='check_plugin',
                                      description='Check a PyMoDAQ plugin package and print a report')
     parser.add_argument('package', nargs='?', default=None,
-                        help='installed plugin package, default: read from the pyproject.toml of the current folder')
+                        help='name of an installed plugin package, or folder of the plugin repository or package '
+                             '(that does not need to be installed), default: the current folder')
     parser.add_argument('--fail-on', choices=list(FAIL_LEVELS), default='error',
                         help="findings of this level and above give a non zero exit code ('todo': everything)")
     parser.add_argument('--strict-imports', action='store_true',
@@ -506,14 +568,14 @@ def main(argv=None) -> int:
     parser.add_argument('-v', '--verbose', action='store_true', help='list every todo')
     args = parser.parse_args(argv)
     try:
-        package = args.package or guess_package_name(Path.cwd())
-    except FileNotFoundError as e:
+        package, project = resolve_target(args.package)
+    except ValueError as e:
         parser.error(str(e))
-    report = check_plugin_package(package, args.fail_on, args.strict_imports)
+    report = check_plugin_package(package, args.fail_on, args.strict_imports, project,
+                                  check_entry_points=is_installed(package) or project is None)
     print(report.format(verbose=args.verbose))
     return 0 if report.ok else 1
 
 
 if __name__ == '__main__':
-    import sys
     sys.exit(main())
