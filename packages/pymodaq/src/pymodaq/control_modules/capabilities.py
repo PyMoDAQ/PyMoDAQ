@@ -63,8 +63,8 @@ UI_WIDGETS = frozenset({
 _DEFAULT_WIDGETS = {
     (Access.CONTROL, Domain.CONTINUOUS): ('value', 'move_done_led', 'stop', 'show_controls'),
     (Access.CONTROL, Domain.DISCRETE): ('selector',),
-    (Access.MEASUREMENT, Domain.DISCRETE): ('label',),
-    (Access.MEASUREMENT, Domain.CONTINUOUS, 'scalar'): ('read', 'show_graph'),
+    (Access.MEASUREMENT, Domain.DISCRETE): ('label', 'grab'),
+    (Access.MEASUREMENT, Domain.CONTINUOUS, 'scalar'): ('read', 'grab', 'show_graph'),
     (Access.MEASUREMENT, Domain.CONTINUOUS, 'array'): ('snap', 'grab', 'show_graph', 'save'),
 }
 
@@ -103,6 +103,8 @@ class Quantity:
         docs: str = '',
         ui_add: tuple | list = (),
         ui_remove: tuple | list = (),
+        push: bool = False,
+        readback: bool | str = False,
     ) -> None:
         self.access = Access(access)
         self.units = units
@@ -116,6 +118,9 @@ class Quantity:
         self.docs = docs
         self.ui_add = tuple(ui_add)
         self.ui_remove = tuple(ui_remove)
+        self.push = bool(push)
+        # True, or the name of the measurement that reports the device's actual value; resolved by Capabilities
+        self.readback = readback
         self.name: str | None = None
         self._validate()
 
@@ -126,6 +131,10 @@ class Quantity:
             raise ValueError('a quantity has either values (discrete) or lo/hi/epsilon (continuous), not both')
         if self.lo is not None and self.hi is not None and self.lo > self.hi:
             raise ValueError(f'lo ({self.lo}) is greater than hi ({self.hi})')
+        if self.readback and self.access is not Access.CONTROL:
+            raise ValueError('only a control can have a readback')
+        if self.push and self.access is not Access.MEASUREMENT:
+            raise ValueError('only a measurement can be pushed by the plugin')
         if self.epsilon < 0:
             raise ValueError(f'epsilon must be non-negative, got {self.epsilon}')
         unknown = (set(self.ui_add) | set(self.ui_remove)) - UI_WIDGETS
@@ -152,6 +161,7 @@ class Quantity:
             'domain': self.domain.value,
             'units': self.units,
             'label': self.label,
+            'readback': self.readback,
             'dtype': self.dtype,
             'shape': list(self.shape),
             'lo': self.lo,
@@ -161,6 +171,7 @@ class Quantity:
             'docs': self.docs,
             'ui_add': list(self.ui_add),
             'ui_remove': list(self.ui_remove),
+            'push': self.push,
         }
 
     @classmethod
@@ -170,6 +181,7 @@ class Quantity:
             Access(d['access']),
             units=d.get('units', ''),
             label=d.get('label', ''),
+            readback=d.get('readback', False),
             dtype=d.get('dtype', 'float64'),
             shape=tuple(d.get('shape', (1,))),
             lo=d.get('lo'),
@@ -179,6 +191,7 @@ class Quantity:
             docs=d.get('docs', ''),
             ui_add=d.get('ui_add', []),
             ui_remove=d.get('ui_remove', []),
+            push=d.get('push', False),
         )
         quantity.name = d['name']
         return quantity
@@ -194,10 +207,14 @@ def measurement(
     docs: str = '',
     ui_add: tuple | list = (),
     ui_remove: tuple | list = (),
+    push: bool = False,
 ) -> Quantity:
-    """Declare a read-only quantity: a sensor reading, a detector channel, a status."""
+    """Declare a read-only quantity: a sensor reading, a detector channel, a status.
+
+    ``push=True`` means the plugin sends its readings with ``push_reading`` instead of being polled.
+    """
     return Quantity(Access.MEASUREMENT, units=units, label=label, dtype=dtype, shape=shape,
-                    values=values, docs=docs, ui_add=ui_add, ui_remove=ui_remove)
+                    values=values, docs=docs, ui_add=ui_add, ui_remove=ui_remove, push=push)
 
 
 def control(
@@ -211,14 +228,28 @@ def control(
     docs: str = '',
     ui_add: tuple | list = (),
     ui_remove: tuple | list = (),
+    readback: bool | str = False,
 ) -> Quantity:
-    """Declare a readable and writable quantity.
+    """Declare a readable and writable quantity: a target, with the device's actual value as a readback.
 
     ``lo``, ``hi`` and ``epsilon`` describe a continuous range (``epsilon`` is the move tolerance).
     ``values`` describes a discrete set instead.
+
+    ``readback`` declares the measurement that reports the actual value, which the GUI shows in the same row.
+    ``True`` names it ``<name>_readback``; a string names it. If a measurement of that name is already
+    declared, it is used; otherwise it is created with the units, shape and values of the control.
     """
     return Quantity(Access.CONTROL, units=units, label=label, lo=lo, hi=hi, epsilon=epsilon,
-                    values=values, docs=docs, ui_add=ui_add, ui_remove=ui_remove)
+                    values=values, docs=docs, ui_add=ui_add, ui_remove=ui_remove, readback=readback)
+
+
+def _readback_of(control: Quantity) -> Quantity:
+    """The measurement that reports *control*'s actual value: same units, shape and values, no limits."""
+    readback = Quantity(Access.MEASUREMENT, units=control.units,
+                        label=f'{control.label} readback' if control.label else '',
+                        dtype=control.dtype, shape=control.shape, values=control.values)
+    readback.name = control.readback
+    return readback
 
 
 @dataclass
@@ -236,6 +267,15 @@ class Capabilities:
         duplicates = sorted({n for n in names if names.count(n) > 1})
         if duplicates:
             raise ValueError(f'quantity names must be unique, duplicated: {duplicates}')
+        measured = {q.name for q in self.measurements}
+        for control in self.controls:
+            if not control.readback:
+                continue
+            if control.readback is True:
+                control.readback = f'{control.name}_readback'
+            if control.readback not in measured:
+                self.measurements.append(_readback_of(control))
+                measured.add(control.readback)
 
     @classmethod
     def from_device(cls, device: type | Any) -> Capabilities:

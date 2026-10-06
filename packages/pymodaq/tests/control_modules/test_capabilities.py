@@ -143,10 +143,10 @@ class TestToolbarWidgets:
         assert toolbar_widgets(Spectrometer.trigger) == ['selector']
 
     def test_discrete_measurement_gets_a_label(self):
-        assert toolbar_widgets(Spectrometer.status) == ['label']
+        assert toolbar_widgets(Spectrometer.status) == ['label', 'grab']
 
     def test_scalar_measurement_gets_read_and_graph(self):
-        assert toolbar_widgets(Spectrometer.temperature) == ['read', 'show_graph']
+        assert toolbar_widgets(Spectrometer.temperature) == ['read', 'grab', 'show_graph']
 
     def test_array_measurement_gets_the_viewer_toolbar(self):
         assert toolbar_widgets(Spectrometer.spectrum) == ['snap', 'grab', 'show_graph', 'save']
@@ -175,3 +175,57 @@ class TestToolbarWidgets:
         q = Quantity.from_dict(control(lo=0, hi=1, ui_add=('slider',), ui_remove=('stop',)).to_dict())
         assert q.ui_add == ('slider',)
         assert 'stop' not in toolbar_widgets(q)
+
+
+class TestReadback:
+
+    def test_true_creates_a_measurement_named_after_the_control(self):
+        class Stage:
+            x = control(units='mm', lo=0, hi=50, readback=True)
+
+        caps = Capabilities.from_device(Stage)
+        readback = caps.measurements[0]
+        assert caps.controls[0].readback == 'x_readback'
+        assert readback.name == 'x_readback'
+        assert readback.units == 'mm' and readback.access is Access.MEASUREMENT
+        assert readback.lo is None  # a readback has no limits
+
+    def test_a_string_names_the_created_measurement(self):
+        class Stage:
+            x = control(readback='x_position')
+
+        caps = Capabilities.from_device(Stage)
+        assert [q.name for q in caps.measurements] == ['x_position']
+        assert caps.controls[0].readback == 'x_position'
+
+    def test_a_declared_measurement_is_linked_not_duplicated(self):
+        class Stage:
+            x = control(readback='x_position')
+            x_position = measurement(units='mm')
+
+        caps = Capabilities.from_device(Stage)
+        assert [q.name for q in caps.measurements] == ['x_position']
+
+    def test_the_readback_survives_serialization(self):
+        class Stage:
+            x = control(units='mm', readback=True)
+
+        caps = Capabilities.from_device(Stage)
+        restored = Capabilities.from_dict(json.loads(json.dumps(caps.to_dict())))
+        assert restored.to_dict() == caps.to_dict()
+        assert [q.name for q in restored.measurements] == ['x_readback']
+
+    def test_no_readback_by_default(self):
+        class Stage:
+            x = control()
+
+        caps = Capabilities.from_device(Stage)
+        assert caps.controls[0].readback is False and caps.measurements == []
+
+    def test_any_string_names_the_readback(self):
+        class Stage:
+            z = control(units='mm', readback='my_z_readback')
+
+        caps = Capabilities.from_device(Stage)
+        assert caps.controls[0].readback == 'my_z_readback'
+        assert [q.name for q in caps.measurements] == ['my_z_readback']
