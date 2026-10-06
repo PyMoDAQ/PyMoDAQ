@@ -21,3 +21,11 @@ def test_help_found_for_path_class_and_module(tmp_path):
 
 def test_help_of_a_package_module_without_help():
     assert get_help_text(help_mod) is None
+
+
+def test_help_of_a_single_file_module_has_priority(tmp_path):
+    (tmp_path / 'help.md').write_text('# Folder help\n', encoding='utf-8')
+    (tmp_path / 'module.help.md').write_text('# Module help\n', encoding='utf-8')
+    assert get_help_text(tmp_path / 'module.py') == '# Module help\n'
+    assert get_help_text(tmp_path / 'other.py') == '# Folder help\n'
+    assert get_help_text(tmp_path) == '# Folder help\n'

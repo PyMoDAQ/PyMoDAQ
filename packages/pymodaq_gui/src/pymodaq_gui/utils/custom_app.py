@@ -191,7 +191,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     def get_help_markdown(self) -> str:
         """Markdown text describing how to use this application, shown by the Help action
 
-        Read from the help.md next to the module defining the class, else the class docstring
+        Read from the help.md (or <module>.help.md) next to the module defining the class, else the class docstring
         """
         return get_help_text(self) or inspect.cleandoc(self.__class__.__doc__ or '')
 
