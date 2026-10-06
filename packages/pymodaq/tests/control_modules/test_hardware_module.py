@@ -243,3 +243,19 @@ class TestReadActions:
         widget.get_action('spectrum_read').trigger()
         qtbot.waitUntil(lambda: widget._displays['spectrum'].text() != '-', timeout=2000)
         widget.release()
+
+
+class TestCaptions:
+
+    def test_the_label_is_shown_and_the_name_is_kept(self, registry, qtbot):
+        class Labelled(Camera):
+            temperature = measurement(units='K', label='Sensor temperature')
+
+        widget = HardwareModule(HardwareKey(hardware_class=Labelled, controller_id=8), Labelled, registry=registry)
+        qtbot.addWidget(widget)
+        assert widget.controller.capabilities.measurements[0].name == 'temperature'
+        assert widget.get_toolbar('temperature').findChildren(QtWidgets.QLabel)[0].text() == 'SENSOR TEMPERATURE'
+        widget.release()
+
+    def test_without_a_label_the_name_is_made_readable(self, module):
+        assert module.get_toolbar('temperature').findChildren(QtWidgets.QLabel)[0].text() == 'TEMPERATURE'

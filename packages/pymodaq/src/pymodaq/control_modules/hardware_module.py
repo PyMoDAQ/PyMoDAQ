@@ -24,6 +24,7 @@ from pyqtgraph.parametertree import ParameterTree
 from qt_themes import get_theme
 from qtpy import QtWidgets
 from qtpy.QtCore import QMetaObject, Qt, Signal, Slot
+from qtpy.QtGui import QColor
 
 from pymodaq_gui.managers.action_manager import ActionManager
 
@@ -36,6 +37,7 @@ __all__ = ['HardwareModule']
 
 INSTRUMENT_TOOLBAR = 'instrument'
 HISTORY_LENGTH = 200  # points kept by the trace of a scalar measurement
+CHANNEL_DOCK_WIDTH = 440
 
 
 class _ViewDock(QtWidgets.QDockWidget):
@@ -51,16 +53,22 @@ class _ViewDock(QtWidgets.QDockWidget):
 class _FallbackColors:
     """Used when no theme is applied to the application, e.g. in a bare script or a test."""
 
-    red = '#d32f2f'
-    green = '#388e3c'
-    blue = '#1976d2'
-    magenta = '#8e24aa'
+    red = QColor('#d32f2f')
+    green = QColor('#388e3c')
+    blue = QColor('#1976d2')
+    magenta = QColor('#8e24aa')
 
 
 def _colors():
     """The current theme, so that the icon colours follow the application's theme."""
     theme = get_theme()
     return theme if theme is not None else _FallbackColors
+
+
+def _caption(quantity: Quantity) -> str:
+    """The text shown for a channel: its label in capitals, or its name made readable."""
+    text = quantity.label or quantity.name.replace('_', ' ').capitalize()
+    return text.upper()
 
 
 def _format(data) -> str:
@@ -164,6 +172,7 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
     def _build_channels(self, caps) -> None:
         """One toolbar per quantity, stacked in a dock on the left."""
         container = QtWidgets.QWidget()
+        container.setMinimumWidth(CHANNEL_DOCK_WIDTH)  # a full row, with its label, fits without the overflow arrow
         layout = QtWidgets.QVBoxLayout(container)
         layout.setSpacing(8)
         for quantity in caps.measurements + caps.controls:
@@ -181,15 +190,17 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
     def _access_color(quantity: Quantity) -> str:
         """Measurements are blue and controls magenta, so the two kinds can be told apart at a glance."""
         colors = _colors()
-        return colors.blue if quantity.access is Access.MEASUREMENT else colors.magenta
+        color = colors.blue if quantity.access is Access.MEASUREMENT else colors.magenta
+        return QColor(color).name()  # a hex string, which a style sheet accepts
 
     def _fill_channel_toolbar(self, quantity: Quantity) -> None:
         """Name, then groups separated by a separator: display | value | read and grab | show graph."""
         name = quantity.name
         is_measurement = quantity.access is Access.MEASUREMENT
-        label = QtWidgets.QLabel(name.upper())  # a caption, so the name reads apart from the value
+        label = QtWidgets.QLabel(_caption(quantity))  # the label shown; the name stays the identifier
         label.setStyleSheet(f'color: {self._access_color(quantity)}; font-weight: bold; letter-spacing: 1px;')
-        label.setToolTip('measurement: read from the device' if is_measurement else 'control: set on the device')
+        kind = 'measurement: read from the device' if is_measurement else 'control: set on the device'
+        label.setToolTip(f'{name} ({kind})')
         self.add_widget(f'{name}_name', label, toolbar=name)
 
         widgets = toolbar_widgets(quantity)

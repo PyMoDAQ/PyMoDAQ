@@ -13,7 +13,7 @@ What to try:
 import sys
 
 import numpy as np
-from qtpy import QtWidgets
+from pymodaq_gui.qt_utils import mkQApp
 
 from pymodaq.control_modules.capabilities import control, measurement
 from pymodaq.control_modules.hardware_module import HardwareModule
@@ -35,11 +35,11 @@ class FakeSpectrometer:
 
     params: list = []
 
-    spectrum = measurement(units='counts', shape=(256,), docs='Spectrum, replaced on each read')
-    temperature = measurement(units='K', docs='Sensor temperature')
-    status = measurement(values=['idle', 'running'], docs='Device state')
-    exposure = control(units='ms', lo=1, hi=1000, epsilon=0.1, docs='Exposure time')
-    trigger = control(values=['internal', 'external'], docs='Trigger source')
+    spectrum = measurement(units='counts', shape=(256,), label='Spectrum', docs='Replaced on each read')
+    temperature = measurement(units='K', label='Sensor temperature', docs='Sensor temperature')
+    status = measurement(values=['idle', 'running'], label='Device state', docs='Device state')
+    exposure = control(units='ms', lo=1, hi=1000, epsilon=0.1, label='Exposure', docs='Exposure time')
+    trigger = control(values=['internal', 'external'], label='Trigger source', docs='Trigger source')
 
     def __init__(self):
         self._exposure = 10.0
@@ -73,7 +73,7 @@ class FakeSpectrometer:
 
 
 def main() -> int:
-    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
+    app = mkQApp('HardwareModule example')  # applies the PyMoDAQ theme and style, as the other modules do
     key = HardwareKey(hardware_class=FakeSpectrometer, controller_id=0)
     module = HardwareModule(key, FakeSpectrometer)
     module.resize(900, 520)
