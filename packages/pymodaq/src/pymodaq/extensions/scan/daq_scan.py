@@ -355,11 +355,12 @@ class DAQScan(CustomExt):
 
         self.live_plot_dockarea = gutils.DockArea()
         self.live_plot_dock = gutils.Dock('Live Plots')
-        self.dockarea.addDock(self.live_plot_dock, 'right', self.dock_command)
+        self.dockarea.addDock(self.live_plot_dock, 'right')
         self.live_plot_dock.addWidget(self.live_plot_dockarea)
 
         self.dock_general_settings = gutils.Dock('General Settings')
-        self.dockarea.addDock(self.dock_general_settings, 'right', self.live_plot_dock)
+        self.dock_general_settings.setMaximumWidth(400)
+        self.dockarea.addDock(self.dock_general_settings, 'right', self.dock_command)
         self.dock_general_settings.setVisible(config('pymodaq', 'scan', 'show_general_settings'))
 
         widget_command = QtWidgets.QWidget()
@@ -371,7 +372,7 @@ class DAQScan(CustomExt):
 
         # Column 1: Actuators (selection + probe, and scan geometry)
         self.actuators_widget = self._make_section_groupbox('Actuators')
-        self.actuators_widget.setMinimumWidth(220)
+        self.actuators_widget.setMinimumWidth(280)
         self.actuators_widget.setMaximumWidth(400)
 
         self.actuators_settings_tree = ParameterTree()
@@ -384,8 +385,10 @@ class DAQScan(CustomExt):
 
         # Column 2: Detectors (selection + probe, and what/how to plot from them)
         self.detectors_widget = self._make_section_groupbox('Detectors')
-        self.detectors_widget.setMinimumWidth(220)
+        self.detectors_widget.setMinimumWidth(280)
         self.detectors_widget.setMaximumWidth(400)
+
+        self.dock_command.setMaximumWidth(810)
 
         self.detectors_settings_tree = ParameterTree()
         self.detectors_widget.layout().addWidget(self.detectors_settings_tree)
