@@ -1249,15 +1249,9 @@ class DAQScan(CustomExt):
             self._set_selection_enabled(False)
             self._init_live()
             Naverage = self.settings['scan_options', 'scan_average']
-            nav_axes = self.scanner.get_nav_axes()
             if Naverage > 1:
                 scan_shape = [Naverage]
                 scan_shape.extend(self.scanner.get_scan_shape())
-                for nav_axis in nav_axes:
-                    nav_axis.index += 1
-                nav_axes.insert(0, Axis('Average',
-                                        data=np.linspace(0, Naverage - 1, Naverage),
-                                        index=0))
             else:
                 scan_shape = self.scanner.get_scan_shape()
 
@@ -1492,6 +1486,10 @@ class DAQScanAcquisition(ExtensionWorker):
 
     def init_things(self):
         try:
+            # the number of averages may have been changed since the creation of this object: it must be
+            # consistent with the scan shape declared (from the settings) when the scan is started
+            self.Naverage = self.settings['scan_options', 'scan_average']
+
             self.modules_manager.timeout_signal.connect(self.timeout)
 
             self.scan_step_failed_signal.connect(self._on_scan_step_failed)

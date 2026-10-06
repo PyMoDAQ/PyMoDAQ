@@ -700,6 +700,34 @@ class TestDataToExportExtendedSaver:
             assert np.all(np.isnan(arr[other_idx]))
 
 
+    def test_average_dimension(self, h5saver_lowlevel):
+        """As used by the DAQ_Scan with Naverage > 1: the first extended dimension is the averaging one"""
+        h5saver = h5saver_lowlevel
+        det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
+        NAVERAGE, NSTEPS = 3, 4
+        EXT_SHAPE = (NAVERAGE, NSTEPS)
+        nav_axes = [Axis('Average', '', data=np.arange(NAVERAGE, dtype=float), index=0),
+                    Axis('scan', 'm', data=np.arange(NSTEPS, dtype=float), index=1)]
+        data_to_export = DataToExport(name='mydata', data=[
+            DataWithAxes(name='mydata0D', data=[np.array([5.])], source='raw', dim='Data0D',
+                         distribution='uniform')])
+        data_saver = DataToExportExtendedSaver(h5saver, extended_shape=EXT_SHAPE, fill_value=np.nan)
+
+        data_saver.add_nav_axes(det_group, nav_axes)
+        data_saver.add_data(det_group, data_to_export, [NAVERAGE - 1, NSTEPS - 1])
+
+        arrays = [node.read() for node in h5saver.walk_nodes('/RawData/MyDet')
+                  if node.attrs.get('data_type') in ('data', 'Data') and node.name != 'Logger']
+        assert len(arrays) == 1
+        assert arrays[0].shape[:2] == EXT_SHAPE
+        assert np.all(arrays[0][NAVERAGE - 1, NSTEPS - 1] == 5.)
+        assert np.all(np.isnan(arrays[0][0, 0]))
+
+        # an index without the averaging one does not match the declared shape
+        with pytest.raises(IndexError):
+            data_saver.add_data(det_group, data_to_export, [NSTEPS - 1])
+
+
 class TestDataLoader:
     def test_load_normal_data(self, create_h5_with_data_to_export):
         h5saver = create_h5_with_data_to_export

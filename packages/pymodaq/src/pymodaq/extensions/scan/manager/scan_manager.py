@@ -66,12 +66,14 @@ class ScanManager(SettingsManager):
 
 
 
-        super().__init__(dashboard=dashboard,
-                         handler_id=ScanSettingsEntryHandler.handler_name)
+        # the settings are built from self.params in the parent __init__: it must be set before
         self.params = [
             {'title': 'Options', 'name': 'daq_scan', 'type': 'group', 'children': daq_scan.params},
             {'title': 'Saver', 'name': 'h5saver', 'type': 'group', 'children': H5Saver.params},
         ]
+
+        super().__init__(dashboard=dashboard,
+                         handler_id=ScanSettingsEntryHandler.handler_name)
 
         self._h5saver = daq_scan.h5_manager.get_h5saver()
         self._h5saver.settings.child('do_save').hide()
