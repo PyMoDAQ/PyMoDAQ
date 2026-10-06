@@ -77,7 +77,7 @@ def test_good_move_passes(fake_package):
 def test_bad_move_reports_everything(fake_package):
     klass = pt.load_plugin_class(pt.PluginModule(fake_package, 'daq_move_Bad', 'move'))
     problems = '\n'.join(pt.check_move_class(klass))
-    for method in ('ini_stage', 'get_actuator_value', 'stop_motion'):
+    for method in ('ini_stage', 'get_actuator_value'):
         assert f'override {method}()' in problems
     assert 'close()' not in problems
     assert 'same type as' in problems
@@ -266,3 +266,11 @@ def test_syntax_error_is_located_and_reported_once(fake_package, tmp_path):
     syn = next(res for res in report.results if res.item == 'daq_move_Syn')
     assert len(syn.problems) == 0  # the import error is not repeated, the finding says it all
     assert not report.ok
+
+
+def test_stop_motion_not_overridden_is_a_warning_not_an_error(fake_package):
+    bad = pt.check_plugin_module(pt.PluginModule(fake_package, 'daq_move_Bad', 'move'))
+    assert not any('stop_motion' in p for p in bad.problems)
+    assert [f.severity for f in bad.findings if f.code == 'PMQ311'] == [Severity.WARNING]
+    good = pt.check_plugin_module(pt.PluginModule(fake_package, 'daq_move_Good', 'move'))
+    assert 'PMQ311' not in {f.code for f in good.findings}
