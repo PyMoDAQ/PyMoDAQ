@@ -27,10 +27,8 @@ class TestDeclaration:
     def test_attribute_name_becomes_quantity_name(self):
         assert Spectrometer.spectrum.name == 'spectrum'
 
-    def test_measurement_is_read_only(self):
+    def test_factories_set_access(self):
         assert Spectrometer.temperature.access is Access.MEASUREMENT
-
-    def test_control_is_writable(self):
         assert Spectrometer.exposure.access is Access.CONTROL
 
     def test_domain_follows_arguments(self):
@@ -49,8 +47,9 @@ class TestDeclaration:
         assert q.values == []
 
     def test_name_must_be_identifier(self):
-        with pytest.raises(ValueError):
-            type('Bad', (), {'bad name': measurement()})
+        # called directly: Python < 3.12 wraps errors raised from __set_name__ in a RuntimeError
+        with pytest.raises(ValueError, match='identifiers'):
+            measurement().__set_name__(Spectrometer, 'bad name')
 
 
 class TestValidation:
@@ -109,28 +108,30 @@ class TestFromDevice:
     def test_device_without_declarations_is_empty(self):
         caps = Capabilities.from_device(object)
         assert caps.measurements == [] and caps.controls == []
+        assert not caps.has_measurements()
+        assert not caps.has_controls()
+
+    def test_has_helpers_reflect_content(self):
+        caps = Capabilities.from_device(Spectrometer)
+        assert caps.has_measurements()
+        assert caps.has_controls()
+        assert not Capabilities(measurements=[Spectrometer.temperature]).has_controls()
 
 
 class TestSerialization:
 
-    def test_round_trip(self):
+    def test_round_trip_preserves_every_field(self):
         caps = Capabilities.from_device(Spectrometer)
         restored = Capabilities.from_dict(json.loads(json.dumps(caps.to_dict())))
-        assert [q.name for q in restored.measurements] == [q.name for q in caps.measurements]
-        assert [q.name for q in restored.controls] == [q.name for q in caps.controls]
-        exposure = restored.controls[0]
-        assert (exposure.lo, exposure.hi, exposure.epsilon) == (1, 1000, 0.1)
+        assert restored.to_dict() == caps.to_dict()
+        assert restored.controls[0].access is Access.CONTROL
+        assert restored.measurements[0].shape == (1024,)
 
     def test_dict_carries_access_and_domain(self):
         d = Spectrometer.status.to_dict()
         assert d['access'] == 'measurement'
         assert d['domain'] == 'discrete'
         assert d['values'] == ['idle', 'running']
-
-    def test_quantity_round_trip_keeps_name(self):
-        q = Quantity.from_dict(Spectrometer.exposure.to_dict())
-        assert q.name == 'exposure'
-        assert q.access is Access.CONTROL
 
 
 class TestToolbarWidgets:
@@ -149,6 +150,10 @@ class TestToolbarWidgets:
 
     def test_array_measurement_gets_the_viewer_toolbar(self):
         assert toolbar_widgets(Spectrometer.spectrum) == ['snap', 'grab', 'show_graph', 'save']
+
+    @pytest.mark.parametrize('shape', [(1, 1), (None,), (3,)])
+    def test_non_scalar_shapes_count_as_arrays(self, shape):
+        assert toolbar_widgets(measurement(shape=shape)) == ['snap', 'grab', 'show_graph', 'save']
 
     def test_declaration_adds_widgets(self):
         q = control(lo=0, hi=1, ui_add=('slider',))
