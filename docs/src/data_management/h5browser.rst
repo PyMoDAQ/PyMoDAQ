@@ -4,6 +4,14 @@
 Data Browsing: the H5Browser module
 ===================================
 
+Introduction
+++++++++++++
+
+.. include:: ../../../packages/pymodaq_gui/src/pymodaq_gui/h5modules/browsing.help.md
+   :parser: myst_parser.sphinx_
+   :start-line: 2
+   :end-before: <!-- end of intro -->
+
 Exploring data
 ++++++++++++++
 

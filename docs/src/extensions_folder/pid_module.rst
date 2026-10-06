@@ -6,6 +6,11 @@ PID Module
 Introduction
 ------------
 
+.. include:: ../../../packages/pymodaq/src/pymodaq/extensions/pid/help.md
+   :parser: myst_parser.sphinx_
+   :start-line: 2
+   :end-before: <!-- end of intro -->
+
 This documentation is complementary to the video on the module :
 
 https://www.youtube.com/watch?v=u8ifY4WqQEA

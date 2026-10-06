@@ -20,6 +20,11 @@ of Gaussian Process regression from `scikit-learn <https://scikit-learn.org/stab
 Introduction
 ++++++++++++
 
+.. include:: ../../../packages/pymodaq/src/pymodaq/extensions/bayesian/help.md
+   :parser: myst_parser.sphinx_
+   :start-line: 2
+   :end-before: <!-- end of intro -->
+
 You'll find below, a very short introduction, for a more detailed one, you can also read
 `this article <https://medium.com/@okanyenigun/step-by-step-guide-to-bayesian-optimization-a-python-based-approach-3558985c6818>`__
 from Okan Yenigun from which this introduction is derived.

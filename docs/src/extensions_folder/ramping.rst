@@ -15,6 +15,11 @@ Ramping
 Introduction
 ++++++++++++
 
+.. include:: ../../../packages/pymodaq/src/pymodaq/extensions/ramping/help.md
+   :parser: myst_parser.sphinx_
+   :start-line: 2
+   :end-before: <!-- end of intro -->
+
 Some experiments are not done by moving an actuator step by step and acquiring data once it has reached each
 position, as the :ref:`DAQ_Scan_module` does, but by *continuously* sweeping a parameter while recording everything:
 ramping the temperature of a cryostat or of an oven, the current of a magnet, the voltage of a power supply, the

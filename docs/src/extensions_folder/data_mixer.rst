@@ -13,6 +13,11 @@ DataMixer
 Introduction
 ++++++++++++
 
+.. include:: ../../../packages/pymodaq/src/pymodaq/extensions/data_mixer/help.md
+   :parser: myst_parser.sphinx_
+   :start-line: 2
+   :end-before: <!-- end of intro -->
+
 When dealing with PyMoDAQ you may be frustrated because you cannot easily customize the behaviour of the modules. In
 particular the DAQ_Viewer module grab raw data and except by the use of regions of interest you cannot really
 post-process those data. In fact there are solutions but they are quite complex especially if one want to do regular

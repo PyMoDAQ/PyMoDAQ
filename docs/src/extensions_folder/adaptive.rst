@@ -20,6 +20,11 @@ through their python package:
 Introduction
 ++++++++++++
 
+.. include:: ../../../packages/pymodaq/src/pymodaq/extensions/adaptive_optim/help.md
+   :parser: myst_parser.sphinx_
+   :start-line: 2
+   :end-before: <!-- end of intro -->
+
 *Adaptive is an open-source Python library that*
 *streamlines adaptive parallel function evaluations. Rather than calculating all points on a dense grid, it*
 *intelligently selects the "best" points in the parameter space based on your provided function and bounds.*

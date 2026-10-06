@@ -15,6 +15,11 @@ Sequencer
 Introduction
 ++++++++++++
 
+.. include:: ../../../packages/pymodaq/src/pymodaq/extensions/sequencer/help.md
+   :parser: myst_parser.sphinx_
+   :start-line: 2
+   :end-before: <!-- end of intro -->
+
 The :ref:`DAQ_Scan_module` is perfect when you want to acquire data on a regular grid of actuators positions. But an
 experiment is often more of a *procedure*: move some stages to a starting point, wait for a temperature to settle,
 take a few snapshots, check a signal level and, depending on its value, go back a few steps or move on to the next

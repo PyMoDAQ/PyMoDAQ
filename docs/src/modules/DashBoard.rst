@@ -3,29 +3,6 @@
 DashBoard
 =========
 
-This module is the heart of PyMoDAQ, it will:
-
-* Help you declare the list of actuators and detectors to be used for a given experiment (:ref:`experiment_manager`)
-* Allow you to set particular values for their settings (see :ref:`state_manager`)
-* Load and run specific extensions such as:
-  * Automatic data acquisition of detectors as a function of one or more actuators using the DAQ_Scan
-  * Log data into advanced binary file or distant database using its DAQ_Logger extension
-  * Optimize data or sampling using the Bayesian or Adaptive extensions
-  * Mix data using the DataMixer
-  * ...
-
-
-The flow of this module is as follow:
-
-* At startup you have to define/load/modify an experiment (see :ref:`experiment_manager`) representing an ensemble
-  of actuators and detectors
-* Define/load/modify a State (see :ref:`state_manager`) representing a state of the control modules settings and
-  some other special state subentries like actuator values
-* Define/load/modify eventual overshoots (see :ref:`overshoot_manager`)
-* Define/load/modify eventual ROI (Region of interests) selections (see :ref:`roi_manager`)
-* Use the actuators and detectors manually to drive your experiment
-* Select an extension to run: automated scan (DAQ_Scan), log data (DAQ_Logger)...
-
 .. _dashboard_cli_arguments_note:
 
 .. note::
@@ -42,6 +19,11 @@ The flow of this module is as follow:
 
 Introduction
 ------------
+
+.. include:: ../../../packages/pymodaq/src/pymodaq/dashboard.help.md
+   :parser: myst_parser.sphinx_
+   :start-line: 2
+   :end-before: <!-- end of intro -->
 
 This module has one main window,
 the dashboard (:numref:`dashboard`) where a log and all declared actuators and detectors
