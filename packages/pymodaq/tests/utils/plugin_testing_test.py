@@ -141,3 +141,24 @@ def test_deprecated_axis_names_declaration(fake_package, tmp_path):
     result = pt.check_plugin_module(pt.PluginModule(fake_package, 'daq_move_Old', 'move'))
     assert any("'axis_names'" in str(f) for f in result.findings if f.severity == Severity.ERROR)
     assert not result.ok
+
+
+def test_fail_levels(fake_package):
+    report = pt.check_plugin_package('pymodaq_plugins_mock')
+    assert report.ok and not pt.check_plugin_package('pymodaq_plugins_mock', fail_on='warning').ok  # _epsilon
+    assert not pt.check_plugin_package('pymodaq_plugins_mock', fail_on='todo').ok
+    with pytest.raises(ValueError):
+        pt.check_plugin_package('pymodaq_plugins_mock', fail_on='nope')
+
+
+def test_strict_imports(fake_package, tmp_path):
+    (tmp_path / 'pymodaq_plugins_fake' / 'daq_move_plugins' / 'daq_move_Env.py').write_text('import not_a_module_xyz')
+    result = pt.check_plugin_module(pt.PluginModule(fake_package, 'daq_move_Env', 'move'))
+    assert result.failing() == [] and result.failing(strict_imports=True)
+
+
+def test_cli(capsys, monkeypatch):
+    assert pt.main(['pymodaq_plugins_mock']) == 0
+    assert pt.main(['pymodaq_plugins_mock', '--fail-on', 'todo', '-v']) == 1
+    out = capsys.readouterr().out
+    assert 'pymodaq_plugins_mock' in out and 'PMQ201' in out

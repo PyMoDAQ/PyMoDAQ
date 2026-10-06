@@ -33,7 +33,7 @@ def test_created_instrument_is_valid_but_unfinished(package, kind, module):
     sources = pt.check_package_sources('pymodaq_plugins_scaf')  # TODO, NotImplementedError: unfinished, not wrong
     assert {f.severity for f in sources.findings} == {Severity.TODO}
     assert {f.code for f in sources.findings} >= {'PMQ201', 'PMQ202'}
-    assert sources.failing() == [] and sources.failing(strict=True)
+    assert sources.failing() == [] and sources.failing('todo')
 
 
 def test_package_is_found_from_a_subfolder(package, monkeypatch):

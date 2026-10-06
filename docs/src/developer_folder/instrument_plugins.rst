@@ -140,8 +140,13 @@ the instrument SDK is not installed). Every finding has a code, a severity, a lo
 
 * ``error``: the plugin will not work or will not be seen by PyMoDAQ
 * ``warning``: deprecated or suspicious
-* ``todo``: the plugin is not finished (leftovers of the template). They are listed and counted but do not fail the
-  tests, unless you set ``strict = True`` in the test class, which is meant for a release or the review of a contribution.
+* ``todo``: the plugin is not finished (leftovers of the template)
+
+By default only the errors fail the tests, the others are listed (the todos are also counted). Set the class attribute
+``fail_on = 'warning'`` or ``fail_on = 'todo'`` (everything) in your test class to be stricter, for instance before a
+release or to review a contribution. A module that cannot be imported because of a missing third party module or SDK
+is skipped; set ``strict_imports = True`` to make it fail, which is advised in the CI of your plugin as its dependencies
+are installed there.
 
 ======== =================================================================================================
 Code     Meaning
@@ -163,10 +168,17 @@ PMQ309   ``ini_stage`` / ``ini_detector`` do not return ``(info, initialized)``
 PMQ310   the plugin class has no docstring
 ======== =================================================================================================
 
+From the root of your plugin repository you can also print this report from the command line, the exit code being
+non zero when the checks fail:
+
+.. code-block:: bash
+
+    python -m pymodaq.utils.plugin_testing [pymodaq_plugins_xxxx] [--fail-on error|warning|todo] [--strict-imports] [-v]
+
 The functions behind these tests (*check_package_layout*, *check_move_class*, *check_viewer_class*) return the list of
 problems found and can be used from a script. To get a full report of an installed plugin package without pytest, use
 ``print(check_plugin_package('pymodaq_plugins_xxxx'))`` (the returned *PluginReport* also has *ok*, *failures*, *todos* and
-*to_dict()*; use ``check_plugin_package(..., strict=True)`` and ``report.format(verbose=True)`` to see every todo). Lint your code too, at least with
+*to_dict()*; use ``check_plugin_package(..., fail_on='todo')`` and ``report.format(verbose=True)`` to see every todo). Lint your code too, at least with
 ``flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics`` (the gate used by the PyMoDAQ CI) or ``ruff``.
 
 
