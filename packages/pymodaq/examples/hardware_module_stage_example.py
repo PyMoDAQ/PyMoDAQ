@@ -31,20 +31,14 @@ class _Reading:
 
 
 class FakeStage:
-    """Three axes, each with a target (control) and a position (measurement)."""
+    """Three axes. Each target is a control whose readback, ``<axis>_readback``, is its position."""
 
     params: list = []
     speed = 10.0  # mm/s, the same for every axis
 
-    x = control(units='mm', lo=0, hi=50, epsilon=0.01, label='X', ui_add=('slider',),
-                readback='x_position')
-    y = control(units='mm', lo=0, hi=50, epsilon=0.01, label='Y', ui_add=('slider',),
-                readback='y_position')
-    z = control(units='mm', lo=0, hi=10, epsilon=0.01, label='Z', ui_add=('slider',),
-                readback='z_position')
-    x_position = measurement(units='mm', label='X position')
-    y_position = measurement(units='mm', label='Y position')
-    z_position = measurement(units='mm', label='Z position')
+    x = control(units='mm', lo=0, hi=50, epsilon=0.01, label='X', ui_add=('slider',), readback=True)
+    y = control(units='mm', lo=0, hi=50, epsilon=0.01, label='Y', ui_add=('slider',), readback=True)
+    z = control(units='mm', lo=0, hi=10, epsilon=0.01, label='Z', ui_add=('slider',), readback=True)
     motion = measurement(values=['idle', 'moving'], label='Motion')
 
     AXES = ('x', 'y', 'z')
@@ -76,7 +70,7 @@ class FakeStage:
         self._advance()
         arrays = {}
         for name in names:
-            if name.endswith('_position'):
+            if name.endswith('_readback'):
                 arrays[name] = np.array([self._position[name[0]]])
             elif name == 'motion':
                 arrays[name] = np.array(['moving' if self._moving() else 'idle'])
