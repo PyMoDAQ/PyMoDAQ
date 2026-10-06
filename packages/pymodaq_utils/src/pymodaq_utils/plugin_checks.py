@@ -268,14 +268,18 @@ class PluginLoadError(Exception):
         True if the failure comes from the environment rather than from the plugin code: a third party module or
         vendor SDK/driver that is not installed or not available on this OS (``clr``, ``pyvisa``, ``windll``...).
         The plugin classes cannot be checked then, but this is not necessarily a defect of the plugin.
+    syntax_error: bool
+        True if the module has a syntax error: it is located and reported by the static rules (PMQ300)
     placeholder: bool
         True if the module imports the fake wrapper of the template, that was not replaced yet: this is a todo
     """
 
-    def __init__(self, message: str, environmental: bool = False, placeholder: bool = False):
+    def __init__(self, message: str, environmental: bool = False, placeholder: bool = False,
+                 syntax_error: bool = False):
         super().__init__(message)
         self.environmental = environmental
         self.placeholder = placeholder
+        self.syntax_error = syntax_error
 
 
 def _is_environmental(error: Exception, package: str) -> bool:
@@ -301,7 +305,8 @@ def load_plugin_class(plugin_module: PluginModule) -> type:
     except Exception as e:
         placeholder = isinstance(e, ImportError) and bool(PLACEHOLDER_NAMES_RE.search(getattr(e, 'name', None) or ''))
         raise PluginLoadError(f'{plugin_module.import_path} cannot be imported: {e!r}',
-                              not placeholder and _is_environmental(e, plugin_module.package), placeholder) from e
+                              not placeholder and _is_environmental(e, plugin_module.package), placeholder,
+                              isinstance(e, SyntaxError)) from e
     klass = getattr(module, plugin_module.class_name, None)
     if klass is None:
         raise PluginLoadError(f'{plugin_module.import_path} should define a class named {plugin_module.class_name}')
@@ -350,7 +355,9 @@ def check_plugin_module(plugin_module: PluginModule) -> CheckResult:
         klass = load_plugin_class(plugin_module)
         loaded = True
     except PluginLoadError as e:
-        if e.placeholder:  # not finished: reported as a todo, controlled by fail_on
+        if e.syntax_error:  # located and explained by the static rules below (PMQ300)
+            pass
+        elif e.placeholder:  # not finished: reported as a todo, controlled by fail_on
             result.findings.append(Finding('PMQ203', Severity.TODO, str(e), 'replace the import of the fake wrapper '
                                            'of the template with the one of your instrument',
                                            Path(spec.origin) if spec is not None and spec.origin else None))
@@ -478,6 +485,9 @@ def check_plugin_package(package: str, fail_on: str = 'error', strict_imports: b
         report.results.append(CheckResult('plugin discovery', [f'Cannot list the plugin modules: {e!r}']))
         return report
     report.results.extend(check_plugin_module(mod) for mod in modules)
+    located = {(f.path, f.line) for res in report.results for f in res.findings if f.code == 'PMQ300'}
+    for res in report.results:  # a syntax error of a plugin module is reported once, with the module
+        res.findings = [f for f in res.findings if not (f.code == 'PMQ200' and (f.path, f.line) in located)]
     return report
 
 
@@ -570,7 +580,7 @@ def check_plugin_file(path: str | Path, fail_on: str = 'error', strict_imports: 
     result = check_plugin_module(module)
     file = Path(path).resolve()
     result.findings.extend(f for f in check_leftovers(module.package, package_root(module.package))
-                           if f.path is not None and f.path.resolve() == file)
+                           if f.path is not None and f.path.resolve() == file and f.code != 'PMQ200')
     return PluginReport(module.package, [result], fail_on, strict_imports)
 
 

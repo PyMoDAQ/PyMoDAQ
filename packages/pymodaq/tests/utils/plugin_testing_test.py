@@ -130,7 +130,7 @@ def test_import_failure_classification(fake_package, tmp_path, body, environment
     (tmp_path / 'pymodaq_plugins_fake' / 'daq_move_plugins' / 'daq_move_Broken.py').write_text(body)
     result = pt.check_plugin_module(pt.PluginModule(fake_package, 'daq_move_Broken', 'move'))
     assert bool(result.warnings) is environmental
-    assert bool(result.problems) is not environmental
+    assert bool(result.failing()) is not environmental  # a problem, or the finding of a syntax error
 
 
 def test_deprecated_axis_names_declaration(fake_package, tmp_path):
@@ -251,3 +251,18 @@ def test_check_a_single_file(repo, capsys):
 
     with pytest.raises(SystemExit):  # not an instrument module
         pt.main([str(repo / 'src' / 'pymodaq_plugins_notinstalled' / 'utils.py')])
+
+
+def test_syntax_error_is_located_and_reported_once(fake_package, tmp_path):
+    code = 'class DAQ_Move_Syn:\n    _axis_names = [\'a\'\n    def close(self): pass\n'
+    (tmp_path / 'pymodaq_plugins_fake' / 'daq_move_plugins' / 'daq_move_Syn.py').write_text(code)
+    (tmp_path / 'pymodaq_plugins_fake' / 'broken_helper.py').write_text('x = = 1')  # not a plugin module
+    report = pt.check_plugin_package(fake_package)
+    errors = [(res.item, f) for res in report.results for f in res.findings if f.code in ('PMQ200', 'PMQ300')]
+    assert sorted((item, f.code) for item, f in errors) == [('daq_move_Syn', 'PMQ300'), ('package sources', 'PMQ200')]
+    finding = next(f for item, f in errors if f.code == 'PMQ300')
+    assert finding.line == 2 and finding.column and "_axis_names = ['a'" in finding.hint
+    assert f'daq_move_Syn.py:2:{finding.column}' in str(report)
+    syn = next(res for res in report.results if res.item == 'daq_move_Syn')
+    assert len(syn.problems) == 0  # the import error is not repeated, the finding says it all
+    assert not report.ok

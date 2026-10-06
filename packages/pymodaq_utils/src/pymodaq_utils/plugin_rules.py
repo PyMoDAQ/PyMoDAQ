@@ -104,6 +104,8 @@ class Finding:
         file concerned
     line: int
         line concerned
+    column: int
+        column concerned
     """
     code: str
     severity: Severity
@@ -111,12 +113,15 @@ class Finding:
     hint: str = ''
     path: Optional[Path] = None
     line: Optional[int] = None
+    column: Optional[int] = None
 
     @property
     def location(self) -> str:
         if self.path is None:
             return ''
-        return f'{self.path.name}:{self.line}' if self.line else self.path.name
+        if not self.line:
+            return self.path.name
+        return f'{self.path.name}:{self.line}' + (f':{self.column}' if self.column else '')
 
     def format(self, color: bool = False) -> str:
         """Text of the finding, with colors for a terminal if ``color``"""
@@ -164,6 +169,13 @@ def project_root(package: str) -> Optional[Path]:
                 return folder
             return folder if name.replace('-', '_').lower() == package else None
     return None
+
+
+def syntax_error_finding(code: str, path: Path, error: SyntaxError) -> Finding:
+    """Finding with the location (line and column) and the offending line of a syntax error"""
+    text = (error.text or '').strip()
+    hint = (f'"{text}"  ' if text else '') + '(the other checks on this file are skipped until it is fixed)'
+    return Finding(code, Severity.ERROR, f'syntax error: {error.msg}', hint, path, error.lineno, error.offset or None)
 
 
 def _python_files(root: Path):
@@ -298,7 +310,7 @@ def check_leftovers(package: str, root: Path, project: Optional[Path] = None) ->
             try:
                 tree = ast.parse(path.read_text(errors='replace'))
             except SyntaxError as e:
-                findings.append(Finding('PMQ200', Severity.ERROR, f'syntax error: {e.msg}', '', path, e.lineno))
+                findings.append(syntax_error_finding('PMQ200', path, e))
                 continue
             for node in ast.walk(tree):
                 if isinstance(node, ast.Raise) and _is_name(node.exc, 'NotImplementedError'):
@@ -369,7 +381,7 @@ def check_plugin_source(path: Path, kind: str, class_name: str, static_fallback:
     try:
         tree = ast.parse(path.read_text(errors='replace'))
     except SyntaxError as e:
-        return [Finding('PMQ300', Severity.ERROR, f'syntax error: {e.msg}', 'fix the syntax', path, e.lineno)]
+        return [syntax_error_finding('PMQ300', path, e)]
 
     for node in ast.walk(tree):
         if isinstance(node, (ast.Import, ast.ImportFrom)):
