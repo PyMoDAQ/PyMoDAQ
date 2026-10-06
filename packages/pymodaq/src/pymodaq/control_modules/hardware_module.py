@@ -53,6 +53,8 @@ class _FallbackColors:
 
     red = '#d32f2f'
     green = '#388e3c'
+    blue = '#1976d2'
+    magenta = '#8e24aa'
 
 
 def _colors():
@@ -163,6 +165,7 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         """One toolbar per quantity, stacked in a dock on the left."""
         container = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout(container)
+        layout.setSpacing(8)
         for quantity in caps.measurements + caps.controls:
             self._quantities[quantity.name] = quantity
             bar = QtWidgets.QToolBar(quantity.name, container)
@@ -174,26 +177,59 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         self.channels_dock.setWidget(container)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.channels_dock)
 
+    @staticmethod
+    def _access_color(quantity: Quantity) -> str:
+        """Measurements are blue and controls magenta, so the two kinds can be told apart at a glance."""
+        colors = _colors()
+        return colors.blue if quantity.access is Access.MEASUREMENT else colors.magenta
+
     def _fill_channel_toolbar(self, quantity: Quantity) -> None:
+        """Name, then groups separated by a separator: display | value | read and grab | show graph."""
         name = quantity.name
-        self.add_widget(f'{name}_name', QtWidgets.QLabel(name), toolbar=name)
-        if quantity.access is Access.MEASUREMENT:
-            display = QtWidgets.QLabel('-')
-            self._displays[name] = display
-            self.add_widget(f'{name}_display', display, toolbar=name)
-        for widget_name in toolbar_widgets(quantity):
-            if widget_name == 'value':
-                self._add_value_spinbox(quantity)
-            elif widget_name == 'selector':
-                self._add_selector(quantity)
-            elif widget_name in ('read', 'label'):  # a scalar or a discrete state is read once
+        is_measurement = quantity.access is Access.MEASUREMENT
+        label = QtWidgets.QLabel(name)
+        label.setStyleSheet(f'color: {self._access_color(quantity)}; font-weight: bold;')
+        label.setToolTip('measurement: read from the device' if is_measurement else 'control: set on the device')
+        self.add_widget(f'{name}_name', label, toolbar=name)
+
+        widgets = toolbar_widgets(quantity)
+        groups = [
+            [lambda: self._add_display(quantity)] if is_measurement else [],
+            [lambda: self._add_value_spinbox(quantity)] if 'value' in widgets else [],
+            [lambda: self._add_selector(quantity)] if 'selector' in widgets else [],
+            [self._actions_of(quantity, widgets)],
+            [lambda: self._add_show_graph_action(name)] if 'show_graph' in widgets else [],
+        ]
+        bar = self.get_toolbar(name)
+        started = False
+        for group in groups:
+            if not group:
+                continue
+            if started:
+                bar.addSeparator()
+            started = True
+            for add in group:
+                add()
+
+    def _actions_of(self, quantity: Quantity, widgets: list[str]):
+        """A function adding the read, snap and grab actions that the quantity's widgets ask for."""
+        name = quantity.name
+
+        def add():
+            if 'read' in widgets or 'label' in widgets:
                 self._add_read_action(name, 'Read', ActionIconNames.SNAP)
-            elif widget_name == 'snap':  # an array is read once
+            if 'snap' in widgets:
                 self._add_read_action(name, 'Snap', ActionIconNames.SNAP)
-            elif widget_name == 'grab':  # an array is followed continuously while checked
+            if 'grab' in widgets:
                 self._add_grab_action(name)
-            elif widget_name == 'show_graph':
-                self._add_show_graph_action(name)
+        return add
+
+    def _add_display(self, quantity: Quantity) -> None:
+        display = QtWidgets.QLabel('-')
+        display.setMinimumWidth(90)
+        display.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self._displays[quantity.name] = display
+        self.add_widget(f'{quantity.name}_display', display, toolbar=quantity.name)
 
     def _add_read_action(self, name: str, text: str, icon: str) -> None:
         self.add_action(f'{name}_read', text, icon, f'{text} the value once', toolbar=name)
@@ -208,10 +244,9 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
             name, self.get_action(f'{name}_grab').isChecked()))
 
     def _add_show_graph_action(self, name: str) -> None:
-        theme = _colors()
         self.add_action(f'{name}_show_graph', 'Show Graph', 'bid_landscape', 'Show or hide the graph',
-                        checkable=True, icon_checked='bid_landscape_disabled',
-                        icon_color=theme.green, icon_checked_color=theme.red, toolbar=name)
+                        checkable=True, icon_checked='bid_landscape', icon_checked_color=_colors().green,
+                        toolbar=name)
         self.connect_action(f'{name}_show_graph', lambda *_, name=name: self._view(name).setVisible(
             self.get_action(f'{name}_show_graph').isChecked()))
 
