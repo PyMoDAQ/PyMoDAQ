@@ -383,3 +383,43 @@ class TestReadbackRows:
     def test_the_led_of_the_row_turns_blue_when_the_readback_is_grabbed(self, axis):
         axis.get_action('temperature_grab').trigger()
         assert axis._led_color('x').name() == _colors().blue.name()
+
+
+class _Values:
+    """A reading holding the given arrays, one per channel."""
+
+    def __init__(self, arrays):
+        self._arrays = arrays
+
+    def get_data_from_name(self, name):
+        return self._arrays[name]
+
+
+class TestNamedReadback:
+
+    def test_a_named_readback_is_read_through_the_device(self, registry, qtbot):
+        class Stage:
+            params: list = []
+            z = control(units='mm', lo=0, hi=10, readback='my_z_readback')
+            readings = {'my_z_readback': 4.5}
+
+            def open(self, settings):
+                pass
+
+            def close(self):
+                pass
+
+            def read(self, names=None, fresh=True):
+                return _Values({name: np.array([self.readings[name]]) for name in names})
+
+            def write(self, name, value):
+                pass
+
+        widget = HardwareModule(HardwareKey(hardware_class=Stage, controller_id=13), Stage, registry=registry)
+        qtbot.addWidget(widget)
+        assert widget.has_action('my_z_readback_read')  # the readback is in the z row
+        widget.initialize()
+        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        widget.get_action('my_z_readback_read').trigger()
+        qtbot.waitUntil(lambda: widget._displays['my_z_readback'].text() == '4.5 mm', timeout=2000)
+        widget.release()

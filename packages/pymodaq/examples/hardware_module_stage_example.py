@@ -17,7 +17,7 @@ import numpy as np
 
 from pymodaq_gui.qt_utils import mkQApp
 
-from pymodaq.control_modules.capabilities import control, measurement
+from pymodaq.control_modules.capabilities import Capabilities, control, measurement
 from pymodaq.control_modules.hardware_module import HardwareModule
 from pymodaq.control_modules.hardware_registry import HardwareKey
 
@@ -38,7 +38,7 @@ class FakeStage:
 
     x = control(units='mm', lo=0, hi=50, epsilon=0.01, label='X', ui_add=('slider',), readback=True)
     y = control(units='mm', lo=0, hi=50, epsilon=0.01, label='Y', ui_add=('slider',), readback=True)
-    z = control(units='mm', lo=0, hi=10, epsilon=0.01, label='Z', ui_add=('slider',), readback=True)
+    z = control(units='mm', lo=0, hi=10, epsilon=0.01, label='Z', ui_add=('slider',), readback="my_z_readback")
     motion = measurement(values=['idle', 'moving'], label='Motion')
 
     AXES = ('x', 'y', 'z')
@@ -47,6 +47,9 @@ class FakeStage:
         self._target = {axis: 0.0 for axis in self.AXES}
         self._position = {axis: 0.0 for axis in self.AXES}
         self._last_update = time.monotonic()
+        # the readback names come from the declarations, so any name works
+        self._axis_of_readback = {c.readback: c.name for c in Capabilities.from_device(type(self)).controls
+                                  if c.readback}
 
     def open(self, settings):
         self._last_update = time.monotonic()
@@ -70,8 +73,8 @@ class FakeStage:
         self._advance()
         arrays = {}
         for name in names:
-            if name.endswith('_readback'):
-                arrays[name] = np.array([self._position[name[0]]])
+            if name in self._axis_of_readback:
+                arrays[name] = np.array([self._position[self._axis_of_readback[name]]])
             elif name == 'motion':
                 arrays[name] = np.array(['moving' if self._moving() else 'idle'])
         return _Reading(arrays)
