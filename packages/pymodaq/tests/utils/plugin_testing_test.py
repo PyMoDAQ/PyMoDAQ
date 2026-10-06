@@ -61,12 +61,12 @@ def test_find_plugin_modules(fake_package):
 
 
 def test_good_move_passes(fake_package):
-    klass = pt._load_class(pt.PluginModule(fake_package, 'daq_move_Good', 'move'))
+    klass = pt.load_plugin_class(pt.PluginModule(fake_package, 'daq_move_Good', 'move'))
     assert pt.check_move_class(klass) == []
 
 
 def test_bad_move_reports_everything(fake_package):
-    klass = pt._load_class(pt.PluginModule(fake_package, 'daq_move_Bad', 'move'))
+    klass = pt.load_plugin_class(pt.PluginModule(fake_package, 'daq_move_Bad', 'move'))
     problems = '\n'.join(pt.check_move_class(klass))
     for method in ('ini_stage', 'get_actuator_value', 'stop_motion'):
         assert f'override {method}()' in problems
@@ -86,9 +86,25 @@ def test_layout_reports_entrypoint_and_naming(fake_package):
 def test_wrong_class_name_fails(fake_package, tmp_path):
     (tmp_path / 'pymodaq_plugins_fake' / 'daq_move_plugins' / 'daq_move_Other.py').write_text(
         textwrap.dedent(GOOD_MOVE))  # defines DAQ_Move_Good, not DAQ_Move_Other
-    with pytest.raises(pytest.fail.Exception, match='DAQ_Move_Other'):
-        pt._load_class(pt.PluginModule(fake_package, 'daq_move_Other', 'move'))
+    with pytest.raises(pt.PluginLoadError, match='DAQ_Move_Other'):
+        pt.load_plugin_class(pt.PluginModule(fake_package, 'daq_move_Other', 'move'))
 
 
 def test_package_name_checked():
     assert any('pymodaq_plugins_<name>' in p for p in pt.check_package_layout('json'))
+
+
+def test_report_mock():
+    report = pt.check_plugin_package('pymodaq_plugins_mock')
+    assert report.ok, str(report)
+    assert 'daq_move_Mock' in report.to_dict()['results']
+    assert str(report).startswith('pymodaq_plugins_mock: OK')
+
+
+def test_report_fake(fake_package):
+    report = pt.check_plugin_package(fake_package)
+    assert not report.ok
+    failed = {res.item for res in report.failures}
+    assert failed == {'package layout', 'daq_move_Bad'}
+    assert 'daq_move_Good' not in failed
+    assert '[FAIL] daq_move_Bad' in str(report) and '[ok] daq_move_Good' in str(report)

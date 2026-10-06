@@ -10,6 +10,11 @@ No hardware is needed: the checks are static / import-level. Use them in a plugi
 Every check is also exposed as a plain function returning a list of problems (empty if all is fine), see
 ``check_move_class``, ``check_viewer_class`` and ``check_package_layout``.
 
+To get a report without pytest, for any installed plugin package::
+
+    from pymodaq.utils.plugin_testing import check_plugin_package
+    print(check_plugin_package('pymodaq_plugins_mock'))
+
 .. versionadded:: 5.3.0
 """
 from __future__ import annotations
@@ -18,7 +23,7 @@ import importlib
 import inspect
 import pkgutil
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
@@ -231,6 +236,95 @@ def check_viewer_class(klass: type) -> list[str]:
     return problems
 
 
+class PluginLoadError(Exception):
+    """A plugin module cannot be imported or does not define the expected class"""
+
+
+def load_plugin_class(plugin_module: PluginModule) -> type:
+    """Import a plugin module and return its plugin class
+
+    Raises
+    ------
+    PluginLoadError
+        with an explicit message if the module cannot be imported or lacks the expected class
+    """
+    try:
+        module = importlib.import_module(plugin_module.import_path)
+    except Exception as e:
+        raise PluginLoadError(f'{plugin_module.import_path} cannot be imported '
+                              f'(are vendor SDK imports guarded?): {e!r}') from e
+    klass = getattr(module, plugin_module.class_name, None)
+    if klass is None:
+        raise PluginLoadError(f'{plugin_module.import_path} should define a class named {plugin_module.class_name}')
+    return klass
+
+
+def check_plugin_module(plugin_module: PluginModule) -> list[str]:
+    """Load a plugin module and run the checks relevant for its kind, returns the list of problems"""
+    try:
+        klass = load_plugin_class(plugin_module)
+    except PluginLoadError as e:
+        return [str(e)]
+    return check_move_class(klass) if plugin_module.kind == 'move' else check_viewer_class(klass)
+
+
+@dataclass
+class CheckResult:
+    """Problems found on one item (the package itself or one of its plugin modules)"""
+    item: str
+    problems: list[str] = field(default_factory=list)
+
+    @property
+    def ok(self) -> bool:
+        return not self.problems
+
+
+@dataclass
+class PluginReport:
+    """Result of all the checks on a plugin package, see :func:`check_plugin_package`"""
+    package: str
+    results: list[CheckResult] = field(default_factory=list)
+
+    @property
+    def ok(self) -> bool:
+        return all(res.ok for res in self.results)
+
+    @property
+    def failures(self) -> list[CheckResult]:
+        return [res for res in self.results if not res.ok]
+
+    def to_dict(self) -> dict:
+        return {'package': self.package, 'ok': self.ok,
+                'results': {res.item: res.problems for res in self.results}}
+
+    def __str__(self) -> str:
+        lines = [f'{self.package}: {"OK" if self.ok else f"{len(self.failures)} item(s) with problems"} '
+                 f'({len(self.results)} checked)']
+        for res in self.results:
+            lines.append(f'  [{"ok" if res.ok else "FAIL"}] {res.item}')
+            lines.extend(f'         - {problem}' for problem in res.problems)
+        return '\n'.join(lines)
+
+
+def check_plugin_package(package: str) -> PluginReport:
+    """Run all the checks on an installed plugin package and return a report, without using pytest
+
+    Examples
+    --------
+    >>> report = check_plugin_package('pymodaq_plugins_mock')
+    >>> print(report)
+    >>> report.ok
+    """
+    report = PluginReport(package, [CheckResult('package layout', check_package_layout(package))])
+    try:
+        modules = find_plugin_modules(package)
+    except Exception as e:
+        report.results.append(CheckResult('plugin discovery', [f'Cannot list the plugin modules: {e!r}']))
+        return report
+    report.results.extend(CheckResult(str(mod), check_plugin_module(mod)) for mod in modules)
+    return report
+
+
 class PluginPackageChecks:
     """Mixin to subclass in a test module of a plugin repository, see the module documentation.
 
@@ -257,23 +351,9 @@ class PluginPackageChecks:
         assert not problems, '\n'.join(problems)
 
     def test_move_plugin(self, plugin_module):
-        klass = _load_class(plugin_module)
-        problems = check_move_class(klass)
+        problems = check_plugin_module(plugin_module)
         assert not problems, '\n'.join(problems)
 
     def test_viewer_plugin(self, plugin_module):
-        klass = _load_class(plugin_module)
-        problems = check_viewer_class(klass)
+        problems = check_plugin_module(plugin_module)
         assert not problems, '\n'.join(problems)
-
-
-def _load_class(plugin_module: PluginModule) -> type:
-    """Import a plugin module and return its plugin class, failing with explicit messages"""
-    try:
-        module = importlib.import_module(plugin_module.import_path)
-    except Exception as e:
-        pytest.fail(f'{plugin_module.import_path} cannot be imported (are vendor SDK imports guarded?): {e!r}')
-    klass = getattr(module, plugin_module.class_name, None)
-    if klass is None:
-        pytest.fail(f'{plugin_module.import_path} should define a class named {plugin_module.class_name}')
-    return klass

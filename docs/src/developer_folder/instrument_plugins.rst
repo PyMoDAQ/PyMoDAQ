@@ -136,7 +136,9 @@ Every plugin module found in the package is checked individually (``pytest -v`` 
 * ``params`` is a valid list of dict producing a settings tree
 
 The functions behind these tests (*check_package_layout*, *check_move_class*, *check_viewer_class*) return the list of
-problems found and can be used from a script. Lint your code too, at least with
+problems found and can be used from a script. To get a full report of an installed plugin package without pytest, use
+``print(check_plugin_package('pymodaq_plugins_xxxx'))`` (the returned *PluginReport* also has *ok*, *failures* and
+*to_dict()*). Lint your code too, at least with
 ``flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics`` (the gate used by the PyMoDAQ CI) or ``ruff``.
 
 
