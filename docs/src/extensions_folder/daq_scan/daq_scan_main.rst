@@ -292,7 +292,8 @@ It is comprised of:
 
 * **Scan options** :
 
-  * **N average**: Select how many scans to average. Save all individual scans.
+  * **N average**: Select how many scans to average. Save all individual scans. Averaging is not available for the
+    scans generating spread data (*Tabular* and *Scan2D/RandomSpread*): N average is then set to 1 and locked.
   * **Plot on top**: at the second iteration, plot the averaged scan on top of the current one (checked) or in a second
     panel
   * **Go to ini. positions**: when checked (default), actuators are moved back to their initial positions
