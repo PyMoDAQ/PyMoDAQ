@@ -135,11 +135,55 @@ Every plugin module found in the package is checked individually (``pytest -v`` 
   from `pint`
 * ``params`` is a valid list of dict producing a settings tree
 
+Beyond the tests, the source of the plugin is analysed by *static rules* (nothing is imported, so they also work when
+the instrument SDK is not installed). Every finding has a code, a severity, a location and a hint to fix it:
+
+* ``error``: the plugin will not work or will not be seen by PyMoDAQ
+* ``warning``: deprecated or suspicious
+* ``todo``: the plugin is not finished (leftovers of the template). They are listed and counted but do not fail the
+  tests, unless you set ``strict = True`` in the test class, which is meant for a release or the review of a contribution.
+
+======== =================================================================================================
+Code     Meaning
+======== =================================================================================================
+PMQ101-3 project name does not follow the convention, still the template one, differs from the package folder
+PMQ104-6 template placeholders left in *pyproject.toml* (url, description, authors)
+PMQ107   no pymodaq dependency declared
+PMQ108   no entry points: PyMoDAQ will not find the plugin
+PMQ109   code found for a feature set to false in ``[features]`` (its entry points will not be generated)
+PMQ110   feature set to true but nothing found. PMQ111: README.rst or LICENSE missing
+PMQ201   TODO comment. PMQ202: ``NotImplementedError`` left. PMQ203: template placeholder name left
+PMQ204   example module of the template left. PMQ205: *config_template.toml* still has the template title
+PMQ302   deprecated or ignored class attribute (``_epsilon``, ``stage_names``, ``axis_names``)
+PMQ303   ``data_actuator_type`` is not ``DataActuatorType.DataActuator``
+PMQ304-6 (module that cannot be imported) inconsistent axes/units, unknown unit, missing mandatory method
+PMQ307   import of the removed ``pymodaq.daq_utils``
+PMQ308   no ``if __name__ == '__main__': main(__file__)`` block to run the plugin standalone
+PMQ309   ``ini_stage`` / ``ini_detector`` do not return ``(info, initialized)``
+PMQ310   the plugin class has no docstring
+======== =================================================================================================
+
 The functions behind these tests (*check_package_layout*, *check_move_class*, *check_viewer_class*) return the list of
 problems found and can be used from a script. To get a full report of an installed plugin package without pytest, use
-``print(check_plugin_package('pymodaq_plugins_xxxx'))`` (the returned *PluginReport* also has *ok*, *failures* and
-*to_dict()*). Lint your code too, at least with
+``print(check_plugin_package('pymodaq_plugins_xxxx'))`` (the returned *PluginReport* also has *ok*, *failures*, *todos* and
+*to_dict()*; use ``check_plugin_package(..., strict=True)`` and ``report.format(verbose=True)`` to see every todo). Lint your code too, at least with
 ``flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics`` (the gate used by the PyMoDAQ CI) or ``ruff``.
+
+
+Adding an instrument to your plugin
+-----------------------------------
+
+To avoid naming mistakes, a helper creates a new instrument module in your plugin package, from the root of your
+plugin repository:
+
+.. code-block:: bash
+
+    python -m pymodaq.utils.plugin_scaffold move Xxxx   # daq_move_Xxxx.py with the class DAQ_Move_Xxxx
+    python -m pymodaq.utils.plugin_scaffold 1D Xxxx     # daq_1Dviewer_Xxxx.py with the class DAQ_1DViewer_Xxxx
+
+(use ``--folder`` to give the *pymodaq_plugins_xxxx* package folder). The module derives from the right base class,
+declares the mandatory attributes and methods, and its ``TODO`` comments tell where to put your instrument code.
+The static rules above list what is left to do.
 
 
 .. _hardware_settings:

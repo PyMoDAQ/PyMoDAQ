@@ -20,6 +20,7 @@ To get a report without pytest, for any installed plugin package::
 from __future__ import annotations
 
 import importlib
+import importlib.util
 import inspect
 import pkgutil
 import re
@@ -34,6 +35,8 @@ from pyqtgraph.parametertree import Parameter
 from pymodaq_data import Unit
 from pymodaq_utils.utils import get_entrypoints
 
+from pymodaq.utils.plugin_rules import (Finding, Severity, check_leftovers, check_plugin_source, check_pyproject,
+                                        package_root, project_root)
 from pymodaq.control_modules.move_utility_classes import DAQ_Move_base
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base
 
@@ -200,9 +203,6 @@ def check_move_class(klass: type) -> list[str]:
     problems = _check_methods(klass, DAQ_Move_base, MANDATORY_MOVE_METHODS)
     problems += _check_params(klass)
 
-    if klass._axis_names is None and not isinstance(inspect.getattr_static(klass, 'axis_names', None), property):
-        problems.append("the axes are declared as 'axis_names', that is ignored: use the '_axis_names' class "
-                        "attribute (and '_epsilons' instead of '_epsilon')")
     axis_names = klass.get_class_axis_names()
     units = klass._controller_units
     if isinstance(units, str):
@@ -291,61 +291,117 @@ def load_plugin_class(plugin_module: PluginModule) -> type:
 class CheckResult:
     """Outcome of the checks on one item (the package itself or one of its plugin modules)
 
-    ``problems`` are defects of the plugin. ``warnings`` mean the item could not be fully checked, for instance
-    because a third party module or a vendor SDK is not available in the current environment.
+    ``problems`` are defects of the plugin found on the imported classes. ``warnings`` mean the item could not be
+    fully checked, for instance because a third party module or a vendor SDK is not available in the current
+    environment. ``findings`` come from the static rules of :mod:`pymodaq.utils.plugin_rules`.
     """
     item: str
     problems: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    findings: list[Finding] = field(default_factory=list)
+
+    def failing(self, strict: bool = False) -> list[str]:
+        """What makes this item fail: problems, error findings and, if strict, the todo findings"""
+        severities = (Severity.ERROR, Severity.TODO) if strict else (Severity.ERROR,)
+        return self.problems + [str(f) for f in self.findings if f.severity in severities]
 
     @property
     def ok(self) -> bool:
-        return not self.problems
+        return not self.failing()
 
 
 def check_plugin_module(plugin_module: PluginModule) -> CheckResult:
-    """Load a plugin module and run the checks relevant for its kind"""
+    """Load a plugin module and run the checks relevant for its kind, plus the static rules on its source"""
     result = CheckResult(str(plugin_module))
+    spec = importlib.util.find_spec(plugin_module.import_path)
+    path = Path(spec.origin) if spec is not None and spec.origin else None
+    loaded = False
     try:
         klass = load_plugin_class(plugin_module)
+        loaded = True
     except PluginLoadError as e:
         (result.warnings if e.environmental else result.problems).append(str(e))
-        return result
-    result.problems = check_move_class(klass) if plugin_module.kind == 'move' else check_viewer_class(klass)
+    if loaded:
+        result.problems = check_move_class(klass) if plugin_module.kind == 'move' else check_viewer_class(klass)
+    if path is not None:
+        result.findings = check_plugin_source(path, plugin_module.kind, plugin_module.class_name,
+                                              static_fallback=not loaded)
     return result
 
 
 @dataclass
 class PluginReport:
-    """Result of all the checks on a plugin package, see :func:`check_plugin_package`"""
+    """Result of all the checks on a plugin package, see :func:`check_plugin_package`
+
+    With ``strict`` the unfinished parts of the plugin (``todo`` findings: TODO comments, placeholders...) also make
+    the report fail, otherwise they are just listed. Use it before a release or to accept a contribution.
+    """
     package: str
     results: list[CheckResult] = field(default_factory=list)
+    strict: bool = False
 
     @property
     def ok(self) -> bool:
-        return all(res.ok for res in self.results)
+        return not self.failures
 
     @property
     def failures(self) -> list[CheckResult]:
-        return [res for res in self.results if not res.ok]
+        return [res for res in self.results if res.failing(self.strict)]
+
+    @property
+    def todos(self) -> list[Finding]:
+        return [f for res in self.results for f in res.findings if f.severity == Severity.TODO]
 
     def to_dict(self) -> dict:
-        return {'package': self.package, 'ok': self.ok,
-                'results': {res.item: {'problems': res.problems, 'warnings': res.warnings}
+        return {'package': self.package, 'ok': self.ok, 'strict': self.strict,
+                'results': {res.item: {'problems': res.problems, 'warnings': res.warnings,
+                                       'findings': [str(f) for f in res.findings]}
                             for res in self.results}}
 
-    def __str__(self) -> str:
-        lines = [f'{self.package}: {"OK" if self.ok else f"{len(self.failures)} item(s) with problems"} '
-                 f'({len(self.results)} checked)']
+    def format(self, verbose: bool = False, max_todos: int = 3) -> str:
+        """Text report. The todo findings are summarized unless ``verbose``"""
+        head = 'OK' if self.ok else f'{len(self.failures)} item(s) with problems'
+        lines = [f'{self.package}: {head} ({len(self.results)} checked), {len(self.todos)} todo(s) left']
         for res in self.results:
-            status = 'FAIL' if res.problems else ('warn' if res.warnings else 'ok')
+            failing = res.failing(self.strict)
+            status = 'FAIL' if failing else ('warn' if res.warnings or res.findings else 'ok')
             lines.append(f'  [{status}] {res.item}')
             lines.extend(f'         - {problem}' for problem in res.problems + res.warnings)
+            todos = [f for f in res.findings if f.severity == Severity.TODO]
+            lines.extend(f'         - {f}' for f in res.findings if f.severity != Severity.TODO)
+            shown = todos if verbose else todos[:max_todos]
+            lines.extend(f'         - {f}' for f in shown)
+            if len(todos) > len(shown):
+                lines.append(f'         - ... {len(todos) - len(shown)} more todo(s), use format(verbose=True)')
         return '\n'.join(lines)
 
+    def __str__(self) -> str:
+        return self.format()
 
-def check_plugin_package(package: str) -> PluginReport:
+
+def check_package_sources(package: str) -> CheckResult:
+    """Static rules on the packaging (pyproject.toml...) and on the leftovers of the template"""
+    result = CheckResult('package sources')
+    root = package_root(package)
+    if root is None:
+        result.problems.append(f'package {package} not found')
+        return result
+    project = project_root(package)  # None if installed from a wheel: there is no pyproject.toml to check
+    if project is not None:
+        result.findings.extend(check_pyproject(package, project))
+    result.findings.extend(check_leftovers(package, root, project))
+    return result
+
+
+def check_plugin_package(package: str, strict: bool = False) -> PluginReport:
     """Run all the checks on an installed plugin package and return a report, without using pytest
+
+    Parameters
+    ----------
+    package: str
+        name of the plugin package, for instance pymodaq_plugins_mock
+    strict: bool
+        if True the unfinished parts (todo findings) make the report fail
 
     Examples
     --------
@@ -353,7 +409,8 @@ def check_plugin_package(package: str) -> PluginReport:
     >>> print(report)
     >>> report.ok
     """
-    report = PluginReport(package, [CheckResult('package layout', check_package_layout(package))])
+    report = PluginReport(package, [CheckResult('package layout', check_package_layout(package)),
+                                    check_package_sources(package)], strict)
     try:
         modules = find_plugin_modules(package)
     except Exception as e:
@@ -371,6 +428,7 @@ class PluginPackageChecks:
     package_name: Optional[str] = None
     strict_imports = False  # if True, a module that cannot be imported because of a missing third party module or
     # SDK fails instead of being skipped
+    strict = False  # if True the unfinished parts of the plugin (TODO comments, placeholders...) fail the tests
 
     @pytest.fixture
     def package(self, request) -> str:
@@ -396,9 +454,14 @@ class PluginPackageChecks:
     def test_viewer_plugin(self, plugin_module):
         self._assert_module_ok(plugin_module)
 
+    def test_package_sources(self, package):
+        result = check_package_sources(package)
+        messages = result.failing(self.strict)
+        assert not messages, '\n'.join(messages)
+
     def _assert_module_ok(self, plugin_module: PluginModule):
         result = check_plugin_module(plugin_module)
-        messages = result.problems + (result.warnings if self.strict_imports else [])
+        messages = result.failing(self.strict) + (result.warnings if self.strict_imports else [])
         assert not messages, '\n'.join(messages)
         if result.warnings:
             pytest.skip('; '.join(result.warnings))

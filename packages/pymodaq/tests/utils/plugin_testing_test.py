@@ -4,6 +4,7 @@ import textwrap
 import pytest
 
 from pymodaq.utils import plugin_testing as pt
+from pymodaq.utils.plugin_rules import Severity
 from pymodaq.utils.plugin_testing import PluginPackageChecks
 
 
@@ -13,9 +14,11 @@ class TestMockPlugin(PluginPackageChecks):
 
 
 GOOD_MOVE = '''
-from pymodaq.control_modules.move_utility_classes import DAQ_Move_base, comon_parameters_fun
+from pymodaq.control_modules.move_utility_classes import DAQ_Move_base, DataActuatorType, comon_parameters_fun, main
 
 class DAQ_Move_Good(DAQ_Move_base):
+    """A good actuator"""
+    data_actuator_type = DataActuatorType.DataActuator
     _axis_names = ['x', 'y']
     _controller_units = ['mm', 'um']
     _epsilons = [0.1, 0.1]
@@ -25,6 +28,9 @@ class DAQ_Move_Good(DAQ_Move_base):
     def get_actuator_value(self): pass
     def stop_motion(self): pass
     def close(self): pass
+
+if __name__ == '__main__':
+    main(__file__)
 '''
 
 BAD_MOVE = '''
@@ -133,4 +139,5 @@ def test_deprecated_axis_names_declaration(fake_package, tmp_path):
             .replace('Good', 'Old'))
     (tmp_path / 'pymodaq_plugins_fake' / 'daq_move_plugins' / 'daq_move_Old.py').write_text(code)
     result = pt.check_plugin_module(pt.PluginModule(fake_package, 'daq_move_Old', 'move'))
-    assert any("'axis_names'" in p for p in result.problems)
+    assert any("'axis_names'" in str(f) for f in result.findings if f.severity == Severity.ERROR)
+    assert not result.ok
