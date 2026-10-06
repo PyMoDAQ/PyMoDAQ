@@ -16,7 +16,7 @@ default_value_red = 0.0
 default_value_green = 1.0
 default_value_relative = 1.0
 controls_as_popup = false
-controls_dock_layout = ['vertical', 'horizontal']  # row stacking of the Controls dock shared by every open actuator (current choice first); also changeable live from that dock's right-click menu
+controls_dock_layout = ['horizontal', 'vertical']  # row stacking of the Controls dock shared by every open actuator (current choice first); also changeable live from that dock's right-click menu
 compact_dock_layout = ['vertical', 'horizontal']  # row stacking of the consolidated actuators dock (current choice first); also changeable live from that dock's right-click menu
 
 [actuator.allowed_units]
