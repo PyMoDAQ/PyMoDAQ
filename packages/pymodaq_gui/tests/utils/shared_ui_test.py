@@ -107,3 +107,24 @@ def test_app_help_toggle(qtbot):
     action.trigger()
     dialog.close()
     assert not action.isChecked()
+
+
+def test_changelog_action(qtbot, monkeypatch):
+    import qt_themes
+    from qtpy import QtGui
+    from pymodaq_gui.utils.widgets.window import make_window
+    from pymodaq_gui.utils import shared_ui as shared_ui_module
+    from pymodaq_gui.utils.shared_ui import SharedUI
+
+    qt_themes.set_theme('dracula')
+
+    opened = []
+    monkeypatch.setattr(QtGui.QDesktopServices, 'openUrl', lambda url: opened.append(url.toString()))
+
+    window, _ = make_window(area=False, title='ChangelogTest')
+    qtbot.addWidget(window)
+    shared_ui = SharedUI(window, show=False)
+    shared_ui.affect_application(DocumentedApp(window))
+
+    shared_ui.get_action('changelog').trigger()
+    assert opened == [shared_ui_module.CHANGELOG_URL]
