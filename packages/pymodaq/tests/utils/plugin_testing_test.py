@@ -217,3 +217,10 @@ def test_package_name_from_folder_not_from_unmodified_pyproject(repo):
 def test_mock_has_no_error():
     findings = pt_rules.check_package_sources('pymodaq_plugins_mock')
     assert not [f for f in findings if f.severity == Severity.ERROR]
+
+
+def test_conflicted_copy_is_not_taken_for_a_plugin_module(fake_package, tmp_path):
+    name = 'daq_move_Mono_840G11-WEBER_oct.-05-085858-2026_CaseConflict.py'
+    (tmp_path / 'pymodaq_plugins_fake' / 'daq_move_plugins' / name).write_text('x = = 1')
+    assert sorted(m.module_name for m in pt.find_plugin_modules(fake_package)) == ['daq_move_Bad', 'daq_move_Good']
+    assert 'PMQ112' in {f.code for f in pt.check_package_sources(fake_package).findings}

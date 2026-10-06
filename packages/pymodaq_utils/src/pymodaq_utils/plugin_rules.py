@@ -130,9 +130,19 @@ def project_root(package: str) -> Optional[Path]:
 
 
 def _python_files(root: Path):
+    """The python modules of the package: the generated files and the files that cannot be imported are left out"""
     for path in sorted(root.rglob('*.py')):
-        if path.stem not in IGNORED_MODULES and '__pycache__' not in path.parts:
+        if path.stem not in IGNORED_MODULES and '__pycache__' not in path.parts and path.stem.isidentifier():
             yield path
+
+
+def check_file_names(root: Path) -> list[Finding]:
+    """Python files whose name is not a valid module name: they cannot be imported and should not be shipped"""
+    return [Finding('PMQ112', Severity.WARNING, f"'{path.name}' is not a valid python module name",
+                    'delete or rename it: it is often a conflicted copy made by a file synchronization tool '
+                    '(Dropbox, OneDrive, Syncthing...) or an editor backup', path)
+            for path in sorted(root.rglob('*.py'))
+            if '__pycache__' not in path.parts and path.stem not in IGNORED_MODULES and not path.stem.isidentifier()]
 
 
 # -------------------------------------------------------------------------------------------------------------------
@@ -411,6 +421,7 @@ def check_package_sources(package: str) -> list[Finding]:
         return [Finding('PMQ100', Severity.ERROR, f'package {package} not found', 'install the plugin')]
     project = project_root(package)
     findings = check_pyproject(package, project) if project is not None else []
+    findings.extend(check_file_names(root))
     findings.extend(check_leftovers(package, root, project))
     for mod in find_plugin_modules(package):
         file = Path(importlib.util.find_spec(mod.import_path).origin)

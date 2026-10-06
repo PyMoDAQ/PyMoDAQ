@@ -33,7 +33,7 @@ import toml
 
 from pymodaq_utils.utils import get_entrypoints
 
-from pymodaq_utils.plugin_rules import (PLACEHOLDER_NAMES_RE, Finding, Severity, check_leftovers,
+from pymodaq_utils.plugin_rules import (PLACEHOLDER_NAMES_RE, Finding, Severity, check_file_names, check_leftovers,
                                         check_plugin_source, check_pyproject, is_valid_unit, package_root,
                                         project_root)
 
@@ -88,8 +88,8 @@ class PluginModule:
 
 
 def _submodule_names(package_path: str) -> list[str]:
-    """Names of modules (not packages) found in a package, without importing them."""
-    return sorted(m.name for m in pkgutil.iter_modules([package_path]) if not m.ispkg)
+    """Names of the modules (not packages) found in a package that can be imported, without importing them."""
+    return sorted(m.name for m in pkgutil.iter_modules([package_path]) if not m.ispkg and m.name.isidentifier())
 
 
 def find_plugin_modules(package: str) -> list[PluginModule]:
@@ -428,6 +428,7 @@ def check_package_sources(package: str, project: Optional[Path] = None) -> Check
     project = project or project_root(package)  # None if installed from a wheel: no pyproject.toml to check
     if project is not None:
         result.findings.extend(check_pyproject(package, project))
+    result.findings.extend(check_file_names(root))
     result.findings.extend(check_leftovers(package, root, project))
     return result
 

@@ -108,3 +108,14 @@ def test_source_syntax_error(tmp_path):
     path = tmp_path / 'daq_move_Foo.py'
     path.write_text('x = = 1')
     assert codes(pr.check_plugin_source(path, 'move', 'DAQ_Move_Foo')) == {'PMQ300'}
+
+
+def test_conflicted_copy_files_are_reported_and_otherwise_ignored(tmp_path):
+    pkg = tmp_path / 'pymodaq_plugins_foo'
+    pkg.mkdir()
+    bad = pkg / 'daq_move_Mono_840G11-WEBER_oct.-05-085858-2026_CaseConflict.py'
+    bad.write_text('# TODO this copy should not be scanned\nraise NotImplementedError')
+    (pkg / 'daq_move_Mono.py').write_text('x = 1')
+    assert [f.code for f in pr.check_file_names(pkg)] == ['PMQ112']
+    assert pr.check_file_names(pkg)[0].severity == Severity.WARNING
+    assert pr.check_leftovers('pymodaq_plugins_foo', pkg) == []  # no TODO / NotImplementedError from the copy

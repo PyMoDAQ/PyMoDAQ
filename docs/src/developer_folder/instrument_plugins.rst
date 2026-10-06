@@ -161,6 +161,7 @@ PMQ107   no pymodaq dependency declared
 PMQ108   no entry points: PyMoDAQ will not find the plugin
 PMQ109   code found for a feature set to false in ``[features]`` (its entry points will not be generated)
 PMQ110   feature set to true but nothing found. PMQ111: README.rst or LICENSE missing
+PMQ112   python file that is not a valid module name (often a conflicted copy of a synchronisation tool): ignored
 PMQ201   TODO comment. PMQ202: ``NotImplementedError`` left. PMQ203: template placeholder name left
 PMQ204   example module of the template left. PMQ205: *config_template.toml* still has the template title
 PMQ302   deprecated or ignored class attribute (``_epsilon``, ``stage_names``, ``axis_names``)
