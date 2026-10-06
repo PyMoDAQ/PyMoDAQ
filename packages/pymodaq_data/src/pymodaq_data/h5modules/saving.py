@@ -92,11 +92,14 @@ class H5SaverLowLevel(H5Backend):
 
     @classmethod
     def from_file(cls, path: Union[Path, str], save_type: SaveType = 'scan',
-                  new_file: bool = False, metadata: dict = None) -> 'H5SaverLowLevel':
+                  new_file: bool = False, metadata: dict = None,
+                  swmr_mode: bool = False,
+                  mode='a') -> 'H5SaverLowLevel':
         """Create and initialise an H5SaverLowLevel from a file path.
 
         Convenience factory that combines the constructor and :meth:`init_file`
         call into a single expression.
+
         Parameters
         ----------
         path: Path or str
@@ -108,6 +111,11 @@ class H5SaverLowLevel(H5Backend):
             opened for appending.
         metadata: dict or None
             Extra attributes written to the raw-data group on creation.
+        swmr_mode: bool
+            If True, prepare the file for SWMR (h5py backend only)
+        mode: str
+            valid if new_file is False. Then could be 'r' for readonly or 'a' to append data
+
 
         Returns
         -------
@@ -115,7 +123,11 @@ class H5SaverLowLevel(H5Backend):
             A fully initialised instance ready for reading/writing.
         """
         h5saver = cls(save_type)
-        h5saver.init_file(file_name=Path(path), new_file=new_file, metadata=metadata)
+        h5saver.init_file(file_name=Path(path),
+                          new_file=new_file,
+                          metadata=metadata,
+                          swmr_mode=swmr_mode,
+                          mode=mode)
         return h5saver
 
     def set_swmr_flush_interval(self, interval: int):
@@ -149,8 +161,11 @@ class H5SaverLowLevel(H5Backend):
     def h5_file(self):
         return self._h5file
 
-    def init_file(self, file_name: Path, raw_group_name='RawData', new_file=False,
-                  metadata: dict = None, swmr_mode: bool = False):
+    def init_file(self, file_name: Path, raw_group_name='RawData',
+                  new_file=False,
+                  metadata: dict = None,
+                  swmr_mode: bool = False,
+                  mode: str = 'a'):
         """Initializes a new h5 file,
 
         Should have an extension with h5 in it.
@@ -167,6 +182,8 @@ class H5SaverLowLevel(H5Backend):
             A dictionary to be saved as attributes
         swmr_mode: bool
             If True, prepare the file for SWMR (h5py backend only)
+        mode: str
+            valid if new_file is False. Then could be 'r' for readonly or 'a' to append data
 
         Returns
         -------
@@ -200,7 +217,7 @@ class H5SaverLowLevel(H5Backend):
             return
 
         self.close_file()
-        self.open_file(self.h5_file_path.joinpath(self.h5_file_name), 'w' if new_file else 'a',
+        self.open_file(self.h5_file_path.joinpath(self.h5_file_name), 'w' if new_file else mode,
                        title='PyMoDAQ file', swmr_mode=swmr_mode)
 
         self._raw_group = self.get_set_group(self.root(), raw_group_name, title='Data from PyMoDAQ modules')
@@ -267,6 +284,7 @@ class H5SaverLowLevel(H5Backend):
                   title: str = '', metadata=dict([])):
 
         """save data arrays on the hdf5 file together with metadata
+
         Parameters
         ----------
         where: GROUP
@@ -278,7 +296,7 @@ class H5SaverLowLevel(H5Backend):
         data_shape: Iterable
             the shape of the array to save, mandatory if array_to_save is None
         data_dimension: DataDim
-         The data's dimension
+            The data's dimension
         scan_shape: Iterable
             the shape of the scan dimensions
         title: str
@@ -294,12 +312,13 @@ class H5SaverLowLevel(H5Backend):
             if False, data are saved as a CARRAY, otherwise as a EARRAY (for ragged data, see add_string_array)
         metadata: dict
             dictionnary whose keys will be saved as the array attributes
-        add_scan_dim: if True, the scan axes dimension (scan_shape iterable) is prepended to the array shape on the hdf5
-                      In that case, the array is usually initialized as zero and further populated
+        add_scan_dim: bool
+            if True, the scan axes dimension (scan_shape iterable) is prepended to the array shape on the hdf5
+            In that case, the array is usually initialized as zero and further populated
 
         Returns
         -------
-        array (CARRAY or EARRAY)
+        CARRAY or EARRAY
 
         See Also
         --------

@@ -1,20 +1,23 @@
 from importlib import import_module
 from pathlib import Path
-from typing import Union
+from typing import Union, TYPE_CHECKING
 import numpy as np
-from qtpy import QtCore, QtWidgets
+from qtpy import QtCore, QtWidgets, QtGui
 import qt_themes
 
 from pymodaq_gui.managers.action_manager import QAction
-from pymodaq_gui.utils import CustomApp
+from pymodaq_gui.utils.custom_app import CustomApp
 from pymodaq_gui.utils import Dock
 from pymodaq_gui.utils.widgets import LabelWithFont
 from pymodaq_gui.utils.styling import create_font, create_icon
-from pymodaq_gui.plotting.utils.plot_utils import display_in_dock
+from pymodaq_gui.plotting.utils.plot_utils import DetachablePanel
 from pymodaq_gui.utils.widgets.widget_with_label_title import WidgetWithLabelTitle
-from pymodaq_gui.utils.widgets.widget_with_title_in_toolbar import WidgetWithTitleInToolbar
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import GlobalConfig as Config
+
+
+if TYPE_CHECKING:
+    from pymodaq.control_modules.utils import ControlModule
 
 config = Config()
 
@@ -38,13 +41,31 @@ class ControlModuleUI(CustomApp):
     # Common icon name for initialization action
     INIT_ICON = 'cable'
 
-    def __init__(self, parent, title, settings_dock: Dock = None,):
+    def __init__(self, app: 'ControlModule', parent, title, settings_dock: Dock = None,):
         super().__init__(parent, title=title)
+        self._app = app
         self.settings_dock: Dock = settings_dock
         self.config = config
         self._ini_state = False
 
-        self._settings_widget = WidgetWithTitleInToolbar(self.title)
+        self._settings_widget = WidgetWithLabelTitle(self.title, closable=True, attachable=True,
+                                                     expand_subwidget=True)
+        self._settings_widget.sig_close.connect(lambda: self.show_settings(False))
+        self._settings_widget.closeEvent = lambda event: self.set_action_checked('show_settings', False)
+        self._settings_panel = DetachablePanel(
+            self._settings_widget, self.settings_dock, f'{self.title} settings',
+            detached=self.config('pymodaq', 'control_modules', 'settings_as_popup'),
+            layout_config_path=('pymodaq', 'control_modules', 'settings_dock_layout'),
+            is_shown=lambda: self.is_action_checked('show_settings'))
+
+    @property
+    def app(self) -> 'ControlModule':
+        return self._app
+
+    def quit_fun(self) -> bool:
+        res = super().quit_fun()
+
+        return res
 
     def add_setting_tree(self, tree):
         self._settings_widget.insert_widget(tree)
@@ -63,6 +84,9 @@ class ControlModuleUI(CustomApp):
         self.add_widget('name', LabelWithFont(f'{self.title}', font_name="Tahoma",
                                                 font_size=14, isbold=True, isitalic=True),
                         toolbar=toolbar)
+
+    def set_init_color(self, color: QtGui.QColor):
+        self.get_action('name').widget.set_color(color)
 
     def _setup_init_action(self, toolbar: QtWidgets.QToolBar = None,
                            action_name: str = 'init',
@@ -102,9 +126,6 @@ class ControlModuleUI(CustomApp):
         self.add_action('show_settings', 'Show Settings', 'settings', "Show Settings",
                         checkable=True, icon_checked_color=self.get_theme().green,
                         toolbar=toolbar)
-        self._settings_widget.add_action('close', 'Close', 'cancel',
-                                         toolbar=self._settings_widget.toolbar,
-                                         icon_color=self.get_theme().red)
 
     def update_init_icon(self, initialized: bool, action_name: str = 'init') -> None:
         """Update the initialization action icon based on state
@@ -136,19 +157,7 @@ class ControlModuleUI(CustomApp):
 
     def _show_settings(self, show: bool = True):
         """Slot connected to the show_settings action."""
-        if (self.config('pymodaq', 'control_modules', 'settings_as_popup')
-            or self.settings_dock is None):
-            if self.settings_dock is not None:
-                self.settings_dock.removeWidgets(close=False)
-                self.settings_dock.setVisible(False)
-
-            self._settings_widget.setWindowTitle(f'{self.title} settings')
-            self._settings_widget.setVisible(show)
-            self._settings_widget.closeEvent = lambda event: self.set_action_checked('show_settings', False)
-        else:
-            display_in_dock(show,
-                            self._settings_widget,
-                            self.settings_dock)
+        self._settings_panel.show(show)
 
     def show_settings(self, show=True):
         """Programmatically show/hide the settings widget. API entry."""
@@ -163,8 +172,6 @@ class ControlModuleUI(CustomApp):
         """
         if 'show_settings' in self.actions_names:
             self.connect_action('show_settings', self._show_settings)
-            self._settings_widget.connect_action('close',
-                                                 self.get_action('show_settings').trigger)
         if hasattr(self, '_init_action_name') and self._init_action_name in self.actions_names:
             self.connect_action(self._init_action_name, self.send_init)
 
@@ -186,6 +193,7 @@ class ControlModuleUI(CustomApp):
     def send_init(self, checked: bool):
         """Should be implemented to send to the main app the fact that someone (un)checked init."""
         raise NotImplementedError
+
 
 
 def register_uis(parent_module_name: str = 'pymodaq.control_modules.daq_move_ui'):

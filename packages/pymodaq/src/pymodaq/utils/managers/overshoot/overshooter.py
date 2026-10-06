@@ -17,7 +17,7 @@ from pymodaq.utils.managers.state.state_manager import StateManager
 from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager
 from pymodaq.utils.managers.modules.utils import ModuleType
 
-from pymodaq.utils.managers.overshoot.utils import ModulesManager, \
+from pymodaq.utils.managers.overshoot.utils import ModulesManagerOvershoot, \
     get_set_overshooter_path, TriggerDirection  # noqa
 from pymodaq_gui.managers.manager_base import ManagerBase, ManagerActions
 
@@ -67,7 +67,7 @@ class Overshooter(ManagerBase):
         self._state_manager = dashboard.state_manager
 
         super().__init__(dashboard=dashboard,
-                         module_manager_class=ModulesManager)
+                         module_manager_class=ModulesManagerOvershoot)
 
         self.slots: dict[str, Callable] = {}
 
@@ -84,6 +84,11 @@ class Overshooter(ManagerBase):
         self.state_manager.new_entry.connect(self.update_states)
         self.state_manager.deleted_entry.connect(self.update_states)
 
+    @property
+    def modules_manager(self) -> ModulesManagerOvershoot:
+        """ Reimplemented to have the custom module manager type
+        """
+        return self._modules_manager
 
     def child_added(self, param: Parameter, data: tuple[Parameter, int]):
         if param is self.settings.child('overshoots'):
@@ -114,7 +119,8 @@ class Overshooter(ManagerBase):
         self._overshoot_under_process = False
 
     def show_hide_module_manager_settings(self):
-        to_hide = [('test_actuator',), ('probe_data',),
+        to_hide = [('probe_actuators',), ('probe_detectors',),
+                   ('probe_actuators_results',), ('probe_detectors_results',),
                    ]
         for param_tuple in to_hide:
             self.modules_manager.settings.child(*param_tuple).hide()
@@ -291,8 +297,12 @@ class Overshooter(ManagerBase):
 
         self.entries_sync.update_key('items', self.entries)
         self.update_entry()
-        self.update_available_data()
+
         self.update_states()
+
+    def show(self):
+        self.update_available_data()
+        super().show()
 
 
 if __name__ == "__main__":

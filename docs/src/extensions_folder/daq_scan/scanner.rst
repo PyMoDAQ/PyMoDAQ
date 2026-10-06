@@ -52,7 +52,8 @@ The possible settings are visible on :numref:`scan2D_fig` and described below:
 
 * **Scan subtype**: See :numref:`scan2D_subtypes` either *linear* (scan line by line), *linear back and forth* (scan line by line
   but in reverse direction each 2 lines), *spiral* (start from the center and scan as a spiral), *Random* (random
-  sampling of the *linear* case) and *Adaptive* (see :ref:`adaptive_scans`)
+  sampling of the *linear* case), *RandomSpread* (same as *Random* but the data are saved as *spread* data: a list of
+  points with their coordinates) and *Adaptive* (see :ref:`adaptive_scans`)
 * **Start, Stop, Step**: for each axes (each actuators)
 * **Rmax, Rstep, Npts/axis**: in case of spiral scan only. Rmax is the maximum radius of the spiral (calculated),
   and Npts/axis is the number of points for both axis (total number of points is therefore Npts/axis²).
@@ -98,6 +99,12 @@ Tabular
 +++++++
 
 The tabular scan type consists of a list of positions (for each selected actuators).
+
+.. note::
+
+   The *Tabular* scans (like the *RandomSpread* subtype of *Scan2D*) generate *spread* data. The averaging of scans
+   (*N average* of the :ref:`general_settings_daq_scan`) is not available for them: it is set to 1 and locked as long as
+   such a scan is selected.
 
 Tabular Linear/Manual case
 ##########################
@@ -180,7 +187,7 @@ From these on all previous points, it will determine the best next points to pro
 on has to choose a signal among all available from the DashBoard detectors. It has to be a Scalar so originate from a 0D
 detector or integrated ROI from 1D or 2D detectors. The module manager user interface (right most setting tree in the
 DAQ_Scan module ,see :numref:`module_manager_fig`) will let you probe available datas exported from currently selected
-detectors. You can then pick the Data0D one you want to use as the Adaptive feedback. For instance, on :numref:`module_managerfig`,
+detectors. You can then pick the Data0D one you want to use as the Adaptive feedback. For instance, on :numref:`module_manager_fig`,
 three Data0D are available, one from a 0D detector (CH000) and 2 from the Measurements ROIs of a 1D detector. In that case the
 CH000 data has been selected and will therefore be use as feedback for the Adaptive algorithm.
 

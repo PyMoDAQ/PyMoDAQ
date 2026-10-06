@@ -25,7 +25,7 @@ Once the download is finished, we should run the installer:
 
    * On Linux, the `.sh` files are executed using the `bash` command.
    * The "$(uname)" and "$(uname -m)" variables are here to get the filename that corresponds to our machine
-     configuration. Run `uname` and `uname -m   ` commands in a terminal to understand!
+     configuration. Run ``uname`` and ``uname -m`` commands in a terminal to understand!
 
 The installer will ask us several questions in the terminal, we will keep the default choices except for the last
 question, for which we should answer "yes".
@@ -55,7 +55,7 @@ environment into brackets.
    It will also create a folder ~/miniforge3 in our home directory, where all our Python environments will be stored.
 
 
-.. _section_installation:
+.. _section_installation_ubuntu:
 
 Set up a new Python environment
 -------------------------------
@@ -191,7 +191,7 @@ Once all the instruments of our experimental setup are controlled with a dedicat
 difficult task is behind us.
 
 We can now group them in a :ref:`Dashboard <dashboard_module>`, and enjoy all the features available through
-the Dashboard Extensions. A group of control modules in a dashboard can be saved in a :ref:`preset <preset_manager>`.
+the Dashboard Extensions. A group of control modules in a dashboard can be saved in a :ref:`preset <experiment_manager>`.
 A dashboard can be started with command line arguments, as explained on the
 :ref:`dashboard page <dashboard_cli_arguments_note>`
 

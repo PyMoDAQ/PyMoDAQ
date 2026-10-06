@@ -11,7 +11,7 @@ from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.inprocess import QtInProcessKernelManager
 
 from pymodaq_utils.config import GlobalConfig
-from pymodaq.extensions.custom_ext import CustomExt
+from pymodaq.utils.custom_ext import CustomExt
 
 from pymodaq_utils.utils import get_version
 from pymodaq_gui.utils.dock import DockArea
@@ -82,6 +82,9 @@ class Console(CustomExt):
         super().__init__(dockarea, dashboard)
 
         self.setup_ui()
+
+    def _quit_fun(self) -> bool:
+        return True
 
     def do_things_after_experiment_set(self, experiment: str):
         super().do_things_after_experiment_set(experiment)

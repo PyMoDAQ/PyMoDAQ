@@ -34,13 +34,15 @@ class ObjectFactory(metaclass=ABCMeta):
 
     Examples
     --------
-    @ObjectFactory.register('custom')
-    def my_custom_builder():
-        pass
+    ::
+
+        @ObjectFactory.register('custom')
+        def my_custom_builder():
+            pass
 
     See Also
     --------
-    pymodaq.post_treatment.process_1d_to_scalar.Data1DProcessorFactory
+    pymodaq_data.post_treatment.process_to_scalar.DataProcessorFactory
     """
     _builders = {}
 

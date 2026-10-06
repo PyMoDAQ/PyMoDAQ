@@ -39,7 +39,7 @@ from pymodaq_gui.plotting.items.crosshair import Crosshair
 from pymodaq_gui.plotting.utils.filter import Filter2DFromCrosshair, Filter2DFromRois
 from pymodaq_gui.plotting.utils.plot_utils import make_dashed_pens
 from pymodaq_gui.utils.dock import Dock
-from pymodaq_gui.plotting.utils.plot_utils import display_in_dock
+from pymodaq_gui.plotting.utils.plot_utils import DetachablePanel
 
 logger = set_logger(get_module_name(__file__))
 
@@ -57,6 +57,7 @@ COLORS_DICT = dict(red=(255, 0, 0), green=(0, 255, 0), blue=(0, 0, 255), spread=
 IMAGE_TYPES = ['red', 'green', 'blue']
 COLOR_LIST = PlotColors()
 crosshair_pens = make_dashed_pens(color=(255, 255, 0))
+ROISELECT_Z_VALUE = 100  # above the image items (Z 0 to 2) and the isocurve (Z 5)
 config = GlobalConfig()
 
 
@@ -353,7 +354,16 @@ class View2D(ActionManager, QtCore.QObject):
 
         self.image_widget = ImageWidget()
         self.roi_manager = ROIViewerManager(self.image_widget.plotitem.vb, ROIDim.ROI2D)
-        self.roi_widget = WidgetWithLabelTitle(self.title, self.roi_manager.roiwidget)
+        self.roi_widget = WidgetWithLabelTitle(self.title, self.roi_manager.roiwidget,
+                                               closable=True, attachable=True,
+                                               expand_subwidget=True)
+        self.roi_widget.sig_close.connect(lambda: self.get_action('roi').trigger())
+        self.roi_widget.closeEvent = lambda event: self.set_action_checked('roi', False)
+        self._rois_panel = DetachablePanel(
+            self.roi_widget, self.rois_dock, f'{self.title} ROIs',
+            detached=config('gui', 'viewer', 'rois_as_popup'),
+            layout_config_path=('gui', 'viewer', 'rois_dock_layout'),
+            is_shown=lambda: self.is_action_checked('roi'))
         self.roi_target: Union[pgROI, Crosshair] = None
 
         self.setup_view_box()
@@ -393,7 +403,11 @@ class View2D(ActionManager, QtCore.QObject):
         return theme
 
     def setup_view_box(self):
-        """ create and axis-sync a viewbox dedicated to ROIselect """
+        """ create and axis-sync a viewbox for the top and right axes, and add the ROIselect
+
+        The ROIselect is added to the main plotitem (as in the Viewer1D), above the image items, so that it is drawn
+        on top of the images
+        """
         self.roi_vb = ViewBox()
         self.plotitem.scene().addItem(self.roi_vb)
         self.plotitem.getAxis('right').linkToView(self.roi_vb)
@@ -405,7 +419,8 @@ class View2D(ActionManager, QtCore.QObject):
         self.update_view_box()
         self.plotitem.vb.sigResized.connect(self.update_view_box)
 
-        self.roi_vb.addItem(self.ROIselect)
+        self.ROIselect.setZValue(ROISELECT_Z_VALUE)
+        self.plotitem.addItem(self.ROIselect)
 
     def update_view_box(self):
         self.roi_vb.setGeometry(self.plotitem.vb.sceneBoundingRect())
@@ -676,19 +691,7 @@ class View2D(ActionManager, QtCore.QObject):
     @Slot(bool)
     def roi_clicked(self, isroichecked=True):
 
-        if (config('gui', 'viewer', 'rois_as_popup')
-            or self.rois_dock is None):
-            if self.rois_dock is not None:
-                self.rois_dock.removeWidgets(close=False)
-                self.rois_dock.setVisible(False)
-
-            self.roi_widget.setWindowTitle(f'{self.title} ROIs')
-            self.roi_widget.setVisible(isroichecked)
-            self.roi_widget.closeEvent = lambda event: self.set_action_checked('roi', False)
-        else:
-            display_in_dock(isroichecked,
-                            self.roi_widget,
-                            self.rois_dock)
+        self._rois_panel.show(isroichecked)
 
         for roi_meta in self.roi_manager.ROIs:
             roi_meta.roi.setVisible(isroichecked)
@@ -709,12 +712,12 @@ class View2D(ActionManager, QtCore.QObject):
         self.histogrammer.show_hide_histogram(show, are_items_visible)
 
     def prepare_image_widget_for_lineouts(self, ratio=0.7):
-        QtGui.QGuiApplication.processEvents()
+
         self.splitter_VRight.splitterMoved[int, int].emit(int(ratio * self.parent_widget.height()), 1)
         self.splitter.moveSplitter(int(ratio * self.parent_widget.width()), 1)
         self.splitter_VLeft.moveSplitter(int(ratio * self.parent_widget.height()), 1)
         self.splitter_VLeft.splitterMoved[int, int].emit(int(ratio * self.parent_widget.height()), 1)
-        QtGui.QGuiApplication.processEvents()
+
 
     def collapse_lineout_widgets(self):
         self.prepare_image_widget_for_lineouts(ratio=1)
@@ -1142,9 +1145,11 @@ class Viewer2D(ViewerBase):
 
                     QtWidgets.QApplication.processEvents()
 
-                if not self._display_temporary:
-                    self.data_to_export_signal.emit(self.data_to_export)
-                self.ROI_changed.emit()
+            # emit even without ROI data (e.g. all ROIs with Process data off), otherwise the DAQ_Viewer
+            # would wait forever for this viewer's data
+            if not self._display_temporary:
+                self.data_to_export_signal.emit(self.data_to_export)
+            self.ROI_changed.emit()
 
 
 def main_spread():

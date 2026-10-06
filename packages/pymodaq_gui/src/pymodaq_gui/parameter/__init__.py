@@ -1,7 +1,11 @@
+from contextlib import contextmanager
+from typing import Any
+
 from qtpy import QtWidgets
 
 from pyqtgraph.parametertree import parameterTypes, Parameter, ParameterTree
 from . import pymodaq_ptypes
+
 
 __parameter_value_old_fun = Parameter.value
 def __parameter_value_monkey_path(self):
@@ -11,6 +15,8 @@ def __parameter_value_monkey_path(self):
         return None
 
 Parameter.value = __parameter_value_monkey_path
+
+
 
 class ParameterTree(ParameterTree):
     def __init__(self, *args, **kwargs):

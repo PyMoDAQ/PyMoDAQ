@@ -21,21 +21,29 @@ def mkQApp(app_name: str):
 def create_nested_menu(layers, items_per_layer, pattern="Menu", prefix_pattern="Sub", use_index_tracking=False):
     """
     Creates a nested dictionary structure with specified layers and items per layer.
-    
-    Args:
-        layers (int): Number of layers in the nested structure
-        items_per_layer (int or list): Number of items per layer. 
-                                     Can be an integer (same for all layers) 
-                                     or a list (specific count for each layer)
-        pattern (str): Base pattern for naming items (default: "Menu")
-        prefix_pattern (str): Prefix pattern for sub-levels (default: "Sub")
-        use_index_tracking (bool): If True, adds _ijk tracking to names (default: False)
-    
-    Returns:
-        dict: Nested dictionary structure
-    
-    Examples:
-        create_nested_menu(3, 2, use_index_tracking=True) creates:
+
+    Parameters
+    ----------
+    layers: int
+        Number of layers in the nested structure
+    items_per_layer: int or list
+        Number of items per layer. Can be an integer (same for all layers) or a list (specific count for each layer)
+    pattern: str
+        Base pattern for naming items (default: "Menu")
+    prefix_pattern: str
+        Prefix pattern for sub-levels (default: "Sub")
+    use_index_tracking: bool
+        If True, adds _ijk tracking to names (default: False)
+
+    Returns
+    -------
+    dict
+        Nested dictionary structure
+
+    Examples
+    --------
+    ``create_nested_menu(3, 2, use_index_tracking=True)`` creates::
+
         {
             'Menu_1': {
                 'SubMenu_11': ['SubSubMenu_111', 'SubSubMenu_112'],

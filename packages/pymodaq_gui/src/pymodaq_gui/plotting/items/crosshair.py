@@ -9,6 +9,7 @@ import numpy as np
 class Crosshair(pg.GraphicsObject):
     crosshair_dragged = Signal(float, float, name='crosshair_dragged')
     # signal used to pass crosshair position to other methods
+    Z_VALUE = 100  # draw the lines above the plotted data (e.g. the image items of a Viewer2D)
 
     def __init__(self, plotitem, orientation='both', pen=None):
         super().__init__()
@@ -32,6 +33,8 @@ class Crosshair(pg.GraphicsObject):
 
         self.vLine = pg.InfiniteLine(angle=90, movable=True, pen=pen)
         self.hLine = pg.InfiniteLine(angle=0, movable=True, pen=pen)
+        self.vLine.setZValue(self.Z_VALUE)
+        self.hLine.setZValue(self.Z_VALUE)
 
         self.plotitem.addItem(self.vLine, ignoreBounds=True)
         self.plotitem.addItem(self.hLine, ignoreBounds=True)

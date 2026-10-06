@@ -6,14 +6,16 @@ pillow
 toml
 numpydoc
 sphinx-datatables
-pyqt6
+pyside6
 sphinx-design
+myst-parser
 sphinxcontrib-images
 sphinx-favicon
 sphinx-autodoc-typehints
 sphinx-qt-documentation
-sphinxext-rediraffe
 numpy
+pymodaq_plugins_utils
+qtmonaco
 pyopengl
 
 # -e ../packages/pymodaq_utils

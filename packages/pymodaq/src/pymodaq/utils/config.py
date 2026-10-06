@@ -39,10 +39,23 @@ def get_set_remote_path(user=False):
     return get_set_config_dir('remote_configs', user=user)
 
 
-def get_set_overshoot_path(user=False):
-    """ creates and return the config folder path for overshoot files
+def get_set_overshoot_path(subfolder: str = '', user=False):
+    """ creates and return the config folder path for the Overshoot Manager entries
+
+    Entries are stored in a subfolder named from the experiment. Files from older versions may still be in the
+    'overshoot_configs' folder, they are not used anymore.
     """
-    return get_set_config_dir('overshoot_configs', user=user)
+    target_path = get_set_config_dir('overshooter_configs', user=user).joinpath(subfolder)
+    target_path.mkdir(parents=True, exist_ok=True)
+    return target_path
+
+
+def get_set_roi_manager_path(user=True):
+    """ creates and return the config folder path for the ROI Manager entries (one file per experiment)
+
+    Not to be confused with pymodaq_gui.config.get_set_roi_path, used by the data viewers to save their ROIs
+    """
+    return get_set_config_dir('rois', user=user)
 
 
 @GlobalConfig.register()

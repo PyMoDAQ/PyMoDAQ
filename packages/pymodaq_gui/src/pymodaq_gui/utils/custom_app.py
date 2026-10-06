@@ -1,17 +1,22 @@
+import inspect
 from pathlib import Path
-from typing import Union, TYPE_CHECKING, Dict, Optional
-
-from pymodaq_utils.config import GlobalConfig as Config
-
-config = Config()
+from typing import Union, TYPE_CHECKING, Dict, Optional, Iterable
 
 import qt_themes
 from qt_themes import Theme
 from qtpy.QtCore import QObject, QLocale
 from qtpy import QtCore, QtWidgets
 
+from pymodaq_data.h5modules.data_saving import DataToExportSaver
+from pymodaq_gui.h5modules.saving import H5Saver
+from pymodaq_gui.managers.runner_thread_manager import WorkerThreadManager
+from pymodaq_gui.managers.h5manager import FileStatus, H5Manager, FileAction
+from pymodaq_utils.config import GlobalConfig as Config
+from pymodaq_utils.enums import StrEnum
+from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import get_set_path, get_set_local_dir
 from pymodaq_utils.warnings import deprecation_msg
+from pymodaq_utils.help import get_help_text
 
 from pymodaq_gui.utils.dock import DockArea, Dock
 from pymodaq_gui.managers.action_manager import ActionManager
@@ -19,6 +24,15 @@ from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_gui.parameter import ParameterTree
 from pymodaq_gui.utils.splash import get_splash_sc
 
+logger = set_logger(get_module_name(__file__))
+config = Config()
+
+
+class WorkFlowActions(StrEnum):
+    START = 'start'
+    STOP = 'stop'
+    PAUSE = 'pause'
+    LOG = 'log'
 
 
 class CustomApp(QObject, ActionManager, ParameterManager):
@@ -105,12 +119,18 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     """
 
     log_signal = QtCore.Signal(str)
+    show_h5file_statusbar_widgets = False
+    show_workflow_actions = False
+
+    h5_base_group_name = 'AppData'  # rename that in your app/extension to give a meaningful name to your base group
     params = []
 
     def __init__(self, parent: Union[DockArea, QtWidgets.QMainWindow, QtWidgets.QWidget] = None,
                  tree: ParameterTree = None, title: str = None, toolbar: QtWidgets.QToolBar=None,
                  create_app_toolbar: bool = True, add_toolbar_break=True,
-                 create_app_menu: bool = False):
+                 create_app_menu: bool = False,
+                 h5_actions_not: Iterable[FileAction] = (FileAction.CLOSE_FILE, FileAction.OPEN_FILE)):
+
 
         QObject.__init__(self)
         ActionManager.__init__(self)
@@ -136,6 +156,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         self._title: str = ''
         self.title = title
 
+        # then call self.h5saver property
         self.docks: Dict[str, Dock] = dict([])
 
         self._menubar: QtWidgets.QMenuBar = None
@@ -157,10 +178,35 @@ class CustomApp(QObject, ActionManager, ParameterManager):
             parent.setWindowTitle(self.title)
             self._statusbar = QtWidgets.QStatusBar()
 
+        self._status_message_label: QtWidgets.QLabel = None
+
         if create_app_menu:
             self.add_menu(self.__class__.__name__.lower(),
                           self.__class__.__name__,
                           self.menubar if self.mainwindow is not None else None)
+
+        self._h5_manager = H5Manager(self, show_not=h5_actions_not)
+        self._worker_thread_manager = WorkerThreadManager(parent=self)
+
+    def get_help_markdown(self) -> str:
+        """Markdown text describing how to use this application, shown by the Help action
+
+        Read from the help.md next to the module defining the class, else the class docstring
+        """
+        return get_help_text(self) or inspect.cleandoc(self.__class__.__doc__ or '')
+
+    @property
+    def thread_manager(self) -> WorkerThreadManager:
+        return self._worker_thread_manager
+
+    @property
+    def h5_manager(self) -> H5Manager:
+        return self._h5_manager
+
+    @property
+    def h5saver(self) -> H5Saver:
+        """ Convenience method to access the h5saver and for backcompatibility"""
+        return self.h5_manager.h5saver
 
     @classmethod
     def get_local_folder(cls, user=False) -> Path:
@@ -174,6 +220,38 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     @property
     def statusbar(self) -> QtWidgets.QStatusBar | None:
         return self.mainwindow.statusBar() if self.mainwindow is not None else self._statusbar
+
+    def populate_status_bar(self):
+        """Generic method to populate the Status Bar
+
+        for customization, reimplement insert_custom_status_widgets method
+        """
+        self._status_message_label = QtWidgets.QLabel('')
+        self.statusbar.addPermanentWidget(self._status_message_label)
+
+        self.insert_custom_status_widgets()
+
+        if self.show_h5file_statusbar_widgets:
+            self.h5_manager.insert_h5stuff_status()
+
+    def set_permanent_status(self, status: str):
+        """ Display a permanent status message
+
+        Method populate_status_bar should have been called beforehand
+
+        """
+        self._status_message_label.setText(status)
+
+    def insert_custom_status_widgets(self):
+        """ create here Widgets to be added to the StatusBar
+        To be reimplemented
+
+        Examples
+        --------
+        self._file_open_LED = QLED()
+        self.statusbar.addPermanentWidget(self._file_open_LED)
+        """
+        pass
 
     def update_status(self, message: str, wait_time: Optional[int] = None):
         """Show the message in the status bar with a delay of wait_time ms.
@@ -208,22 +286,43 @@ class CustomApp(QObject, ActionManager, ParameterManager):
 
         self.setup_menus_and_toolbars(self.menubar)  # see ActionManager MixIn class
 
+        if self.show_workflow_actions:
+            self.setup_workflow_actions()
         self.setup_actions()  # see ActionManager MixIn class
 
         self.connect_things()
 
         self.do_things_after_ui_setup()
+        self.apply_size_hint()
 
-    def quit_fun(self):
+    def quit_fun(self) -> bool | None:
         """Method to be reimplemented in order to define a custom quit function
         """
+        if len(self.thread_manager.worker_threads) > 0:
+            self.thread_manager.exit_worker_threads()
         if self.mainwindow is not None:
             self.mainwindow.close()
+        self.disconnect_tree()
+        return True
 
     def do_things_after_ui_setup(self):
         """ Method to be reimplemented in order to do things after the UI setup
         """
         pass
+
+    def apply_size_hint(self):
+        if self.mainwindow is not None:
+            self.mainwindow.resize(self._size_hint)
+        else:
+            self.parent.resize(self._size_hint)
+
+    @property
+    def _size_hint(self) -> QtCore.QSize:
+        """ property telling the optimal size for your application UI
+
+        To be reimplemented
+        """
+        return QtCore.QSize(1200, 800)
 
     def setup_docks_and_widgets(self):
         """ Method to be reimplemented to set up the docks layout and/or widgets
@@ -288,6 +387,58 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         """
         pass
 
+    def setup_workflow_actions(self):
+        if 'actions' not in self.menus:
+            self.add_menu('actions', 'Actions', parent_menu=self.menubar)
+
+        self.add_action(WorkFlowActions.START, 'Start Workflow', 'motion_play',
+                        "Start the workflow",
+                        menu='actions', icon_color=self.get_theme().green)
+        self.add_action(WorkFlowActions.STOP, 'Stop Workflow', 'stop_circle', "Stop the workflow",
+                        menu='actions', icon_color=self.get_theme().red)
+        self.add_action(WorkFlowActions.PAUSE, 'Pause Workflow', 'pause_circle', "Pause/resume the workflow",
+                        checkable=True, menu='actions',
+                        icon_checked_color=self.get_theme().orange)
+
+        self.toolbar.addSeparator()
+        self.add_action(WorkFlowActions.LOG, 'Do Logging', 'home_storage',
+                        tip='Log all data generated within the workflow',
+                        menu='actions',
+                        icon_checked_color=self.get_theme().green,
+                        icon_color=self.get_theme().red,
+                        checkable=True,
+                        checked=True)
+        self.toolbar.addSeparator()
+
+    def enable_workflow_actions(self,
+                                enable=True,
+                                excepted: Iterable[str | WorkFlowActions] = (),
+                                opposite: Iterable[str | WorkFlowActions] = (),
+                                other_actions: Iterable[str | WorkFlowActions] = ()):
+        """ Enable/Disable workflow actions (start, stop, pause) + other specified ones
+
+        if an action is specified in excepted, nothing is done on it
+        if an action is specified in opposite, the opposite boolean is applied to its enabled status
+
+        Everytime this function is called the Pause action is unchecked
+
+        """
+        if not isinstance(excepted, Iterable):
+            excepted = [excepted]
+        if not isinstance(other_actions, Iterable):
+            other_actions = [other_actions]
+        if not isinstance(opposite, Iterable):
+            opposite = [opposite]
+
+        for action in [WorkFlowActions(value) for value in WorkFlowActions.values()] + list(other_actions):
+            if self.has_action(action) and action not in excepted:
+                if action in opposite:
+                    self.set_action_enabled(action, not enable)
+                else:
+                    self.set_action_enabled(action, enable)
+
+        self.set_action_checked(WorkFlowActions.PAUSE, False)
+
     def connect_things(self):
         """Connect actions and/or other widgets signal to methods
 
@@ -295,3 +446,6 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         """
         pass
 
+    @property
+    def module_and_data_saver(self) -> DataToExportSaver:
+        return DataToExportSaver(self.h5_manager.h5saver)

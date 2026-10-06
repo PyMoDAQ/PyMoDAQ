@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from qtpy import QtWidgets
 
 from pymodaq.extensions import get_extensions, ExtensionEnum
-from pymodaq.extensions.custom_ext import CustomExt
+from pymodaq.utils.custom_ext import CustomExt
 from pymodaq.utils.gui_utils.loader_utils import create_extension
 from pymodaq_gui.managers.manager_base import ManagerBase, ManagerActions
 from pymodaq_utils import set_logger

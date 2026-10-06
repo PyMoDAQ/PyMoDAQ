@@ -31,15 +31,15 @@ def make_window(
     Returns:
         tuple: (win, area) - The configured QMainWindow and DockArea objects.
     """
-    # Check if area parameter was provided, create new one if None
-    if area is None:
-        area = DockArea()
-    elif area is False:
-        area = None
-
     # Check if win parameter was provided, create new one if None
     if win is None:
         win = QMainWindow()
+
+    # Check if area parameter was provided, create new one if None
+    if area is None:
+        area = DockArea(parent=win)
+    elif area is False:
+        area = None
 
     # Apply the window flags (controls titlebar, buttons, window type)
     if flags is not None:

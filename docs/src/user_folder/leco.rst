@@ -4,7 +4,6 @@ LECO communication
 ==================
 
 If you want to control a device remotely, you can use `LECO <https://leco-laboratory-experiment-control-protocol.readthedocs.io>`_ - Laboratory Experiment Control Protocol.
-Alternatively, you can use :ref:`tcpip`.
 
 For that, you need to install the `pyleco <https://pypi.org/project/pyleco/>`_ package, for example via `pip install pyleco`.
 
@@ -95,8 +94,14 @@ Serialization
 .............
 
 PyMoDAQ data objects have to be transferred between modules.
-The payload of LECO messages are typically JSON encoded messages.
-Therefore, the :class:`~pymodaq.utils.tcp_ip.serializer.Serializer` and :class:`~pymodaq.utils.tcp_ip.serializer.DeSerializer` can encode/decode the data objects to bytes.
-For more information about serialization see :ref:`tcpip`.
-In order to make a JSON string, base64 is used.
-The Serializer offers the :meth:`~pymodaq.utils.tcp_ip.serializer.Serializer.to_b64_string` and the DeSerializer the :meth:`~pymodaq.utils.tcp_ip.serializer.DeSerializer.from_b64_string` method.
+The payload of LECO messages are JSON encoded messages, which cannot hold objects such as
+:class:`~pymodaq_data.data.DataToExport` or :class:`~pymodaq_data.data.DataActuator`.
+Such objects are therefore encoded to bytes using the ``SerializableFactory`` of the
+`serializall <https://github.com/PyMoDAQ/serializall>`_ package: its ``get_apply_serializer`` method converts a
+registered object to bytes, and ``get_apply_deserializer`` converts the bytes back to the original object
+(the type of the object is encoded in the first bytes).
+
+These bytes are not inserted in the JSON message but sent as additional payload frames of the LECO message:
+the JSON parameter is then set to ``None``. JSON compatible values (numbers, strings, lists...) are sent directly as
+JSON parameters. The :func:`~pymodaq.utils.leco.utils.binary_serialization_to_kwargs` function prepares the
+arguments accordingly (``data`` and ``additional_payload``) for pyleco's ``ask_rpc`` method.

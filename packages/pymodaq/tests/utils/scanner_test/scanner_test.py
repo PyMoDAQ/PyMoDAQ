@@ -6,11 +6,38 @@ Created the 08/12/2022
 """
 
 import pytest
+from qtpy import QtWidgets
 
 from pymodaq.utils.scanner.scanner import Scanner, scanner_factory
+from pymodaq_gui.parameter.utils import compareValuesParameter
+
+units = ['nm', 'kW', 'ms', '°C', ]
+
+
+class MoveMock:
+    def __init__(self, ind: int = 0):
+        self.title = f'act_{ind}_{units[ind]}'
+        self.units = units[ind]
+
+actuators = [MoveMock(ind) for ind in range(len(units))]
+
+
+@pytest.fixture()
+def scanner(qtbot) -> Scanner:
+    widget_scanner = QtWidgets.QWidget()
+    qtbot.addWidget(widget_scanner)
+    scanner = Scanner(widget_scanner, actuators=actuators)
+    return scanner
 
 
 class TestScanner:
+    def test_scanner_changed_signal(self, scanner, qtbot):
+        """The signal is emitted each time the scanner implementation changes"""
+        scanner.set_scan_type_and_subtypes('Scan2D', 'Linear')
+        with qtbot.waitSignal(scanner.scanner_changed_signal, timeout=1000):
+            scanner.set_scan_type_and_subtypes('Scan2D', 'RandomSpread')
+        assert scanner.scan_sub_type == 'RandomSpread'
+
     def test_attributes(self, qtbot):
         """test if attributes needed by external objects are present"""
         scanner = Scanner()
@@ -22,3 +49,7 @@ class TestScanner:
         assert hasattr(scanner, 'positions')
         assert hasattr(scanner, 'axes_indexes')
         assert hasattr(scanner, 'axes_unique')
+
+    def test_instantiation(self, scanner):
+        scanner = scanner
+

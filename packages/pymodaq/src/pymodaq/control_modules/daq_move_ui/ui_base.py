@@ -1,7 +1,6 @@
 from abc import abstractmethod
 from typing import TYPE_CHECKING
 
-import numpy as np
 from qtpy.QtWidgets import QComboBox
 from pint import DimensionalityError
 from qtpy import QtWidgets, QtCore, QtGui
@@ -9,9 +8,8 @@ from typing import Union, List
 
 from pymodaq.utils.shared_ui import SharedUI
 from pymodaq_gui.qt_utils import mkQApp
-from pymodaq_gui.utils.widgets.widget_with_title_in_toolbar import WidgetWithTitleInToolbar
-from pymodaq_gui.utils.widgets.window import make_window
 from pymodaq_gui.utils.widgets.widget_with_label_title import WidgetWithLabelTitle
+from pymodaq_gui.utils.widgets.window import make_window
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq.control_modules.thread_commands import UiToMainMove
@@ -21,15 +19,24 @@ from pymodaq_data import Q_
 from pymodaq_data import DataToExport
 from pymodaq_gui.plotting.data_viewers import ViewerDispatcher
 from pymodaq_gui.utils import (DockArea, QSpinBoxWithShortcut,
-                               PushButtonIcon, QLED, QSpinBox_ro,
+                               PushButtonIcon, QSpinBox_ro,
                                Dock)
-from pymodaq_gui.utils.widgets import LabelWithFont
-from pymodaq_gui.plotting.utils.plot_utils import display_in_dock
+from pymodaq_gui.utils.widgets import LabelWithFont, MultistateLED, StatusPalette, Status
+from pymodaq_gui.plotting.utils.plot_utils import DetachablePanel
+from pymodaq_utils.enums import StrEnum
 
 
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq.control_modules.daq_move_ui.utils import UiType
 config = Config()
+
+
+class MoveLedState(StrEnum):
+    """States of the DAQ_Move status LED."""
+    UNINITIALIZED = 'uninitialized'
+    IDLE = 'idle'
+    MOVING = 'moving'
+    ERROR = 'error'
 
 
 
@@ -43,16 +50,17 @@ class DAQMoveUI(ControlModuleUI):
     command_sig: Signal[Threadcommand]
         This signal is emitted whenever some actions done by the user has to be
         applied on the main module. Possible commands are:
-            * init
-            * get_value
-            * loop_get_value
-            * find_home
-            * stop
-            * move_abs
-            * move_rel
-            * actuator_changed
-            * rel_value
-            * show_plugin_config
+
+        * init
+        * get_value
+        * loop_get_value
+        * find_home
+        * stop
+        * move_abs
+        * move_rel
+        * actuator_changed
+        * rel_value
+        * show_plugin_config
 
     Methods
     -------
@@ -68,12 +76,13 @@ class DAQMoveUI(ControlModuleUI):
 
     is_compact = False
 
-    def __init__(self, parent: Union[DockArea, QtWidgets.QWidget],
+    def __init__(self, app, parent: Union[DockArea, QtWidgets.QWidget],
                  title="DAQ_Move",
                  controls_dock: Dock = None,
                  settings_dock: Dock = None,):
 
-        super().__init__(parent,
+        super().__init__(app,
+                         parent,
                          title=title,
                          settings_dock=settings_dock,)
 
@@ -87,7 +96,7 @@ class DAQMoveUI(ControlModuleUI):
         self.abs_value_sb_2: QSpinBoxWithShortcut = None
         self.abs_value_sb_red: QSpinBoxWithShortcut = None
         self.abs_value_sb_bis: QSpinBoxWithShortcut = None
-        self.move_done_led: QLED = None
+        self.status_led: MultistateLED = None
         self.current_value_sb: QSpinBox_ro = None
         self.find_home_pb: PushButtonIcon = None
         self.move_rel_plus_pb: PushButtonIcon = None
@@ -97,7 +106,8 @@ class DAQMoveUI(ControlModuleUI):
         self.stop_pb: PushButtonIcon = None
         self.get_value_pb: PushButtonIcon = None
 
-        self.control_widget: WidgetWithTitleInToolbar = None
+        self.control_widget: WidgetWithLabelTitle = None
+        self._controls_panel: DetachablePanel = None
         self.graph_widget: QtWidgets.QWidget = None
         self.viewer: ViewerDispatcher = None
 
@@ -116,6 +126,7 @@ class DAQMoveUI(ControlModuleUI):
     @actuator_init.setter
     def actuator_init(self, status):
         self._ini_state = status
+        self.status_led.set_state(MoveLedState.IDLE if status else MoveLedState.UNINITIALIZED)
         self.enable_move_buttons(status)
         self.update_init_icon(status, 'ini_actuator')
         if self.has_action('ini_actuator'):
@@ -140,12 +151,15 @@ class DAQMoveUI(ControlModuleUI):
 
     @property
     def move_done(self):
-        """bool: the status of the move_done LED."""
-        return self.move_done_led.get_state()
+        """bool: True when the actuator is idle (not moving)."""
+        return self.status_led.get_state() != MoveLedState.MOVING
 
     @move_done.setter
     def move_done(self, status):
-        self.move_done_led.set_as(status)
+        self.status_led.set_state(MoveLedState.IDLE if status else MoveLedState.MOVING)
+
+    def quit_fun(self) -> bool | None:
+        return self.app.quit_fun()
 
     # -------------------------------------------------------------------------
     # UI Construction
@@ -154,7 +168,15 @@ class DAQMoveUI(ControlModuleUI):
     def setup_docks_and_widgets(self):
         self.parent.setLayout(QtWidgets.QHBoxLayout())
 
-        self.control_widget = WidgetWithTitleInToolbar(self.title)
+        self.control_widget = WidgetWithLabelTitle(self.title, closable=True, attachable=True)
+        self.control_widget.sig_close.connect(lambda: self.get_action('show_controls').trigger())
+        self.control_widget.closeEvent = lambda event: self.set_action_checked('show_controls', False)
+        self._controls_panel = DetachablePanel(
+            self.control_widget, self.controls_dock, f'{self.title} controls',
+            detached=self.config('pymodaq', 'actuator', 'controls_as_popup'),
+            orientation=QtCore.Qt.Orientation.Vertical,
+            layout_config_path=('pymodaq', 'actuator', 'controls_dock_layout'),
+            is_shown=lambda: self.is_action_checked('show_controls'))
         self.parent.layout().setContentsMargins(0, 0, 0, 0)
 
         self.actuators_combo = QComboBox()
@@ -169,7 +191,15 @@ class DAQMoveUI(ControlModuleUI):
         self.abs_value_sb_red = self.abs_value_sb_2
 
         self.abs_value_sb_bis = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('pymodaq', 'actuator', 'siprefix'))
-        self.move_done_led = QLED(readonly=True)
+        self.status_led = MultistateLED(
+            states=[
+                (MoveLedState.UNINITIALIZED, StatusPalette.color(Status.OFF)),
+                (MoveLedState.IDLE,          StatusPalette.color(Status.IDLE)),
+                (MoveLedState.MOVING,        StatusPalette.color(Status.RUNNING)),
+                (MoveLedState.ERROR,         StatusPalette.color(Status.CRITICAL)),
+            ],
+            readonly=True,
+        )
         self.current_value_sb = QSpinBox_ro(font_size=10, min_height=20,
                                             siPrefix=config('pymodaq', 'actuator', 'siprefix'),
                                             )
@@ -207,7 +237,7 @@ class DAQMoveUI(ControlModuleUI):
         self.add_toolbar('move', 'DAQMove')
         self.parent.layout().insertWidget(0, self.get_toolbar('move'))
         
-    def populate_control_ui(self,  widget: WidgetWithTitleInToolbar):
+    def populate_control_ui(self,  widget: WidgetWithLabelTitle):
 
         container_widget = QtWidgets.QWidget()
         widget.insert_widget(container_widget)
@@ -241,7 +271,7 @@ class DAQMoveUI(ControlModuleUI):
         self._setup_settings_action(toolbar=toolbar)
         toolbar.addSeparator()
         self.add_widget('current', self.current_value_sb, toolbar=toolbar)
-        self.add_widget('move_done', self.move_done_led, toolbar=toolbar)
+        self.add_widget('move_done', self.status_led, toolbar=toolbar)
 
         self.add_action('stop', 'Stop', 'stop_circle', "Stop Motion",
                         toolbar=toolbar, icon_color=self.get_theme().red)
@@ -260,10 +290,6 @@ class DAQMoveUI(ControlModuleUI):
                         toolbar=toolbar, icon_checked='repeat_on',
                         icon_checked_color=self.get_theme().green)
         self.add_widget('status', self.statusbar, toolbar=toolbar)
-
-        self.control_widget.add_action('close', 'Close', 'cancel',
-                                       toolbar=self.control_widget.toolbar,
-                                       icon_color=self.get_theme().red)
 
     def setup_absolute_spinbox_actions(self, toolbar: QtWidgets.QToolBar = None):
         if toolbar is None:
@@ -337,6 +363,22 @@ class DAQMoveUI(ControlModuleUI):
             self.actuators_combo.currentTextChanged.disconnect()
         except TypeError:
             pass
+        if 'move_abs_green' in self.actions_names:
+            self.connect_action('move_abs_green', connect=False)
+        if 'move_abs_red' in self.actions_names:
+            self.connect_action('move_abs_red', connect=False)
+        try:
+            self.move_abs_pb.clicked.disconnect()
+        except TypeError:
+            pass
+        try:
+            self.move_rel_plus_pb.clicked.disconnect()
+        except TypeError:
+            pass
+        try:
+            self.move_rel_minus_pb.clicked.disconnect()
+        except TypeError:
+            pass
         self.remove_absolute_spinbox_actions(self.toolbar)
         self.remove_absolute_actions(self.toolbar)
         self.remove_relative_actions(self.toolbar)
@@ -357,8 +399,6 @@ class DAQMoveUI(ControlModuleUI):
     def connect_things(self):
         self._connect_common_actions()
         self.connect_common_move_actions()
-        self.control_widget.connect_action('close',
-                                           self.get_action('show_controls').trigger)
 
     def connect_move_actions(self):
         if 'move_abs_green' in self.actions_names:
@@ -513,20 +553,7 @@ class DAQMoveUI(ControlModuleUI):
     # -------------------------------------------------------------------------
 
     def show_controls(self, show: bool = True):
-        if (self.config('pymodaq', 'actuator', 'controls_as_popup')
-                or self.controls_dock is None):
-            if self.controls_dock is not None:
-                self.controls_dock.removeWidgets(close=False)
-                self.controls_dock.setVisible(False)
-
-            self.control_widget.setWindowTitle(f'{self.title} controls')
-            self.control_widget.setVisible(show)
-            self.control_widget.closeEvent = lambda event: self.set_action_checked('show_controls', False)
-        else:
-            display_in_dock(show,
-                            self.control_widget,
-                            self.controls_dock,
-                            orientation=QtCore.Qt.Orientation.Vertical)
+        self._controls_panel.show(show)
 
     def show_graph(self, show: bool = True):
         self.graph_widget.setWindowTitle(f'{self.title} graph')

@@ -96,6 +96,7 @@ try:
         logger.info('************************')
 
 
+
     except Exception as e:
         try:
             logger.exception(str(e))

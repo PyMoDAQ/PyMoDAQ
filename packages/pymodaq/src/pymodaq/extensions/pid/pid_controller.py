@@ -1,24 +1,28 @@
 import time
 from pymodaq.control_modules.move_utility_classes import HW_SETTINGS_KEY as ACTUATOR_SETTINGS_KEY
 from functools import partial  # needed for the button to sync setpoint with currpoint
+from pymodaq.control_modules.utils import ControllerAndThread, QThreadProxy
 from typing import Dict, List, TYPE_CHECKING
 from collections import deque
 import numpy as np
 
-from qtpy import QtGui, QtWidgets
+from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, QThread, Signal
 
 from simple_pid import PID
 
+from pymodaq.utils.managers.modules import ModuleType
+from pymodaq.utils.managers.modules.loader import PluginInfo
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import ThreadCommand, find_dict_in_list_from_key_val
-from pymodaq.utils.exceptions import DetectorError, ActuatorError, PIDError
+from pymodaq.utils.exceptions import PIDError
 
 from pymodaq_gui.parameter import utils as putils
-from pymodaq_gui.parameter import Parameter, ParameterTree
+from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.plotting.data_viewers.viewer0D import Viewer0D
-from pymodaq_gui.utils.widgets import QLED, LabelWithFont, SpinBox
-from pymodaq_gui.utils.dock import DockArea, Dock
+from pymodaq_gui.utils.widgets import MultistateLED, StatusPalette, Status, LabelWithFont, SpinBox
+from pymodaq_utils.enums import StrEnum
+from pymodaq_gui.utils.dock import Dock
 
 
 from pymodaq_data.data import DataToExport, DataCalculated, DataRaw
@@ -30,18 +34,34 @@ from pymodaq.utils.data import DataActuator, DataToActuators
 from pymodaq.extensions.pid.actuator_controller import PIDController
 from pymodaq.extensions.pid.utils import PIDModelGeneric
 
-from pymodaq.extensions.custom_ext import CustomExt
+from pymodaq.utils.custom_ext import CustomExt
 
 if TYPE_CHECKING:
-    from pymodaq.control_modules.daq_move import DAQ_Move
+    pass
 
 
 config = Config()
 logger = set_logger(get_module_name(__file__))
 
 
+class ModelLedState(StrEnum):
+    """States of the model initialization LED."""
+    UNINITIALIZED = 'uninitialized'
+    READY = 'ready'
+    ERROR = 'error'
+
+
+class PidLedState(StrEnum):
+    """States of the PID-loop status LED."""
+    IDLE = 'idle'
+    RUNNING = 'running'
+    ERROR = 'error'
+
+
 class DAQ_PID(CustomExt):
     """ """
+
+    h5_base_group_name = 'PID'
 
     command_pid = Signal(ThreadCommand)
     curr_points_signal = Signal(dict)
@@ -264,7 +284,7 @@ class DAQ_PID(CustomExt):
         if self.is_action_checked("ini_pid"):
             output_limits = self.get_output_limits()
             self.update_queues(refresh=True)
-            self.runner_thread = QThread()
+            self.runner_thread = QThread(self)
             pid_runner = PIDRunner(
                 self.model_class,
                 self.modules_manager,
@@ -297,13 +317,13 @@ class DAQ_PID(CustomExt):
             pid_runner.moveToThread(self.runner_thread)
 
             self.runner_thread.start()
-            self.get_action("pid_led").set_as_true()
+            self.get_action("pid_led").set_state(PidLedState.RUNNING)
             self.enable_controls_pid_run(True)
 
         else:
             if hasattr(self, "runner_thread"):
                 self.exit_runner_thread()
-            self.get_action("pid_led").set_as_false()
+            self.get_action("pid_led").set_state(PidLedState.IDLE)
             self.enable_controls_pid_run(False)
 
         self.initialized_state = True
@@ -451,14 +471,28 @@ class DAQ_PID(CustomExt):
         self.add_widget("model_label", QtWidgets.QLabel, "Init Model:")
         self.add_action("ini_model", "Init Model", "ini",
             tip="Initialize the selected model: algo/data conversion")
-        self.add_widget("model_led", QLED, toolbar=self.toolbar)
+        self.add_widget("model_led", MultistateLED(
+            states=[
+                (ModelLedState.UNINITIALIZED, StatusPalette.color(Status.OFF)),
+                (ModelLedState.READY,         StatusPalette.color(Status.IDLE)),
+                (ModelLedState.ERROR,         StatusPalette.color(Status.CRITICAL)),
+            ],
+            readonly=True,
+        ), toolbar=self.toolbar)
         self.add_action("create_setp_actuators", "Create SetPoint Actuators", "Add_Step",
             tip="Create a DAQ_Move Control Module for each SetPoint allowing to"
             "control them from the DashBoard, therefore within other extensions")
         self.add_widget("model_label", QtWidgets.QLabel, "Init PID Runner:")
         self.add_action("ini_pid", "Init the PID loop", "ini",
             tip="Init the PID thread", checkable=True)
-        self.add_widget("pid_led", QLED, toolbar=self.toolbar)
+        self.add_widget("pid_led", MultistateLED(
+            states=[
+                (PidLedState.IDLE,    StatusPalette.color(Status.OFF)),
+                (PidLedState.RUNNING, StatusPalette.color(Status.RUNNING)),
+                (PidLedState.ERROR,   StatusPalette.color(Status.CRITICAL)),
+            ],
+            readonly=True,
+        ), toolbar=self.toolbar)
         self.add_action( "run", "Run The PID loop", "run2",
             tip="run or stop the pid loop", checkable=True)
         self.add_action("pause", "Pause the PID loop", "pause",
@@ -513,8 +547,24 @@ class DAQ_PID(CustomExt):
     def create_setp_actuators(self):
         # Now that we have the module manager, load PID if it is checked in managers
         try:
+            modules: list[PluginInfo] = []
             for setp in self.model_class.setpoints_names:
-                self.dashboard.add_move_from_extension(setp, "PID", PIDController(self, setp))
+                id = self.dashboard.modules_manager.get_random_id()
+                modules.append(
+                    PluginInfo(
+                        id,
+                        setp,
+                        'PID',
+                        type=ModuleType.Actuator,
+                        is_master=False,
+                        controller=ControllerAndThread(
+                            name=setp,
+                            id=id,
+                            thread=QThreadProxy(thread=self.thread()),
+                            controller=PIDController(self, setp),
+                            is_master=False,)
+                      ))
+            self.dashboard.module_creator.add_move_from_extension(modules=modules)
             self.set_action_enabled("create_setp_actuators", False)
 
         except Exception as e:
@@ -604,7 +654,7 @@ class DAQ_PID(CustomExt):
             )
 
             self.enable_controls_pid(True)
-            self.get_action("model_led").set_as_true()
+            self.get_action("model_led").set_state(ModelLedState.READY)
             self.set_action_enabled("ini_model", False)
             self.set_action_enabled("create_setp_actuators", True)
 
@@ -711,16 +761,11 @@ class DAQ_PID(CustomExt):
         self.setpoints_sb[i].setValue(self.curr_points[i])
         self.update_runner_setpoints()
 
-    def quit_fun(self):
+    def _quit_fun(self) -> bool:
         """ """
-        try:
-
-
-            self.dashboard.remove_modules([setp for setp in self.model_class.setpoints_names])
-            super().quit_fun()
-
-        except Exception as e:
-            print(e)
+        if self.model_class is not None:
+            self.dashboard.remove_modules([setp for setp in self.model_class.setpoints_names if setp in self.dashboard.modules_manager.actuators_name])
+        return True
 
     def update_runner_setpoints(self):
         self.command_pid.emit(ThreadCommand("update_setpoints", self.setpoints))

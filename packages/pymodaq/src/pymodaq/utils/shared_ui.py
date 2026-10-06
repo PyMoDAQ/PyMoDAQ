@@ -12,7 +12,8 @@ from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq.utils.leco.utils import start_coordinator
 
-from pymodaq_gui.utils.shared_ui import SharedUI, MenuToolbarNames
+from pymodaq_gui.utils.shared_ui import SharedUI
+from pymodaq_gui.utils.enums import MenuToolbarNames
 
 logger = set_logger(get_module_name(__file__))
 

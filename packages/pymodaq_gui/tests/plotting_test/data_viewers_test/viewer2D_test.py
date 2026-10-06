@@ -458,6 +458,32 @@ class TestROI:
         assert np.any(vlineout.data[0] == approx(np.mean(data[0], 1)))
         assert np.any(intlineout.data[0] == approx(np.mean(data[0])))
 
+    def test_process_data_led(self, init_viewer2d):
+        """The Process data LED of a ROI activates/deactivates its processing"""
+        prog, qtbot = init_viewer2d
+        data = init_data()
+        prog.show_data(data)
+        index_roi, roi_meta, roi_type = create_one_roi(prog, qtbot, roitype='RectROI')
+        assert roi_meta.roi.compute
+
+        roi_meta.param.child('process_data').setValue(False)
+        assert not roi_meta.roi.compute
+        with qtbot.waitSignal(prog.data_to_export_signal, timeout=1000) as blocker:
+            prog.show_data(data)
+        assert 'Integrated' not in blocker.args[0].get_names()
+
+        roi_meta.param.child('process_data').setValue(True)
+        assert roi_meta.roi.compute
+        with qtbot.waitSignal(prog.data_to_export_signal, timeout=1000) as blocker:
+            prog.show_data(data)
+        assert 'Integrated' in blocker.args[0].get_names()
+
+    def test_roi_angle_from_param(self, init_viewer2d):
+        prog, qtbot = init_viewer2d
+        index_roi, roi_meta, roi_type = create_one_roi(prog, qtbot, roitype='RectROI')
+        roi_meta.param.child('angle').setValue(30.)
+        assert roi_meta.param.to_options().angle == approx(30.)
+
     def test_data_from_roi_spread(self, init_viewer2d):
         prog, qtbot = init_viewer2d
         data = init_data(uniform=False)
@@ -617,6 +643,20 @@ class TestRoiSelect:
         assert isinstance(blocker.args[0], RoiInfo)
         assert blocker.args[0].origin == Point(POS[-1::-1])
         assert blocker.args[0].size == Point(SIZE[-1::-1])
+
+
+def test_crosshair_and_roiselect_above_images(init_viewer2d):
+    """The crosshair lines and the ROIselect should be drawn above the image items"""
+    prog, qtbot = init_viewer2d
+    prog.show_data(init_data(Ndata=3))
+    prog.view.get_action('crosshair').trigger()
+    prog.view.get_action('ROIselect').trigger()
+
+    assert prog.view.ROIselect.parentItem() is prog.view.plotitem.vb.childGroup
+    z_images = max(image.zValue() for image in prog.view.data_displayer.get_images().values())
+    assert prog.view.crosshair.vLine.zValue() > z_images
+    assert prog.view.crosshair.hLine.zValue() > z_images
+    assert prog.view.ROIselect.zValue() > z_images
 
 
 class TestImageDisplayer:

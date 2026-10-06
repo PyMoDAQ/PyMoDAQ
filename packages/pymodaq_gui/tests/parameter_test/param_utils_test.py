@@ -54,12 +54,12 @@ params4 = [
     ]},
 ]
 
-P1 = Parameter(name='settings1', type='group', children=params1)
-P2 = Parameter(name='settings2', type='group', children=params2)
-P3 = Parameter(name='settings3', type='group', children=params3)
-P4 = Parameter(name='settings4', type='group', children=params4)
-P1_bool = Parameter(name='settings1', type='bool', children=params1)
-P1_noedit = Parameter(name='settings1', type='group', children=params1, editable=False)
+P1 = Parameter.create(name='settings1', type='group', children=params1)
+P2 = Parameter.create(name='settings2', type='group', children=params2)
+P3 = Parameter.create(name='settings3', type='group', children=params3)
+P4 = Parameter.create(name='settings4', type='group', children=params4)
+P1_bool = Parameter.create(name='settings1', type='bool', children=params1)
+P1_noedit = Parameter.create(name='settings1', type='group', children=params1, editable=False)
 
 def test_iter_children_params():
     settings = Parameter.create(name='settings', type='group', children=params)
@@ -254,3 +254,22 @@ def test_ParameterWithPath_serialize():
     assert putils.compareParameters(param_back.parameter, p1_with_path.parameter, with_self=False)
     assert type(p1_with_path.parameter) == type(param_back.parameter)
 
+
+
+@pytest.mark.parametrize('has_keep', [True, False])
+@pytest.mark.parametrize('keep, expected', [(None, {'value', 'limits'}), (set(), set()), ({'value'}, {'value'})])
+def test_tree_change_blocker(monkeypatch, has_keep, keep, expected):
+    if has_keep and not putils._TREE_CHANGE_BLOCKER_HAS_KEEP:
+        pytest.skip('installed pyqtgraph has no keep argument')
+    monkeypatch.setattr(putils, '_TREE_CHANGE_BLOCKER_HAS_KEEP', has_keep)
+    settings = Parameter.create(name='settings', type='group', children=[
+        {'name': 'a_list', 'type': 'list', 'limits': ['a', 'b']},
+        {'name': 'a_float', 'type': 'float', 'value': 0.}])
+    emitted = []
+    settings.sigTreeStateChanged.connect(lambda param, changes: emitted.extend(changes))
+
+    with putils.tree_change_blocker(settings, keep=keep):
+        settings.child('a_list').setLimits(['a', 'b', 'c'])
+        settings['a_float'] = 1.
+    assert {change[1] for change in emitted} == expected
+    assert settings['a_float'] == 1.

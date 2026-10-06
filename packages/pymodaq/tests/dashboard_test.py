@@ -66,3 +66,28 @@ class TestGeneral:
             assert not shared_ui.mainwindow.isVisible()
         finally:
             dashboard.quit_fun()
+
+
+def test_quit_while_loading_experiment(init_qt):
+    """Quitting during the (asynchronous) loading of an experiment should stop the loading and the hardware
+    threads of the modules already created"""
+    qtbot = init_qt
+    shared_ui, dashboard = create_load_dashboard()
+    qtbot.addWidget(shared_ui.mainwindow)
+
+    dashboard.experiment_manager.execute_entry()
+    loader = dashboard.experiment_manager.loader
+    modules = loader._modules[:]
+    assert not loader._finished  # still loading
+    threads = [module.controller_and_thread.thread for module in modules]
+
+    dashboard.quit_fun()
+
+    for thread in threads:
+        assert thread is None or not thread.isRunning()
+    for module in modules:
+        thread = module.controller_and_thread.thread
+        assert thread is None or not thread.isRunning()
+
+    qtbot.wait(500)  # pending signals should not resume the loading
+    assert len(loader._modules) == len(modules)

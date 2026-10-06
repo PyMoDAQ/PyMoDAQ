@@ -244,13 +244,11 @@ class Node(object):
     @property
     def path(self) -> str:
         """return node path
-        Parameters
-        ----------
-        node (str or node instance), see h5py and pytables documentation on nodes
 
         Returns
         -------
-        str : full path of the node
+        str
+            full path of the node
         """
         if self.backend == 'tables':
             return self._node._v_pathname
@@ -288,7 +286,8 @@ class GROUP(Node):
 
         Returns
         -------
-        dict: keys are children node names, values are the children nodes
+        dict
+            keys are children node names, values are the children nodes
 
         See Also
         --------
@@ -387,8 +386,8 @@ class EARRAY(CARRAY):
         The data to append could be:
 
         * a single element (without the enlargeable shape index that is always the first
-        index, that is of shape length n). In that case the first index of the enlargeable array
-        is increased by one.
+          index, that is of shape length n). In that case the first index of the enlargeable array
+          is increased by one.
         * an ensemble of elements (a ndarray) of shape length of (n+1).
 
         Parameters
@@ -575,6 +574,11 @@ class H5Backend:
         self._swmr_enabled = False
         self.set_backend(backend)
 
+    @property
+    def swmr_mode(self) -> bool:
+        return self._swmr_mode
+
+
     def set_backend(self, backend: str):
         """Switch the active backend, closing any open file first.
 
@@ -658,7 +662,7 @@ class H5Backend:
             return self._h5file
         else:
             if swmr_mode and self.backend == 'h5py':
-                if mode == 'w':
+                if mode in ('w', 'a'):
                     kwargs['libver'] = 'latest'
                 elif mode == 'r':
                     kwargs['swmr'] = True
@@ -804,22 +808,24 @@ class H5Backend:
 
     def get_set_group(self, where, name, title='', **kwargs):
         """Retrieve or create (if absent) a node group
+
         Get attributed to the class attribute ``current_group``
 
         Parameters
         ----------
-        where: str or node
-               path or parent node instance
+        where: str or Node
+            path or parent node instance
         name: str
-              group node name
+            group node name
         title: str
-               node title
-
-        Keyword Arguments:
+            node title
+        kwargs: dict
             any other metadata related to this node (for example: origin)
+
         Returns
         -------
-        group: group node
+        GROUP
+            the group node
         """
 
         if isinstance(where, Node):
@@ -858,12 +864,13 @@ class H5Backend:
     def is_node_in_group(self, where, name):
         """
         Check if a given node with name is in the group defined by where (comparison on lower case strings)
+
         Parameters
         ----------
-        where: (str or node)
-                path or parent node instance
-        name: (str)
-              group node name
+        where: str or Node
+            path or parent node instance
+        name: str
+            group node name
 
         Returns
         -------
@@ -940,13 +947,16 @@ class H5Backend:
 
     def get_node_name(self, node):
         """return node name
+
         Parameters
         ----------
-        node (str or node instance), see h5py and pytables documentation on nodes
+        node: str or Node
+            see h5py and pytables documentation on nodes
 
         Returns
         -------
-        str: name of the node
+        str
+            name of the node
         """
         if isinstance(node, Node):
             node = node.node
@@ -954,13 +964,16 @@ class H5Backend:
 
     def get_node_path(self, node):
         """return node path
+
         Parameters
         ----------
-        node (str or node instance), see h5py and pytables documentation on nodes
+        node: str or Node
+            see h5py and pytables documentation on nodes
 
         Returns
         -------
-        str : full path of the node
+        str
+            full path of the node
         """
         if isinstance(node, Node):
             node = node.node
@@ -983,12 +996,13 @@ class H5Backend:
 
         Parameters
         ----------
-        where (str or node instance)
+        where: str or Node
             see h5py and pytables documentation on nodes, and Node objects of this module
 
         Returns
         -------
-        dict: keys are children node names, values are the children nodes
+        dict
+            keys are children node names, values are the children nodes
 
         See Also
         --------
@@ -1159,14 +1173,18 @@ class H5Backend:
 
         Parameters
         ----------
-        where: (str) group location in the file where to create the array node
-        name: (str) name of the array
-        dtype: (dtype) numpy dtype style, for particular case of strings, use dtype='string'
-        title: (str) node title attribute (written in capitals)
+        where: str
+            group location in the file where to create the array node
+        name: str
+            name of the array
+        dtype: dtype
+            numpy dtype style, for particular case of strings, use dtype='string'
+        title: str
+            node title attribute (written in capitals)
 
         Returns
         -------
-        array
+        VLARRAY
 
         """
         if isinstance(where, Node):
@@ -1222,15 +1240,19 @@ class H5Backend:
         Add a node in the h5 file tree of the group type
         Parameters
         ----------
-        group_name: (str) a custom name for this group
+        group_name: str
+            a custom name for this group
         group_type: str or GroupType enum
             one of the possible values of GroupType, should be enforced by higher level modules not here
-        where: (str or node) parent node where to create the new group
-        metadata: (dict) extra metadata to be saved with this new group node
+        where: str or Node
+            parent node where to create the new group
+        metadata: dict
+            extra metadata to be saved with this new group node
 
         Returns
         -------
-        (node): newly created group node
+        GROUP
+            newly created group node
         """
         if metadata is None:
             metadata = {}

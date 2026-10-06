@@ -35,8 +35,22 @@ class TestGetSet:
     def test_get_set_overshoot_path(self):
         local_path = config_mod.get_set_local_dir()
         overshoot_path = config_mod_pymodaq.get_set_overshoot_path()
-        assert Path(overshoot_path) == Path(local_path).joinpath('overshoot_configs')
+        assert Path(overshoot_path) == Path(local_path).joinpath('overshooter_configs')
         assert Path(overshoot_path).is_dir()
+
+    def test_get_set_overshoot_path_same_as_manager(self):
+        from pymodaq.utils.managers.overshoot.utils import get_set_overshooter_path
+        assert get_set_overshooter_path('an_experiment') == \
+               config_mod_pymodaq.get_set_overshoot_path('an_experiment')
+        get_set_overshooter_path('an_experiment').rmdir()
+
+    def test_get_set_roi_manager_path(self):
+        from pymodaq.utils.managers.roi_manager.utils import get_set_roi_path
+        local_path = config_mod.get_set_local_dir(user=True)
+        roi_path = config_mod_pymodaq.get_set_roi_manager_path()
+        assert Path(roi_path) == Path(local_path).joinpath('rois')
+        assert Path(roi_path).is_dir()
+        assert get_set_roi_path() == roi_path
 
 
 def test_required_config_entries():
@@ -66,7 +80,6 @@ def test_required_config_entries():
     assert 'allow_settings_edition' in config('viewer')
 
     assert 'scan' in config
-    assert 'scan_in_thread' in config('scan')
     assert 'show_popups' in config('scan')
     assert 'default' in config('scan')
     assert 'Naverage' in config('scan')

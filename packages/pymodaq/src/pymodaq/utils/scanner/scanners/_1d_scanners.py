@@ -74,6 +74,15 @@ class Scan1DLinear(Scan1DBase):
     def __init__(self, actuators: List['DAQ_Move'] = None, settings=None, **_ignored):
         super().__init__(actuators=actuators, settings=settings)
 
+    def to_dict(self) -> dict[str, Any]:
+        return {'start': self.settings['start'],
+                'stop': self.settings['stop'],
+                'step': self.settings['step']}
+
+    def from_dict(self, scanner_dict: dict[str, Any]):
+        self.settings['start'] = scanner_dict['start']
+        self.settings['stop'] = scanner_dict['stop']
+        self.settings['step'] = scanner_dict['step']
 
     def set_scan(self):
         self.positions = mutils.linspace_step(self.settings['start'], self.settings['stop'],
@@ -143,12 +152,18 @@ class Scan1DSparse(Scan1DBase):
         settings.child('units_handling', 'display_units').hide()
         self.settings.child('parsed_string').setOpts(tip=self.__doc__)
 
+    def to_dict(self) -> dict[str, Any]:
+        return {'string': self.settings['parsed_string'],}
+
+    def from_dict(self, scanner_dict: dict[str, Any]):
+        self.settings['parsed_string'] = scanner_dict['string']
+
     def set_scan(self):
         try:
-            range_strings = re.findall("[^,\s]+", self.settings['parsed_string'])
+            range_strings = re.findall(r"[^,\s]+", self.settings['parsed_string'])
             series = np.asarray([])
             for range_string in range_strings:
-                number_strings = re.findall("[^:]+", range_string)  # Extract the numbers by splitting on :.
+                number_strings = re.findall(r"[^:]+", range_string)  # Extract the numbers by splitting on :.
                 this_range = np.asarray([])
                 if len(number_strings) == 3:  # 3 Numbers specify a range
                     start, step, stop = [float(number) for number in number_strings]

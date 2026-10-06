@@ -9,15 +9,15 @@ Created the 05/09/2022
 from typing import List, Union
 import sys
 
-from qtpy import QtWidgets, QtCore, QtGui
-from qtpy.QtWidgets import QVBoxLayout,  QWidget
+from qtpy import QtWidgets, QtCore
+from qtpy.QtWidgets import QVBoxLayout
 
+from pymodaq.control_modules.enums import ActionIconNames
 from pymodaq.utils.daq_utils import ThreadCommand
 from pymodaq.control_modules.ui_utils import ControlModuleUI
 
 from pymodaq_gui.utils import DockArea, Dock
 from pymodaq_utils.config import GlobalConfig as Config
-from pymodaq_utils.enums import StrEnum
 from pymodaq.control_modules.instruments import DET_TYPES
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerFactory, ViewerDispatcher
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
@@ -39,14 +39,6 @@ options = {
 add_menu_entries = add_category_layers(options)
 
 
-class ActionIconNames(StrEnum):
-    SNAP = 'looks_one'
-    GRAB = 'repeat'
-    GRAB_STOP = 'repeat_on'
-    INI = 'cable'
-    RESET = 'replay'
-
-
 class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     """DAQ_Viewer user interface.
 
@@ -57,12 +49,13 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     command_sig: Signal[Threadcommand]
         This signal is emitted whenever some actions done by the user has to be
         applied on the main module. Possible commands are:
-            * init
-            * grab
-            * snap
-            * detector_changed
-            * daq_type_changed
-            * save_current
+
+        * init
+        * grab
+        * snap
+        * detector_changed
+        * daq_type_changed
+        * save_current
 
     Methods
     -------
@@ -76,13 +69,13 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     pymodaq.utils.daq_utils.ThreadCommand
     """
 
-    def __init__(self, parent: QtWidgets.QWidget, title="DAQ_Viewer",
+    def __init__(self, app, parent: QtWidgets.QWidget, title="DAQ_Viewer",
                  rois_dock: Dock = None,
                  settings_dock: Dock = None,
                  area: DockArea = None,
                  **kwargs):
 
-        ControlModuleUI.__init__(self, parent,
+        ControlModuleUI.__init__(self, app, parent,
                                  title=title,
                                  settings_dock=settings_dock,)
         if area is not None:
@@ -142,10 +135,10 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._data_ready = status
         if status:
             icon = create_icon(ActionIconNames.SNAP,
-                               icon_color=self.get_theme().green,)
+                               icon_color=self.get_theme().green, )
         else:
             icon = create_icon(ActionIconNames.SNAP,
-                               icon_color=self.get_theme().red,)
+                               icon_color=self.get_theme().red, )
         self.get_action('snap').set_icon(icon)
 
     # -------------------------------------------------------------------------
@@ -261,11 +254,14 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     def send_init(self, checked: bool):
         self.get_action('selector').widget.setEnabled(not checked)
         if not checked and self.is_action_checked('background_subtract'):
-            self.get_action('background_subtract').trigger()
-        QtWidgets.QApplication.processEvents()
+            self.get_action('background_subtract').setChecked(False)
+
         self.command_sig.emit(ThreadCommand(UiToMainViewer.INIT,
                                             [checked,
                                              self.selector.selected_module]))
+
+    def quit_fun(self):
+        return self.app.quit_fun()
 
     def _enable_detchoices(self, enable=True):
         self.get_action('selector').widget.setEnabled(enable)
@@ -273,8 +269,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     def _detector_changed(self, sel_mod: SelectedModule):
         try:
             self.command_sig.emit(ThreadCommand(UiToMainViewer.DETECTOR_CHANGED, sel_mod))
-            if self.viewer_types != [sel_mod.daq_type.to_viewer_type()]:
-                self.update_viewers([sel_mod.daq_type.to_viewer_type()])
+            self.update_viewers([sel_mod.daq_type.to_viewer_type()])
         except ValueError as e:
             pass
 
@@ -291,6 +286,8 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     # -------------------------------------------------------------------------
     # Visibility / Lifecycle
     # -------------------------------------------------------------------------
+
+
 
     def show_graphs(self, show: bool = True):
         self.parent.setVisible(show)

@@ -1,6 +1,7 @@
 from qtpy import QtWidgets
 
 from pymodaq.utils.config import get_set_experiment_path
+from pymodaq.utils.gui_utils.loader_utils import create_extension
 from pymodaq_utils.config import GlobalConfig
 from pytest import fixture, mark
 from pymodaq.dashboard import create_load_dashboard, extensions
@@ -20,22 +21,26 @@ def init_qt(qtbot):
 def dashboard(init_qt):
     qtbot = init_qt
     shared_ui, dashboard = create_load_dashboard()
-    qtbot.addWidget(shared_ui.mainwindow)
-    shared_ui.show()
-
+    qtbot.addWidget(shared_ui.parent)
+    qtbot.addWidget(dashboard.tree)
     # dashboard.preset_manager.execute_entry()
-    yield dashboard
+    yield dashboard, qtbot
     dashboard.quit_fun()
 
 
 
 class TestExtensions:
-    @mark.parametrize('ext', extensions)
-    def test_load(self, dashboard, ext):
-        dashboard = dashboard
+    def test_load(self, dashboard):
+        dashboard, qtbot = dashboard
 
-        dashboard.load_extension(ext)
-        QtWidgets.QApplication.processEvents()
+        for ext_name in extensions:
+            win_ext, ext = create_extension(dashboard, extensions[ext_name].klass)
+            # qtbot.addWidget(ext.parent)
+            # qtbot.addWidget(ext.tree)
+
+            ext.quit_fun()
+            QtWidgets.QApplication.processEvents()
+
 
 
 

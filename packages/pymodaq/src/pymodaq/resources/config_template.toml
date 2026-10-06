@@ -1,7 +1,7 @@
-control_module_ini_polling = 60 # in seconds
-
 [control_modules]
 settings_as_popup = false
+settings_dock_layout = 'horizontal'  # 'horizontal' or 'vertical', also changeable from the Settings dock's right-click menu
+control_module_ini_polling = 60 # in seconds
 
 [actuator]
 ui = ['Simple', 'Relative', 'Binary'] #other eventual options will be added programmaticaly at startup
@@ -16,6 +16,7 @@ default_value_red = 0.0
 default_value_green = 1.0
 default_value_relative = 1.0
 controls_as_popup = false
+controls_dock_layout = 'vertical'  # 'horizontal' or 'vertical', also changeable from the Controls dock's right-click menu
 
 [actuator.allowed_units]
 V = 'V'
@@ -27,12 +28,11 @@ revolutions_per_minute = 'revolutions_per_minute'
 
 [viewer]
 daq_type = 'DAQ0D' #either "DAQ0D", "DAQ1D", "DAQ2D", "DAQND"
-viewer_in_thread = true
 timeout = 10000  # default duration in ms to wait for data to be acquirred
 allow_settings_edition = false  # during grab
+restore_rois = false  # apply the ROI Manager entry of an experiment (re-create its viewers' ROIs) when it is loaded
 
 [scan]
-scan_in_thread = true
 show_popups = true
 default = "Scan2D"
 Naverage = 1  # minimum is 1
@@ -40,6 +40,8 @@ average_on_top = false
 steps_limit = 1000  # the limit of the number of steps you can set in a given scan
 sort1D = true
 stop_on_timeout = true  # if False, a hardware timeout during a scan step will be logged but the scan will continue
+show_general_settings = false  # show the General settings dock (Time Flow, Scan options, Save...) at startup, hidden by default (can be toggled from the Actions menu)
+auto_show_live_plots = true  # automatically show the Live Plots dock when a scan starts, if at least one Plot0D/Plot1D is selected
 
 [scan.timeflow]
 wait_time = 0
@@ -55,3 +57,8 @@ wait_time_between = 0
 [launcher]
 max_history_size = 20
 keep_duplicates = false
+
+[ramping]
+duration_units = [ "s", "min",]
+ramp_setting = [ "duration", "velocity",]
+

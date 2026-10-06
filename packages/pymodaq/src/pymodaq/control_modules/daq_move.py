@@ -21,6 +21,7 @@ from qtpy import QtWidgets
 from easydict import EasyDict as edict
 
 from pymodaq.control_modules.daq_move_ui.utils import UiType
+from pymodaq.control_modules.units import get_unit_to_display
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import find_keys_from_val
 from pymodaq_utils import utils
@@ -117,15 +118,19 @@ class DAQ_Move(ParameterControlModule):
         self.logger.info(f"Initializing DAQ_Move: {title}")
 
         super().__init__(listener_class=MoveActorListener,
-                         action_list=("save", "update"), **kwargs)
+                         action_list=("save", "update"),
+                         title=title,
+                         **kwargs)
 
         self.parent = parent
         self.ui_identifier_default = ui_identifier
         if parent is not None:
 
-            self.ui = DAQMoveUI(parent, title,
-                                  controls_dock=kwargs.pop('controls_dock', None),
-                                  settings_dock=kwargs.pop('settings_dock', None))
+            self.ui = DAQMoveUI(self,
+                                parent,
+                                title,
+                                controls_dock=kwargs.pop('controls_dock', None),
+                                settings_dock=kwargs.pop('settings_dock', None))
         else:
             self.ui = None
 
@@ -135,7 +140,6 @@ class DAQ_Move(ParameterControlModule):
             self.ui.command_sig.connect(self.process_ui_cmds)
 
         self.splash_sc = get_splash_sc()
-        self._title = title
         if len(ACTUATOR_NAMES) > 0:  # will be 0 if no valid plugins are installed
             self.actuator = kwargs.get("actuator", ACTUATOR_NAMES[0])
 
@@ -163,9 +167,15 @@ class DAQ_Move(ParameterControlModule):
 
     @property
     def current_value(self) -> DataActuator:
-        if self._current_value.origin is None:
+        if self._current_value.origin is None or self._current_value.origin == '':
             self.current_value.origin = self.title
         return self._current_value
+
+    @property
+    def target_value(self) -> DataActuator:
+        if self._target_value.origin is None or self._target_value.origin == '':
+            self._target_value.origin = self.title
+        return self._target_value
 
     @property
     def epsilon(self) -> float:
@@ -189,9 +199,10 @@ class DAQ_Move(ParameterControlModule):
                 self.update_ui_from_actuator_selection(act_type)
             self._reload_plugin_settings()
         else:
-            raise ActuatorError(
+            logger.error(
                 f"{act_type} is an invalid actuator, should be within {ACTUATOR_NAMES}"
             )
+        self.instrument_changed.emit()
 
     def update_ui_from_actuator_selection(self, act_name: str):
         """ When the selected actuator change, the UI is updated to reflect the
@@ -247,7 +258,7 @@ class DAQ_Move(ParameterControlModule):
 
     def update_default_values(self):
         if self.ui is not None:
-            self.ui.set_unit_as_suffix(self.units)
+            self.ui.set_unit_as_suffix(self.get_unit_to_display(self.units))
         self.value_changed(self.settings.child('main_settings', 'default_value_green'))
         self.value_changed(self.settings.child('main_settings', 'default_value_red'))
         self.value_changed(self.settings.child('main_settings', 'default_value_relative'))
@@ -302,9 +313,10 @@ class DAQ_Move(ParameterControlModule):
             * move_rel
             * actuator_changed
             * rel_value
+            * quit
         """
         if cmd.command == UiToMainMove.INIT:
-            self.init_hardware(cmd.attribute[0])
+            self.do_init_hardware_signal.emit(cmd.attribute[0])  # usually connected to ini_hardware method, but could be bypassed (see Dashboard/ModulesManager)
         elif cmd.command == UiToMainMove.GET_VALUE:
             self.get_actuator_value()
         elif cmd.command == UiToMainMove.LOOP_GET_VALUE:
@@ -338,6 +350,8 @@ class DAQ_Move(ParameterControlModule):
             self.command_hardware.emit(
                 ThreadCommand(ControlToHardwareMove.RESET_VALUE),
             )
+        elif cmd.command == UiToMainMove.QUIT:
+            self.quit_fun()
 
     # -------------------------------------------------------------------------
     # Hardware lifecycle hooks
@@ -631,16 +645,7 @@ class DAQ_Move(ParameterControlModule):
         -------
         str: the unit to be displayed on the ui
         """
-        if ("°" in unit or "degree" in unit) and not "°C" in unit:
-            # special case as pint base unit for angles are radians
-            return "°"
-        elif "°C" in unit:
-            return "°C"
-        else:
-            for key in config("pymodaq", "actuator", "allowed_units"):
-                if key in unit:
-                    return config("pymodaq", "actuator", "allowed_units", key)
-            return str(Q_(1, unit).to_base_units().units)
+        return get_unit_to_display(unit)
 
     def _load_plugin_params(self):
         parent_module = utils.find_dict_in_list_from_key_val(
@@ -751,9 +756,13 @@ class DAQ_Move(ParameterControlModule):
                     self.ui.actuator_init = True
             else:
                 self._controller_and_thread.initialized = False
+                if self.ui is not None:
+                    self.ui.actuator_init = False
             if self._controller_and_thread.initialized:
                 self.get_actuator_value()
             self.init_signal.emit(self._controller_and_thread.initialized)
+            if self.ui is not None:
+                self.ui.set_init_color(self.get_color_from_status())
 
         elif (
             status.command == ThreadStatusMove.GET_ACTUATOR_VALUE
@@ -839,15 +848,17 @@ class DAQ_Move(ParameterControlModule):
 class ActuatorWorker(HardwareWorkerBase):
     """Worker class mediating between DAQ_Move and the actuator plugin instance.
 
-    ================== ========================
-    **Attributes**      **Type**
-    *status_sig*        instance of Signal (inherited)
-    *plugin*            actuator plugin instance
-    *plugin_name*       string (inherited property)
-    *controller_address* int or None
-    *axis_address*      string
-    *motion_stopped*    boolean
-    ================== ========================
+    Attributes
+    ----------
+    status_sig: Signal
+        inherited
+    plugin: DAQ_Move_base
+        actuator plugin instance
+    plugin_name: str
+        inherited property
+    controller_address: int or None
+    axis_address: str
+    motion_stopped: bool
     """
 
     _kind = 'actuator'
@@ -945,6 +956,7 @@ class ActuatorWorker(HardwareWorkerBase):
 
             return status
         except Exception as e:
+            status.initialized = False
             self.logger.exception(str(e))
             return status
 
@@ -1021,8 +1033,7 @@ class ActuatorWorker(HardwareWorkerBase):
         if super().queue_command(command):
             return
         try:
-            logger.debug(f"Threadcommand {command.command} sent to {self.title}")
-
+            logger.debug(f"Threadcommand {command.command}/{command.attribute} sent to {self.title}")
             if command.command == ControlToHardwareMove.INI_STAGE:
                 # Legacy alias → emit the canonical INI_HARDWARE status
                 status: edict = self.ini_hardware(*command.attribute)

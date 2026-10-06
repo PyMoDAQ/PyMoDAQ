@@ -59,35 +59,4 @@ def launcher(qtbot, copied_data, request):
 
     # Clean up
     launcher.quit_fun()
-    launcher.deleteLater()
 
-
-@pytest.fixture
-def state_manager(qtbot):
-    """Fixture to replicate the synchronization bug between experiment and configuration."""
-    qt_themes.set_theme(theme=config('gui', 'style', 'theme')[0],
-                        style=config('gui', 'style', 'style')[0])
-
-    try:
-        from pymodaq.utils.managers.state.state_manager import StateManager
-
-        state_manager = StateManager()
-
-        main_window = QtWidgets.QMainWindow()
-        main_window.setWindowTitle('Bug sync')
-        main_window.setCentralWidget(state_manager.add_toolbar('test'))
-
-        state_manager.experiment_manager.get_external_toolbar_menu(toolbar=state_manager.get_toolbar('test'))
-        state_manager.get_external_toolbar_menu(toolbar=state_manager.get_toolbar('test'))
-        state_manager.experiment_manager.enable_actions(True)
-        state_manager.enable_actions(True)
-
-        qtbot.addWidget(main_window)
-        main_window.show()
-
-        yield state_manager
-
-        main_window.close()
-        main_window.deleteLater()
-    except Exception as e:
-        pytest.skip(f"Configurator not available: {str(e)}")

@@ -1,10 +1,19 @@
 from copy import deepcopy
 
-from qtpy import QtWidgets, QtCore, QtGui
+from qtpy import QtWidgets, QtCore
 from pyqtgraph.parametertree.Parameter import ParameterItem
 from pyqtgraph.parametertree.parameterTypes.basetypes import WidgetParameterItem
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.qt_utils import mkQApp
+from pymodaq_gui.utils.styling import create_icon
+from qt_themes import get_theme
+
+
+def _blue_icon_color():
+    """Theme's blue if a theme is applied, else a sensible fallback (e.g. in tests
+    or when a widget is built before any qt_themes.set_theme() call)."""
+    theme = get_theme()
+    return getattr(theme, 'blue', None) or '#0078d4'
 
 
 class ItemSelect_pb(QtWidgets.QWidget):
@@ -20,15 +29,11 @@ class ItemSelect_pb(QtWidgets.QWidget):
         # Pushbutton Add
         self.add_pb = QtWidgets.QPushButton()
         self.add_pb.setText("")
-        icon3 = QtGui.QIcon()
-        icon3.addPixmap(QtGui.QPixmap("icons:Add2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.add_pb.setIcon(icon3)        
+        self.add_pb.setIcon(create_icon('add', icon_color=_blue_icon_color()))
         # Pushbutton Remove
         self.remove_pb = QtWidgets.QPushButton()
         self.remove_pb.setText("")
-        icon3 = QtGui.QIcon()
-        icon3.addPixmap(QtGui.QPixmap("icons:remove.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.remove_pb.setIcon(icon3)               
+        self.remove_pb.setIcon(create_icon('remove', icon_color=_blue_icon_color()))
         #### Layout ###
         self.ver_layout = QtWidgets.QVBoxLayout()    
         self.ver_layout.addWidget(self.add_pb)        
@@ -69,7 +74,7 @@ class ItemSelect(QtWidgets.QListWidget):
         allitems = [item.text() for item in self.all_items()]
         if self.hasCheckbox:   
             # Clean up list with non existing entries      
-            [self.selItems.remove(item) for item in self.selItems if item not in allitems]        
+            self.selItems[:] = [item for item in self.selItems if item in allitems]
             for item in self.all_items():
                 if item.checkState() != QtCore.Qt.CheckState(0):  # Item is selected
                     if item.text() not in self.selItems:  # if item not in list then add it
@@ -116,8 +121,7 @@ class ItemSelect(QtWidgets.QListWidget):
         """
         # Remove values in selected if they do not exist in all
         values = deepcopy(values)
-        [values['selected'].remove(value) for value in values['selected'] if value
-         not in values['all_items']]
+        values['selected'] = [value for value in values['selected'] if value in values['all_items']]
         
         allitems_text = []
         # Check existing items and remove unused ones

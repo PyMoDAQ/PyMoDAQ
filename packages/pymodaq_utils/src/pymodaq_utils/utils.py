@@ -31,7 +31,7 @@ else:
 
 
 logger = logger_module.set_logger(logger_module.get_module_name(__file__))
-
+ser_factory = SerializableFactory()
 config = Config()
 
 
@@ -623,12 +623,27 @@ def format_dir_path(path: Path) -> str:
         return f'{path}{dir_trailing_symbol if path.is_dir() else ""}'
 
 
+def read_binary_and_deserialize(fname: Path) -> list[SerializableBase]:
+    if not fname.exists():
+        return []
+    with open(fname, 'rb') as file:
+        lines = file.readlines()
+    all_lines = b''
+    for line in lines:
+        all_lines += line
+    data = []
+    while len(all_lines) > 0:
+        entry, all_lines = ser_factory.get_apply_deserializer(all_lines, only_object=False)
+        data.append(entry)
+    return data
+
+
 if __name__ == '__main__':
 
     #plugins = get_plugins()  # pragma: no cover
     #extensions = get_extension()
     #models = get_models()
-    #count = count_lines('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git\\pymodaq\src')
+    #count = count_lines(r'C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git\\pymodaq\src')
 
 
     # import license

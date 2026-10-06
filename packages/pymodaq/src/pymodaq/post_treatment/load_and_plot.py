@@ -182,26 +182,36 @@ class LoaderPlotter:
         if len(data) > 0:
             data0D_arrays = []
             data0D_arrays_averaged = []
+            errors_arrays = []
+            errors_arrays_averaged = []
+
             labels = []
             labels_averaged = []
+
             dwa = None
             for dwa in data:
-                if 'averaged' in dwa.name and separate_average:
+                if 'averaged' in dwa.name.lower() and separate_average:
                     data0D_arrays_averaged.extend(dwa.data)
                     labels_averaged.extend([f'{dwa.get_full_name()}/{label}' for label in dwa.labels])
+                    if dwa.errors is not None:
+                        errors_arrays_averaged.extend(dwa.errors)
                     self._data.remove(dwa)
 
 
                 else:
                     data0D_arrays.extend(dwa.data)
                     labels.extend([f'{dwa.get_full_name()}/{label}' for label in dwa.labels])
+                    if dwa.errors is not None:
+                        errors_arrays.extend(dwa.errors)
                     self._data.remove(dwa)
             if dwa is not None:
                 data0D = DataFromPlugins(self.grouped_data0D_fullname.split('/')[1],
-                                         data=data0D_arrays, labels=labels,
+                                         data=data0D_arrays,
+                                         labels=labels,
                                          distribution=dwa.distribution,
                                          dim='DataND',
                                          origin=self.grouped_data0D_fullname.split('/')[0],
+                                         errors=errors_arrays if len(errors_arrays) > 0 else None,
                                          axes=dwa.axes, nav_indexes=dwa.nav_indexes,
                                          )
                 self._data.append(data0D)
@@ -212,6 +222,7 @@ class LoaderPlotter:
                         distribution=dwa.distribution,
                         dim='DataND',
                         origin=self.grouped_data0D_fullname.split('/')[0],
+                        errors=errors_arrays_averaged if len(errors_arrays_averaged) > 0 else None,
                         axes=dwa.axes, nav_indexes=dwa.nav_indexes,
                     )
                     self._data.append(data0D_averaged)

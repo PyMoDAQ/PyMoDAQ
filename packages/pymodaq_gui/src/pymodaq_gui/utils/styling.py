@@ -2,12 +2,15 @@ from pathlib import Path
 from typing import Union
 import dataclasses
 
+from qt_themes import get_theme
+
 import pyqtgraph as pg
 import qt_themes
 from pyqtgraph import mkColor
 from qtpy import QtCore, QtGui, QtWidgets
 
 from pymodaq_gui.resources.material_icons import MaterialIcon
+from pymodaq_gui.utils.widgets.painter_utils import draw_shape
 from pymodaq_utils.config import GlobalConfig as Config
 
 config = Config()
@@ -86,38 +89,8 @@ def make_shape_icon(
         painter.setBrush(brush if filled else QtCore.Qt.BrushStyle.NoBrush)
         painter.setPen(pen if not filled else QtCore.Qt.PenStyle.NoPen)
 
-        if shape == "circle":
-            painter.drawEllipse(1, 1, size - 2, size - 2)
-        elif shape == "triangle":
-            # Draw an equilateral triangle pointing upwards
-            half_size = size / 2
-            triangle_height = (size * (3 ** 0.5)) / 2
-            offset_y = (size - triangle_height) / 2
-            points = [
-                QtCore.QPointF(half_size, offset_y),
-                QtCore.QPointF(size - 1, size - offset_y - 1),
-                QtCore.QPointF(1, size - offset_y - 1),
-            ]
-            polygon = QtGui.QPolygonF(points)
-            painter.drawPolygon(polygon)
-        elif shape == "square":
-            painter.drawRect(1, 1, size - 2, size - 2)
-        elif shape == "rectangle":
-            painter.drawRect(1, 1, width - 2, height - 2)
-        elif shape == "diamond":
-            # Draw a diamond (rotated square)
-            half_width = width / 2
-            half_height = height / 2
-            points = [
-                QtCore.QPointF(half_width, 1),
-                QtCore.QPointF(width - 1, half_height),
-                QtCore.QPointF(half_width, height - 1),
-                QtCore.QPointF(1, half_height),
-            ]
-            polygon = QtGui.QPolygonF(points)
-            painter.drawPolygon(polygon)
-        else:
-            raise ValueError(f"Unsupported shape: {shape}")
+        rect = QtCore.QRectF(1, 1, width - 2, height - 2)
+        draw_shape(painter, shape, rect)
 
         painter.end()
     return QtGui.QIcon(pixmap)
@@ -351,3 +324,98 @@ class Font:
 
     def get_font(self) -> QtGui.QFont:
         return create_font(self.font_name, self.font_size, self.isbold, self.isitalic)
+
+
+def text_color(level: int):
+    colors = ('text', 'subtext0', 'subtext1')
+    level = level % 3
+    return colors[level]
+
+
+def alpha_color(level: int):
+    return 0.5 + 0.5 * (1 - level / 5)
+
+
+def color_to_rgba(color: QtGui.QColor, alpha: float = None):
+    """ Return a rgba string to use for color argument in stylesheets"""
+    if alpha is None:
+        alpha = color.alpha()
+    return f'rgba({color.red()}, {color.green()}, {color.blue()}, {alpha})'
+
+
+def button_style(level: int):
+
+    return f"""
+    QPushButton {{
+        background-color: {color_to_rgba(color_from_depth(get_theme().mantle, level))};
+        color: {color_to_rgba(get_theme().text)};
+        border: 1px solid {color_to_rgba(get_theme().surface1)};
+        border-radius: 6px;
+        padding: 6px 24px 6px 12px; /* Plus d'espace à droite pour l'indicateur de menu */
+        font-weight: bold;
+    }}
+    
+    QPushButton:hover {{
+        background-color: {color_to_rgba(get_theme().primary)};
+        border: 1px solid {color_to_rgba(get_theme().surface2)};
+    }}
+    
+    QPushButton:pressed {{
+        background-color: {color_to_rgba(get_theme().primary)};
+    }}
+    
+    QPushButton::menu-indicator {{
+        subcontrol-origin: padding;
+        subcontrol-position: center right;
+        right: 8px;
+        width: 10px;
+        height: 10px;
+    }}
+    """
+
+
+def menu_style(level: int):
+    return f"""
+    QMenu {{
+        background-color: {color_to_rgba(get_theme().mantle)};
+        color: {color_to_rgba(get_theme().text)};
+        border: 1px solid {color_to_rgba(get_theme().surface0)};
+        padding: 4px 0px;
+    }}
+
+    QMenu::item {{
+        background-color: transparent;
+        padding: 6px 28px 6px 24px;
+        margin: 2px 4px;
+        border-radius: 4px;
+    }}
+
+    QMenu::item:selected {{
+        background-color: {color_to_rgba(get_theme().primary)};
+        color: {color_to_rgba(get_theme().base)};
+    }}
+
+    QMenu::separator {{
+        height: 1px;
+        background-color: {color_to_rgba(get_theme().surface0)};
+        margin: 4px 10px;
+    }}
+
+    QMenu::indicator {{
+        width: 14px;
+        height: 14px;
+        left: 6px;
+    }}
+    """
+
+
+def color_from_depth(color: QtGui.QColor, depth: int) -> QtGui.QColor:
+    # Generate a distinct tint step per level
+    # Dark themes: Stepwise lightening | Light themes: Stepwise darkening
+    if get_theme().is_dark_theme():
+        # Dark theme adjustment (e.g., Nord, Monokai)
+        level_color = color.lighter(100 + (depth * 15))
+    else:
+        # Light theme adjustment (e.g., Catppuccin Latte)
+        level_color = color.darker(100 + (depth * 10))
+    return level_color

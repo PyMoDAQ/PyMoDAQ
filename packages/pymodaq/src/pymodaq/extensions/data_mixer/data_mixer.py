@@ -1,18 +1,19 @@
-import sys
-
 from qtpy import QtWidgets, QtCore
-import numpy as np
 from pathlib import Path
 
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
+from pymodaq.control_modules.enums import DAQTypesEnum
+from pymodaq.control_modules.utils import ControllerAndThread, QThreadProxy
+from pymodaq.utils.managers.modules import ModuleType
+from pymodaq.utils.managers.modules.loader import PluginInfo
 from pymodaq_gui import utils as gutils
-from pymodaq_utils.config import ConfigError, GlobalConfig as Config
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import find_dict_in_list_from_key_val
-from pymodaq_data.data import DataToExport, DataWithAxes
+from pymodaq_data.data import DataToExport
 
-from pymodaq.extensions.custom_ext import CustomExt
+from pymodaq.utils.custom_ext import CustomExt
 
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerDispatcher
 from pymodaq_gui.utils.widgets.qled import QLED
@@ -20,7 +21,11 @@ from pymodaq_gui.parameter import utils as putils
 
 
 from pymodaq.extensions.data_mixer.model import get_models, DataMixerModel
-from pymodaq.extensions.data_mixer.utils import DataMixerConfig, find_key_in_nested_dict
+from pymodaq.extensions.data_mixer.utils import DataMixerConfig
+
+if TYPE_CHECKING:
+    from pymodaq.control_modules.daq_viewer import DAQ_Viewer
+
 
 logger = set_logger(get_module_name(__file__))
 
@@ -33,6 +38,7 @@ CLASS_NAME = 'DataMixer'  # this should be the name of your class defined below
 
 class DataMixer(CustomExt):
     settings_name = 'DataMixerSettings'
+    h5_base_group_name = 'DataMixer'
     models = get_models()
     params = [
         {'title': 'Models', 'name': 'models', 'type': 'group', 'expanded': True, 'visible': True,
@@ -74,8 +80,10 @@ class DataMixer(CustomExt):
         splitter.addWidget(self.modules_manager.settings_tree)
         self.modules_manager.tree.header().setVisible(False)
         self.modules_manager.settings.child('actuators').hide()
-        self.modules_manager.settings.child('probe_data').hide()
-        self.modules_manager.settings.child('test_actuator').hide()
+        self.modules_manager.settings.child('probe_detectors').hide()
+        self.modules_manager.settings.child('probe_actuators').hide()
+        self.modules_manager.settings.child('probe_detectors_results').hide()
+        self.modules_manager.settings.child('probe_actuators_results').hide()
 
         splitter.addWidget(self.settings_tree)
 
@@ -147,16 +155,32 @@ class DataMixer(CustomExt):
         self.modules_manager.grab_data(check_do_override=False)
 
     def create_computed_detectors(self):
-        try:
-            self.dashboard.add_det_from_extension('DataMixer', 'DAQ0D', 'DataMixer', self)
-            datamixer_mod = self.dashboard.modules_manager.get_mod_from_name('DataMixer', 'det')
-            datamixer_mod.settings.child(datamixer_mod._hw_settings_name, 'overridden_detectors').setOpts(
-                limits=self.modules_manager.selected_detectors_name)
-            self.set_action_enabled('create_computed_detectors', False)
-            #self.dashboard.override_det_from_extension(self.modules_manager.selected_detectors_name)
-        except Exception as e:
-            logger.exception(str(e))
-            pass
+        id = self.dashboard.modules_manager.get_random_id()
+        plugin = PluginInfo(
+            id=id,
+            name=f'DataMixer',
+            class_name='DataMixer',
+            type=ModuleType.Detector,
+            daq_type=DAQTypesEnum.DAQ0D,
+            controller=ControllerAndThread(name='DataMixer',
+                                           thread=QThreadProxy(thread=self.thread(),
+                                                               ),
+                                           controller=self,
+                                           is_master=False,
+                                           id=id)
+        )
+
+
+        self.dashboard.module_creator.add_det_from_extension(
+            modules=[plugin],
+            callback=self._on_detector_added)
+
+    def _on_detector_added(self, modules: list['DAQ_Viewer']):
+        self.dashboard.module_creator.forget_callback(self._on_detector_added)
+        datamixer_mod = self.dashboard.modules_manager.get_mod_from_name('DataMixer', 'det')
+        datamixer_mod.settings.child(datamixer_mod._hw_settings_name, 'overridden_detectors').setOpts(
+            limits=self.modules_manager.selected_detectors_name)
+        self.set_action_enabled('create_computed_detectors', False)
 
     def update_connect_detectors(self):
         try:
@@ -221,9 +245,10 @@ class DataMixer(CustomExt):
             if self.model_class is not None:
                 self.model_class.update_settings(param)
 
-    def quit_fun(self):
+    def _quit_fun(self) -> bool:
         self.dashboard.remove_modules(['DataMixer'])
-        super().quit_fun()
+        return True
+
 
 def main():
     import sys

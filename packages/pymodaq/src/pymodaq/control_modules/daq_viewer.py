@@ -16,12 +16,11 @@ from typing import List, Tuple, Union, Optional
 import time
 
 from easydict import EasyDict as edict
-import numpy as np
 from qtpy import QtWidgets
 from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal
 
 
-from pymodaq_data.data import DataToExport, Axis, DataDistribution, Averaging
+from pymodaq_data.data import DataToExport, Averaging
 from pymodaq.utils.data import DataFromPlugins
 
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -37,7 +36,7 @@ from pymodaq.utils.h5modules import module_saving
 from pymodaq_data.h5modules.backends import Node, SaveType
 from pymodaq_utils.utils import ThreadCommand, find_dict_in_list_from_key_val
 
-from pymodaq_gui.parameter import ioxml, Parameter
+from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.parameter import utils as putils
 from pymodaq.control_modules.viewer_utility_classes import params as daq_viewer_params
 from pymodaq_utils import utils
@@ -47,12 +46,13 @@ from pymodaq_gui.utils import DockArea, Dock
 
 from pymodaq.utils.gui_utils import get_splash_sc
 from pymodaq.control_modules.daq_viewer_ui.ui_base import DAQ_Viewer_UI
-from pymodaq.control_modules.instruments import (DET_TYPES, DAQTypesEnum,
-                                           DetectorError, get_viewer_plugins)
+from pymodaq.control_modules.instruments import (DET_TYPES, DetectorError, get_viewer_plugins)
+from pymodaq.control_modules.enums import DAQTypesEnum
 from pymodaq.control_modules.thread_commands import (ThreadStatus, ThreadStatusViewer, ControlToHardware,
                                                      ControlToHardwareViewer, UiToMainViewer)
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerBase
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
+from pymodaq_gui.plotting.items.roi import RoiInfo
 from pymodaq_utils.enums import enum_checker
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base
 
@@ -81,9 +81,6 @@ class DAQ_Viewer(ParameterControlModule):
         used by connected objects.
     custom_sig: Signal[ThreadCommand]
         use this to propagate info/data coming from the hardware plugin to another object
-    overshoot_signal: Signal[bool]
-        This signal is emitted when some 0D data from the plugin is higher than the overshoot threshold set in the
-        settings
 
     See Also
     --------
@@ -91,9 +88,9 @@ class DAQ_Viewer(ParameterControlModule):
 
     Notes
     -----
-    A particular signal from the 2D DataViewer is directly connected to the plugin: ROI_select_signal. The position and
-    size of the corresponding ROI is then directly transferred to a plugin function named `ROISelect` that you have to
-    create if one want to receive infos from the ROI
+    The ROIselect and the crosshair of the data viewers are forwarded to the plugin: each time the user moves them, the
+    plugin methods `roi_select(roi_info, ind_viewer)` and `crosshair(crosshair_info, ind_viewer)` are called (they do
+    nothing by default and can be overridden in the plugin).
     """
     settings_name = 'daq_viewer_settings'
     _hw_kind = 'detector'
@@ -102,7 +99,6 @@ class DAQ_Viewer(ParameterControlModule):
 
     grab_done_signal = Signal(DataToExport)
 
-    overshoot_signal = Signal(bool)
     data_saved = Signal()
     grab_status = Signal(bool)
 
@@ -126,20 +122,23 @@ class DAQ_Viewer(ParameterControlModule):
         self.logger = set_logger(f'{logger.name}.{title}')
         self.logger.info(f'Initializing DAQ_Viewer: {title}')
 
-        super().__init__(listener_class=ViewerActorListener, **kwargs)
+        super().__init__(listener_class=ViewerActorListener, title=title, **kwargs)
 
         self.rois_dock: Dock = rois_dock
-        self._detector = SelectedModule(daq_type=DAQTypesEnum[daq_type])
+        daq_type = enum_checker(DAQTypesEnum, daq_type)
+        self._detector = SelectedModule(daq_type=daq_type)
 
         self._viewer_types: List[ViewersEnum] = []
         self._viewers: List[ViewerBase] = []
+        self._viewer_connections: List[Tuple[Signal, callable]] = []  # (signal, slot) to disconnect on viewers change
 
         self.override_grab_from_extension = False  # boolean allowing an extension to tell to init a grab or not
         # (see DataMixer for reasons and use case in ModulesManager and dashboard method add_det_from_extension)
 
         self.parent = parent
         if parent is not None:
-            self.ui = DAQ_Viewer_UI(parent, title,
+            self.ui = DAQ_Viewer_UI(self,
+                                    parent, title,
                                     area = area,
                                     rois_dock=self.rois_dock,
                                     settings_dock=kwargs.pop('settings_dock', None),)
@@ -155,17 +154,15 @@ class DAQ_Viewer(ParameterControlModule):
 
         self.splash_sc = get_splash_sc()
 
-        self._title = title
 
         self._module_and_data_saver: Union[None,
                                           module_saving.DetectorSaver,
-                                          module_saving.DetectorTimeSaver,
-                                          module_saving.DetectorExtendedSaver] = None
+                                          module_saving.DetectorTimeSaver] = None
         self._h5saver_continuous: Optional[H5Saver] = None
         self._ind_continuous_grab = 0
 
-        self.settings.child('main_settings', 'DAQ_type').setValue(self._detector.module_name)
-        self.settings.child('main_settings', 'detector_type').setValue(self._detector.daq_type)
+        self.settings.child('main_settings', 'DAQ_type').setValue(self._detector.daq_type.name)
+        self.settings.child('main_settings', 'detector_type').setValue(self._detector.module_name)
 
         self._grabing: bool = False
         self._do_bkg: bool = False
@@ -189,7 +186,6 @@ class DAQ_Viewer(ParameterControlModule):
         self.detector = self._detector
 
         self.grab_done_signal.connect(self._save_export_data)
-        self.update_plugin_config()
 
     def __repr__(self):
         return f'{self.__class__.__name__}: {self.title} {self.detector}'
@@ -229,6 +225,20 @@ class DAQ_Viewer(ParameterControlModule):
     def do_bkg(self, doit: bool):
         self._do_bkg = doit
 
+    def _connect_viewer_signal(self, signal: Signal, slot: callable):
+        signal.connect(slot)
+        self._viewer_connections.append((signal, slot))
+
+    def _send_roi_select(self, roi_info: RoiInfo, ind_viewer: int):
+        """Forward the ROIselect info of a viewer to the plugin roi_select method"""
+        self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.ROI_SELECT,
+                                                 dict(roi_info=roi_info, ind_viewer=ind_viewer)))
+
+    def _send_crosshair(self, posx: float, posy: float, ind_viewer: int):
+        """Forward the crosshair position of a viewer to the plugin crosshair method"""
+        self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.CROSSHAIR,
+                                                 dict(crosshair_info=(posx, posy), ind_viewer=ind_viewer)))
+
     @property
     def viewers(self) -> List[ViewerBase]:
         """:obj:`list`: Get/Set the Viewers (instances of real implementation of ViewerBase class) from the UI"""
@@ -240,24 +250,28 @@ class DAQ_Viewer(ParameterControlModule):
         for viewer in self._viewers:
             try:
                 viewer.data_to_export_signal.disconnect()
-            except:
+            except TypeError as e:
                 pass
+        for signal, slot in self._viewer_connections:
+            try:
+                signal.disconnect(slot)
+            except (TypeError, RuntimeError):
+                pass
+        self._viewer_connections = []
+
         for ind_viewer, viewer in enumerate(viewers):
             viewer.data_to_export_signal.connect(self._get_data_from_viewer)
 
-            viewer.roi_select_signal.connect(
-                lambda roi_info: self.command_hardware.emit(
-                    ThreadCommand(ControlToHardwareViewer.ROI_SELECT,
-                                  dict(roi_info=roi_info,
-                                       ind_viewer=ind_viewer))))
-            viewer.crosshair_dragged.connect(
-                lambda crosshair_info: self.command_hardware.emit(
-                    ThreadCommand(ControlToHardwareViewer.CROSSHAIR,
-                                  dict(crosshair_info=crosshair_info,
-                                       ind_viewer=ind_viewer))))
-
+            # ind_viewer bound as default argument (evaluated now, not when the slot is called)
+            self._connect_viewer_signal(
+                viewer.roi_select_signal,
+                lambda roi_info, ind_viewer=ind_viewer: self._send_roi_select(roi_info, ind_viewer))
+            self._connect_viewer_signal(
+                viewer.crosshair_dragged,
+                lambda posx, posy, ind_viewer=ind_viewer: self._send_crosshair(posx, posy, ind_viewer))
 
         self._viewers = viewers
+        self.instrument_changed.emit()
 
     @property
     def Naverage(self):
@@ -278,10 +292,11 @@ class DAQ_Viewer(ParameterControlModule):
         if isinstance(det, str):
             det = SelectedModule(self._detector.daq_type, det)
         self._detector = det
-        self.update_plugin_config()
+        self.settings.child('main_settings', 'DAQ_type').setValue(det.daq_type.name)
+        self.settings.child('main_settings', 'detector_type').setValue(det.module_name)
+        self._reload_plugin_settings()
         if self.ui is not None:
             self.ui.detector = det
-        self._reload_plugin_settings()
 
     @property
     def daq_type(self) -> DAQTypesEnum:
@@ -327,10 +342,11 @@ class DAQ_Viewer(ParameterControlModule):
                 * do_bkg
                 * take_bkg
                 * viewers_changed
+                * quit
         """
 
         if cmd.command == UiToMainViewer.INIT:
-            self.init_hardware(cmd.attribute[0])
+            self.do_init_hardware_signal.emit(cmd.attribute[0])  # usually connected to ini_hardware method, but could be bypassed (see Dashboard)
         elif cmd.command == UiToMainViewer.GRAB:
             self.grab_data(cmd.attribute, snap_state=False)
         elif cmd.command == UiToMainViewer.SNAP:
@@ -349,11 +365,12 @@ class DAQ_Viewer(ParameterControlModule):
         elif cmd.command == UiToMainViewer.VIEWERS_CHANGED:
             self._viewer_types: List[ViewersEnum] = cmd.attribute['viewer_types']
             self.viewers = cmd.attribute['viewers']
+        elif cmd.command == UiToMainViewer.QUIT:
+            self.quit_fun()
 
     def detector_changed_from_ui(self, detector: SelectedModule):
         self._detector = detector
         self.settings.child('main_settings', 'DAQ_type').setValue(detector.daq_type.name)
-        self.update_plugin_config()
         self._reload_plugin_settings()
 
     # -------------------------------------------------------------------------
@@ -362,11 +379,6 @@ class DAQ_Viewer(ParameterControlModule):
 
     def _create_hardware(self):
         return DetectorWorker(self._title, self.settings, self.detector)
-
-    def _setup_hardware_thread(self, hardware):
-        if self.config('pymodaq', 'viewer', 'viewer_in_thread'):
-            hardware.moveToThread(self.controller_thread.thread)
-            self.controller_thread.thread.start()
 
     def _connect_hardware_signals(self, hardware):
         hardware.data_detector_sig[DataToExport].connect(self.show_data)
@@ -502,8 +514,9 @@ class DAQ_Viewer(ParameterControlModule):
     def save_current(self):
         """Save current data into a h5file"""
         self._do_save_data = True
-        self._save_file_pathname = select_file(start_path=self._save_file_pathname, save=True,
-                                                                                  ext='h5')  # see daq_utils
+        start_path = self._save_file_pathname or config('data', 'data_saving', 'h5file', 'save_path')
+        self._save_file_pathname = select_file(start_path=start_path, save=True, ext='h5')
+
         self._save_export_data(self._data_to_save_export)
 
 
@@ -564,31 +577,6 @@ class DAQ_Viewer(ParameterControlModule):
 
         self.settings.child('saver_settings', 'N_saved').setValue(self.settings['saver_settings', 'N_saved'] + 1)
 
-    def insert_data(self, indexes: Tuple[int], where: Union[Node, str] = None,
-                    distribution=DataDistribution.uniform,
-                    extra_data: DataToExport = None):
-        """Insert DataToExport to a DetectorExtendedSaver at specified indexes
-
-        Method to be used when saving into an already initialized array within a h5file (DAQ_Scan for instance)
-
-        Parameters
-        ----------
-        indexes: tuple(int)
-            The indexes within the extended array where to place these data
-        where: Node or str
-        distribution: DataDistribution enum
-        extra_data: DataToExport
-            If not None add its content to the saved data
-
-        See Also
-        --------
-        DAQ_Scan, DetectorExtendedSaver
-        """
-        if extra_data is not None:
-            self._data_to_save_export.append(extra_data.data)
-        self._add_data_to_saver(self._data_to_save_export, init_step=np.all(np.array(indexes) == 0), where=where,
-                                indexes=indexes, distribution=distribution)
-
     def _add_data_to_saver(self, dte: DataToExport, init_step=False, where=None, **kwargs):
         """Adds DataToExport data to the current node using the declared module_and_data_saver
 
@@ -605,7 +593,7 @@ class DAQ_Viewer(ParameterControlModule):
 
         See Also
         --------
-        DetectorSaver, DetectorTimeSaver, DetectorExtendedSaver
+        DetectorSaver, DetectorTimeSaver
 
         """
         if dte is not None:
@@ -713,13 +701,16 @@ class DAQ_Viewer(ParameterControlModule):
         Slot receiving data from plugins emitted with the `data_grabed_signal`
         Process the data as specified in the settings, display them into the dedicated data viewers depending on the
         settings:
-            * create a container (DataToExport `_data_to_save_export`) with info from this DAQ_Viewer (title), a timestamp...
-            * call `_process_data`
-            * do background subtraction if any
-            * check refresh time (if set in the settings) to send or not data to data viewers
-            * either send to the data viewers (if refresh time is ok and/or show data option in settings is set)
-            * either
-                * send grab_done_signal (to the slot _save_export_data ) to save the data
+
+        * create a container (DataToExport ``_data_to_save_export``) with info from this DAQ_Viewer (title), a
+          timestamp...
+        * call ``_process_data``
+        * do background subtraction if any
+        * check refresh time (if set in the settings) to send or not data to data viewers
+        * either send to the data viewers (if refresh time is ok and/or show data option in settings is set)
+        * either
+
+          * send grab_done_signal (to the slot _save_export_data ) to save the data
 
         Parameters
         ----------
@@ -787,19 +778,12 @@ class DAQ_Viewer(ParameterControlModule):
     def _init_show_data(self, dte: DataToExport):
         """Processing before showing data
 
-        * process the data to check if they overshoot
         * check the data dimensionality to update the dedicated viewers
 
         Parameters
         ----------
         dte: DataToExport
-
-        See Also
-        --------
-        _process_overshoot
         """
-        self._process_overshoot(dte)
-
         self._viewer_types = [ViewersEnum(dwa.dim.name) for dwa in dte if
                               ('do_plot' not in dwa.extra_attributes) or
                               ('do_plot' in dwa.extra_attributes and dwa.do_plot)]
@@ -859,10 +843,6 @@ class DAQ_Viewer(ParameterControlModule):
             'name', detector.module_name)['module']
         return detector_module
 
-    def update_plugin_config(self):
-        parent_module = self.get_detector_module(self.detector)
-        mod = import_module(parent_module.__package__.split('.')[0])
-
     def _load_plugin_params(self):
         det_params, _class = get_viewer_plugins(self.detector.daq_type.name,
                                                 self.detector.module_name)
@@ -873,7 +853,6 @@ class DAQ_Viewer(ParameterControlModule):
         path = self.settings.childPath(param)
         if param.name() == 'DAQ_type':
             self.settings.child('saver_settings', 'do_save').setValue(False)
-            self.settings.child('main_settings', 'axes').show(param.value() == 'DAQ2D')
 
         elif param.name() == 'show_averaging':
             self.settings.child('main_settings', 'live_averaging').setValue(False)
@@ -891,20 +870,6 @@ class DAQ_Viewer(ParameterControlModule):
             else:
                 self.settings.child('main_settings', 'N_live_averaging').hide()
 
-        elif param.name() in putils.iter_children(self.settings.child('main_settings', 'axes'), []):
-            if self.daq_type.name == "DAQ2D":
-                if param.name() == 'use_calib':
-                    if param.value() != 'None':
-                        params = ioxml.XML_file_to_parameter(
-                            os.path.join(local_path, 'camera_calibrations', param.value() + '.xml'))
-                        param_obj = Parameter.create(name='calib', type='group', children=params)
-                        self.settings.child('main_settings', 'axes').restoreState(
-                            param_obj.child('axes').saveState(), addChildren=False, removeChildren=False)
-                        self.settings.child('main_settings', 'axes').show()
-                else:
-                    for viewer in self.viewers:
-                        viewer.x_axis, viewer.y_axis = self.get_scaling_options()
-
         elif param.name() == 'wait_time':
             self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.UPDATE_WAIT_TIME,
                                                      [param.value()]))
@@ -916,33 +881,6 @@ class DAQ_Viewer(ParameterControlModule):
                     self._h5saver_continuous.settings.child(*path[1:]).setValue(param.value())
             except KeyError:
                 pass
-
-    def get_scaling_options(self):
-        """Create axes scaling options depending on the ('main_settings', 'axes') settings
-
-        Returns
-        -------
-        Tuple[Axis]
-        """
-        scaled_xaxis = Axis(label=self.settings['main_settings', 'axes', 'xaxis', 'xlabel'],
-                            units=self.settings['main_settings', 'axes', 'xaxis', 'xunits'],
-                            offset=self.settings['main_settings', 'axes', 'xaxis', 'xoffset'],
-                            scaling=self.settings['main_settings', 'axes', 'xaxis', 'xscaling'])
-        scaled_yaxis = Axis(label=self.settings['main_settings', 'axes', 'yaxis', 'ylabel'],
-                            units=self.settings['main_settings', 'axes', 'yaxis', 'yunits'],
-                            offset=self.settings['main_settings', 'axes', 'yaxis', 'yoffset'],
-                            scaling=self.settings['main_settings', 'axes', 'yaxis', 'yscaling'])
-        return scaled_xaxis, scaled_yaxis
-
-    def _process_overshoot(self, dte: DataToExport):
-        """Compare data value (0D) to the given overshoot setting
-        """
-        if self.settings.child('main_settings', 'overshoot', 'stop_overshoot').value():
-            for dwa in dte:
-                for data_array in dwa.data:
-                    if np.any(data_array >= self.settings['main_settings', 'overshoot',
-                                                          'overshoot_value']):
-                        self.overshoot_signal.emit(True)
 
     # -------------------------------------------------------------------------
     # Thread status handler
@@ -978,6 +916,9 @@ class DAQ_Viewer(ParameterControlModule):
 
             self._controller_and_thread.initialized = status.attribute["initialized"]
             self.init_signal.emit(self._controller_and_thread.initialized)
+
+            if self.ui is not None:
+                self.ui.set_init_color(self.get_color_from_status())
 
         elif status.command == ThreadStatusViewer.GRAB:
             self.grab_status.emit(True)
@@ -1318,6 +1259,7 @@ def main(init_qt=True, init_det=False):
 
     shared_ui, daq_viewer = create_load_daq_viewer()
     shared_ui.show()
+    daq_viewer.shared_ui = shared_ui
 
     if init_det:
         daq_viewer.init_hardware_ui(init_det)

@@ -67,7 +67,7 @@ class UniformImageItem(PymodaqImage):
             imageitem.setImage(imagedata.T)
 
         or the interpretation of the data can be changed locally through the ``axisOrder`` keyword or by changing the
-        `imageAxisOrder` :ref:`global configuration option <apiref_config>`
+        `imageAxisOrder` :ref:`global configuration option <pyqtgraph:apiref_config>`
 
         All keywords supported by :func:`~pyqtgraph.ImageItem.setOpts` are also allowed here.
 
@@ -116,9 +116,8 @@ class UniformImageItem(PymodaqImage):
             self.image = image
             self._imageHasNans = None
             self._imageNanLocations = None
-            if self.image.shape[0] > 2**15-1 or self.image.shape[1] > 2**15-1:
-                if 'autoDownsample' not in kargs:
-                    kargs['autoDownsample'] = True
+            if (self.image.shape[0] > 2**15-1 or self.image.shape[1] > 2**15-1) and 'autoDownsample' not in kargs:
+                kargs['autoDownsample'] = True
             if shapeChanged:
                 self.prepareGeometryChange()
                 self.informViewBoundsChanged()
@@ -155,10 +154,16 @@ class UniformImageItem(PymodaqImage):
 
         if gotNewData:
             self.sigImageChanged.emit()
-        if self._defferedLevels is not None:
-            levels = self._defferedLevels
+        # Patching for people not using the last version of pyqtgraph
+        if hasattr(self, "_defferedLevels") and self._defferedLevels is not None:
+            self._deferredLevels = self._defferedLevels
             self._defferedLevels = None
-            self.setLevels((levels))
+            print("Warning: you are using an old version of pyqtgraph, please update to the last version")
+
+        if self._deferredLevels is not None:
+            levels = self._deferredLevels
+            self._deferredLevels = None
+            self.setLevels(levels)
 
 class SpreadImageItem(PymodaqImage):
     """
@@ -208,34 +213,35 @@ class SpreadImageItem(PymodaqImage):
         Update the image displayed by this item. For more information on how the image
         is processed before displaying, see :func:`makeARGB <pyqtgraph.makeARGB>`
 
-        =================  =========================================================================
-        **Arguments:**
-        image             (numpy array) 2D array of: points coordinates (dim 0 is number of points)
-                          (dim 1 is x, y coordinates and point value) image.shape = (N, 3)
-
-                           Specifies the image data. May be 2D (width, height) or
-                           3D (width, height, RGBa). The array dtype must be integer or floating
-                           point of any bit depth. For 3D arrays, the third dimension must
-                           be of length 3 (RGB) or 4 (RGBA). See *notes* below.
-
-        autoLevels         (bool) If True, this forces the image to automatically select
-                           levels based on the maximum and minimum values in the data.
-                           By default, this argument is true unless the levels argument is
-                           given.
-        lut                (numpy array) The color lookup table to use when displaying the image.
-                           See :func:`setLookupTable <pyqtgraph.ImageItem.setLookupTable>`.
-        levels             (min, max) The minimum and maximum values to use when rescaling the image
-                           data. By default, this will be set to the minimum and maximum values
-                           in the image. If the image array has dtype uint8, no rescaling is necessary.
+        Parameters
+        ----------
+        image: numpy array
+            2D array of: points coordinates (dim 0 is number of points)
+            (dim 1 is x, y coordinates and point value) image.shape = (N, 3)
+        autoLevels: bool
+            If True, this forces the image to automatically select
+            levels based on the maximum and minimum values in the data.
+            By default, this argument is true unless the levels argument is given.
+        lut: numpy array
+            The color lookup table to use when displaying the image.
+            See :func:`setLookupTable <pyqtgraph.ImageItem.setLookupTable>`.
+        levels: (min, max)
+            The minimum and maximum values to use when rescaling the image
+            data. By default, this will be set to the minimum and maximum values
+            in the image. If the image array has dtype uint8, no rescaling is necessary.
         levels_sym: bool, optional
-            if true and autolevels is True, will symetrize the levels from -abs(max(min_data, max_data) to abs(max(min_data, max_data)
-        opacity            (float 0.0-1.0)
-        compositionMode    See :func:`setCompositionMode <pyqtgraph.ImageItem.setCompositionMode>`
-        border             Sets the pen used when drawing the image border. Default is None.
-        autoDownsample     (bool) If True, the image is automatically downsampled to match the
-                           screen resolution. This improves performance for large images and
-                           reduces aliasing.
-        =================  =========================================================================
+            if true and autolevels is True, will symetrize the levels from
+            -abs(max(min_data, max_data) to abs(max(min_data, max_data)
+        opacity: float
+            between 0.0 and 1.0
+        compositionMode:
+            See :func:`setCompositionMode <pyqtgraph.ImageItem.setCompositionMode>`
+        border:
+            Sets the pen used when drawing the image border. Default is None.
+        autoDownsample: bool
+            If True, the image is automatically downsampled to match the
+            screen resolution. This improves performance for large images and
+            reduces aliasing.
 
 
         **Notes:**
@@ -247,7 +253,7 @@ class SpreadImageItem(PymodaqImage):
             imageitem.setImage(imagedata.T)
 
         This requirement can be changed by calling ``image.setOpts(axisOrder='row-major')`` or
-        by changing the ``imageAxisOrder`` :ref:`global configuration option <apiref_config>`.
+        by changing the ``imageAxisOrder`` :ref:`global configuration option <pyqtgraph:apiref_config>`.
 
 
         """
@@ -415,6 +421,7 @@ class SpreadImageItem(PymodaqImage):
         return tr
 
     def setLookupTable(self, lut, update=True):
+        """ Set the lookup table (see pyqtgraph's ImageItem.setLookupTable) and update the mesh pen color """
         super().setLookupTable(lut,update=update)
         if self.lut is not None and self.image is not None:
             lu = np.mean(self.lut(self.image), axis=0).astype(np.uint8)

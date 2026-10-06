@@ -21,10 +21,27 @@ class PushButtonIcon(QtWidgets.QPushButton):
             self.setIcon(icon)
         self.setCheckable(checkable)
         self.setToolTip(tip)
-        
+
     def contextMenuEvent(self, event):
         if self._menu is not None:
             self._menu.exec(event.globalPos())
+
+
+class ToolButtonIcon(QtWidgets.QToolButton):
+    """ Icon-only button with the same hover/pressed highlight as a QAction in a toolbar.
+
+    Unlike a flat QPushButton, QToolButton with autoRaise reacts to hover the same
+    way toolbar action buttons do, since that's what Qt uses under the hood for those.
+    """
+    def __init__(self, icon_name: str, checkable=False, tip="", icon_color=None,
+                 icon_size: QtCore.QSize = None):
+        super().__init__()
+        self.setIcon(create_icon(icon_name, icon_color))
+        self.setCheckable(checkable)
+        self.setToolTip(tip)
+        self.setAutoRaise(True)
+        if icon_size is not None:
+            self.setIconSize(icon_size)
 
 
 class EditPushInfo:

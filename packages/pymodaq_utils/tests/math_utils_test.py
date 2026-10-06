@@ -227,3 +227,62 @@ class TestMath:
 
         assert (np.all(mutils.wrap(phase_array, (-np.pi, np.pi)) >= -np.pi) and
                 np.all(mutils.wrap(phase_array, (-np.pi, np.pi)) <= np.pi))
+
+
+
+class TestGetSiPrefix:
+
+    def test_zero(self):
+        """Ensure that zero returns 0.0 with an empty prefix string."""
+        val, prefix = mutils.get_si_prefix(0)
+        assert val == 0.0
+        assert prefix == ""
+
+    @pytest.mark.parametrize("input_val, expected_val, expected_prefix", [
+        # Numbers requiring no prefix change
+        (5, 5.0, ""),
+        (123.45, 123.45, ""),
+        (999.999, 999.999, ""),
+
+        # Standard large numbers (Kilo, Mega, Giga)
+        (1000, 1.0, "k"),
+        (4700, 4.7, "k"),
+        (2e6, 2.0, "M"),
+        (1500000000, 1.5, "G"),
+    ])
+    def test_positive_numbers(self, input_val, expected_val, expected_prefix):
+        """Verify handling of positive values and exact boundary transitions."""
+        val, prefix = mutils.get_si_prefix(input_val)
+        assert val == pytest.approx(expected_val)
+        assert prefix == expected_prefix
+
+    @pytest.mark.parametrize("input_val, expected_val, expected_prefix", [
+        (0.0015, 1.5, "m"),  # Milli (m)
+        (0.0000047, 4.7, "µ"),  # Micro (µ)
+        (1e-9, 1.0, "n"),  # Nano (n)
+    ])
+    def test_small_decimals(self, input_val, expected_val, expected_prefix):
+        """Verify handling of small decimal floating-point values."""
+        val, prefix = mutils.get_si_prefix(input_val)
+        assert val == pytest.approx(expected_val)
+        assert prefix == expected_prefix
+
+    @pytest.mark.parametrize("input_val, expected_val, expected_prefix", [
+        (-3300, -3.3, "k"),
+        (-0.005, -5.0, "m"),
+    ])
+    def test_negative_numbers(self, input_val, expected_val, expected_prefix):
+        """Ensure negative signs are preserved while selecting the correct prefix."""
+        val, prefix = mutils.get_si_prefix(input_val)
+        assert val == pytest.approx(expected_val)
+        assert prefix == expected_prefix
+
+    @pytest.mark.parametrize("input_val, expected_val, expected_prefix", [
+        (1e27, 1000.0, "Y"),  # Exceeding maximum prefix (Yotta)
+        (1e-26, 0.01, "y"),  # Dropping below minimum prefix (yocto)
+    ])
+    def test_out_of_bounds_saturation(self, input_val, expected_val, expected_prefix):
+        """Verify the function safely saturates at the limits of the prefix scale."""
+        val, prefix = mutils.get_si_prefix(input_val)
+        assert val == pytest.approx(expected_val)
+        assert prefix == expected_prefix

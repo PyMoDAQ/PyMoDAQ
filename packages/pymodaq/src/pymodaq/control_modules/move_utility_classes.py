@@ -1,6 +1,7 @@
 import numbers
 
 from pymodaq.control_modules.daq_move_ui.utils import UiType
+from pymodaq.control_modules.enums import MoveType
 
 HW_KIND = 'actuator'
 HW_SETTINGS_KEY = f'{HW_KIND}_settings'
@@ -33,8 +34,6 @@ from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 from pymodaq.control_modules.utils import (create_controller_param, create_remote_connection_params,
                                            ControllerStatus)
 from pymodaq.control_modules.plugin_base import PluginBase
-from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
-
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import ActuatorWorker
@@ -102,28 +101,25 @@ def comon_parameters(epsilon=config('pymodaq', 'actuator', 'epsilon_default'),
                 {'title': 'Offset factor:', 'name': 'offset', 'type': 'float', 'value': 0., 'default': 0.}]}]
 
 
-MOVE_COMMANDS = ['abs', 'rel', 'home']
-
-
 class MoveCommand:
     """Utility class to contain a given move type and value
 
     Attributes
     ----------
-    move_type: str
+    move_type: pymodaq.control_modules.enums.MoveType | str
         either:
 
-        * 'abs': performs an absolute action
-        * 'rel': performs a relative action
-        * 'home': find the actuator's home
+        * 'abs' or MoveType.ABS: performs an absolute action
+        * 'rel' or MoveType.REL: performs a relative action
+        * 'home or MoveType.HOME': find the actuator's home
     value: float
         the value the move should reach
 
     """
 
-    def __init__(self, move_type, value=0):
-        if move_type not in MOVE_COMMANDS:
-            raise ValueError(f'The allowed move types fro an actuator are {MOVE_COMMANDS}')
+    def __init__(self, move_type: MoveType | str, value=0):
+        if move_type not in MoveType.names():
+            raise ValueError(f'The allowed move types for an actuator are {MoveType.names()}')
         self.move_type = move_type
         self.value = value
 
@@ -136,29 +132,22 @@ def comon_parameters_fun(is_multiaxes=False, axes_names=None,
 
     Parameters
     ----------
-    is_multiaxes: bool
+    is_multiaxes: bool (deprecated, useless)
         If True, display the particular settings to define which axis the controller is driving
     axes_names: deprecated, use axis_names
-    axis_names: list of str or dictionnary of string as key and integer as value
+    axis_names: (deprecated, useless as the get_class_axis method is used now))
+        list of str or dictionnary of string as key and integer as value
         The string identifier of every axis the controller can drive
-    master: bool
+    master: bool (deprecated useless)
         If True consider this plugin has to init the controller, otherwise use an already initialized instance
     epsilon: float
         deprecated (< 5.0.0) no more used here
 
     """
-    if axes_names is not None and len(axis_names) == 0:
-        if len(axes_names) == 0:
-            axes_names = ['']
-        axis_names = axes_names
+    axis_names = DAQ_Move_base.get_class_axis_names(axis_names, axes_names)
 
-    is_multiaxes = len(axis_names) > 1 or is_multiaxes
     if isinstance(axis_names, list):
-        if len(axis_names) > 0:
-            axis_name = axis_names[0]
-        else:
-            axis_names = ['']
-            axis_name = ''
+        axis_name = axis_names[0]
     elif isinstance(axis_names, dict):
         axis_name = axis_names[list(axis_names.keys())[0]]
     else:
@@ -276,6 +265,31 @@ class DAQ_Move_base(PluginBase):
 
 
     data_shape = (1,)  # expected shape of the underlying actuator's value (in general a float so shape = (1, ))
+
+    @classmethod
+    def get_class_axis_names(cls, axis_names: list[str] = None,
+                             deprecated_names: list[str] = None) -> list[str]:
+        """ Convenience method to access the declared axis in a given plugin
+
+        Handles some old declaration style and eventual attribute as None or empty string
+        """
+        if axis_names is None:
+            axis_names = cls._axis_names
+        if deprecated_names is None:
+            deprecated_names = cls.stage_names
+
+        _axis_names = None
+        if axis_names is not None and len(deprecated_names) != 0:
+            #check for old and deprecated plugins
+            _axis_names = deprecated_names
+            deprecation_msg("using 'stage_names' class attribute in plugins is deprecated, please use"
+                            "'_axis_names' instead" )
+        if axis_names is not None and len(axis_names) != 0:
+            # this _axis_names attribute has priority hence eventual overwriting of stage_names
+            _axis_names = axis_names
+        else:
+            _axis_names = [''] if (_axis_names is None or _axis_names == []) else _axis_names
+        return _axis_names
 
     def __init__(self, parent: Optional['ActuatorWorker'] = None,
                  params_state: Optional[dict] = None,
@@ -401,8 +415,8 @@ class DAQ_Move_base(PluginBase):
 
         The property controller_units is deprecated please use the axis_unit property
         """
-        deprecation_msg('The property controller_units is deprecated please use the'
-                        'axis_unit property.')
+        deprecation_msg(f'The property controller_units is deprecated please use the'
+                        f'axis_unit property.')
         return self.axis_unit
 
     @controller_units.setter
@@ -638,7 +652,7 @@ class DAQ_Move_base(PluginBase):
         else:
             raise NotImplementedError
 
-    def move_home(self, value: Union[float, DataActuator]):
+    def move_home(self, *args, **kwargs):
         if hasattr(self, 'move_Home'):
             deprecation_msg('move_Home method in plugins is deprecated, use move_home', 3)
             self.move_Home()  # type: ignore
@@ -773,7 +787,12 @@ class DAQ_Move_base(PluginBase):
             if self.move_is_done:
                 self.emit_status(ThreadCommand(ThreadStatus.UPDATE_STATUS, 'Move has been stopped'))
                 logger.info('Move has been stopped')
-            self.current_value = self.get_actuator_value()
+            try:
+                self.current_value = self.get_actuator_value()
+            except Exception as e:
+                logger.error(str(e))
+                self.poll_timer.stop()
+
             self.emit_value(self._current_value)
             logger.debug(f'Current value: {self._current_value}')
 
@@ -852,7 +871,7 @@ class DAQ_Move_base(PluginBase):
         pass
 
     @abstractmethod
-    def stop_motion(self, value: DataActuator) -> None:
+    def stop_motion(self, *args, **kwargs) -> None:
         """Stop the actuator and emit move_done signal."""
         pass
 

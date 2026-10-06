@@ -4,6 +4,10 @@ Created the 21/11/2022
 
 @author: Sebastien Weber
 """
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
 from time import time
 from typing import Union, List, Tuple, Iterable
 from pathlib import Path
@@ -18,13 +22,28 @@ from .saving import DataType, H5SaverLowLevel
 from .backends import GROUP, CARRAY, Node, EARRAY, NodeError, GroupType  # noqa: F401
 from pymodaq_utils.utils import capitalize
 from pymodaq_data.h5modules.saving import SaveType
-
+from .. import DataToExport, DataDistribution
 
 SPECIAL_GROUP_NAMES = dict(nav_axes='NavAxes')
 
 
 class AxisError(Exception):
     pass
+
+
+@dataclass
+class DataBundle:
+    """Convenience class to hold data to be saved or plotted"""
+    dte: DataToExport
+    node: str = None
+    settings: str = ''
+    indexes: list[int] = None  # indexes within an eventual Extended array (see DAQ_Scan)
+    axis_values: list[float | np.ndarray] = None  # axis values within an eventual Enlargeable array (see Optimizers)
+    distribution: DataDistribution = field(
+        default_factory=lambda: DataDistribution.uniform
+    )  # type of data to be saved
+    save_index: int = 0  # an index to know what step in the saving process we're in (see DAQ_Scan)
+
 
 
 class DataManagement(metaclass=ABCMeta):
@@ -297,12 +316,17 @@ class DataSaverLoader(DataManagement):
     data_type = DataType['data']
 
     def __init__(self, h5saver: Union[H5SaverLowLevel, Path],
-                 new_file: bool = False, metadata: dict = None, save_type=SaveType.custom):
+                 new_file: bool = False,
+                 metadata: dict = None,
+                 save_type=SaveType.custom,
+                 swmr_mode=False):
         self.data_type = enum_checker(DataType, self.data_type)
 
         if isinstance(h5saver, (Path, str)):
             h5saver = H5SaverLowLevel.from_file(h5saver, save_type,
-                                                new_file=new_file, metadata=metadata)
+                                                new_file=new_file,
+                                                metadata=metadata,
+                                                swmr_mode=swmr_mode)
 
         self._h5saver = h5saver
         self._axis_saver = AxisSaverLoader(self._h5saver)
@@ -708,7 +732,7 @@ class DataExtendedSaver(DataSaverLoader):
     Parameters
     ----------
     h5saver: H5SaverLowLevel
-    extended_shape: Tuple[int]
+    extended_shape: Iterable[int]
         the extra shape compared to the data the h5array will have
 
     Attributes
@@ -718,7 +742,9 @@ class DataExtendedSaver(DataSaverLoader):
     """
     data_type = DataType['data']
 
-    def __init__(self, h5saver: H5SaverLowLevel, extended_shape: Tuple[int], fill_value=None):
+    def __init__(self, h5saver: H5SaverLowLevel,
+                 extended_shape: Iterable[int],
+                 fill_value=None):
         super().__init__(h5saver)
         self.extended_shape = extended_shape
         self.fill_value = fill_value
@@ -784,7 +810,9 @@ class DataExtendedSaver(DataSaverLoader):
                     # because there will be len(self.extended_shape) extra navigation axes
                     self._axis_saver.add_axis(where, axis)
 
-    def add_data(self, where: Union[Node, str], data: DataWithAxes, indexes: List[int],
+    def add_data(self, where: Union[Node, str],
+                 data: DataWithAxes,
+                 indexes: Iterable[int],
                  distribution=DataDistribution['uniform']):
         """Adds given DataWithAxes at a location within the initialized h5 array
 
@@ -835,6 +863,14 @@ class DataToExportSaver:
         self._data_saver = DataSaverLoader(self._h5saver)
         self._bkg_saver = BkgSaver(self._h5saver)
 
+    @property
+    def h5saver(self) -> H5SaverLowLevel:
+        return self._h5saver
+
+    @h5saver.setter
+    def h5saver(self, h5saver: H5SaverLowLevel):
+        self._h5saver = h5saver
+
     def __getattr__(self, item):
         """ Allows to call attributes of the underlying H5Saver object"""
 
@@ -867,6 +903,9 @@ class DataToExportSaver:
         """All DataWithAxes included in the DataToExport will be saved into a channel group indexed
         and formatted as below"""
         return f'CH{ind:02d}'
+
+    def add_data_bundle(self, data: DataBundle):
+        self.add_data(data.node, data.dte, data.settings)
 
     def add_data(self, where: Union[Node, str], data: DataToExport, settings_as_xml='', **kwargs):
         """
@@ -959,6 +998,9 @@ class DataToExportEnlargeableSaver(DataToExportSaver):
         self._data_saver = DataEnlargeableSaver(self._h5saver)
         self._nav_axis_saver = AxisSaverLoader(self._h5saver)
 
+    def add_data_bundle(self, data: DataBundle):
+        self.add_data(data.node, data.dte, axis_values=data.axis_values, settings_as_xml=data.settings)
+
     def add_data(self, where: Union[Node, str], data: DataToExport,
                  axis_values: List[Union[float, np.ndarray]] = None,
                  axis_value: Union[float, np.ndarray] = None,
@@ -1022,6 +1064,9 @@ class DataToExportTimedSaver(DataToExportEnlargeableSaver):
     def add_data(self, where: Union[Node, str], data: DataToExport, settings_as_xml='', **kwargs):
         super().add_data(where, data, axis_values=[data.timestamp], settings_as_xml=settings_as_xml, **kwargs)
 
+    def add_data_bundle(self, data: DataBundle):
+        self.add_data(data.node, data.dte, settings_as_xml=data.settings)
+
 
 class DataToExportExtendedSaver(DataToExportSaver):
     """Object to save DataToExport at given indexes within arrays including extended shape
@@ -1035,7 +1080,10 @@ class DataToExportExtendedSaver(DataToExportSaver):
         the extra shape compared to the data the h5array will have
     """
 
-    def __init__(self, h5saver: H5SaverLowLevel, extended_shape: Tuple[int], fill_value=None):
+    def __init__(self,
+                 h5saver: H5SaverLowLevel,
+                 extended_shape: Iterable[int],
+                 fill_value=None):
         super().__init__(h5saver)
         self._data_saver = DataExtendedSaver(h5saver, extended_shape, fill_value=fill_value)
         self._nav_axis_saver = AxisSaverLoader(h5saver)
@@ -1054,7 +1102,12 @@ class DataToExportExtendedSaver(DataToExportSaver):
             for axis in axes:
                 self._nav_axis_saver.add_axis(nav_group, axis)
 
-    def add_data(self, where: Union[Node, str], data: DataToExport, indexes: Iterable[int],
+    def add_data_bundle(self, data: DataBundle):
+        self.add_data(data.node, data.dte, data.indexes, data.distribution, data.settings)
+
+    def add_data(self, where: Union[Node, str],
+                 data: DataToExport,
+                 indexes: Iterable[int],
                  distribution=DataDistribution.uniform,
                  settings_as_xml='', **kwargs):
 
@@ -1095,7 +1148,7 @@ class DataToExportExtendedSaver(DataToExportSaver):
 
 
 class DataLoader:
-    """Specialized Object to load DataWithAxes object from a h5file
+    """Specialized Object to load DataWithAxes / DataToExport objects from a h5file
 
     On the contrary to DataSaverLoader, does include navigation axes stored elsewhere in the h5file
     (for instance if saved from the DAQ_Scan)
@@ -1105,12 +1158,15 @@ class DataLoader:
     h5saver: H5SaverLowLevel or Path
     """
 
-    def __init__(self, h5saver: Union[H5SaverLowLevel, Path]):
+    def __init__(self, h5saver: Union[H5SaverLowLevel, Path],
+                 swmr_mode = False):
         self._axis_loader: AxisSaverLoader = None
         self._data_loader: DataSaverLoader = None
 
         if isinstance(h5saver, (Path, str)):
-            h5saver = H5SaverLowLevel.from_file(h5saver)
+            h5saver = H5SaverLowLevel.from_file(h5saver,
+                                                swmr_mode=swmr_mode,
+                                                mode='r')
 
         self.h5saver = h5saver
 
@@ -1129,8 +1185,8 @@ class DataLoader:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close_file()
-    @property
 
+    @property
     def raw_group(self) -> Node:
         """ Get the base RawGroup where raw data should be saved
 
@@ -1161,8 +1217,8 @@ class DataLoader:
 
         Returns
         -------
-        GROUP: returns the group named SPECIAL_GROUP_NAMES['nav_axes'] holding all NavAxis for
-        those data
+        GROUP
+            the group named ``SPECIAL_GROUP_NAMES['nav_axes']`` holding all NavAxis for those data
 
         See Also
         --------
@@ -1200,17 +1256,25 @@ class DataLoader:
             if nav_group is not None:
                 nav_axes = self._axis_loader.get_axes(nav_group)
                 axes = data.axes[:]
+                # in swmr mode, if at the time where the axis is read, a writer added stuff
+                # then the axis and the data may not be consistent. Below is an attempt to correct this
+                for ind_nav, nav_axe in enumerate(nav_axes):
+                    if nav_axe.size > data.shape[data.nav_indexes[nav_axe.index]]:
+                        nav_axe.data = nav_axe.get_data()[:data.shape[data.nav_indexes[nav_axe.index]]]
                 axes.extend(nav_axes)
                 data.axes = axes
                 data.get_dim_from_data_axes()
         data.create_missing_axes()
         return data
 
-    def load_all(self, where: GROUP, data: DataToExport = None, with_bkg=False) -> DataToExport:
+    def load_all(self, where: GROUP | str, data: DataToExport = None, with_bkg=False) -> DataToExport:
         if data is None:
             data = DataToExport('Loaded data')
         where = self._h5saver.get_node(where)
-        children_dict = where.children()
+        try:
+            children_dict = where.children()
+        except AttributeError:
+            children_dict = {where.name: where}
         data_list = []
         for child in children_dict:
             if isinstance(children_dict[child], GROUP):
@@ -1266,3 +1330,5 @@ class DataLoader:
         raise NameError(f'No dwa matching this name: {name} and '
                         f'origin: {origin} hanging from '
                         f'{where}')
+
+
