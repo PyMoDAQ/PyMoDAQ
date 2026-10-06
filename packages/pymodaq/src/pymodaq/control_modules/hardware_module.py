@@ -46,7 +46,8 @@ class _ViewDock(QtWidgets.QDockWidget):
 def _format(data) -> str:
     values = np.asarray(data)
     if values.size == 1:
-        return f'{values.ravel()[0]:.4g}'
+        item = values.ravel()[0]
+        return f'{item:.4g}' if np.issubdtype(values.dtype, np.number) else str(item)
     return np.array2string(values, precision=3, threshold=10)
 
 
@@ -132,8 +133,11 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
             elif widget_name == 'selector':
                 self._add_selector(quantity)
             elif widget_name == 'read':
-                self.add_action(f'{name}_read', 'Read', 'repeat', 'Read the value once', toolbar=name)
-                self.connect_action(f'{name}_read', lambda *_, name=name: self._read(name))
+                self._add_read_action(name, 'Read', 'repeat')
+            elif widget_name == 'label':  # a discrete state is read on demand, like a scalar
+                self._add_read_action(name, 'Read', 'repeat')
+            elif widget_name == 'snap':  # an array is read once
+                self._add_read_action(name, 'Snap', 'camera')
             elif widget_name == 'show_graph':
                 self.add_action(f'{name}_show_graph', 'Show Graph', 'bid_landscape',
                                 'Show or hide the graph of this channel', checkable=True, toolbar=name)
@@ -175,6 +179,10 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
     def _start_poll(self, name: str) -> None:
         if self.controller.connected:  # polling needs an open device; reconnected devices restart it
             self.controller.poll(name, self._view_period_ms)
+
+    def _add_read_action(self, name: str, text: str, icon: str) -> None:
+        self.add_action(f'{name}_read', text, icon, f'{text} the value once', toolbar=name)
+        self.connect_action(f'{name}_read', lambda *_, name=name: self._read(name))
 
     def _add_value_spinbox(self, quantity: Quantity) -> None:
         spin = QtWidgets.QDoubleSpinBox()
@@ -231,6 +239,8 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         if name not in self._curves:
             return
         values = np.asarray(data)
+        if not np.issubdtype(values.dtype, np.number):
+            return  # a label such as a discrete state has no trace
         if values.size == 1:  # a scalar: plot its history
             self._history[name].append(float(values.ravel()[0]))
             self._curves[name].setData(list(self._history[name]))

@@ -178,3 +178,25 @@ class TestViews:
         qtbot.waitUntil(lambda: not module.controller.connected, timeout=2000)
         module.controller.thread.ini_hardware()
         qtbot.waitUntil(lambda: 'temperature' in module.controller._polled, timeout=2000)
+
+
+class TestReadActions:
+
+    def test_a_discrete_measurement_can_be_read(self, module, qtbot):
+        module.initialize()
+        qtbot.waitUntil(lambda: module.controller.connected, timeout=2000)
+        module.get_action('status_read').trigger()
+        qtbot.waitUntil(lambda: module._displays['status'].text() == '2.5', timeout=2000)  # Camera returns 2.5 for every name
+
+    def test_an_array_can_be_read_once(self, registry, qtbot):
+        class Scope(Camera):
+            spectrum = measurement(shape=(4,))
+
+        key = HardwareKey(hardware_class=Scope, controller_id=9)
+        widget = HardwareModule(key, Scope, registry=registry)
+        qtbot.addWidget(widget)
+        widget.initialize()
+        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        widget.get_action('spectrum_read').trigger()
+        qtbot.waitUntil(lambda: widget._displays['spectrum'].text() != '-', timeout=2000)
+        widget.release()
