@@ -48,6 +48,8 @@ def fake_package(tmp_path, monkeypatch):
     (move / 'daq_move_Good.py').write_text(textwrap.dedent(GOOD_MOVE))
     (move / 'daq_move_Bad.py').write_text(textwrap.dedent(BAD_MOVE))
     (move / 'move_Misnamed.py').write_text('')
+    (move / 'lextab.py').write_text('')
+    (move / 'yacctab.py').write_text('')
     monkeypatch.syspath_prepend(str(tmp_path))
     yield 'pymodaq_plugins_fake'
     for name in [n for n in sys.modules if n.startswith('pymodaq_plugins_fake')]:
@@ -79,6 +81,7 @@ def test_bad_move_reports_everything(fake_package):
 def test_layout_reports_entrypoint_and_naming(fake_package):
     problems = '\n'.join(pt.check_package_layout(fake_package))
     assert 'move_Misnamed' in problems
+    assert 'lextab' not in problems and 'yacctab' not in problems
     assert 'No entry point' in problems
     assert "should define 'config'" in problems
 
