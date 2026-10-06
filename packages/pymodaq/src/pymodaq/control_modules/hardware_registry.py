@@ -94,9 +94,11 @@ class HardwareRegistry:
                                      f'not {plugin_class.__name__}')
                 entry.ref_count += 1
                 return entry.controller
+            # Build the class before the thread starts: a quantity name clash raises here.
+            cls = controller_class(plugin_class)
             settings = make_plugin_settings(plugin_class, params_state)
             thread = self._make_thread(plugin_class, params_state)
-            controller = controller_class(plugin_class)(thread, settings, Capabilities.from_device(plugin_class))
+            controller = cls(thread, settings, Capabilities.from_device(plugin_class))
             self._entries[key] = _Entry(thread=thread, controller=controller, plugin_class=plugin_class)
             return controller
 
