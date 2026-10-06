@@ -147,37 +147,80 @@ class TestViews:
         assert not module.has_action('exposure_show_graph')
         assert module.has_action('temperature_show_graph')
 
-    def test_show_graph_opens_a_view_and_polls_the_channel(self, module, qtbot):
+    def test_show_graph_opens_a_view_without_polling(self, module, qtbot):
         module.initialize()
         qtbot.waitUntil(lambda: module.controller.connected, timeout=2000)
         module.get_action('temperature_show_graph').trigger()
-        assert 'temperature' in module.controller._polled
         assert not module._views['temperature'].isHidden()
+        assert 'temperature' not in module.controller._polled
 
-    def test_readings_reach_the_trace(self, module, qtbot):
+    def test_a_read_fills_the_trace(self, module, qtbot):
         module.initialize()
         qtbot.waitUntil(lambda: module.controller.connected, timeout=2000)
         module.get_action('temperature_show_graph').trigger()
-        qtbot.waitUntil(lambda: len(module._history['temperature']) >= 2, timeout=2000)
-        assert list(module._history['temperature'])[-1] == 2.5
+        module.get_action('temperature_read').trigger()
+        qtbot.waitUntil(lambda: len(module._history['temperature']) == 1, timeout=2000)
         assert module._displays['temperature'].text() == '2.5'
 
-    def test_closing_the_view_stops_the_poll(self, module, qtbot):
-        module.initialize()
-        qtbot.waitUntil(lambda: module.controller.connected, timeout=2000)
+    def test_closing_the_view_unchecks_show_graph(self, module, qtbot):
         module.get_action('temperature_show_graph').trigger()
         module._views['temperature'].close()
-        assert 'temperature' not in module.controller._polled
         assert not module.get_action('temperature_show_graph').isChecked()
 
-    def test_polls_restart_after_the_device_reopens(self, module, qtbot):
-        module.initialize()
+
+class TestGrab:
+
+    @pytest.fixture
+    def scope(self, registry, qtbot):
+        class Scope(Camera):
+            spectrum = measurement(shape=(4,))
+
+        widget = HardwareModule(HardwareKey(hardware_class=Scope, controller_id=7), Scope, registry=registry)
+        qtbot.addWidget(widget)
+        widget.initialize()
+        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        yield widget
+        widget.release()
+
+    def test_grab_polls_the_array_while_checked(self, scope, qtbot):
+        scope.get_action('spectrum_grab').trigger()
+        assert 'spectrum' in scope.controller._polled
+        qtbot.waitUntil(lambda: scope._displays['spectrum'].text() != '-', timeout=2000)
+
+    def test_unchecking_grab_stops_the_poll(self, scope):
+        scope.get_action('spectrum_grab').trigger()
+        scope.get_action('spectrum_grab').trigger()
+        assert 'spectrum' not in scope.controller._polled
+
+    def test_closing_the_device_unchecks_grab(self, scope, qtbot):
+        scope.get_action('spectrum_grab').trigger()
+        scope.get_action('ini').trigger()  # Ini. toggles the device closed
+        qtbot.waitUntil(lambda: not scope.controller.connected, timeout=2000)
+        assert not scope.get_action('spectrum_grab').isChecked()
+
+    def test_grab_restarts_when_the_device_reopens(self, scope, qtbot):
+        scope.get_action('spectrum_grab').trigger()
+        scope.controller.thread.close_hardware()
+        qtbot.waitUntil(lambda: not scope.controller.connected, timeout=2000)
+        scope.controller.thread.ini_hardware()
+        qtbot.waitUntil(lambda: 'spectrum' in scope.controller._polled, timeout=2000)
+
+
+class TestInstrumentToolbar:
+
+    def test_ini_opens_and_closes_the_device(self, module, qtbot):
+        module.get_action('ini').trigger()
         qtbot.waitUntil(lambda: module.controller.connected, timeout=2000)
-        module.get_action('temperature_show_graph').trigger()
-        module.controller.thread.close_hardware()
+        assert module.get_action('ini').isChecked()
+        module.get_action('ini').trigger()
         qtbot.waitUntil(lambda: not module.controller.connected, timeout=2000)
-        module.controller.thread.ini_hardware()
-        qtbot.waitUntil(lambda: 'temperature' in module.controller._polled, timeout=2000)
+        assert not module.get_action('ini').isChecked()
+
+    def test_settings_button_toggles_the_settings_dock(self, module):
+        module.get_action('show_settings').trigger()
+        assert not module.settings_dock.isHidden()
+        module.get_action('show_settings').trigger()
+        assert module.settings_dock.isHidden()
 
 
 class TestReadActions:

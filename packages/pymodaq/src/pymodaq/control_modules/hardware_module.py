@@ -4,10 +4,12 @@ A :class:`HardwareModule` attaches to the registry for its device and drives the
 :class:`~pymodaq.control_modules.controller.Controller`. It never touches the plugin or the
 hardware thread directly.
 
-Layout: the instrument toolbar sits on top, and a channel dock on the left holds one
-``QToolBar`` per declared quantity. The widgets of each toolbar come from
-:func:`~pymodaq.control_modules.capabilities.toolbar_widgets`. A channel's ``show_graph`` action
-opens a view dock on the right. The view polls its channel while it is open and stops when it closes.
+Layout: the instrument toolbar sits on top (Ini., status, Settings). A channel dock on the left holds
+one ``QToolBar`` per declared quantity, built from
+:func:`~pymodaq.control_modules.capabilities.toolbar_widgets`. Views (plots) open on the right.
+
+The device is only polled while a channel is grabbed: ``Grab`` polls continuously, ``Snap`` and
+``Read`` read once. ``Show Graph`` only opens or closes the view; a view shows whatever readings arrive.
 
 Only the widgets handled in :meth:`HardwareModule._fill_channel_toolbar` are built; other default
 names are skipped until they are implemented.
@@ -18,13 +20,16 @@ from collections import deque
 
 import numpy as np
 import pyqtgraph as pg
+from pyqtgraph.parametertree import ParameterTree
+from qt_themes import get_theme
 from qtpy import QtWidgets
-from qtpy.QtCore import QMetaObject, Qt, Signal
+from qtpy.QtCore import QMetaObject, Qt, Signal, Slot
 
 from pymodaq_gui.managers.action_manager import ActionManager
 
 from pymodaq.control_modules.capabilities import Access, Quantity, toolbar_widgets
 from pymodaq.control_modules.controller import Controller
+from pymodaq.control_modules.enums import ActionIconNames
 from pymodaq.control_modules.hardware_registry import HardwareKey, HardwareRegistry
 
 __all__ = ['HardwareModule']
@@ -43,12 +48,28 @@ class _ViewDock(QtWidgets.QDockWidget):
         self.closed.emit()
 
 
+class _FallbackColors:
+    """Used when no theme is applied to the application, e.g. in a bare script or a test."""
+
+    red = '#d32f2f'
+    green = '#388e3c'
+
+
+def _colors():
+    """The current theme, so that the icon colours follow the application's theme."""
+    theme = get_theme()
+    return theme if theme is not None else _FallbackColors
+
+
 def _format(data) -> str:
+    """A short text for a toolbar: the value of a scalar, a summary of an array."""
     values = np.asarray(data)
     if values.size == 1:
         item = values.ravel()[0]
         return f'{item:.4g}' if np.issubdtype(values.dtype, np.number) else str(item)
-    return np.array2string(values, precision=3, threshold=10)
+    if np.issubdtype(values.dtype, np.number):
+        return f'{values.shape} max {np.nanmax(values):.3g}'
+    return str(values.shape)
 
 
 class HardwareModule(QtWidgets.QMainWindow, ActionManager):
@@ -64,19 +85,23 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         Saved plugin settings, used only by the first module that attaches to *key*.
     registry :
         Registry to attach to. Defaults to the process-wide one.
-    view_period_ms :
-        Polling period of an open view.
+    grab_period_ms :
+        Polling period of a grabbed channel.
     """
+
+    # Settings edited in the settings dock, sent to the hardware thread: (path, value, change).
+    _settings_update = Signal(list, object, str)
 
     def __init__(self, key: HardwareKey, plugin_class: type, params_state: dict | None = None,
                  registry: HardwareRegistry | None = None, parent: QtWidgets.QWidget | None = None,
-                 view_period_ms: float = 200.0):
+                 grab_period_ms: float = 200.0):
         QtWidgets.QMainWindow.__init__(self, parent)
         ActionManager.__init__(self)
         self._registry = registry if registry is not None else HardwareRegistry.get()
         self._key = key
         self._attached = True
-        self._view_period_ms = view_period_ms
+        self._grab_period_ms = grab_period_ms
+        self._grabbing: set[str] = set()
         self._quantities: dict[str, Quantity] = {}
         self._value_widgets: dict[str, QtWidgets.QWidget] = {}
         self._displays: dict[str, QtWidgets.QLabel] = {}
@@ -90,6 +115,8 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         self.status_label = QtWidgets.QLabel('not open')
         self.setup_actions()
         self._build_channels(self.controller.capabilities)
+        self._build_settings()
+        self._settings_update.connect(self.controller.thread.update_settings)
 
         self.controller.device_status.connect(self._on_status)
         self.controller.device_error.connect(self._on_error)
@@ -99,11 +126,38 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
     # ── Layout ───────────────────────────────────────────────────────────────
 
     def setup_actions(self) -> None:
-        """The instrument toolbar: initialise the device and show its status."""
+        """The instrument toolbar: open or close the device, show its status, show its settings."""
+        theme = _colors()
         self.add_toolbar(INSTRUMENT_TOOLBAR, 'Instrument', parent=self)
-        self.add_action('ini', 'Ini.', 'Open', 'Open the device', toolbar=INSTRUMENT_TOOLBAR)
-        self.connect_action('ini', lambda *_: self.initialize())
+        self.add_action('ini', 'Ini.', ActionIconNames.INI, 'Open the device (uncheck to close it)',
+                        checkable=True, icon_color=theme.red, icon_checked_color=theme.green,
+                        toolbar=INSTRUMENT_TOOLBAR)
+        self.connect_action('ini', lambda *_: self._set_device_open(self.get_action('ini').isChecked()))
         self.add_widget('status', self.status_label, toolbar=INSTRUMENT_TOOLBAR)
+        self.add_action('show_settings', 'Settings', 'settings', 'Show or hide the device settings',
+                        checkable=True, icon_checked_color=theme.green, toolbar=INSTRUMENT_TOOLBAR)
+        self.connect_action('show_settings', lambda *_: self.settings_dock.setVisible(
+            self.get_action('show_settings').isChecked()))
+
+    def _build_settings(self) -> None:
+        """The plugin's settings in a dock. Edits go to the hardware thread."""
+        tree = ParameterTree(showHeader=False)
+        tree.setParameters(self.controller.settings, showTop=False)
+        self.controller.settings.sigTreeStateChanged.connect(self._relay_settings_change)
+        self.settings_dock = QtWidgets.QDockWidget('Settings', self)
+        self.settings_dock.setWidget(tree)
+        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.settings_dock)
+        self.settings_dock.hide()
+        self.settings_dock.visibilityChanged.connect(
+            lambda visible: self.get_action('show_settings').setChecked(visible))
+
+    def _relay_settings_change(self, _, changes) -> None:
+        if not self._attached or self.controller.thread is None:
+            return
+        for param, change, data in changes:
+            path = self.controller.settings.childPath(param)
+            if path is not None:
+                self._settings_update.emit(path, data, change)
 
     def _build_channels(self, caps) -> None:
         """One toolbar per quantity, stacked in a dock on the left."""
@@ -132,57 +186,34 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
                 self._add_value_spinbox(quantity)
             elif widget_name == 'selector':
                 self._add_selector(quantity)
-            elif widget_name == 'read':
-                self._add_read_action(name, 'Read', 'repeat')
-            elif widget_name == 'label':  # a discrete state is read on demand, like a scalar
-                self._add_read_action(name, 'Read', 'repeat')
+            elif widget_name in ('read', 'label'):  # a scalar or a discrete state is read once
+                self._add_read_action(name, 'Read', ActionIconNames.SNAP)
             elif widget_name == 'snap':  # an array is read once
-                self._add_read_action(name, 'Snap', 'camera')
+                self._add_read_action(name, 'Snap', ActionIconNames.SNAP)
+            elif widget_name == 'grab':  # an array is followed continuously while checked
+                self._add_grab_action(name)
             elif widget_name == 'show_graph':
-                self.add_action(f'{name}_show_graph', 'Show Graph', 'bid_landscape',
-                                'Show or hide the graph of this channel', checkable=True, toolbar=name)
-                self.connect_action(f'{name}_show_graph',
-                                    lambda *_, name=name: self._set_view_shown(name, self._graph_checked(name)))
-
-    def _graph_checked(self, name: str) -> bool:
-        return self.get_action(f'{name}_show_graph').isChecked()
-
-    def _view(self, name: str) -> _ViewDock:
-        """The view dock of *name*, created on first use and hidden until shown."""
-        if name not in self._views:
-            plot = pg.PlotWidget()
-            self._curves[name] = plot.plot()
-            self._history[name] = deque(maxlen=HISTORY_LENGTH)
-            dock = _ViewDock(name, self)
-            dock.setWidget(plot)
-            dock.closed.connect(lambda name=name: self._on_view_closed(name))
-            self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
-            dock.hide()
-            self._views[name] = dock
-        return self._views[name]
-
-    def _set_view_shown(self, name: str, shown: bool) -> None:
-        self._view(name).setVisible(shown)
-        if shown:
-            self._start_poll(name)
-        else:
-            self.controller.stop_poll(name)
-
-    def _on_view_closed(self, name: str) -> None:
-        """The user closed the view dock: uncheck its action and stop polling, without firing the action."""
-        action = self.get_action(f'{name}_show_graph')
-        action.blockSignals(True)
-        action.setChecked(False)
-        action.blockSignals(False)
-        self.controller.stop_poll(name)
-
-    def _start_poll(self, name: str) -> None:
-        if self.controller.connected:  # polling needs an open device; reconnected devices restart it
-            self.controller.poll(name, self._view_period_ms)
+                self._add_show_graph_action(name)
 
     def _add_read_action(self, name: str, text: str, icon: str) -> None:
         self.add_action(f'{name}_read', text, icon, f'{text} the value once', toolbar=name)
         self.connect_action(f'{name}_read', lambda *_, name=name: self._read(name))
+
+    def _add_grab_action(self, name: str) -> None:
+        theme = _colors()
+        self.add_action(f'{name}_grab', 'Grab', ActionIconNames.GRAB, 'Follow the value continuously',
+                        checkable=True, icon_checked=ActionIconNames.GRAB_STOP,
+                        icon_checked_color=theme.green, toolbar=name)
+        self.connect_action(f'{name}_grab', lambda *_, name=name: self._set_grabbing(
+            name, self.get_action(f'{name}_grab').isChecked()))
+
+    def _add_show_graph_action(self, name: str) -> None:
+        theme = _colors()
+        self.add_action(f'{name}_show_graph', 'Show Graph', 'bid_landscape', 'Show or hide the graph',
+                        checkable=True, icon_checked='bid_landscape_disabled',
+                        icon_color=theme.green, icon_checked_color=theme.red, toolbar=name)
+        self.connect_action(f'{name}_show_graph', lambda *_, name=name: self._view(name).setVisible(
+            self.get_action(f'{name}_show_graph').isChecked()))
 
     def _add_value_spinbox(self, quantity: Quantity) -> None:
         spin = QtWidgets.QDoubleSpinBox()
@@ -199,11 +230,52 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         self._value_widgets[quantity.name] = combo
         self.add_widget(f'{quantity.name}_selector', combo, toolbar=quantity.name)
 
+    def _view(self, name: str) -> _ViewDock:
+        """The view dock of *name*, created on first use and hidden until shown."""
+        if name not in self._views:
+            plot = pg.PlotWidget()
+            self._curves[name] = plot.plot()
+            self._history[name] = deque(maxlen=HISTORY_LENGTH)
+            dock = _ViewDock(name, self)
+            dock.setWidget(plot)
+            dock.closed.connect(lambda name=name: self._on_view_closed(name))
+            self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
+            dock.hide()
+            self._views[name] = dock
+        return self._views[name]
+
+    def _on_view_closed(self, name: str) -> None:
+        """The user closed the view: uncheck its action without firing it."""
+        action = self.get_action(f'{name}_show_graph')
+        action.blockSignals(True)
+        action.setChecked(False)
+        action.blockSignals(False)
+
     # ── Device ───────────────────────────────────────────────────────────────
 
     def initialize(self) -> None:
         """Open the device on its hardware thread. The status line reports the result."""
         QMetaObject.invokeMethod(self.controller.thread, 'ini_hardware', Qt.ConnectionType.QueuedConnection)
+
+    def _set_device_open(self, opened: bool) -> None:
+        if opened:
+            self.initialize()
+        else:
+            for name in list(self._grabbing):  # unchecking the grab stops its poll
+                self.get_action(f'{name}_grab').setChecked(False)
+            QMetaObject.invokeMethod(self.controller.thread, 'close_hardware', Qt.ConnectionType.QueuedConnection)
+
+    def _set_grabbing(self, name: str, grabbing: bool) -> None:
+        if grabbing:
+            self._grabbing.add(name)
+            self._start_grab(name)
+        else:
+            self._grabbing.discard(name)
+            self.controller.stop_poll(name)
+
+    def _start_grab(self, name: str) -> None:
+        if self.controller.connected:  # a grab restarts when the device opens again
+            self.controller.poll(name, self._grab_period_ms)
 
     def _write(self, name: str, value: object) -> None:
         if self._attached:  # a widget can still emit after the device is released
@@ -211,7 +283,7 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
 
     def _read(self, name: str) -> None:
         if self._attached:
-            self.controller.read(name, lambda data: self._displays[name].setText(_format(data)))
+            self.controller.read(name, lambda data: self._on_reading(name, data))
 
     def release(self) -> None:
         """Detach from the registry. The device closes when the last module lets go of it."""
@@ -225,13 +297,18 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
 
     # ── Signals from the controller ──────────────────────────────────────────
 
+    @Slot(bool, str)
     def _on_status(self, connected: bool, info: str) -> None:
         state = 'open' if connected else 'closed'
         self.status_label.setText(f'{state}: {info}')
+        ini = self.get_action('ini')
+        ini.blockSignals(True)
+        ini.setChecked(connected)
+        ini.blockSignals(False)
+        ini.set_icon(ActionIconNames.INI, _colors().green if connected else _colors().red)
         if connected:
-            for name, dock in self._views.items():
-                if not dock.isHidden():
-                    self._start_poll(name)
+            for name in self._grabbing:
+                self._start_grab(name)
 
     def _on_reading(self, name: str, data: object) -> None:
         if name in self._displays:
