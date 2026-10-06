@@ -94,6 +94,52 @@ follow some rules and syntax. The `plugin template package`__ could be copied lo
 
 __ https://github.com/PyMoDAQ/pymodaq_plugins_template
 
+.. _plugin_acceptance_tests:
+
+Testing your plugin
+-------------------
+
+A plugin contribution is accepted if it passes the acceptance checks shipped with PyMoDAQ. They need no hardware
+(they are static and import-level checks) and can be reused in any plugin repository, in a test module such as
+*tests/test_plugin.py*. They exist from PyMoDAQ 5.3.0 on, so the module should skip itself with older versions
+(the check is done on the release tuple, as a development version like ``5.3.0.dev1`` is lower than ``5.3``):
+
+.. code-block:: python
+
+    from importlib.metadata import version
+
+    import pytest
+    from packaging.version import Version
+
+    if Version(version('pymodaq')).release[:2] < (5, 3):
+        pytest.skip('Plugin acceptance checks need pymodaq >= 5.3', allow_module_level=True)
+
+    from pymodaq.utils.plugin_testing import PluginPackageChecks
+
+    class TestMyPlugin(PluginPackageChecks):
+        package_name = 'pymodaq_plugins_xxxx'  # optional, otherwise read from the nearest pyproject.toml
+
+This file replaces any generic test file inherited from the template; keep only tests that are specific to your
+instrument next to it.
+
+Every plugin module found in the package is checked individually (``pytest -v`` lists them):
+
+* the package name, its *config* and *__version__*, and the ``pymodaq.plugins`` / ``pymodaq.instruments`` entry
+  points (and the optional extension, model, scanner... ones, that must be loadable)
+* the naming convention of the modules and of the classes (see above), and that no module is wrongly named
+* the plugin modules can be imported *without the instrument vendor SDK* (guard these imports with *try/except*)
+* the plugin class derives from the right base class and overrides the mandatory methods
+  (*ini_stage*, *get_actuator_value*, *stop_motion*, *close* for an actuator; *ini_detector*, *grab_data*, *stop*,
+  *close* for a detector)
+* for an actuator, ``_axis_names``, ``_controller_units`` and ``_epsilons`` are consistent and the units are known
+  from `pint`
+* ``params`` is a valid list of dict producing a settings tree
+
+The functions behind these tests (*check_package_layout*, *check_move_class*, *check_viewer_class*) return the list of
+problems found and can be used from a script. Lint your code too, at least with
+``flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics`` (the gate used by the PyMoDAQ CI) or ``ruff``.
+
+
 .. _hardware_settings:
 
 
