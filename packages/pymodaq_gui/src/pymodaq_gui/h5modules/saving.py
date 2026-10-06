@@ -385,6 +385,8 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
 
         except Exception as e:
             logger.exception(str(e))
+            raise
+
     @classmethod
     def find_part_in_path_and_subpath(cls, base_dir, part='', create=False, increment=True):
         """
