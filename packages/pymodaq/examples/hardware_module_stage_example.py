@@ -2,11 +2,12 @@
 
     python examples/hardware_module_stage_example.py
 
-Each axis has a target (a control, with a spinbox and a slider) and a position (a measurement).
-The position moves towards the target at a fixed speed, and only while the device is read. So:
+Each axis is one row: a target (a control, with a spinbox and a slider) and its position (a
+measurement, linked as the control's readback), like DAQ_Move. The position moves towards the target
+at a fixed speed, and only while the device is read. So:
 - Ini. opens the stage.
 - Move a target with the slider or the spinbox. The device gets the new target at once.
-- Grab the position of an axis (Grab, blue LED). Its readout follows the target with a delay.
+- Grab the position of an axis (Grab, blue LED). Its display follows the target with a delay.
 - Motion shows "moving" while any axis is still on its way.
 """
 import sys
@@ -35,9 +36,12 @@ class FakeStage:
     params: list = []
     speed = 10.0  # mm/s, the same for every axis
 
-    x = control(units='mm', lo=0, hi=50, epsilon=0.01, label='X target', ui_add=('slider',))
-    y = control(units='mm', lo=0, hi=50, epsilon=0.01, label='Y target', ui_add=('slider',))
-    z = control(units='mm', lo=0, hi=10, epsilon=0.01, label='Z target', ui_add=('slider',))
+    x = control(units='mm', lo=0, hi=50, epsilon=0.01, label='X', ui_add=('slider',),
+                readback='x_position')
+    y = control(units='mm', lo=0, hi=50, epsilon=0.01, label='Y', ui_add=('slider',),
+                readback='y_position')
+    z = control(units='mm', lo=0, hi=10, epsilon=0.01, label='Z', ui_add=('slider',),
+                readback='z_position')
     x_position = measurement(units='mm', label='X position')
     y_position = measurement(units='mm', label='Y position')
     z_position = measurement(units='mm', label='Z position')

@@ -133,6 +133,8 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         self._curves: dict[str, pg.PlotDataItem] = {}
         self._history: dict[str, deque] = {}
         self._leds: dict[str, QtWidgets.QLabel] = {}
+        self._row_of: dict[str, str] = {}  # a channel's row: a control's row holds its readback too
+        self._row_channels: dict[str, list[str]] = {}  # the channels of each row
         self._pending: set[str] = set()  # writes sent, not yet acknowledged
         self._failed: set[str] = set()  # writes the plugin rejected
         self._reading: set[str] = set()  # one-shot reads in flight
@@ -194,19 +196,22 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
                 self._settings_update.emit(path, data, change)
 
     def _build_channels(self, caps) -> None:
-        """One toolbar per quantity, stacked in a dock on the left."""
+        """One toolbar per row, stacked in a dock on the left. A readback is shown in its control's row."""
         container = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout(container)
         layout.setSpacing(8)
         quantities = caps.measurements + caps.controls
+        for quantity in quantities:
+            self._quantities[quantity.name] = quantity
+        linked = {q.readback for q in caps.controls if q.readback}
+        rows = [q for q in quantities if q.name not in linked]
         bold = QtWidgets.QLabel().font()
         bold.setBold(True)
-        self._name_width = max((QtGui.QFontMetrics(bold).horizontalAdvance(_caption(q)) for q in quantities),
+        self._name_width = max((QtGui.QFontMetrics(bold).horizontalAdvance(_caption(q)) for q in rows),
                                default=0) + 16
         # a whole row fits without the toolbar's overflow arrow: name, display, value, four buttons, separators
         container.setMinimumWidth(self._name_width + DISPLAY_WIDTH + VALUE_WIDTH + SLIDER_WIDTH + 4 * ACTION_WIDTH + 60)
-        for quantity in quantities:
-            self._quantities[quantity.name] = quantity
+        for quantity in rows:
             bar = QtWidgets.QToolBar(quantity.name, container)
             self.reference_toolbar(quantity.name, bar)
             layout.addWidget(bar)
@@ -215,7 +220,6 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         self.channels_dock = QtWidgets.QDockWidget('Channels', self)
         self.channels_dock.setWidget(container)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.channels_dock)
-
     @staticmethod
     def _access_color(quantity: Quantity) -> str:
         """Measurements are blue and controls magenta, so the two kinds can be told apart at a glance."""
@@ -224,89 +228,94 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         return QColor(color).name()  # a hex string, which a style sheet accepts
 
     def _fill_channel_toolbar(self, quantity: Quantity) -> None:
-        """Name, display, value, actions, show graph: each row has the same slots, so the actions line up."""
-        name = quantity.name
+        """Name, display, value, actions, show graph: each row has the same slots, so the actions line up.
+
+        The row is named after the quantity. A control's readback, when it has one, is the channel the
+        display and the actions read.
+        """
+        row = quantity.name
         is_measurement = quantity.access is Access.MEASUREMENT
+        channel = quantity.readback or row
+        has_display = is_measurement or bool(quantity.readback)
+        self._row_of[row] = row
+        self._row_channels[row] = [row, channel] if channel != row else [row]
+        self._row_of[channel] = row
+
         led = QtWidgets.QLabel()  # the channel status: see _led_color
         led.setFixedSize(12, 12)
-        self._leds[name] = led
-        self.add_widget(f'{name}_led', led, toolbar=name)
+        self._leds[row] = led
+        self.add_widget(f'{row}_led', led, toolbar=row)
         label = QtWidgets.QLabel(_caption(quantity))  # the label shown; the name stays the identifier
         label.setStyleSheet(f'color: {self._access_color(quantity)}; font-weight: bold; letter-spacing: 1px;')
         label.setFixedWidth(self._name_width)
         kind = 'measurement: read from the device' if is_measurement else 'control: set on the device'
-        label.setToolTip(f'{name} ({kind})')
-        self.add_widget(f'{name}_name', label, toolbar=name)
+        label.setToolTip(f'{row} ({kind})')
+        self.add_widget(f'{row}_name', label, toolbar=row)
 
         widgets = toolbar_widgets(quantity)
-        bar = self.get_toolbar(name)
+        if channel != row:  # a control with a readback also has the actions of its readback
+            widgets += [w for w in toolbar_widgets(self._quantities[channel]) if w not in widgets]
+        bar = self.get_toolbar(row)
         bar.addSeparator()
-        if is_measurement:
-            self._add_display(quantity)
+        if has_display:
+            self._add_display(channel, row)
         else:
-            self._add_placeholder(name, 'display', DISPLAY_WIDTH)
+            self._add_placeholder(row, 'display', DISPLAY_WIDTH)
         bar.addSeparator()
         if 'value' in widgets:
             self._add_value_spinbox(quantity)
         elif 'selector' in widgets:
             self._add_selector(quantity)
         else:
-            self._add_placeholder(name, 'value', VALUE_WIDTH)
+            self._add_placeholder(row, 'value', VALUE_WIDTH)
         if 'slider' in widgets:
             self._add_slider(quantity)
         else:
-            self._add_placeholder(name, 'slider', SLIDER_WIDTH)
+            self._add_placeholder(row, 'slider', SLIDER_WIDTH)
         bar.addSeparator()
-        self._actions_of(quantity, widgets)()
+        self._actions_of(channel, row, widgets)()
         if 'show_graph' in widgets:
             bar.addSeparator()
-            self._add_show_graph_action(name)
-
+            self._add_show_graph_action(channel, row)
     def _add_placeholder(self, name: str, slot: str, width: int) -> None:
         """An empty column, so that a row without this slot keeps the others aligned."""
         spacer = QtWidgets.QWidget()
         spacer.setFixedWidth(width)
         self.add_widget(f'{name}_{slot}_slot', spacer, toolbar=name)
 
-    def _actions_of(self, quantity: Quantity, widgets: list[str]):
-        """A function adding the read, snap and grab actions that the quantity's widgets ask for."""
-        name = quantity.name
+    def _actions_of(self, channel: str, row: str, widgets: list[str]):
+        """A function adding the read, snap and grab actions that the widgets ask for, on the row's toolbar."""
 
         def add():
             if 'read' in widgets or 'label' in widgets:
-                self._add_read_action(name, 'Read', ActionIconNames.SNAP)
+                self._add_read_action(channel, row, 'Read', ActionIconNames.SNAP)
             if 'snap' in widgets:
-                self._add_read_action(name, 'Snap', ActionIconNames.SNAP)
+                self._add_read_action(channel, row, 'Snap', ActionIconNames.SNAP)
             if 'grab' in widgets:
-                self._add_grab_action(name)
+                self._add_grab_action(channel, row)
         return add
-
-    def _add_display(self, quantity: Quantity) -> None:
+    def _add_display(self, channel: str, row: str) -> None:
         display = QtWidgets.QLabel('-')
         display.setFixedWidth(DISPLAY_WIDTH)
         display.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        self._displays[quantity.name] = display
-        self.add_widget(f'{quantity.name}_display', display, toolbar=quantity.name)
-
-    def _add_read_action(self, name: str, text: str, icon: str) -> None:
-        self.add_action(f'{name}_read', text, icon, f'{text} the value once', toolbar=name)
-        self.connect_action(f'{name}_read', lambda *_, name=name: self._read(name))
-
-    def _add_grab_action(self, name: str) -> None:
+        self._displays[channel] = display
+        self.add_widget(f'{row}_display', display, toolbar=row)
+    def _add_read_action(self, channel: str, row: str, text: str, icon: str) -> None:
+        self.add_action(f'{channel}_read', text, icon, f'{text} the value once', toolbar=row)
+        self.connect_action(f'{channel}_read', lambda *_, channel=channel: self._read(channel))
+    def _add_grab_action(self, channel: str, row: str) -> None:
         theme = _colors()
-        self.add_action(f'{name}_grab', 'Grab', ActionIconNames.GRAB, 'Follow the value continuously',
+        self.add_action(f'{channel}_grab', 'Grab', ActionIconNames.GRAB, 'Follow the value continuously',
                         checkable=True, icon_checked=ActionIconNames.GRAB_STOP,
-                        icon_checked_color=theme.green, toolbar=name)
-        self.connect_action(f'{name}_grab', lambda *_, name=name: self._set_grabbing(
-            name, self.get_action(f'{name}_grab').isChecked()))
-
-    def _add_show_graph_action(self, name: str) -> None:
-        self.add_action(f'{name}_show_graph', 'Show Graph', 'bid_landscape', 'Show or hide the graph',
+                        icon_checked_color=theme.green, toolbar=row)
+        self.connect_action(f'{channel}_grab', lambda *_, channel=channel: self._set_grabbing(
+            channel, self.get_action(f'{channel}_grab').isChecked()))
+    def _add_show_graph_action(self, channel: str, row: str) -> None:
+        self.add_action(f'{channel}_show_graph', 'Show Graph', 'bid_landscape', 'Show or hide the graph',
                         checkable=True, icon_checked='bid_landscape', icon_checked_color=_colors().green,
-                        toolbar=name)
-        self.connect_action(f'{name}_show_graph', lambda *_, name=name: self._view(name).setVisible(
-            self.get_action(f'{name}_show_graph').isChecked()))
-
+                        toolbar=row)
+        self.connect_action(f'{channel}_show_graph', lambda *_, channel=channel: self._view(channel).setVisible(
+            self.get_action(f'{channel}_show_graph').isChecked()))
     def _add_value_spinbox(self, quantity: Quantity) -> None:
         spin = QtWidgets.QDoubleSpinBox()
         spin.setRange(-1e12 if quantity.lo is None else quantity.lo, 1e12 if quantity.hi is None else quantity.hi)
@@ -401,19 +410,26 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
             self._refresh_led(name)
             self.controller.read(name, lambda data: self._on_reading(name, data))
 
-    def _led_color(self, name: str) -> QColor:
+    def _led_color(self, row: str) -> QColor:
         """Grey: device closed. Red: last write failed. Orange: write pending. Blue: read or grab active. Green: idle."""
         colors = _colors()
+        names = self._row_channels.get(row, [row])
         if not self.controller.connected:
             return QColor('#9e9e9e')
-        if name in self._failed:
+        if any(n in self._failed for n in names):
             return QColor(colors.red)
-        if name in self._pending:
+        if any(n in self._pending for n in names):
             return QColor(colors.orange)
-        if name in self._reading or name in self._grabbing:
+        if any(n in self._reading or n in self._grabbing for n in names):
             return QColor(colors.blue)
         return QColor(colors.green)
 
+    def _refresh_led(self, name: str) -> None:
+        row = self._row_of.get(name, name)
+        led = self._leds.get(row)
+        if led is not None:
+            led.setStyleSheet(f'background-color: {self._led_color(row).name()}; border-radius: 6px; '
+                              'border: 1px solid #616161;')
     def _refresh_led(self, name: str) -> None:
         led = self._leds.get(name)
         if led is not None:

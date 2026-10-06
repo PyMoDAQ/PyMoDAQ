@@ -355,3 +355,31 @@ class TestSlider:
 
     def test_a_slider_has_a_channel_row_with_the_same_columns(self, stage):
         assert stage._sliders['x'].width() == SLIDER_WIDTH
+
+
+class TestReadbackRows:
+
+    @pytest.fixture
+    def axis(self, registry, qtbot):
+        class Axis(Camera):
+            x = control(units='mm', lo=0, hi=50, readback='temperature')
+
+        widget = HardwareModule(HardwareKey(hardware_class=Axis, controller_id=12), Axis, registry=registry)
+        qtbot.addWidget(widget)
+        widget.initialize()
+        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        yield widget
+        widget.release()
+
+    def test_the_readback_is_in_its_controls_row(self, axis):
+        assert not axis.has_toolbar('temperature')
+        assert axis.has_toolbar('x')
+        assert axis.has_action('temperature_grab')
+
+    def test_the_readback_display_follows_its_reading(self, axis, qtbot):
+        axis.get_action('temperature_read').trigger()
+        qtbot.waitUntil(lambda: axis._displays['temperature'].text() == '2.5 K', timeout=2000)
+
+    def test_the_led_of_the_row_turns_blue_when_the_readback_is_grabbed(self, axis):
+        axis.get_action('temperature_grab').trigger()
+        assert axis._led_color('x').name() == _colors().blue.name()
