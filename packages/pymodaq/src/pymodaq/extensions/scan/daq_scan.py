@@ -13,7 +13,9 @@ import tempfile
 from typing import List, Tuple, Union, TYPE_CHECKING
 
 import numpy as np
-from qtpy import QtWidgets, QtCore
+import qt_themes
+from qt_themes import get_theme
+from qtpy import QtWidgets, QtCore, QtGui
 from qtpy.QtWidgets import QDialogButtonBox
 from qtpy.QtCore import Signal, QDateTime, QDate, QTime, QTimer
 
@@ -22,6 +24,7 @@ from pymodaq.control_modules.enums import MoveType
 from pymodaq.utils.custom_ext import CustomExt
 from pymodaq.utils.managers.modules import ModuleType
 from pymodaq_data.plotting.utils import PlotColors
+from pymodaq_gui.utils.styling import color_to_rgba
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config
@@ -371,20 +374,22 @@ class DAQScan(CustomExt):
         widget_command.layout().addWidget(splitter_widget)
 
         # Column 1: Actuators (selection + probe, and scan geometry)
-        self.actuators_widget = self._make_section_groupbox('Actuators')
+        self.actuators_widget = self._make_section_groupbox('1) Actuators',
+                                                            color=get_theme().magenta)
         self.actuators_widget.setMinimumWidth(280)
         self.actuators_widget.setMaximumWidth(400)
 
         self.actuators_settings_tree = ParameterTree()
         self.actuators_widget.layout().addWidget(self.actuators_settings_tree)
 
-        self.actuators_widget.layout().addWidget(self._section_label('Scan Parameters'))
+        self.actuators_widget.layout().addWidget(
+            self._section_label('2) Scan Parameters', color=get_theme().magenta))
         self.scanner_widget = QtWidgets.QWidget()
         self.scanner_widget.setLayout(QtWidgets.QVBoxLayout())
         self.actuators_widget.layout().addWidget(self.scanner_widget)
 
         # Column 2: Detectors (selection + probe, and what/how to plot from them)
-        self.detectors_widget = self._make_section_groupbox('Detectors')
+        self.detectors_widget = self._make_section_groupbox('3) Detectors', color=get_theme().magenta)
         self.detectors_widget.setMinimumWidth(280)
         self.detectors_widget.setMaximumWidth(400)
 
@@ -393,7 +398,8 @@ class DAQScan(CustomExt):
         self.detectors_settings_tree = ParameterTree()
         self.detectors_widget.layout().addWidget(self.detectors_settings_tree)
 
-        self.detectors_widget.layout().addWidget(self._section_label('Plotting Parameters'))
+        self.detectors_widget.layout().addWidget(
+            self._section_label('4) Plotting Parameters', color=get_theme().magenta))
         self.plotting_settings_tree = ParameterTree()
         self.detectors_widget.layout().addWidget(self.plotting_settings_tree)
 
@@ -415,15 +421,17 @@ class DAQScan(CustomExt):
         # Probe button first (quick access), then the stable selection list, then the probe
         # results last: results live in their own group now, not nested under the probe
         # button, so they no longer push the selection list out of view when populated.
-        self.actuators_settings_tree.addParameters(self.modules_manager.settings.child('probe_actuators'))
-        self.actuators_settings_tree.addParameters(self.modules_manager.settings.child('actuators'))
-        self.actuators_settings_tree.addParameters(
-            self.modules_manager.settings.child('probe_actuators_results'))
 
-        self.detectors_settings_tree.addParameters(self.modules_manager.settings.child('probe_detectors'))
+        self.actuators_settings_tree.addParameters(self.modules_manager.settings.child('actuators'))
+        self.actuators_settings_tree.addParameters(self.modules_manager.settings.child('probe_actuators'))
+        # self.actuators_settings_tree.addParameters(
+        #     self.modules_manager.settings.child('probe_actuators_results'))
+
+
         self.detectors_settings_tree.addParameters(self.modules_manager.settings.child('detectors'))
-        self.detectors_settings_tree.addParameters(
-            self.modules_manager.settings.child('probe_detectors_results'))
+        self.detectors_settings_tree.addParameters(self.modules_manager.settings.child('probe_detectors'))
+        # self.detectors_settings_tree.addParameters(
+        #     self.modules_manager.settings.child('probe_detectors_results'))
 
         self._refresh_selection_tree_height()
 
@@ -711,23 +719,27 @@ class DAQScan(CustomExt):
         self.scan_selector.scan_select_signal.connect(self.scanner.update_from_scan_selector)
 
     @staticmethod
-    def _make_section_groupbox(title: str) -> QtWidgets.QGroupBox:
+    def _make_section_groupbox(title: str, color: QtGui.QColor=None) -> QtWidgets.QGroupBox:
         """A QGroupBox whose title is bold, larger and centered, for clear section identification"""
+        if color is None:
+            color = get_theme().text
         box = QtWidgets.QGroupBox(title)
         box.setLayout(QtWidgets.QVBoxLayout())
         box.layout().setContentsMargins(8, 18, 8, 8)
         box.setAlignment(QtCore.Qt.AlignmentFlag.AlignHCenter)
         box.setStyleSheet(
             'QGroupBox { font-weight: bold; font-size: 12pt; margin-top: 6px; } '
-            'QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top center; '
-            'padding: 0 6px; }')
+            f'QGroupBox::title {{ subcontrol-origin: margin; subcontrol-position: top center;'
+            f' color: {color_to_rgba(color)}; padding: 0 6px; }}')
         return box
 
     @staticmethod
-    def _section_label(text: str) -> QtWidgets.QLabel:
+    def _section_label(text: str, color: QtGui.QColor = None) -> QtWidgets.QLabel:
+        if color is None:
+            color = get_theme().text
         label = QtWidgets.QLabel(text)
         label.setAlignment(QtCore.Qt.AlignmentFlag.AlignHCenter)
-        label.setStyleSheet('font-weight: bold; font-size: 11pt;')
+        label.setStyleSheet(f'font-weight: bold; font-size: 11pt; color: {color_to_rgba(color)}')
         return label
 
     @staticmethod
