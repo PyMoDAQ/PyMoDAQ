@@ -111,7 +111,7 @@ class TestDevice:
         module.initialize()
         qtbot.waitUntil(lambda: module.controller.connected, timeout=2000)
         module.get_action('temperature_read').trigger()
-        qtbot.waitUntil(lambda: module._displays['temperature'].text() == '2.5', timeout=2000)
+        qtbot.waitUntil(lambda: module._displays['temperature'].text() == '2.5 K', timeout=2000)
 
 
 class TestRelease:
@@ -160,7 +160,7 @@ class TestViews:
         module.get_action('temperature_show_graph').trigger()
         module.get_action('temperature_read').trigger()
         qtbot.waitUntil(lambda: len(module._history['temperature']) == 1, timeout=2000)
-        assert module._displays['temperature'].text() == '2.5'
+        assert module._displays['temperature'].text() == '2.5 K'
 
     def test_closing_the_view_unchecks_show_graph(self, module, qtbot):
         module.get_action('temperature_show_graph').trigger()

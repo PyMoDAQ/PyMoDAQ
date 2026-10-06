@@ -187,8 +187,8 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         """Name, then groups separated by a separator: display | value | read and grab | show graph."""
         name = quantity.name
         is_measurement = quantity.access is Access.MEASUREMENT
-        label = QtWidgets.QLabel(name)
-        label.setStyleSheet(f'color: {self._access_color(quantity)}; font-weight: bold;')
+        label = QtWidgets.QLabel(name.upper())  # a caption, so the name reads apart from the value
+        label.setStyleSheet(f'color: {self._access_color(quantity)}; font-weight: bold; letter-spacing: 1px;')
         label.setToolTip('measurement: read from the device' if is_measurement else 'control: set on the device')
         self.add_widget(f'{name}_name', label, toolbar=name)
 
@@ -347,7 +347,7 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
 
     def _on_reading(self, name: str, data: object) -> None:
         if name in self._displays:
-            self._displays[name].setText(_format(data))
+            self._displays[name].setText(self._display_text(name, data))
         if name not in self._curves:
             return
         values = np.asarray(data)
@@ -358,6 +358,11 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
             self._curves[name].setData(list(self._history[name]))
         else:
             self._curves[name].setData(values.ravel())
+
+    def _display_text(self, name: str, data: object) -> str:
+        text = _format(data)
+        units = self._quantities[name].units
+        return f'{text} {units}' if units and np.asarray(data).size == 1 else text
 
     def _on_error(self, message: str) -> None:
         self.status_label.setText(f'error: {message}')
