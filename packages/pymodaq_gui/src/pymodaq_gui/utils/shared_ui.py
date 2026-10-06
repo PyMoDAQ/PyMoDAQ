@@ -31,6 +31,8 @@ from pymodaq_gui.utils.enums import MenuToolbarNames
 
 logger = set_logger(get_module_name(__file__))
 
+CHANGELOG_URL = "https://pymodaq.cnrs.fr/en/latest/changelogs.html"
+
 config = Config()
 
 
@@ -216,6 +218,10 @@ class SharedUI(CustomApp):
 
         self.get_action("documentation").setShortcut(QtGui.QKeySequence("F1"))
 
+        self.add_action(short_name="changelog", name="Changelog", icon_name="history",
+                        tip="What changed in each PyMoDAQ release (online documentation)",
+                        auto_toolbar=False, menu=MenuToolbarNames.HELP)
+
         self.get_menu(MenuToolbarNames.HELP).addSeparator()
 
         self.add_action(short_name="app_help", name="Application help", icon_name="help",
@@ -240,6 +246,7 @@ class SharedUI(CustomApp):
 
         self.connect_action("about", self.show_about)
         self.connect_action("documentation", self.show_help)
+        self.connect_action("changelog", self.show_changelog)
         self.connect_action("app_help", self.show_app_help)
         self.connect_action("check_updates", lambda: self.check_update(True))
 
@@ -358,6 +365,9 @@ class SharedUI(CustomApp):
 
     def show_help(self):
         QtGui.QDesktopServices.openUrl(QtCore.QUrl("http://pymodaq.cnrs.fr"))
+
+    def show_changelog(self):
+        QtGui.QDesktopServices.openUrl(QtCore.QUrl(CHANGELOG_URL))
 
     def show_app_help(self):
         if not self.get_action('app_help').isChecked():
