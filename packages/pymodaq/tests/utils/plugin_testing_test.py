@@ -127,7 +127,10 @@ def test_import_failure_classification(fake_package, tmp_path, body, environment
 
 
 def test_deprecated_axis_names_declaration(fake_package, tmp_path):
-    (tmp_path / 'pymodaq_plugins_fake' / 'daq_move_plugins' / 'daq_move_Old.py').write_text(
-        textwrap.dedent(GOOD_MOVE).replace('    _axis_names = ', '    axis_names = ').replace('=_axis_names', '=axis_names').replace('Good', 'Old'))
+    code = (textwrap.dedent(GOOD_MOVE)
+            .replace('    _axis_names = ', '    axis_names = ')
+            .replace('=_axis_names', '=axis_names')
+            .replace('Good', 'Old'))
+    (tmp_path / 'pymodaq_plugins_fake' / 'daq_move_plugins' / 'daq_move_Old.py').write_text(code)
     result = pt.check_plugin_module(pt.PluginModule(fake_package, 'daq_move_Old', 'move'))
     assert any("'axis_names'" in p for p in result.problems)
