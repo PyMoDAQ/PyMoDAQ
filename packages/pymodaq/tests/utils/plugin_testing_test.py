@@ -108,3 +108,23 @@ def test_report_fake(fake_package):
     assert failed == {'package layout', 'daq_move_Bad'}
     assert 'daq_move_Good' not in failed
     assert '[FAIL] daq_move_Bad' in str(report) and '[ok] daq_move_Good' in str(report)
+
+
+@pytest.mark.parametrize('body, environmental', [
+    ('import not_a_module_xyz', True),
+    ('raise OSError("cannot load library")', True),
+    ('from pymodaq.not_a_module import x', False),
+    ('x = = 1', False),
+])
+def test_import_failure_classification(fake_package, tmp_path, body, environmental):
+    (tmp_path / 'pymodaq_plugins_fake' / 'daq_move_plugins' / 'daq_move_Broken.py').write_text(body)
+    result = pt.check_plugin_module(pt.PluginModule(fake_package, 'daq_move_Broken', 'move'))
+    assert bool(result.warnings) is environmental
+    assert bool(result.problems) is not environmental
+
+
+def test_deprecated_axis_names_declaration(fake_package, tmp_path):
+    (tmp_path / 'pymodaq_plugins_fake' / 'daq_move_plugins' / 'daq_move_Old.py').write_text(
+        textwrap.dedent(GOOD_MOVE).replace('    _axis_names = ', '    axis_names = ').replace('=_axis_names', '=axis_names').replace('Good', 'Old'))
+    result = pt.check_plugin_module(pt.PluginModule(fake_package, 'daq_move_Old', 'move'))
+    assert any("'axis_names'" in p for p in result.problems)

@@ -197,6 +197,9 @@ def check_move_class(klass: type) -> list[str]:
     problems = _check_methods(klass, DAQ_Move_base, MANDATORY_MOVE_METHODS)
     problems += _check_params(klass)
 
+    if klass._axis_names is None and not isinstance(inspect.getattr_static(klass, 'axis_names', None), property):
+        problems.append("the axes are declared as 'axis_names', that is ignored: use the '_axis_names' class "
+                        "attribute (and '_epsilons' instead of '_epsilon')")
     axis_names = klass.get_class_axis_names()
     units = klass._controller_units
     if isinstance(units, str):
@@ -237,7 +240,29 @@ def check_viewer_class(klass: type) -> list[str]:
 
 
 class PluginLoadError(Exception):
-    """A plugin module cannot be imported or does not define the expected class"""
+    """A plugin module cannot be imported or does not define the expected class
+
+    Attributes
+    ----------
+    environmental: bool
+        True if the failure comes from the environment rather than from the plugin code: a third party module or
+        vendor SDK/driver that is not installed or not available on this OS (``clr``, ``pyvisa``, ``windll``...).
+        The plugin classes cannot be checked then, but this is not necessarily a defect of the plugin.
+    """
+
+    def __init__(self, message: str, environmental: bool = False):
+        super().__init__(message)
+        self.environmental = environmental
+
+
+def _is_environmental(error: Exception, package: str) -> bool:
+    """Whether an import error is due to the environment (third party module, SDK, OS) and not the plugin/pymodaq"""
+    if isinstance(error, (SyntaxError, NameError, AttributeError, TypeError)):
+        return False
+    if isinstance(error, ImportError):
+        name = getattr(error, 'name', None) or ''
+        return not (name == 'pymodaq' or name.startswith('pymodaq.') or name.split('.')[0] == package)
+    return isinstance(error, (OSError, KeyError))
 
 
 def load_plugin_class(plugin_module: PluginModule) -> type:
@@ -251,32 +276,40 @@ def load_plugin_class(plugin_module: PluginModule) -> type:
     try:
         module = importlib.import_module(plugin_module.import_path)
     except Exception as e:
-        raise PluginLoadError(f'{plugin_module.import_path} cannot be imported '
-                              f'(are vendor SDK imports guarded?): {e!r}') from e
+        raise PluginLoadError(f'{plugin_module.import_path} cannot be imported: {e!r}',
+                              _is_environmental(e, plugin_module.package)) from e
     klass = getattr(module, plugin_module.class_name, None)
     if klass is None:
         raise PluginLoadError(f'{plugin_module.import_path} should define a class named {plugin_module.class_name}')
     return klass
 
 
-def check_plugin_module(plugin_module: PluginModule) -> list[str]:
-    """Load a plugin module and run the checks relevant for its kind, returns the list of problems"""
-    try:
-        klass = load_plugin_class(plugin_module)
-    except PluginLoadError as e:
-        return [str(e)]
-    return check_move_class(klass) if plugin_module.kind == 'move' else check_viewer_class(klass)
-
-
 @dataclass
 class CheckResult:
-    """Problems found on one item (the package itself or one of its plugin modules)"""
+    """Outcome of the checks on one item (the package itself or one of its plugin modules)
+
+    ``problems`` are defects of the plugin. ``warnings`` mean the item could not be fully checked, for instance
+    because a third party module or a vendor SDK is not available in the current environment.
+    """
     item: str
     problems: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:
         return not self.problems
+
+
+def check_plugin_module(plugin_module: PluginModule) -> CheckResult:
+    """Load a plugin module and run the checks relevant for its kind"""
+    result = CheckResult(str(plugin_module))
+    try:
+        klass = load_plugin_class(plugin_module)
+    except PluginLoadError as e:
+        (result.warnings if e.environmental else result.problems).append(str(e))
+        return result
+    result.problems = check_move_class(klass) if plugin_module.kind == 'move' else check_viewer_class(klass)
+    return result
 
 
 @dataclass
@@ -295,14 +328,16 @@ class PluginReport:
 
     def to_dict(self) -> dict:
         return {'package': self.package, 'ok': self.ok,
-                'results': {res.item: res.problems for res in self.results}}
+                'results': {res.item: {'problems': res.problems, 'warnings': res.warnings}
+                            for res in self.results}}
 
     def __str__(self) -> str:
         lines = [f'{self.package}: {"OK" if self.ok else f"{len(self.failures)} item(s) with problems"} '
                  f'({len(self.results)} checked)']
         for res in self.results:
-            lines.append(f'  [{"ok" if res.ok else "FAIL"}] {res.item}')
-            lines.extend(f'         - {problem}' for problem in res.problems)
+            status = 'FAIL' if res.problems else ('warn' if res.warnings else 'ok')
+            lines.append(f'  [{status}] {res.item}')
+            lines.extend(f'         - {problem}' for problem in res.problems + res.warnings)
         return '\n'.join(lines)
 
 
@@ -321,7 +356,7 @@ def check_plugin_package(package: str) -> PluginReport:
     except Exception as e:
         report.results.append(CheckResult('plugin discovery', [f'Cannot list the plugin modules: {e!r}']))
         return report
-    report.results.extend(CheckResult(str(mod), check_plugin_module(mod)) for mod in modules)
+    report.results.extend(check_plugin_module(mod) for mod in modules)
     return report
 
 
@@ -331,6 +366,8 @@ class PluginPackageChecks:
     Test classes are parametrized per plugin module so that every failure is reported individually.
     """
     package_name: Optional[str] = None
+    strict_imports = False  # if True, a module that cannot be imported because of a missing third party module or
+    # SDK fails instead of being skipped
 
     @pytest.fixture
     def package(self, request) -> str:
@@ -351,9 +388,14 @@ class PluginPackageChecks:
         assert not problems, '\n'.join(problems)
 
     def test_move_plugin(self, plugin_module):
-        problems = check_plugin_module(plugin_module)
-        assert not problems, '\n'.join(problems)
+        self._assert_module_ok(plugin_module)
 
     def test_viewer_plugin(self, plugin_module):
-        problems = check_plugin_module(plugin_module)
-        assert not problems, '\n'.join(problems)
+        self._assert_module_ok(plugin_module)
+
+    def _assert_module_ok(self, plugin_module: PluginModule):
+        result = check_plugin_module(plugin_module)
+        messages = result.problems + (result.warnings if self.strict_imports else [])
+        assert not messages, '\n'.join(messages)
+        if result.warnings:
+            pytest.skip('; '.join(result.warnings))
