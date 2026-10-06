@@ -139,3 +139,42 @@ class TestRelease:
         widget.release()
         spin.setValue(20.0)
         spin.editingFinished.emit()  # no controller left to write to
+
+
+class TestViews:
+
+    def test_a_control_has_no_graph(self, module):
+        assert not module.has_action('exposure_show_graph')
+        assert module.has_action('temperature_show_graph')
+
+    def test_show_graph_opens_a_view_and_polls_the_channel(self, module, qtbot):
+        module.initialize()
+        qtbot.waitUntil(lambda: module.controller.connected, timeout=2000)
+        module.get_action('temperature_show_graph').trigger()
+        assert 'temperature' in module.controller._polled
+        assert not module._views['temperature'].isHidden()
+
+    def test_readings_reach_the_trace(self, module, qtbot):
+        module.initialize()
+        qtbot.waitUntil(lambda: module.controller.connected, timeout=2000)
+        module.get_action('temperature_show_graph').trigger()
+        qtbot.waitUntil(lambda: len(module._history['temperature']) >= 2, timeout=2000)
+        assert list(module._history['temperature'])[-1] == 2.5
+        assert module._displays['temperature'].text() == '2.5'
+
+    def test_closing_the_view_stops_the_poll(self, module, qtbot):
+        module.initialize()
+        qtbot.waitUntil(lambda: module.controller.connected, timeout=2000)
+        module.get_action('temperature_show_graph').trigger()
+        module._views['temperature'].close()
+        assert 'temperature' not in module.controller._polled
+        assert not module.get_action('temperature_show_graph').isChecked()
+
+    def test_polls_restart_after_the_device_reopens(self, module, qtbot):
+        module.initialize()
+        qtbot.waitUntil(lambda: module.controller.connected, timeout=2000)
+        module.get_action('temperature_show_graph').trigger()
+        module.controller.thread.close_hardware()
+        qtbot.waitUntil(lambda: not module.controller.connected, timeout=2000)
+        module.controller.thread.ini_hardware()
+        qtbot.waitUntil(lambda: 'temperature' in module.controller._polled, timeout=2000)

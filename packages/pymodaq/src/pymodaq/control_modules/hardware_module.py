@@ -6,17 +6,20 @@ hardware thread directly.
 
 Layout: the instrument toolbar sits on top, and a channel dock on the left holds one
 ``QToolBar`` per declared quantity. The widgets of each toolbar come from
-:func:`~pymodaq.control_modules.capabilities.toolbar_widgets`. Views (plots) will be docks of
-this window.
+:func:`~pymodaq.control_modules.capabilities.toolbar_widgets`. A channel's ``show_graph`` action
+opens a view dock on the right. The view polls its channel while it is open and stops when it closes.
 
 Only the widgets handled in :meth:`HardwareModule._fill_channel_toolbar` are built; other default
 names are skipped until they are implemented.
 """
 from __future__ import annotations
 
+from collections import deque
+
 import numpy as np
+import pyqtgraph as pg
 from qtpy import QtWidgets
-from qtpy.QtCore import QMetaObject, Qt
+from qtpy.QtCore import QMetaObject, Qt, Signal
 
 from pymodaq_gui.managers.action_manager import ActionManager
 
@@ -27,6 +30,17 @@ from pymodaq.control_modules.hardware_registry import HardwareKey, HardwareRegis
 __all__ = ['HardwareModule']
 
 INSTRUMENT_TOOLBAR = 'instrument'
+HISTORY_LENGTH = 200  # points kept by the trace of a scalar measurement
+
+
+class _ViewDock(QtWidgets.QDockWidget):
+    """A view dock that tells its owner when the user closes it."""
+
+    closed = Signal()
+
+    def closeEvent(self, event):
+        super().closeEvent(event)
+        self.closed.emit()
 
 
 def _format(data) -> str:
@@ -49,18 +63,25 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         Saved plugin settings, used only by the first module that attaches to *key*.
     registry :
         Registry to attach to. Defaults to the process-wide one.
+    view_period_ms :
+        Polling period of an open view.
     """
 
     def __init__(self, key: HardwareKey, plugin_class: type, params_state: dict | None = None,
-                 registry: HardwareRegistry | None = None, parent: QtWidgets.QWidget | None = None):
+                 registry: HardwareRegistry | None = None, parent: QtWidgets.QWidget | None = None,
+                 view_period_ms: float = 200.0):
         QtWidgets.QMainWindow.__init__(self, parent)
         ActionManager.__init__(self)
         self._registry = registry if registry is not None else HardwareRegistry.get()
         self._key = key
         self._attached = True
+        self._view_period_ms = view_period_ms
         self._quantities: dict[str, Quantity] = {}
         self._value_widgets: dict[str, QtWidgets.QWidget] = {}
         self._displays: dict[str, QtWidgets.QLabel] = {}
+        self._views: dict[str, _ViewDock] = {}
+        self._curves: dict[str, pg.PlotDataItem] = {}
+        self._history: dict[str, deque] = {}
         self.controller: Controller = self._registry.attach(key, plugin_class, params_state)
         self.setWindowTitle(plugin_class.__name__)
         self.setCentralWidget(QtWidgets.QWidget())  # the area the views will fill
@@ -72,6 +93,7 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         self.controller.device_status.connect(self._on_status)
         self.controller.device_error.connect(self._on_error)
         self.controller.written.connect(self._on_written)
+        self.controller.new_reading.connect(self._on_reading)
 
     # ── Layout ───────────────────────────────────────────────────────────────
 
@@ -112,6 +134,47 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
             elif widget_name == 'read':
                 self.add_action(f'{name}_read', 'Read', 'repeat', 'Read the value once', toolbar=name)
                 self.connect_action(f'{name}_read', lambda *_, name=name: self._read(name))
+            elif widget_name == 'show_graph':
+                self.add_action(f'{name}_show_graph', 'Show Graph', 'bid_landscape',
+                                'Show or hide the graph of this channel', checkable=True, toolbar=name)
+                self.connect_action(f'{name}_show_graph',
+                                    lambda *_, name=name: self._set_view_shown(name, self._graph_checked(name)))
+
+    def _graph_checked(self, name: str) -> bool:
+        return self.get_action(f'{name}_show_graph').isChecked()
+
+    def _view(self, name: str) -> _ViewDock:
+        """The view dock of *name*, created on first use and hidden until shown."""
+        if name not in self._views:
+            plot = pg.PlotWidget()
+            self._curves[name] = plot.plot()
+            self._history[name] = deque(maxlen=HISTORY_LENGTH)
+            dock = _ViewDock(name, self)
+            dock.setWidget(plot)
+            dock.closed.connect(lambda name=name: self._on_view_closed(name))
+            self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
+            dock.hide()
+            self._views[name] = dock
+        return self._views[name]
+
+    def _set_view_shown(self, name: str, shown: bool) -> None:
+        self._view(name).setVisible(shown)
+        if shown:
+            self._start_poll(name)
+        else:
+            self.controller.stop_poll(name)
+
+    def _on_view_closed(self, name: str) -> None:
+        """The user closed the view dock: uncheck its action and stop polling, without firing the action."""
+        action = self.get_action(f'{name}_show_graph')
+        action.blockSignals(True)
+        action.setChecked(False)
+        action.blockSignals(False)
+        self.controller.stop_poll(name)
+
+    def _start_poll(self, name: str) -> None:
+        if self.controller.connected:  # polling needs an open device; reconnected devices restart it
+            self.controller.poll(name, self._view_period_ms)
 
     def _add_value_spinbox(self, quantity: Quantity) -> None:
         spin = QtWidgets.QDoubleSpinBox()
@@ -157,6 +220,22 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
     def _on_status(self, connected: bool, info: str) -> None:
         state = 'open' if connected else 'closed'
         self.status_label.setText(f'{state}: {info}')
+        if connected:
+            for name, dock in self._views.items():
+                if not dock.isHidden():
+                    self._start_poll(name)
+
+    def _on_reading(self, name: str, data: object) -> None:
+        if name in self._displays:
+            self._displays[name].setText(_format(data))
+        if name not in self._curves:
+            return
+        values = np.asarray(data)
+        if values.size == 1:  # a scalar: plot its history
+            self._history[name].append(float(values.ravel()[0]))
+            self._curves[name].setData(list(self._history[name]))
+        else:
+            self._curves[name].setData(values.ravel())
 
     def _on_error(self, message: str) -> None:
         self.status_label.setText(f'error: {message}')
