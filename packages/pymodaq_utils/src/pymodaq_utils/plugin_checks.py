@@ -34,8 +34,8 @@ import toml
 from pymodaq_utils.utils import get_entrypoints
 
 from pymodaq_utils.plugin_rules import (PLACEHOLDER_NAMES_RE, Finding, Severity, check_file_names, check_leftovers,
-                                        check_plugin_source, check_pyproject, is_valid_unit, package_root,
-                                        project_root)
+                                        check_plugin_source, check_pyproject, colorize, is_valid_unit, package_root,
+                                        project_root, use_color)
 
 VIEWER_DIMS = ('0D', '1D', '2D', 'ND')
 ENTRYPOINT_GROUPS = ('pymodaq.plugins', 'pymodaq.instruments')
@@ -393,21 +393,28 @@ class PluginReport:
                                        'findings': [str(f) for f in res.findings]}
                             for res in self.results}}
 
-    def format(self, verbose: bool = False, max_todos: int = 3) -> str:
-        """Text report. The todo findings are summarized unless ``verbose``"""
+    def format(self, verbose: bool = False, max_todos: int = 3, color: bool = False) -> str:
+        """Text report. The todo findings are summarized unless ``verbose``, colors for a terminal if ``color``"""
+        def col(text, style):
+            return colorize(text, style, color)
+
         head = 'OK' if self.ok else f'{len(self.failures)} item(s) with problems'
-        lines = [f'{self.package}: {head} ({len(self.results)} checked), {len(self.todos)} todo(s) left']
+        lines = [f'{col(self.package, "bold")}: {col(head, "green" if self.ok else "red")} '
+                 f'({len(self.results)} checked), {col(f"{len(self.todos)} todo(s) left", "cyan")}']
         for res in self.results:
             failing = res.failing(self.fail_on, self.strict_imports)
-            status = 'FAIL' if failing else ('warn' if res.warnings or res.findings else 'ok')
-            lines.append(f'  [{status}] {res.item}')
-            lines.extend(f'         - {problem}' for problem in res.problems + res.warnings)
+            status, style = (('FAIL', 'red') if failing else
+                             ('warn', 'yellow') if res.warnings or res.findings else ('ok', 'green'))
+            lines.append(f'  {col(f"[{status}]", style)} {res.item}')
+            lines.extend(f'         - {col(problem, "red")}' for problem in res.problems)
+            lines.extend(f'         - {col(warning, "yellow")}' for warning in res.warnings)
             todos = [f for f in res.findings if f.severity == Severity.TODO]
-            lines.extend(f'         - {f}' for f in res.findings if f.severity != Severity.TODO)
+            lines.extend(f'         - {f.format(color)}' for f in res.findings if f.severity != Severity.TODO)
             shown = todos if verbose else todos[:max_todos]
-            lines.extend(f'         - {f}' for f in shown)
+            lines.extend(f'         - {f.format(color)}' for f in shown)
             if len(todos) > len(shown):
-                lines.append(f'         - ... {len(todos) - len(shown)} more todo(s), use format(verbose=True)')
+                lines.append(col(f'         - ... {len(todos) - len(shown)} more todo(s), '
+                                 f'use format(verbose=True)', 'dim'))
         return '\n'.join(lines)
 
     def __str__(self) -> str:
@@ -532,6 +539,8 @@ def main(argv=None) -> int:
     parser.add_argument('--strict-imports', action='store_true',
                         help='fail on the modules that cannot be imported (missing dependency or SDK)')
     parser.add_argument('-v', '--verbose', action='store_true', help='list every todo')
+    parser.add_argument('--color', choices=['auto', 'always', 'never'], default='auto',
+                        help='color the report: auto (default) if the output is a terminal and NO_COLOR is not set')
     args = parser.parse_args(argv)
     try:
         package, project = resolve_target(args.package)
@@ -539,7 +548,7 @@ def main(argv=None) -> int:
         parser.error(str(e))
     report = check_plugin_package(package, args.fail_on, args.strict_imports, project,
                                   check_entry_points=is_installed(package) or project is None)
-    print(report.format(verbose=args.verbose))
+    print(report.format(verbose=args.verbose, color=use_color(args.color)))
     return 0 if report.ok else 1
 
 

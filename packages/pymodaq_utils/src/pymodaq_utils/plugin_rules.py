@@ -22,7 +22,9 @@ from __future__ import annotations
 
 import ast
 import importlib.util
+import os
 import re
+import sys
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -49,6 +51,35 @@ FEATURE_FOLDERS = {'instruments': ('daq_move_plugins', 'daq_viewer_plugins'),
                    'models': ('models',),
                    'h5exporters': ('exporters',),
                    'scanners': ('scanners',)}
+
+
+ANSI_STYLES = {'bold': '1', 'dim': '2', 'red': '31', 'green': '32', 'yellow': '33', 'cyan': '36'}
+
+
+def colorize(text: str, style: str, enabled: bool = True) -> str:
+    """Wrap a text in the ANSI escape codes of a style (bold, dim, red, green, yellow, cyan) if enabled"""
+    if not enabled or not text:
+        return text
+    return f'\033[{ANSI_STYLES[style]}m{text}\033[0m'
+
+
+def use_color(mode: str = 'auto', stream=None) -> bool:
+    """Whether to color the output: mode is 'always', 'never' or 'auto'
+
+    ``auto`` colors if the stream (stdout by default) is a terminal and the NO_COLOR environment variable is not set,
+    or if FORCE_COLOR is set (see https://no-color.org).
+    """
+    if mode == 'never':
+        return False
+    if mode == 'auto':
+        if os.environ.get('NO_COLOR'):
+            return False
+        stream = stream or sys.stdout
+        if not (os.environ.get('FORCE_COLOR') or (hasattr(stream, 'isatty') and stream.isatty())):
+            return False
+    if sys.platform == 'win32':
+        os.system('')  # enables the processing of the escape codes in the console
+    return True
 
 
 class Severity(str, Enum):
@@ -87,10 +118,16 @@ class Finding:
             return ''
         return f'{self.path.name}:{self.line}' if self.line else self.path.name
 
-    def __str__(self) -> str:
+    def format(self, color: bool = False) -> str:
+        """Text of the finding, with colors for a terminal if ``color``"""
+        style = {Severity.ERROR: 'red', Severity.WARNING: 'yellow', Severity.TODO: 'cyan'}[self.severity]
         where = f' {self.location}' if self.location else ''
-        hint = f'  -> {self.hint}' if self.hint else ''
-        return f'{self.code} [{self.severity.value}]{where}: {self.message}{hint}'
+        hint = colorize(f'  -> {self.hint}', 'dim', color) if self.hint else ''
+        return (f'{colorize(self.code, "bold", color)} {colorize(f"[{self.severity.value}]", style, color)}'
+                f'{where}: {self.message}{hint}')
+
+    def __str__(self) -> str:
+        return self.format()
 
 
 def is_valid_unit(unit: str) -> bool:

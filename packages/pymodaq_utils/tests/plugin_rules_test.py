@@ -119,3 +119,32 @@ def test_conflicted_copy_files_are_reported_and_otherwise_ignored(tmp_path):
     assert [f.code for f in pr.check_file_names(pkg)] == ['PMQ112']
     assert pr.check_file_names(pkg)[0].severity == Severity.WARNING
     assert pr.check_leftovers('pymodaq_plugins_foo', pkg) == []  # no TODO / NotImplementedError from the copy
+
+
+class FakeStream:
+    def __init__(self, tty):
+        self.tty = tty
+
+    def isatty(self):
+        return self.tty
+
+
+def test_colorize_and_use_color(monkeypatch):
+    assert pr.colorize('x', 'red', False) == 'x'
+    assert pr.colorize('x', 'red') == '\033[31mx\033[0m'
+    monkeypatch.delenv('NO_COLOR', raising=False)
+    monkeypatch.delenv('FORCE_COLOR', raising=False)
+    assert pr.use_color('auto', FakeStream(True)) and not pr.use_color('auto', FakeStream(False))
+    assert pr.use_color('always', FakeStream(False)) and not pr.use_color('never', FakeStream(True))
+    monkeypatch.setenv('NO_COLOR', '1')
+    assert not pr.use_color('auto', FakeStream(True)) and pr.use_color('always', FakeStream(False))
+    monkeypatch.delenv('NO_COLOR')
+    monkeypatch.setenv('FORCE_COLOR', '1')
+    assert pr.use_color('auto', FakeStream(False))
+
+
+def test_finding_format_color():
+    finding = pr.Finding('PMQ999', Severity.ERROR, 'message', 'a hint')
+    assert str(finding) == finding.format() == 'PMQ999 [error]: message  -> a hint'
+    assert '\033[31m[error]\033[0m' in finding.format(color=True)
+    assert '\033' not in finding.format()

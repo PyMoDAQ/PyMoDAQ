@@ -224,3 +224,14 @@ def test_conflicted_copy_is_not_taken_for_a_plugin_module(fake_package, tmp_path
     (tmp_path / 'pymodaq_plugins_fake' / 'daq_move_plugins' / name).write_text('x = = 1')
     assert sorted(m.module_name for m in pt.find_plugin_modules(fake_package)) == ['daq_move_Bad', 'daq_move_Good']
     assert 'PMQ112' in {f.code for f in pt.check_package_sources(fake_package).findings}
+
+
+def test_report_color(capsys):
+    report = pt.check_plugin_package('pymodaq_plugins_mock')
+    assert '\033' not in str(report) and '\033' not in report.format()
+    colored = report.format(color=True)
+    assert '\033[32m[ok]\033[0m' in colored and '\033[33m[warn]\033[0m' in colored
+    assert pt.main(['pymodaq_plugins_mock', '--color', 'always']) == 0
+    assert '\033[' in capsys.readouterr().out
+    assert pt.main(['pymodaq_plugins_mock', '--color', 'never']) == 0
+    assert '\033[' not in capsys.readouterr().out

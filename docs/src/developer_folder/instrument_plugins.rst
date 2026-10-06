@@ -178,8 +178,10 @@ non zero when the checks fail:
 
 .. code-block:: bash
 
-    check_plugin [package name or folder] [--fail-on error|warning|todo] [--strict-imports] [-v]
+    check_plugin [package name or folder] [--fail-on error|warning|todo] [--strict-imports] [-v] [--color auto|always|never]
 
+The report is colored in a terminal (``--color auto``, the default); set the ``NO_COLOR`` environment variable or
+use ``--color never`` to disable it, or ``FORCE_COLOR`` / ``--color always`` to force it (for instance in a CI log).
 The argument is either the name of an installed plugin package, or a folder: the plugin repository or its package
 folder (the current folder by default). The plugin does not need to be installed, and the *pyproject.toml* can still
 have the template name, which is then reported; only the entry points cannot be checked before the installation.
