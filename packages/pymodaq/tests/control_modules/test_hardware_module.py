@@ -8,7 +8,7 @@ from qtpy import QtWidgets
 from qtpy.QtCore import Qt
 
 from pymodaq.control_modules.capabilities import control, measurement
-from pymodaq.control_modules.hardware_module import HardwareModule
+from pymodaq.control_modules.hardware_module import HardwareModule, _colors
 from pymodaq.control_modules.hardware_registry import HardwareKey, HardwareRegistry
 
 
@@ -254,11 +254,11 @@ class TestCaptions:
         widget = HardwareModule(HardwareKey(hardware_class=Labelled, controller_id=8), Labelled, registry=registry)
         qtbot.addWidget(widget)
         assert widget.controller.capabilities.measurements[0].name == 'temperature'
-        assert widget.get_toolbar('temperature').findChildren(QtWidgets.QLabel)[0].text() == 'SENSOR TEMPERATURE'
+        assert 'SENSOR TEMPERATURE' in [l.text() for l in widget.get_toolbar('temperature').findChildren(QtWidgets.QLabel)]
         widget.release()
 
     def test_without_a_label_the_name_is_made_readable(self, module):
-        assert module.get_toolbar('temperature').findChildren(QtWidgets.QLabel)[0].text() == 'TEMPERATURE'
+        assert 'TEMPERATURE' in [l.text() for l in module.get_toolbar('temperature').findChildren(QtWidgets.QLabel)]
 
 
 class TestSettings:
@@ -281,4 +281,46 @@ class TestSettings:
         widget.controller.settings.child('gain').setValue(3.0)
         plugin = widget.controller.thread._plugin
         qtbot.waitUntil(lambda: ('gain', 3.0) in plugin.committed, timeout=2000)
+        widget.release()
+
+
+class TestChannelLeds:
+
+    def led(self, module, name):
+        return module._led_color(name).name()
+
+    def test_leds_are_grey_while_the_device_is_closed(self, module):
+        assert self.led(module, 'temperature') == '#9e9e9e'
+
+    def test_leds_are_green_when_the_device_is_open(self, module, qtbot):
+        module.initialize()
+        qtbot.waitUntil(lambda: module.controller.connected, timeout=2000)
+        assert self.led(module, 'temperature') == module._led_color('temperature').name() != '#9e9e9e'
+        assert self.led(module, 'exposure') == _colors().green.name()
+
+    def test_a_grabbed_channel_is_blue(self, module, qtbot):
+        module.initialize()
+        qtbot.waitUntil(lambda: module.controller.connected, timeout=2000)
+        module.get_action('temperature_grab').trigger()
+        assert self.led(module, 'temperature') == _colors().blue.name()
+
+    def test_a_rejected_write_turns_the_led_red_until_the_next_good_write(self, registry, qtbot):
+        class Faulty(Camera):
+            def write(self, name, value):
+                if value == 'external':
+                    raise RuntimeError('link down')
+                super().write(name, value)
+
+        widget = HardwareModule(HardwareKey(hardware_class=Faulty, controller_id=10), Faulty, registry=registry)
+        qtbot.addWidget(widget)
+        widget.initialize()
+        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        combo = widget._value_widgets['trigger']
+        combo.setCurrentIndex(1)
+        combo.activated.emit(1)  # 'external' is rejected
+        qtbot.waitUntil(lambda: self.led(widget, 'trigger') == _colors().red.name(), timeout=2000)
+        assert 'link down' in widget.status_label.text()
+        combo.setCurrentIndex(0)
+        combo.activated.emit(0)  # 'internal' is accepted
+        qtbot.waitUntil(lambda: self.led(widget, 'trigger') == _colors().green.name(), timeout=2000)
         widget.release()

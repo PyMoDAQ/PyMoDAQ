@@ -60,6 +60,7 @@ class _FallbackColors:
     green = QColor('#388e3c')
     blue = QColor('#1976d2')
     magenta = QColor('#8e24aa')
+    orange = QColor('#f57c00')
 
 
 def _colors():
@@ -121,6 +122,10 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         self._views: dict[str, _ViewDock] = {}
         self._curves: dict[str, pg.PlotDataItem] = {}
         self._history: dict[str, deque] = {}
+        self._leds: dict[str, QtWidgets.QLabel] = {}
+        self._pending: set[str] = set()  # writes sent, not yet acknowledged
+        self._failed: set[str] = set()  # writes the plugin rejected
+        self._reading: set[str] = set()  # one-shot reads in flight
         self.controller: Controller = self._registry.attach(key, plugin_class, params_state)
         self.setWindowTitle(plugin_class.__name__)
         self.setCentralWidget(QtWidgets.QWidget())  # the area the views will fill
@@ -134,7 +139,10 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         self.controller.device_status.connect(self._on_status)
         self.controller.device_error.connect(self._on_error)
         self.controller.written.connect(self._on_written)
+        self.controller.write_failed.connect(self._on_write_failed)
         self.controller.new_reading.connect(self._on_reading)
+        for name in self._quantities:
+            self._refresh_led(name)
 
     # ── Layout ───────────────────────────────────────────────────────────────
 
@@ -209,6 +217,10 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         """Name, display, value, actions, show graph: each row has the same slots, so the actions line up."""
         name = quantity.name
         is_measurement = quantity.access is Access.MEASUREMENT
+        led = QtWidgets.QLabel()  # the channel status: see _led_color
+        led.setFixedSize(12, 12)
+        self._leds[name] = led
+        self.add_widget(f'{name}_led', led, toolbar=name)
         label = QtWidgets.QLabel(_caption(quantity))  # the label shown; the name stays the identifier
         label.setStyleSheet(f'color: {self._access_color(quantity)}; font-weight: bold; letter-spacing: 1px;')
         label.setFixedWidth(self._name_width)
@@ -340,6 +352,7 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         else:
             self._grabbing.discard(name)
             self.controller.stop_poll(name)
+        self._refresh_led(name)
 
     def _start_grab(self, name: str) -> None:
         if self.controller.connected:  # a grab restarts when the device opens again
@@ -347,11 +360,35 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
 
     def _write(self, name: str, value: object) -> None:
         if self._attached:  # a widget can still emit after the device is released
+            self._pending.add(name)
+            self._failed.discard(name)
+            self._refresh_led(name)
             setattr(self.controller, name, value)
 
     def _read(self, name: str) -> None:
         if self._attached:
+            self._reading.add(name)
+            self._refresh_led(name)
             self.controller.read(name, lambda data: self._on_reading(name, data))
+
+    def _led_color(self, name: str) -> QColor:
+        """Grey: device closed. Red: last write failed. Orange: write pending. Blue: read or grab active. Green: idle."""
+        colors = _colors()
+        if not self.controller.connected:
+            return QColor('#9e9e9e')
+        if name in self._failed:
+            return QColor(colors.red)
+        if name in self._pending:
+            return QColor(colors.orange)
+        if name in self._reading or name in self._grabbing:
+            return QColor(colors.blue)
+        return QColor(colors.green)
+
+    def _refresh_led(self, name: str) -> None:
+        led = self._leds.get(name)
+        if led is not None:
+            led.setStyleSheet(f'background-color: {self._led_color(name).name()}; border-radius: 6px; '
+                              'border: 1px solid #616161;')
 
     def release(self) -> None:
         """Detach from the registry. The device closes when the last module lets go of it."""
@@ -369,6 +406,8 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
     def _on_status(self, connected: bool, info: str) -> None:
         state = 'open' if connected else 'closed'
         self.status_label.setText(f'{state}: {info}')
+        for name in self._leds:
+            self._refresh_led(name)
         ini = self.get_action('ini')
         ini.blockSignals(True)
         ini.setChecked(connected)
@@ -379,6 +418,8 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
                 self._start_grab(name)
 
     def _on_reading(self, name: str, data: object) -> None:
+        self._reading.discard(name)
+        self._refresh_led(name)
         if name in self._displays:
             self._displays[name].setText(self._display_text(name, data))
         if name not in self._curves:
@@ -400,7 +441,16 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
     def _on_error(self, message: str) -> None:
         self.status_label.setText(f'error: {message}')
 
+    def _on_write_failed(self, name: str, message: str) -> None:
+        self._pending.discard(name)
+        self._failed.add(name)
+        self._refresh_led(name)
+        self.status_label.setText(f'error: {name}: {message}')
+
     def _on_written(self, name: str, value: object) -> None:
+        self._pending.discard(name)
+        self._failed.discard(name)
+        self._refresh_led(name)
         widget = self._value_widgets.get(name)
         if widget is None:
             return
