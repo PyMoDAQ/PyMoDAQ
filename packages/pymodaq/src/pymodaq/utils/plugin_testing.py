@@ -489,7 +489,8 @@ class PluginPackageChecks:
 
 
 def main(argv=None) -> int:
-    """Print the report of a plugin package, for the developer: ``python -m pymodaq.utils.plugin_testing``
+    """Print the report of a plugin package, for the developer: the ``check_plugin`` command (or
+    ``python -m pymodaq.utils.plugin_testing``)
 
     Returns 0 if the checks pass, 1 otherwise (so that it can also be used in a script or a CI).
     """

@@ -173,7 +173,7 @@ non zero when the checks fail:
 
 .. code-block:: bash
 
-    python -m pymodaq.utils.plugin_testing [pymodaq_plugins_xxxx] [--fail-on error|warning|todo] [--strict-imports] [-v]
+    check_plugin [pymodaq_plugins_xxxx] [--fail-on error|warning|todo] [--strict-imports] [-v]
 
 The functions behind these tests (*check_package_layout*, *check_move_class*, *check_viewer_class*) return the list of
 problems found and can be used from a script. To get a full report of an installed plugin package without pytest, use
