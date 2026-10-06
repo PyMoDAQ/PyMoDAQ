@@ -105,7 +105,7 @@ class StatusBarManager:
 
 class RampExtension(CustomExt):
 
-    _h5_base_group_name = 'Ramp'
+    h5_base_group_name = 'Ramp'
     show_h5file_statusbar_widgets = True
     show_workflow_actions = True
 

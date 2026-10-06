@@ -136,6 +136,7 @@ class SharedUI(CustomApp):
         for toolbar in app.toolbars:
             self.get_menu(MenuToolbarNames.TOOLBARS).addAction(toolbar.toggleViewAction())
 
+
     def _merge_menus(self, menu_to_merge: QtWidgets.QMenu, menu: QtWidgets.QMenu):
         menu.insertActions(menu.actions()[0], menu_to_merge.actions())
         if menu_to_merge.parent() is not None :
@@ -182,6 +183,7 @@ class SharedUI(CustomApp):
 
         self.add_menu(MenuToolbarNames.TOOLBARS, MenuToolbarNames.TOOLBARS.capitalize(), parent_menu=MenuToolbarNames.VIEW,
                       menu=StickyMenu())
+        self.setup_toolbar_style_menu(MenuToolbarNames.VIEW)
 
         # Tools menu
         self.add_menu(MenuToolbarNames.TOOLS, MenuToolbarNames.TOOLS.capitalize(), parent_menu=menubar)

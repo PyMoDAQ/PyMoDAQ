@@ -5,23 +5,30 @@ from the selected detectors at each position, in hierarchical HDF5 files.
 
 ## Typical workflow
 
-1. Define or load an experiment in the Dashboard first.
-2. In the **Instrument selection** panel, pick the detectors and actuators for the next scan.
-3. In the **Scanner** settings, choose the scan type (1D, 2D, ...) and its subtype, then set the start, stop and
-   step values of each actuator.
-4. In the **Live plots selection** panel, use the data button to list the data available from the selected
-   detectors, and tick what should be plotted live. Nothing is plotted by default.
-5. In the **Save settings**, check what is saved, how and where.
-6. Press **Start** to run the scan. **Stop** ends it.
+1. Define or load an experiment in the [Dashboard](https://pymodaq.cnrs.fr/en/latest/modules/DashBoard.html) first (see the
+   [experiment manager](https://pymodaq.cnrs.fr/en/latest/user_folder/dashboard_manager.html#experiment-manager)).
+2. In the [**Actuators** and **Detectors**](https://pymodaq.cnrs.fr/en/latest/extensions_folder/daq_scan/daq_scan_main.html#selecting-detectors-and-actuators)
+   panels, pick the actuators and detectors for the next scan.
+3. In the [**Scan Parameters**](https://pymodaq.cnrs.fr/en/latest/extensions_folder/daq_scan/scanner.html) panel, choose the scan type (1D, 2D, ...) and its subtype, then set the
+   start, stop and step values of each actuator.
+4. Use the **Probe detectors** button to list the data available from the selected detectors in the
+   [**Plotting Parameters**](https://pymodaq.cnrs.fr/en/latest/extensions_folder/daq_scan/daq_scan_main.html#selecting-the-data-to-render-live) (all are ticked), and untick what
+   should not be plotted live. Nothing is listed or plotted until then.
+5. In the [**General Settings**](https://pymodaq.cnrs.fr/en/latest/extensions_folder/daq_scan/daq_scan_main.html#saving-dataset-and-scans) panel (gear button of the toolbar),
+   check what is saved, how and where.
+6. Press **Start** to run the scan. **Stop** ends it
+   ([scan flow](https://pymodaq.cnrs.fr/en/latest/extensions_folder/daq_scan/daq_scan_main.html#scan-flow)).
 
 ## Good to know
 
 - A dataset is one saved file that can contain several scans, usually for one sample or subject.
 - Live plots combine the dimension of the data with the scan dimension. Keep the total at 2 or less, and use
-  regions of interest (ROI) to reduce raw data to a plottable form.
-- Saved files can be explored with the H5Browser extension.
+  [regions of interest](https://pymodaq.cnrs.fr/en/latest/user_folder/viewers_usage.html#regions-of-interest) (ROI) to reduce raw data to a plottable form.
+- Saved files can be explored with the [H5Browser](https://pymodaq.cnrs.fr/en/latest/data_management/h5browser.html) extension.
+
+<!-- end of intro -->
 
 ## Full documentation
 
 See the [DAQ_Scan documentation](https://pymodaq.cnrs.fr/en/latest/extensions_folder/daq_scan/daq_scan.html)
-for scanner types, the navigator and batch scans.
+for scanner types and the [navigator](https://pymodaq.cnrs.fr/en/latest/extensions_folder/daq_scan/navigator.html).

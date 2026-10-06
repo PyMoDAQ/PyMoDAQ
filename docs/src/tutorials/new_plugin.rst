@@ -267,8 +267,8 @@ if you're using hatch
 .. note::
     In the case of a release to the actual PyPI, we should skip this last step!
 
-Finally, we should modify the `resources/VERSION` file of our repository, so that it corresponds to the release tag
-that we will use for our first release. We can use `1.0.0`.
+There is no version number to edit in the repository: the version of the package is computed from the git tag of
+the release (there used to be a `resources/VERSION` file for this, it is not needed anymore).
 
 Commit and push those changes towards the remote repository. We are now ready to try our first release!
 
@@ -279,7 +279,7 @@ On the page of our repository, let's create a new release.
    Create a new release.
 
 We are prompted to a form to describe the release. In particular, we have to define a tag for the release,
-which should correspond to the `resources/VERSION` file of the package, we use `1.0.0` as the first tag.
+which will be the version of the package, we use `1.0.0` as the first tag.
 
 .. figure:: /image/tutorial_template/github_configure_release.png
 

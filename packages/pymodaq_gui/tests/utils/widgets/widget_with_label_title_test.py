@@ -1,4 +1,5 @@
 import pytest
+from qtpy import QtWidgets
 from pymodaq_gui.utils.widgets.widget_with_label_title import WidgetWithLabelTitle
 
 
@@ -47,3 +48,22 @@ class TestWidgetWithLabelTitle:
 
         widget.set_title('new title')
         assert widget.label.text() == 'new title'
+
+
+@pytest.mark.parametrize('expand, use_insert', [(False, False), (True, False), (True, True)])
+def test_expand_subwidget(qtbot, expand, use_insert):
+    tree = QtWidgets.QTreeWidget()
+    tree.setMinimumHeight(10)
+    if use_insert:
+        widget = WidgetWithLabelTitle('title', expand_subwidget=expand)
+        widget.insert_widget(tree)
+    else:
+        widget = WidgetWithLabelTitle('title', tree, expand_subwidget=expand)
+    qtbot.addWidget(widget)
+    widget.resize(300, 1000)
+    widget.show()
+    qtbot.waitExposed(widget)
+    if expand:
+        assert tree.height() > 800  # fills the available height
+    else:
+        assert tree.height() < 600  # shares the height with the stretch below it

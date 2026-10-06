@@ -303,10 +303,8 @@ class ControlModule(QObject):
         else:
             return get_theme().magenta
 
-    def create_new_file(self, new_file: bool):
-        if new_file:
-            self.close_file()
-
+    def create_new_file(self):
+        self.close_file()
         self.module_and_data_saver.h5saver = self.h5saver
         return True
 
@@ -436,9 +434,6 @@ class ControlModule(QObject):
         raise NotImplementedError
 
     def append_data(self, *args, **kwargs):
-        raise NotImplementedError
-
-    def insert_data(self, *args, **kwargs):
         raise NotImplementedError
 
     def quit_fun(self):
@@ -665,7 +660,9 @@ class ParameterControlModule(ParameterManager, LECOComponentMixin, ControlModule
 
     def quit_fun(self):
         """Programmatic quitting: deinit hardware, emit quit signal, run cleanup hook, close UI."""
-        if self._controller_and_thread.initialized:
+        thread = self._controller_and_thread.thread
+        if self._controller_and_thread.initialized or (thread is not None and thread.isRunning()):
+            # also when the initialization is still ongoing (not yet initialized but its thread is running)
             self.init_hardware(False)
             # The hardware worker emits status_sig(CLOSE) just before self-exiting.
             # That signal is queued on the main thread.  Flush it now so that
@@ -712,7 +709,8 @@ class ParameterControlModule(ParameterManager, LECOComponentMixin, ControlModule
             QtWidgets.QApplication.processEvents()
             hardware = self.controller_and_thread.thread.remove_hardware(self.title)
             #remove the handle onto the hardware worker even if slave
-            hardware.status_sig.disconnect()
+            if hardware is not None:  # None if this module never registered its hardware (e.g. a not initialized slave)
+                hardware.status_sig.disconnect()
 
             if (self.controller_and_thread.is_master and self.controller_and_thread.thread is not None and
                     self.controller_and_thread.thread.isRunning()):

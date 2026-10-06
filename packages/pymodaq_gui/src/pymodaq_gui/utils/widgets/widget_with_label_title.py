@@ -19,6 +19,9 @@ class WidgetWithLabelTitle(QtWidgets.QWidget):
     attachable: bool
         If True, add an attach/detach toggle button in the title header
         emitting `sig_attach_detach` when clicked
+    expand_subwidget: bool
+        If True, the subwidgets fill all the available height (useful for trees in a dock), otherwise
+        they keep their preferred height and the remaining space is left empty below them
     """
 
     sig_close = QtCore.Signal()
@@ -26,8 +29,10 @@ class WidgetWithLabelTitle(QtWidgets.QWidget):
 
     def __init__(self, title: str, subwidget: QtWidgets.QWidget = None, parent=None,
                  closable: bool = False, attachable: bool = False,
+                 expand_subwidget: bool = False,
                  **label_kwargs):
         super().__init__(parent)
+        self._expand_subwidget = expand_subwidget
 
         font_name = label_kwargs.pop('font_name', 'Tahoma')
         font_size = label_kwargs.pop('font_size', 14)
@@ -65,8 +70,13 @@ class WidgetWithLabelTitle(QtWidgets.QWidget):
 
         self.layout().addLayout(header_layout)
         if subwidget is not None:
-            self.layout().addWidget(subwidget)
-        self.layout().addStretch()
+            self.layout().addWidget(subwidget, self._stretch)
+        if not expand_subwidget:
+            self.layout().addStretch()
+
+    @property
+    def _stretch(self) -> int:
+        return 1 if self._expand_subwidget else 0
 
     def _update_attach_button(self, detached: bool):
         self.attach_pb.setIcon(create_icon('back_to_tab' if detached else 'open_in_new'))
@@ -83,7 +93,7 @@ class WidgetWithLabelTitle(QtWidgets.QWidget):
             self.attach_pb.blockSignals(False)
 
     def insert_widget(self, widget=None, ind=1):
-        self.layout().insertWidget(ind, widget)
+        self.layout().insertWidget(ind, widget, self._stretch)
 
     def set_label_visible(self, visible=True):
         self.label.setVisible(visible)

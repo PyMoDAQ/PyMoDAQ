@@ -413,6 +413,8 @@ controller provides an efficient method to do it (that will save time) then you 
         #is True else averaging is done software wise
 
 
+.. _live_mode:
+
 Live Mode
 *********
 
@@ -743,3 +745,129 @@ For instance, in the 0D Mock viewer plugin:
                                                show_graph=False)))
 
 
+
+
+.. _plugin_roi_select:
+
+Reacting to the viewers: ROI select and crosshair
+-------------------------------------------------
+
+A detector plugin can use what the user selects on the data viewers of its DAQ_Viewer (see
+:ref:`viewers_usage`): the *ROI select* and the *crosshair*. Each time the user moves them, the DAQ_Viewer calls
+one of these methods of :py:class:`DAQ_Viewer_base<pymodaq.control_modules.viewer_utility_classes.DAQ_Viewer_base>`,
+which do nothing by default and can be overridden in your plugin:
+
+.. code-block:: python
+
+    def roi_select(self, roi_info: RoiInfo, ind_viewer: int = 0):
+        ...
+
+    def crosshair(self, crosshair_info: Iterable[float], ind_viewer: int = 0):
+        ...
+
+* ``roi_select`` is called each time the user releases the ROI select of a Viewer1D or Viewer2D after moving or
+  resizing it (the ROI select has to be shown, from the viewer toolbar or from the preferences);
+* ``crosshair`` is called each time the crosshair is moved, with its coordinates ``(x, y)`` (only ``x`` is
+  meaningful for a Viewer1D);
+* ``ind_viewer`` is the index of the viewer: the DAQ_Viewer creates one viewer per ``DataFromPlugins`` of the
+  emitted ``DataToExport``, in the same order;
+* positions and sizes are given in the units of the viewer axes, i.e. the axes of the emitted data (in pixels if
+  your data has no axes, or plain index axes).
+
+Both methods are called in the thread of the plugin, like ``grab_data`` or ``commit_settings``: there is no need to
+protect the stored information with a lock. In a live acquisition loop, they are called when the loop processes
+the Qt events (``QtWidgets.QApplication.processEvents()``).
+
+RoiInfo
+*******
+
+The ROI select is described by a :py:class:`RoiInfo<pymodaq_gui.plotting.items.roi.RoiInfo>` object:
+
+* ``origin``: the position of the corner of the selection, as a ``Point``. For a Viewer2D, the coordinates are in
+  the numpy order of the image dimensions: ``(y, x)``, i.e. (rows, columns);
+* ``size``: the size of the selection, in the same order: ``(height, width)`` for a Viewer2D, ``(width,)`` for a
+  Viewer1D;
+* ``centered``: ``False`` for the ROI select (``origin`` is the corner). ``center_origin()`` and ``uncenter_origin()``
+  move ``origin`` to the center of the selection and back;
+* ``roi_class``: the type of the selection (rectangle for a Viewer2D, linear region for a Viewer1D).
+
+Its ``to_slices`` method returns the slices corresponding to the selection, ready to be used on your data:
+one slice for a Viewer1D, two for a Viewer2D (rows, then columns). ``to_slices()`` returns integer bounds,
+``to_slices(False)`` keeps float bounds. ``RoiInfo.from_slices`` does the opposite.
+
+As the selection is in the units of the axes, use the value-based slicer ``vsig`` of
+:ref:`DataWithAxes <data_objects>` to crop your data: it converts the axes values into indexes, whatever the
+offset and scaling of your axes. The index-based slicer ``isig`` with ``to_slices()`` is only correct when the axes
+are plain indexes.
+
+.. code-block:: python
+
+    dwa_cropped = dwa.vsig[roi_info.to_slices(False)]
+
+Example: cropping the emitted data
+**********************************
+
+The plugin stores the last selection and crops the data before emitting them. A setting lets the user enable the
+cropping:
+
+.. code-block:: python
+
+    from pymodaq_gui.plotting.items.roi import RoiInfo
+    from pymodaq.utils.data import DataToExport
+
+
+    class DAQ_2DViewer_MyCamera(DAQ_Viewer_base):
+
+        params = comon_parameters + [
+            {'title': 'Crop to ROI select:', 'name': 'crop', 'type': 'bool', 'value': False},
+        ]
+
+        def ini_attributes(self):
+            self.controller = None
+            self.roi_select_info: RoiInfo = None
+
+        def roi_select(self, roi_info: RoiInfo, ind_viewer: int = 0):
+            self.roi_select_info = roi_info
+
+        def crop(self, dte: DataToExport) -> DataToExport:
+            """Crop all the data of the DataToExport to the ROI select, if enabled and defined"""
+            if not self.settings['crop'] or self.roi_select_info is None:
+                return dte
+            slices = self.roi_select_info.to_slices(False)
+            return DataToExport(dte.name, data=[dwa.vsig[slices] for dwa in dte])
+
+        def grab_data(self, Naverage=1, **kwargs):
+            dte = self.get_data_from_camera()  # your own method building the DataToExport
+            self.dte_signal.emit(self.crop(dte))
+
+Make sure every emission goes through the cropping, in particular in a live loop (see :ref:`live_mode`).
+The *RoiStuff* plugin of the ``pymodaq_plugins_mockexamples`` package gives a complete example.
+
+Example: hardware ROI
+*********************
+
+Many cameras can read only a part of their sensor, which increases the frame rate. In that case, ``roi_select``
+can send the selection to the camera, then update the axes of the emitted data. If the axes of your data are the
+pixels of the sensor (with an offset and a scaling equal to the current hardware ROI start and binning), the
+integer slices of ``to_slices()`` directly give the pixels to read:
+
+.. code-block:: python
+
+    def roi_select(self, roi_info: RoiInfo, ind_viewer: int = 0):
+        rows, cols = roi_info.to_slices()
+        self.controller.set_roi(x=cols.start, width=cols.stop - cols.start,
+                                y=rows.start, height=rows.stop - rows.start)  # your camera API
+        # then update the x and y axes of the emitted data (offset and size)
+
+The pylablib camera plugins (*camera_base_pylablib* in ``pymodaq_plugins_utils``) implement this pattern: the
+selection is copied into a *ROI* setting (*Update ROI from Viewer*), applied to the camera with *Apply ROI*, and the
+axes are recomputed from the camera ROI and binning.
+
+Example: crosshair
+******************
+
+.. code-block:: python
+
+    def crosshair(self, crosshair_info: Iterable[float], ind_viewer: int = 0):
+        x, y = crosshair_info  # in the units of the viewer axes
+        self.controller.point_to(x, y)  # e.g. move a scanning mirror to the selected position

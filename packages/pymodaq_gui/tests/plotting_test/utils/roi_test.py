@@ -27,7 +27,7 @@ class TestInfoFromROI:
 
         assert linear_roi_info.origin == Point(pos_linear[0])
         assert linear_roi_info.size[0] == pytest.approx(pos_linear[1]-pos_linear[0])
-        assert linear_roi_info.color() == mkColor(linear_color)
+        assert linear_roi_info.color == mkColor(linear_color)
         assert len(linear_roi_info.size) == 1
         assert linear_roi_info.roi_class == LinearROI
 
@@ -52,7 +52,7 @@ class TestInfoFromROI:
         assert len(roi_info.size) == 2
         assert roi_info.size[0] == pytest.approx(size[1])  # ROI takes argument as (x, y) while
         # roi_info refers to the index of the numpy data (line, column, ...)
-        assert roi_info.color() == mkColor(color)
+        assert roi_info.color == mkColor(color)
         assert roi_info.size[1] == pytest.approx(size[0])  # ROI takes argument as (x, y) while
         # roi_info refers to the index of the numpy data (line, column, ...)
         assert roi_info.roi_class == RectROI
@@ -69,6 +69,27 @@ class TestInfoFromROI:
         for attr in ('origin', 'size', 'angle', 'centered', 'roi_class'):
             assert getattr(back_from_slice, attr) == getattr(roi_info, attr)
 
+
+    def test_rect_roi_angle(self, qtbot):
+        roi = RectROI(pos=[0, 0], size=[10, 5])
+        roi.setAngle(30)
+        assert RoiInfo.info_from_rect_roi(roi).angle == pytest.approx(30)
+
+    @pytest.mark.parametrize('origin, size', [((10.,), (4.,)), ((10., 20.), (4., 6.))])
+    def test_center_uncenter_origin(self, origin, size):
+        roi_info = RoiInfo(Point(origin), Point(size), roi_class=LinearROI if len(origin) == 1 else RectROI)
+        slices = roi_info.to_slices()
+        roi_info.center_origin()
+        assert roi_info.centered
+        assert roi_info.origin == Point(tuple(o + s / 2 for o, s in zip(origin, size)))
+        assert roi_info.to_slices() == slices  # same selection whatever the origin
+        roi_info.uncenter_origin()
+        assert not roi_info.centered
+        assert roi_info.origin == Point(origin)
+
+    def test_to_slices_without_roi_class(self):
+        with pytest.raises(ValueError):
+            RoiInfo(Point(1., 2.), Point(3., 4.)).to_slices()
 
     def test_get_repr(self, qtbot):
         pos = [-30, 65]

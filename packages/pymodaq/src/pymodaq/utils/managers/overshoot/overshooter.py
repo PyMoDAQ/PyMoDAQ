@@ -119,7 +119,8 @@ class Overshooter(ManagerBase):
         self._overshoot_under_process = False
 
     def show_hide_module_manager_settings(self):
-        to_hide = [('test_actuator',), ('probe_data',),
+        to_hide = [('probe_actuators',), ('probe_detectors',),
+                   ('probe_actuators_results',), ('probe_detectors_results',),
                    ]
         for param_tuple in to_hide:
             self.modules_manager.settings.child(*param_tuple).hide()

@@ -113,6 +113,7 @@ class DAQLogger(CustomExt):
     """
     show_h5file_statusbar_widgets = True
     show_workflow_actions = True
+    h5_base_group_name = 'Logger'
     icon_name = 'home_storage'
     params = [] + SaverWorker.params
 

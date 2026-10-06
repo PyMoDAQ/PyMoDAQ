@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 """Tests for pymodaq.extensions.scan.daq_scan"""
 from unittest.mock import Mock
+
+import numpy as np
 from dataclasses import dataclass
 import pytest
 from qtpy import QtCore
 
+from pymodaq_data.data import Axis, DataRaw, DataToExport
 from pymodaq_gui.parameter import Parameter
 
 from pymodaq.extensions.scan.daq_scan import DAQScan, DAQScanAcquisition
@@ -115,3 +118,39 @@ class TestTimeout:
         timeout_cmds = [cmd for cmd in messages if cmd.command == 'Timeout']
         assert len(timeout_cmds) == 1
         assert timeout_cmds[0].attribute == 'Timeout during acquisition'
+
+
+class TestNaverage:
+    def test_naverage_is_read_when_the_scan_starts(self, scan_acquisition, scan_settings):
+        """The number of averages set after the creation of the acquisition must be used by the scan"""
+        scan_settings.child('scan_options', 'scan_average').setValue(3)
+
+        scan_acquisition.init_things()
+
+        assert scan_acquisition.Naverage == 3
+
+    def test_indexes_and_nav_axes_include_the_average(self, scan_acquisition, scan_settings):
+        scan_settings.child('scan_options', 'scan_average').setValue(3)
+        for name in ('plot_0d', 'plot_1d'):
+            scan_settings.child('plot_options', name).setValue(dict(all_items=[], selected=[]))
+        scan_acquisition.init_things()
+        scan_acquisition.saver_worker = Mock()
+        scan_acquisition.thread_manager = Mock()
+        scan_acquisition.thread_manager.n_jobs = {'SaverWorker': 0}
+        scan_acquisition._on_scan_step_done = Mock()
+
+        scanner = scan_acquisition.scanner
+        scanner.get_indexes_from_scan_index.return_value = (0,)
+        scanner.get_nav_axes.return_value = [Axis('x', 'm', data=np.arange(4.), index=0)]
+        scanner.scanner.do_process_data = False
+
+        scan_acquisition._ind_average = 1
+        scan_acquisition._ind_scan = 0
+        dte = DataToExport('dte', data=[DataRaw('det', data=[np.zeros((1,))], origin='Det0D')])
+
+        scan_acquisition.det_done(dte)
+
+        bundle = scan_acquisition.saver_worker.data_to_save_signal.emit.call_args[0][0]
+        assert bundle.indexes == [1, 0]  # [average index, scan index]
+        nav_axes = scan_acquisition.saver_worker.nav_axes_signal.emit.call_args[0][0]
+        assert {axis.label: axis.index for axis in nav_axes} == {'Average': 0, 'x': 1}

@@ -12,6 +12,7 @@ from pymodaq_data import data as data_mod
 from pymodaq_utils import math_utils as mutils
 
 from pymodaq_gui.plotting.data_viewers.viewer1D import Viewer1D
+from pymodaq_gui.managers.roi_viewer_manager import ROIFactory, ROIDim
 
 from pymodaq_utils.math_utils import gauss1D
 
@@ -58,6 +59,26 @@ class TestViewer1D:
         assert prog.is_action_checked('do_math')
         prog.get_action('do_math').trigger()
         assert not prog.is_action_checked('do_math')
+
+    def test_roi_channels_follow_labels(self, init_viewer1d):
+        """The channels of an ROI must follow the labels of the data and never keep stale ones"""
+        prog, data = init_viewer1d
+        x = np.linspace(0, 200, 201)
+        y1 = mutils.gauss1D(x, 75, 25)
+        y2 = mutils.gauss1D(x, 120, 50, 2)
+        axes = [data_mod.Axis('myaxis', 'units', data=x)]
+
+        prog.show_data(data_mod.DataRaw('mydata', data=[y1, y2], labels=['Mock1', 'Mock2'], axes=axes))
+        prog.get_action('roi').trigger()
+        roi_manager = prog.view.roi_manager
+        roi_manager.add_roi_programmatically(
+            ROIFactory.get_descriptors_from_dimensionality(ROIDim.ROI1D)[0])
+
+        prog.show_data(data_mod.DataRaw('mydata', data=[y1, y2], labels=['CH00', 'CH01'], axes=axes))
+
+        use_channel = roi_manager.get_roi_from_index(0).param['use_channel']
+        assert use_channel['all_items'] == ['CH00', 'CH01']
+        assert use_channel['selected'] == ['CH00', 'CH01']
 
     def test_scatter(self, init_viewer1d):
         prog, data = init_viewer1d

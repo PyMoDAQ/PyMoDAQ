@@ -38,6 +38,7 @@ class ModuleCreator:
     def __init__(self, dashboard: 'DashBoard'):
         self.dashboard = dashboard
         self.module_loader: ModuleLoader = None
+        self._loaders: list[ModuleLoader] = []  # all the loaders currently creating modules
 
         self.menu_button: MenuButton = MenuButton(text='AddModule',
                                                   add_menu_entries=build_menu_for_module_creation(self._get_masters()),
@@ -125,6 +126,30 @@ class ModuleCreator:
         if callback is not None:
             self.module_loader.all_instruments_added.connect(callback)
         self.module_loader.start()
+
+    def register_loader(self, loader: ModuleLoader):
+        """Keep track of a loader creating modules (called by the loader itself)"""
+        if loader not in self._loaders:
+            self._loaders.append(loader)
+
+    def unregister_loader(self, loader: ModuleLoader):
+        """Forget a loader once it has handed over its modules (called by the loader itself)"""
+        if loader in self._loaders:
+            self._loaders.remove(loader)
+
+    def stop_loading(self) -> list[DAQ_Move | DAQ_Viewer]:
+        """Stop all ongoing loadings of modules
+
+        Returns
+        -------
+        list of DAQ_Move or DAQ_Viewer: the modules created by the loaders but not yet added to the
+        ModulesManager
+        """
+        modules = []
+        for loader in self._loaders[:]:
+            modules.extend(loader.stop())
+            self.unregister_loader(loader)
+        return modules
 
     def forget_callback(self, callback : Callable):
         try:
