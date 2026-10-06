@@ -31,6 +31,13 @@ def scanner(qtbot) -> Scanner:
 
 
 class TestScanner:
+    def test_scanner_changed_signal(self, scanner, qtbot):
+        """The signal is emitted each time the scanner implementation changes"""
+        scanner.set_scan_type_and_subtypes('Scan2D', 'Linear')
+        with qtbot.waitSignal(scanner.scanner_changed_signal, timeout=1000):
+            scanner.set_scan_type_and_subtypes('Scan2D', 'RandomSpread')
+        assert scanner.scan_sub_type == 'RandomSpread'
+
     def test_attributes(self, qtbot):
         """test if attributes needed by external objects are present"""
         scanner = Scanner()

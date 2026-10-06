@@ -73,3 +73,37 @@ def test_shared_ui_custom(qtbot):
 
 
 
+
+
+class DocumentedApp(CustomApp):
+    """Help text for the test app"""
+
+
+def test_app_help_toggle(qtbot):
+    import qt_themes
+    from pymodaq_gui.utils.widgets.window import make_window
+    from pymodaq_gui.utils.shared_ui import SharedUI
+
+    qt_themes.set_theme('dracula')
+
+    window, _ = make_window(area=False, title='AppHelpTest')
+    qtbot.addWidget(window)
+    shared_ui = SharedUI(window, show=False)
+    shared_ui.affect_application(DocumentedApp(window))
+
+    action = shared_ui.get_action('app_help')
+    assert action.isCheckable()
+
+    action.trigger()
+    assert action.isChecked()
+    dialog = shared_ui._help_dialog
+    assert dialog.isVisible()
+    assert 'Help text for the test app' in dialog.findChild(QtWidgets.QTextBrowser).toPlainText()
+
+    action.trigger()
+    assert not action.isChecked()
+    assert not dialog.isVisible()
+
+    action.trigger()
+    dialog.close()
+    assert not action.isChecked()
