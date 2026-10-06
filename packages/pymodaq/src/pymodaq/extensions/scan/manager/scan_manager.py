@@ -66,12 +66,14 @@ class ScanManager(SettingsManager):
 
 
 
-        super().__init__(dashboard=dashboard,
-                         handler_id=ScanSettingsEntryHandler.handler_name)
+        # the settings are built from self.params in the parent __init__: it must be set before
         self.params = [
             {'title': 'Options', 'name': 'daq_scan', 'type': 'group', 'children': daq_scan.params},
             {'title': 'Saver', 'name': 'h5saver', 'type': 'group', 'children': H5Saver.params},
         ]
+
+        super().__init__(dashboard=dashboard,
+                         handler_id=ScanSettingsEntryHandler.handler_name)
 
         self._h5saver = daq_scan.h5_manager.get_h5saver()
         self._h5saver.settings.child('do_save').hide()
@@ -216,7 +218,8 @@ class ScanManager(SettingsManager):
         widget.layout().addWidget(self.scanner.parent_widget)
         self.main_widget.layout().insertWidget(0, configure_scan_widget)
         configure_scan_widget.insert_widget(get_data_widget, 2)
-        for child_name in ('probe_data', 'test_actuator'):
+        for child_name in ('probe_detectors', 'probe_actuators',
+                          'probe_detectors_results', 'probe_actuators_results'):
             self.modules_manager.settings.child(child_name).show(False)
         self.main_widget.layout().setStretch(0, 1)
         self.main_widget.layout().setStretch(1, 3)

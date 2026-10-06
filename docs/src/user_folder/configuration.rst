@@ -37,7 +37,7 @@ Each kind of file has its own subfolder. Files shared between all users are in t
 * *overshooter_configs*: the entries of the :ref:`overshoot_manager` (*overshoot_configs* holds the files of
   older versions)
 * *roi_configs*: the ROIs saved from the data viewers
-* *batch_configs*: the batches of scans to do
+* *scans*: the entries of the :ref:`scan_manager`, the scans defined for the DAQ_Scan
 * *sequences*: the sequences of the :ref:`sequencer_extension`
 * *layout_configs*: the user interface docks arrangement
 

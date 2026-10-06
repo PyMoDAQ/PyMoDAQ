@@ -662,7 +662,7 @@ class H5Backend:
             return self._h5file
         else:
             if swmr_mode and self.backend == 'h5py':
-                if mode == 'w':
+                if mode in ('w', 'a'):
                     kwargs['libver'] = 'latest'
                 elif mode == 'r':
                     kwargs['swmr'] = True

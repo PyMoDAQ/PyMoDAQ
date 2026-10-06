@@ -83,6 +83,19 @@ class TestWithoutUI:
         assert putils.iter_children(prog.settings.child(DETECTOR_SETTINGS_KEY), []) == \
             putils.iter_children(det_params, [])
 
+    def test_main_settings_recall_detector(self, ini_daq_viewer_without_ui):
+        prog, qtbot = ini_daq_viewer_without_ui
+        prog.detector = SelectedModule(DAQTypesEnum['DAQ1D'], 'Mock')
+        assert prog.settings['main_settings', 'DAQ_type'] == 'DAQ1D'
+        assert prog.settings['main_settings', 'detector_type'] == 'Mock'
+
+    def test_removed_main_settings(self, ini_daq_viewer_without_ui):
+        prog, qtbot = ini_daq_viewer_without_ui
+        main_settings = prog.settings.child('main_settings')
+        assert 'overshoot' not in main_settings.names
+        assert 'axes' not in main_settings.names
+
+
 #@pytest.mark.skip
 class TestWithUI:
 

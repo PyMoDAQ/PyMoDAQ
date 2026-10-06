@@ -303,10 +303,8 @@ class ControlModule(QObject):
         else:
             return get_theme().magenta
 
-    def create_new_file(self, new_file: bool):
-        if new_file:
-            self.close_file()
-
+    def create_new_file(self):
+        self.close_file()
         self.module_and_data_saver.h5saver = self.h5saver
         return True
 
@@ -436,9 +434,6 @@ class ControlModule(QObject):
         raise NotImplementedError
 
     def append_data(self, *args, **kwargs):
-        raise NotImplementedError
-
-    def insert_data(self, *args, **kwargs):
         raise NotImplementedError
 
     def quit_fun(self):
