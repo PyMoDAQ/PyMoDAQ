@@ -10,7 +10,7 @@ initialization. Use it in a test module of a plugin repository::
         fail_on = 'error'  # or 'warning', 'todo'
         strict_imports = True
 
-.. versionadded:: 5.4.0
+.. versionadded:: 5.3.1
 """
 from pathlib import Path
 from typing import Optional

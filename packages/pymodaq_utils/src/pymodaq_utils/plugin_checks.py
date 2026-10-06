@@ -15,7 +15,7 @@ To get a report without pytest, for any installed plugin package::
     from pymodaq_utils.plugin_checks import check_plugin_package
     print(check_plugin_package('pymodaq_plugins_mock'))
 
-.. versionadded:: 5.4.0
+.. versionadded:: 5.3.1
 """
 from __future__ import annotations
 

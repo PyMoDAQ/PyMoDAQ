@@ -16,7 +16,7 @@ They are used by :mod:`pymodaq_utils.plugin_checks` but can be called directly::
     for finding in check_package_sources('pymodaq_plugins_xxxx'):
         print(finding)
 
-.. versionadded:: 5.4.0
+.. versionadded:: 5.3.1
 """
 from __future__ import annotations
 

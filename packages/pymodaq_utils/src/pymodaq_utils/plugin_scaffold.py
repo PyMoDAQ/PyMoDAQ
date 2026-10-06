@@ -10,7 +10,7 @@ methods, and holds ``TODO`` comments (and ``NotImplementedError``) where the ins
 from the root of the plugin repository (or use ``--folder`` to give the package folder). The same is available from
 python with :func:`create_instrument`.
 
-.. versionadded:: 5.4.0
+.. versionadded:: 5.3.1
 """
 from __future__ import annotations
 

@@ -102,7 +102,7 @@ Testing your plugin
 A plugin contribution is accepted if it passes the acceptance checks shipped with PyMoDAQ. They need no hardware
 (they are static and import-level checks) and can be reused in any plugin repository, in a test module such as
 *tests/test_plugin.py*. They are provided by ``pymodaq_utils`` (not ``pymodaq``, so that importing them does not start
-the whole PyMoDAQ initialization) from PyMoDAQ 5.4.0 on. The module should skip itself with older versions, where
+the whole PyMoDAQ initialization) from PyMoDAQ 5.3.1 on. The module should skip itself with older versions, where
 they do not exist:
 
 .. code-block:: python
@@ -116,7 +116,7 @@ they do not exist:
     except ModuleNotFoundError:  # pymodaq_utils is not installed
         available = False
     if not available:
-        pytest.skip('The plugin acceptance checks need PyMoDAQ >= 5.4', allow_module_level=True)
+        pytest.skip('The plugin acceptance checks need PyMoDAQ >= 5.3.1', allow_module_level=True)
 
     from pymodaq_utils.plugin_testing import PluginPackageChecks
 
