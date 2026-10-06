@@ -20,7 +20,7 @@ from pymodaq_gui.utils.menu_utils import MenuButton, IterableMenu
 from ..element_factory import SeqEltFactory, SeqEltBase, MIME_TYPE
 from ..elements.button import AddButtonPlaceholder
 from ..elements.root import RootElt
-from ..styling import button_style, menu_style, color_from_depth
+from pymodaq_gui.utils.styling import button_style, menu_style, color_from_depth
 from ... import get_set_sequencer_path
 from ..yaml_utils import PrettyListDumper
 

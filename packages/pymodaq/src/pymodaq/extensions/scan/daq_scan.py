@@ -10,10 +10,12 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 import tempfile
-from typing import List, Tuple, Union, TYPE_CHECKING
+from typing import List, Optional, Tuple, Union, TYPE_CHECKING
 
 import numpy as np
-from qtpy import QtWidgets, QtCore
+import qt_themes
+from qt_themes import get_theme
+from qtpy import QtWidgets, QtCore, QtGui
 from qtpy.QtWidgets import QDialogButtonBox
 from qtpy.QtCore import Signal, QDateTime, QDate, QTime, QTimer
 
@@ -22,6 +24,7 @@ from pymodaq.control_modules.enums import MoveType
 from pymodaq.utils.custom_ext import CustomExt
 from pymodaq.utils.managers.modules import ModuleType
 from pymodaq_data.plotting.utils import PlotColors
+from pymodaq_gui.utils.styling import color_to_rgba
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config
@@ -227,6 +230,7 @@ class DAQScan(CustomExt):
         logger.info('Initializing DAQScan')
 
         self._ui_ready = False  # important to be here before super is called, see do_things_after_experiment_set
+        self._naverage_to_restore: Optional[int] = None  # see update_average_option
 
         super().__init__(parent=dockarea,
                          dashboard=dashboard,
@@ -355,11 +359,12 @@ class DAQScan(CustomExt):
 
         self.live_plot_dockarea = gutils.DockArea()
         self.live_plot_dock = gutils.Dock('Live Plots')
-        self.dockarea.addDock(self.live_plot_dock, 'right', self.dock_command)
+        self.dockarea.addDock(self.live_plot_dock, 'right')
         self.live_plot_dock.addWidget(self.live_plot_dockarea)
 
         self.dock_general_settings = gutils.Dock('General Settings')
-        self.dockarea.addDock(self.dock_general_settings, 'right', self.live_plot_dock)
+        self.dock_general_settings.setMaximumWidth(400)
+        self.dockarea.addDock(self.dock_general_settings, 'right', self.dock_command)
         self.dock_general_settings.setVisible(config('pymodaq', 'scan', 'show_general_settings'))
 
         widget_command = QtWidgets.QWidget()
@@ -370,27 +375,32 @@ class DAQScan(CustomExt):
         widget_command.layout().addWidget(splitter_widget)
 
         # Column 1: Actuators (selection + probe, and scan geometry)
-        self.actuators_widget = self._make_section_groupbox('Actuators')
-        self.actuators_widget.setMinimumWidth(220)
+        self.actuators_widget = self._make_section_groupbox('1) Actuators',
+                                                            color=get_theme().magenta)
+        self.actuators_widget.setMinimumWidth(280)
         self.actuators_widget.setMaximumWidth(400)
 
         self.actuators_settings_tree = ParameterTree()
         self.actuators_widget.layout().addWidget(self.actuators_settings_tree)
 
-        self.actuators_widget.layout().addWidget(self._section_label('Scan Parameters'))
+        self.actuators_widget.layout().addWidget(
+            self._section_label('2) Scan Parameters', color=get_theme().magenta))
         self.scanner_widget = QtWidgets.QWidget()
         self.scanner_widget.setLayout(QtWidgets.QVBoxLayout())
         self.actuators_widget.layout().addWidget(self.scanner_widget)
 
         # Column 2: Detectors (selection + probe, and what/how to plot from them)
-        self.detectors_widget = self._make_section_groupbox('Detectors')
-        self.detectors_widget.setMinimumWidth(220)
+        self.detectors_widget = self._make_section_groupbox('3) Detectors', color=get_theme().magenta)
+        self.detectors_widget.setMinimumWidth(280)
         self.detectors_widget.setMaximumWidth(400)
+
+        self.dock_command.setMaximumWidth(810)
 
         self.detectors_settings_tree = ParameterTree()
         self.detectors_widget.layout().addWidget(self.detectors_settings_tree)
 
-        self.detectors_widget.layout().addWidget(self._section_label('Plotting Parameters'))
+        self.detectors_widget.layout().addWidget(
+            self._section_label('4) Plotting Parameters', color=get_theme().magenta))
         self.plotting_settings_tree = ParameterTree()
         self.detectors_widget.layout().addWidget(self.plotting_settings_tree)
 
@@ -412,15 +422,17 @@ class DAQScan(CustomExt):
         # Probe button first (quick access), then the stable selection list, then the probe
         # results last: results live in their own group now, not nested under the probe
         # button, so they no longer push the selection list out of view when populated.
-        self.actuators_settings_tree.addParameters(self.modules_manager.settings.child('probe_actuators'))
-        self.actuators_settings_tree.addParameters(self.modules_manager.settings.child('actuators'))
-        self.actuators_settings_tree.addParameters(
-            self.modules_manager.settings.child('probe_actuators_results'))
 
-        self.detectors_settings_tree.addParameters(self.modules_manager.settings.child('probe_detectors'))
+        self.actuators_settings_tree.addParameters(self.modules_manager.settings.child('actuators'))
+        self.actuators_settings_tree.addParameters(self.modules_manager.settings.child('probe_actuators'))
+        # self.actuators_settings_tree.addParameters(
+        #     self.modules_manager.settings.child('probe_actuators_results'))
+
+
         self.detectors_settings_tree.addParameters(self.modules_manager.settings.child('detectors'))
-        self.detectors_settings_tree.addParameters(
-            self.modules_manager.settings.child('probe_detectors_results'))
+        self.detectors_settings_tree.addParameters(self.modules_manager.settings.child('probe_detectors'))
+        # self.detectors_settings_tree.addParameters(
+        #     self.modules_manager.settings.child('probe_detectors_results'))
 
         self._refresh_selection_tree_height()
 
@@ -463,6 +475,7 @@ class DAQScan(CustomExt):
 
     def connect_things(self):
         self.scanner.scanner_updated_signal.connect(self.do_things_after_scanner_changed)
+        self.scanner.scanner_changed_signal.connect(self.update_average_option)
 
         self.connect_action('ini_positions', self.set_ini_positions)
         self.connect_action(WorkFlowActions.START, self.start_scan)
@@ -708,23 +721,27 @@ class DAQScan(CustomExt):
         self.scan_selector.scan_select_signal.connect(self.scanner.update_from_scan_selector)
 
     @staticmethod
-    def _make_section_groupbox(title: str) -> QtWidgets.QGroupBox:
+    def _make_section_groupbox(title: str, color: QtGui.QColor=None) -> QtWidgets.QGroupBox:
         """A QGroupBox whose title is bold, larger and centered, for clear section identification"""
+        if color is None:
+            color = get_theme().text
         box = QtWidgets.QGroupBox(title)
         box.setLayout(QtWidgets.QVBoxLayout())
         box.layout().setContentsMargins(8, 18, 8, 8)
         box.setAlignment(QtCore.Qt.AlignmentFlag.AlignHCenter)
         box.setStyleSheet(
             'QGroupBox { font-weight: bold; font-size: 12pt; margin-top: 6px; } '
-            'QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top center; '
-            'padding: 0 6px; }')
+            f'QGroupBox::title {{ subcontrol-origin: margin; subcontrol-position: top center;'
+            f' color: {color_to_rgba(color)}; padding: 0 6px; }}')
         return box
 
     @staticmethod
-    def _section_label(text: str) -> QtWidgets.QLabel:
+    def _section_label(text: str, color: QtGui.QColor = None) -> QtWidgets.QLabel:
+        if color is None:
+            color = get_theme().text
         label = QtWidgets.QLabel(text)
         label.setAlignment(QtCore.Qt.AlignmentFlag.AlignHCenter)
-        label.setStyleSheet('font-weight: bold; font-size: 11pt;')
+        label.setStyleSheet(f'font-weight: bold; font-size: 11pt; color: {color_to_rgba(color)}')
         return label
 
     @staticmethod
@@ -926,7 +943,45 @@ class DAQScan(CustomExt):
 
         """
         if param.name() == 'scan_average':
+            if param.value() > 1 and self._is_spread_scan():
+                self._naverage_to_restore = None
+                param.setValue(1)
+                self._warn_no_average_for_spread_scan()
+                return
             self.status_manager.show_average_step(param.value() > 1)
+
+    def _is_spread_scan(self) -> bool:
+        """Check if the current scanner generates spread data (random spread, tabular...)"""
+        try:
+            return self.scanner.distribution == DataDistribution.spread
+        except AttributeError:  # no scanner implementation yet
+            return False
+
+    def _warn_no_average_for_spread_scan(self):
+        message = 'Averaging is not available for scans generating spread data: Naverage is set to 1'
+        logger.warning(message)
+        self.update_status(message)
+
+    def update_average_option(self):
+        """Limit the number of averages to 1 for the scans generating spread data
+
+        Averaging adds a dimension to the saved data that cannot be combined with spread data
+        (random spread, tabular scans). Naverage is therefore set to 1 and locked for these scans, and
+        restored (as well as unlocked) when switching back to a scan generating uniform data.
+        """
+        average_param = self.settings.child('scan_options', 'scan_average')
+        if self._is_spread_scan():
+            if average_param.value() > 1:
+                self._naverage_to_restore = average_param.value()
+                average_param.setValue(1)
+                self._warn_no_average_for_spread_scan()
+            average_param.setOpts(readonly=True,
+                                  tip='Averaging is not available for scans generating spread data')
+        else:
+            average_param.setOpts(readonly=False, tip='')
+            if self._naverage_to_restore is not None:
+                average_param.setValue(self._naverage_to_restore)
+                self._naverage_to_restore = None
 
     def clear_plot_from(self):
         self.settings.child('plot_options', 'plot_0d').setValue(dict(all_items=[], selected=[]))
@@ -1230,6 +1285,7 @@ class DAQScan(CustomExt):
             set_scan
         """
         self.update_status('Starting acquisition')
+        self.update_average_option()  # settings may have been changed (loaded) since the scanner was set
         #deactivate double_clicked
         if self.is_action_checked('move_at'):
             self.get_action('move_at').trigger()
@@ -1249,15 +1305,9 @@ class DAQScan(CustomExt):
             self._set_selection_enabled(False)
             self._init_live()
             Naverage = self.settings['scan_options', 'scan_average']
-            nav_axes = self.scanner.get_nav_axes()
             if Naverage > 1:
                 scan_shape = [Naverage]
                 scan_shape.extend(self.scanner.get_scan_shape())
-                for nav_axis in nav_axes:
-                    nav_axis.index += 1
-                nav_axes.insert(0, Axis('Average',
-                                        data=np.linspace(0, Naverage - 1, Naverage),
-                                        index=0))
             else:
                 scan_shape = self.scanner.get_scan_shape()
 
@@ -1492,6 +1542,10 @@ class DAQScanAcquisition(ExtensionWorker):
 
     def init_things(self):
         try:
+            # the number of averages may have been changed since the creation of this object: it must be
+            # consistent with the scan shape declared (from the settings) when the scan is started
+            self.Naverage = self.settings['scan_options', 'scan_average']
+
             self.modules_manager.timeout_signal.connect(self.timeout)
 
             self.scan_step_failed_signal.connect(self._on_scan_step_failed)

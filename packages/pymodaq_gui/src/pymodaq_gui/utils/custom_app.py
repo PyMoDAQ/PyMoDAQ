@@ -16,6 +16,7 @@ from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import get_set_path, get_set_local_dir
 from pymodaq_utils.warnings import deprecation_msg
+from pymodaq_utils.help import get_help_text
 
 from pymodaq_gui.utils.dock import DockArea, Dock
 from pymodaq_gui.managers.action_manager import ActionManager
@@ -186,6 +187,13 @@ class CustomApp(QObject, ActionManager, ParameterManager):
 
         self._h5_manager = H5Manager(self, show_not=h5_actions_not)
         self._worker_thread_manager = WorkerThreadManager(parent=self)
+
+    def get_help_markdown(self) -> str:
+        """Markdown text describing how to use this application, shown by the Help action
+
+        Read from the help.md next to the module defining the class, else the class docstring
+        """
+        return get_help_text(self) or inspect.cleandoc(self.__class__.__doc__ or '')
 
     @property
     def thread_manager(self) -> WorkerThreadManager:
