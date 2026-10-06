@@ -1,6 +1,6 @@
 [control_modules]
 settings_as_popup = false
-settings_dock_layout = 'horizontal'  # 'horizontal' or 'vertical', also changeable from the Settings dock's right-click menu
+settings_dock_layout = ['horizontal', 'vertical']  # row stacking of the Settings dock shared by every open control module (current choice first); also changeable live from that dock's right-click menu
 control_module_ini_polling = 60 # in seconds
 
 [actuator]
@@ -16,7 +16,8 @@ default_value_red = 0.0
 default_value_green = 1.0
 default_value_relative = 1.0
 controls_as_popup = false
-controls_dock_layout = 'vertical'  # 'horizontal' or 'vertical', also changeable from the Controls dock's right-click menu
+controls_dock_layout = ['vertical', 'horizontal']  # row stacking of the Controls dock shared by every open actuator (current choice first); also changeable live from that dock's right-click menu
+compact_dock_layout = ['vertical', 'horizontal']  # row stacking of the consolidated actuators dock (current choice first); also changeable live from that dock's right-click menu
 
 [actuator.allowed_units]
 V = 'V'
@@ -31,6 +32,7 @@ daq_type = 'DAQ0D' #either "DAQ0D", "DAQ1D", "DAQ2D", "DAQND"
 timeout = 10000  # default duration in ms to wait for data to be acquirred
 allow_settings_edition = false  # during grab
 restore_rois = false  # apply the ROI Manager entry of an experiment (re-create its viewers' ROIs) when it is loaded
+compact_dock_layout = ['vertical', 'horizontal']  # row stacking of the consolidated detectors dock (current choice first); also changeable live from that dock's right-click menu
 
 [scan]
 show_popups = true
