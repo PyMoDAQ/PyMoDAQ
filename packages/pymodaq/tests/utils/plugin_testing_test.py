@@ -235,3 +235,19 @@ def test_report_color(capsys):
     assert '\033[' in capsys.readouterr().out
     assert pt.main(['pymodaq_plugins_mock', '--color', 'never']) == 0
     assert '\033[' not in capsys.readouterr().out
+
+
+def test_check_a_single_file(repo, capsys):
+    folder = repo / 'src' / 'pymodaq_plugins_notinstalled' / 'daq_move_plugins'
+    assert pt.main([str(folder / 'daq_move_Good.py')]) == 0
+    out = capsys.readouterr().out
+    assert '[ok] daq_move_Good' in out and 'package layout' not in out  # only this module is checked
+
+    (folder / 'daq_move_Todo.py').write_text(textwrap.dedent(GOOD_MOVE).replace('Good', 'Todo')
+                                             + '\n# TODO complete me\n')
+    assert pt.main([str(folder / 'daq_move_Todo.py'), '--fail-on', 'todo']) == 1
+    out = capsys.readouterr().out
+    assert 'PMQ201' in out and 'daq_move_Good' not in out
+
+    with pytest.raises(SystemExit):  # not an instrument module
+        pt.main([str(repo / 'src' / 'pymodaq_plugins_notinstalled' / 'utils.py')])

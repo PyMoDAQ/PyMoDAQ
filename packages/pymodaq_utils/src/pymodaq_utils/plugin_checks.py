@@ -522,6 +522,58 @@ def resolve_target(target: Optional[str] = None) -> tuple[str, Optional[Path]]:
     return folder.name, project
 
 
+def resolve_file(path: str | Path) -> PluginModule:
+    """Find the plugin module of a python file of a plugin package, without importing it
+
+    The folder holding the package is added to ``sys.path``.
+
+    Raises
+    ------
+    ValueError
+        if the file is not in a ``pymodaq_plugins_*`` package, or not at the location, or does not have the name, of
+        an instrument module: ``daq_move_plugins/daq_move_<Name>.py`` or
+        ``daq_viewer_plugins/plugins_<N>D/daq_<N>viewer_<Name>.py``
+    """
+    path = Path(path).resolve()
+    if path.suffix != '.py':
+        raise ValueError(f'{path.name} is not a python file')
+    folder = next((p for p in path.parents if p.name.startswith('pymodaq_plugins_') and (p / '__init__.py').is_file()),
+                  None)
+    if folder is None:
+        raise ValueError(f'{path} is not in a pymodaq_plugins_* package')
+    parts = path.relative_to(folder).parts
+    module_name = path.stem
+    kind = None
+    if len(parts) == 2 and parts[0] == 'daq_move_plugins' and module_name.startswith('daq_move_'):
+        kind = 'move'
+    elif len(parts) == 3 and parts[0] == 'daq_viewer_plugins':
+        dim = parts[1][len('plugins_'):] if parts[1].startswith('plugins_') else None
+        if dim in VIEWER_DIMS and module_name.startswith(f'daq_{dim}viewer_'):
+            kind = dim
+    if kind is None or not module_name.isidentifier():
+        raise ValueError(f'{path.name} is not an instrument module: it should be named daq_move_<Name>.py in the '
+                         f'daq_move_plugins folder or daq_<N>viewer_<Name>.py in the daq_viewer_plugins/plugins_<N>D '
+                         f'folder (N = 0, 1, 2 or N) and be a valid python module name')
+    sys.path.insert(0, str(folder.parent))
+    return PluginModule(folder.name, module_name, kind)
+
+
+def check_plugin_file(path: str | Path, fail_on: str = 'error', strict_imports: bool = False) -> PluginReport:
+    """Run the checks on a single instrument module of a plugin package (and the todos of this file)
+
+    The checks on the package (``pyproject.toml``, entry points...) are not done, see :func:`check_plugin_package`.
+    The package does not need to be installed.
+    """
+    if fail_on not in FAIL_LEVELS:
+        raise ValueError(f'fail_on should be one of {list(FAIL_LEVELS)}')
+    module = resolve_file(path)
+    result = check_plugin_module(module)
+    file = Path(path).resolve()
+    result.findings.extend(f for f in check_leftovers(module.package, package_root(module.package))
+                           if f.path is not None and f.path.resolve() == file)
+    return PluginReport(module.package, [result], fail_on, strict_imports)
+
+
 def main(argv=None) -> int:
     """Print the report of a plugin package, for the developer: the ``check_plugin`` command (or
     ``python -m pymodaq_utils.plugin_checks``)
@@ -533,7 +585,8 @@ def main(argv=None) -> int:
                                      description='Check a PyMoDAQ plugin package and print a report')
     parser.add_argument('package', nargs='?', default=None,
                         help='name of an installed plugin package, or folder of the plugin repository or package '
-                             '(that does not need to be installed), default: the current folder')
+                             '(that does not need to be installed), or a single instrument module (python file) of '
+                             'a plugin package. Default: the current folder')
     parser.add_argument('--fail-on', choices=list(FAIL_LEVELS), default='error',
                         help="findings of this level and above give a non zero exit code ('todo': everything)")
     parser.add_argument('--strict-imports', action='store_true',
@@ -542,6 +595,13 @@ def main(argv=None) -> int:
     parser.add_argument('--color', choices=['auto', 'always', 'never'], default='auto',
                         help='color the report: auto (default) if the output is a terminal and NO_COLOR is not set')
     args = parser.parse_args(argv)
+    if args.package is not None and Path(args.package).is_file():  # a single instrument module
+        try:
+            report = check_plugin_file(args.package, args.fail_on, args.strict_imports)
+        except ValueError as e:
+            parser.error(str(e))
+        print(report.format(verbose=args.verbose, color=use_color(args.color)))
+        return 0 if report.ok else 1
     try:
         package, project = resolve_target(args.package)
     except ValueError as e:

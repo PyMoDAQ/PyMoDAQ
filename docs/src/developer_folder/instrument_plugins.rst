@@ -178,11 +178,13 @@ non zero when the checks fail:
 
 .. code-block:: bash
 
-    check_plugin [package name or folder] [--fail-on error|warning|todo] [--strict-imports] [-v] [--color auto|always|never]
+    check_plugin [package name, folder or instrument file] [--fail-on error|warning|todo] [--strict-imports] [-v] [--color auto|always|never]
 
 The report is colored in a terminal (``--color auto``, the default); set the ``NO_COLOR`` environment variable or
 use ``--color never`` to disable it, or ``FORCE_COLOR`` / ``--color always`` to force it (for instance in a CI log).
-The argument is either the name of an installed plugin package, or a folder: the plugin repository or its package
+The argument can also be a single instrument module of a plugin package (``daq_move_Xxxx.py`` or
+``daq_NDviewer_Xxxx.py``): only this module is then checked, with its todos, not the package (*pyproject.toml*, entry
+points...). The argument is either the name of an installed plugin package, or a folder: the plugin repository or its package
 folder (the current folder by default). The plugin does not need to be installed, and the *pyproject.toml* can still
 have the template name, which is then reported; only the entry points cannot be checked before the installation.
 
