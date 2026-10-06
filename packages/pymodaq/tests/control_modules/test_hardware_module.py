@@ -8,7 +8,7 @@ from qtpy import QtWidgets
 from qtpy.QtCore import Qt
 
 from pymodaq.control_modules.capabilities import control, measurement
-from pymodaq.control_modules.hardware_module import HardwareModule, _colors
+from pymodaq.control_modules.hardware_module import HardwareModule, SLIDER_WIDTH, _colors
 from pymodaq.control_modules.hardware_registry import HardwareKey, HardwareRegistry
 
 
@@ -324,3 +324,34 @@ class TestChannelLeds:
         combo.activated.emit(0)  # 'internal' is accepted
         qtbot.waitUntil(lambda: self.led(widget, 'trigger') == _colors().green.name(), timeout=2000)
         widget.release()
+
+
+class TestSlider:
+
+    @pytest.fixture
+    def stage(self, registry, qtbot):
+        class Axis(Camera):
+            x = control(units='mm', lo=0, hi=50, ui_add=('slider',))
+
+        widget = HardwareModule(HardwareKey(hardware_class=Axis, controller_id=11), Axis, registry=registry)
+        qtbot.addWidget(widget)
+        widget.initialize()
+        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        yield widget
+        widget.release()
+
+    def test_releasing_the_slider_writes_its_value_in_the_range(self, stage, qtbot):
+        slider = stage._sliders['x']
+        slider.setValue(500)  # half of the 0 to 50 mm range
+        slider.sliderReleased.emit()
+        plugin = stage.controller.thread._plugin
+        qtbot.waitUntil(lambda: ('x', 25.0) in plugin.written, timeout=2000)  # setValue and release both write
+
+    def test_a_device_write_moves_the_slider_without_writing_back(self, stage, qtbot):
+        plugin = stage.controller.thread._plugin
+        stage.controller.x = 10.0
+        qtbot.waitUntil(lambda: stage._sliders['x'].value() == 200, timeout=2000)
+        assert plugin.written == [('x', 10.0)]
+
+    def test_a_slider_has_a_channel_row_with_the_same_columns(self, stage):
+        assert stage._sliders['x'].width() == SLIDER_WIDTH

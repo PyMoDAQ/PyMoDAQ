@@ -40,6 +40,8 @@ INSTRUMENT_TOOLBAR = 'instrument'
 HISTORY_LENGTH = 200  # points kept by the trace of a scalar measurement
 DISPLAY_WIDTH = 150  # fixed columns: every row's actions start at the same position
 VALUE_WIDTH = 130
+SLIDER_WIDTH = 120
+SLIDER_STEPS = 1000  # a slider maps its range onto this many steps
 ACTION_WIDTH = 44  # room for one toolbar button
 
 
@@ -73,6 +75,13 @@ def _caption(quantity: Quantity) -> str:
     """The text shown for a channel: its label in capitals, or its name made readable."""
     text = quantity.label or quantity.name.replace('_', ' ').capitalize()
     return text.upper()
+
+
+def _range_of(quantity: Quantity) -> tuple[float, float]:
+    """The declared range, with 0 to 1 standing in for a missing limit."""
+    lo = 0.0 if quantity.lo is None else quantity.lo
+    hi = 1.0 if quantity.hi is None else quantity.hi
+    return lo, hi
 
 
 def _format(data) -> str:
@@ -118,6 +127,7 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         self._grabbing: set[str] = set()
         self._quantities: dict[str, Quantity] = {}
         self._value_widgets: dict[str, QtWidgets.QWidget] = {}
+        self._sliders: dict[str, QtWidgets.QSlider] = {}
         self._displays: dict[str, QtWidgets.QLabel] = {}
         self._views: dict[str, _ViewDock] = {}
         self._curves: dict[str, pg.PlotDataItem] = {}
@@ -194,7 +204,7 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         self._name_width = max((QtGui.QFontMetrics(bold).horizontalAdvance(_caption(q)) for q in quantities),
                                default=0) + 16
         # a whole row fits without the toolbar's overflow arrow: name, display, value, four buttons, separators
-        container.setMinimumWidth(self._name_width + DISPLAY_WIDTH + VALUE_WIDTH + 4 * ACTION_WIDTH + 60)
+        container.setMinimumWidth(self._name_width + DISPLAY_WIDTH + VALUE_WIDTH + SLIDER_WIDTH + 4 * ACTION_WIDTH + 60)
         for quantity in quantities:
             self._quantities[quantity.name] = quantity
             bar = QtWidgets.QToolBar(quantity.name, container)
@@ -242,6 +252,10 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
             self._add_selector(quantity)
         else:
             self._add_placeholder(name, 'value', VALUE_WIDTH)
+        if 'slider' in widgets:
+            self._add_slider(quantity)
+        else:
+            self._add_placeholder(name, 'slider', SLIDER_WIDTH)
         bar.addSeparator()
         self._actions_of(quantity, widgets)()
         if 'show_graph' in widgets:
@@ -301,6 +315,22 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         spin.editingFinished.connect(lambda: self._write(quantity.name, spin.value()))
         self._value_widgets[quantity.name] = spin
         self.add_widget(f'{quantity.name}_value', spin, toolbar=quantity.name)
+
+    def _add_slider(self, quantity: Quantity) -> None:
+        """A slider over the declared range. It writes when released, or at once for keyboard and wheel steps."""
+        slider = QtWidgets.QSlider(Qt.Orientation.Horizontal)
+        slider.setRange(0, SLIDER_STEPS)
+        slider.setFixedWidth(SLIDER_WIDTH)
+        slider.sliderReleased.connect(lambda: self._write(quantity.name, self._slider_value(quantity.name)))
+        slider.valueChanged.connect(lambda _: None if slider.isSliderDown() else
+                                    self._write(quantity.name, self._slider_value(quantity.name)))
+        self._sliders[quantity.name] = slider
+        self.add_widget(f'{quantity.name}_slider', slider, toolbar=quantity.name)
+
+    def _slider_value(self, name: str) -> float:
+        quantity = self._quantities[name]
+        lo, hi = _range_of(quantity)
+        return lo + (hi - lo) * self._sliders[name].value() / SLIDER_STEPS
 
     def _add_selector(self, quantity: Quantity) -> None:
         combo = QtWidgets.QComboBox()
@@ -451,6 +481,12 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         self._pending.discard(name)
         self._failed.discard(name)
         self._refresh_led(name)
+        slider = self._sliders.get(name)
+        if slider is not None:  # show the value without writing it back
+            lo, hi = _range_of(self._quantities[name])
+            slider.blockSignals(True)
+            slider.setValue(round((value - lo) / (hi - lo) * SLIDER_STEPS))
+            slider.blockSignals(False)
         widget = self._value_widgets.get(name)
         if widget is None:
             return
