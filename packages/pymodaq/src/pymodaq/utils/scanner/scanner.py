@@ -53,6 +53,7 @@ class Scanner(QObject, ParameterManager):
     ScanSelector, ScannerBase, TableModelSequential, TableModelTabular, pymodaq_types.TableViewCustom
     """
     scanner_updated_signal = Signal()
+    scanner_changed_signal = Signal()  # emitted when the scanner implementation (type, subtype, actuators) changes
     settings_name = 'scanner'
 
     params = [
@@ -160,6 +161,7 @@ class Scanner(QObject, ParameterManager):
             self._scanner._settings_tree.collapsible_widget.setVisible(False)
             self._scanner_settings_widget.layout().addWidget(self._scanner.settings_tree)
             self._scanner.settings.sigTreeStateChanged.connect(self._update_steps)
+            self.scanner_changed_signal.emit()
 
         except ValueError as e:
             pass

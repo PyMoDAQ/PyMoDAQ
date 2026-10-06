@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 import tempfile
-from typing import List, Tuple, Union, TYPE_CHECKING
+from typing import List, Optional, Tuple, Union, TYPE_CHECKING
 
 import numpy as np
 import qt_themes
@@ -230,6 +230,7 @@ class DAQScan(CustomExt):
         logger.info('Initializing DAQScan')
 
         self._ui_ready = False  # important to be here before super is called, see do_things_after_experiment_set
+        self._naverage_to_restore: Optional[int] = None  # see update_average_option
 
         super().__init__(parent=dockarea,
                          dashboard=dashboard,
@@ -474,6 +475,7 @@ class DAQScan(CustomExt):
 
     def connect_things(self):
         self.scanner.scanner_updated_signal.connect(self.do_things_after_scanner_changed)
+        self.scanner.scanner_changed_signal.connect(self.update_average_option)
 
         self.connect_action('ini_positions', self.set_ini_positions)
         self.connect_action(WorkFlowActions.START, self.start_scan)
@@ -941,7 +943,45 @@ class DAQScan(CustomExt):
 
         """
         if param.name() == 'scan_average':
+            if param.value() > 1 and self._is_spread_scan():
+                self._naverage_to_restore = None
+                param.setValue(1)
+                self._warn_no_average_for_spread_scan()
+                return
             self.status_manager.show_average_step(param.value() > 1)
+
+    def _is_spread_scan(self) -> bool:
+        """Check if the current scanner generates spread data (random spread, tabular...)"""
+        try:
+            return self.scanner.distribution == DataDistribution.spread
+        except AttributeError:  # no scanner implementation yet
+            return False
+
+    def _warn_no_average_for_spread_scan(self):
+        message = 'Averaging is not available for scans generating spread data: Naverage is set to 1'
+        logger.warning(message)
+        self.update_status(message)
+
+    def update_average_option(self):
+        """Limit the number of averages to 1 for the scans generating spread data
+
+        Averaging adds a dimension to the saved data that cannot be combined with spread data
+        (random spread, tabular scans). Naverage is therefore set to 1 and locked for these scans, and
+        restored (as well as unlocked) when switching back to a scan generating uniform data.
+        """
+        average_param = self.settings.child('scan_options', 'scan_average')
+        if self._is_spread_scan():
+            if average_param.value() > 1:
+                self._naverage_to_restore = average_param.value()
+                average_param.setValue(1)
+                self._warn_no_average_for_spread_scan()
+            average_param.setOpts(readonly=True,
+                                  tip='Averaging is not available for scans generating spread data')
+        else:
+            average_param.setOpts(readonly=False, tip='')
+            if self._naverage_to_restore is not None:
+                average_param.setValue(self._naverage_to_restore)
+                self._naverage_to_restore = None
 
     def clear_plot_from(self):
         self.settings.child('plot_options', 'plot_0d').setValue(dict(all_items=[], selected=[]))
@@ -1245,6 +1285,7 @@ class DAQScan(CustomExt):
             set_scan
         """
         self.update_status('Starting acquisition')
+        self.update_average_option()  # settings may have been changed (loaded) since the scanner was set
         #deactivate double_clicked
         if self.is_action_checked('move_at'):
             self.get_action('move_at').trigger()

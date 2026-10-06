@@ -52,7 +52,8 @@ The possible settings are visible on :numref:`scan2D_fig` and described below:
 
 * **Scan subtype**: See :numref:`scan2D_subtypes` either *linear* (scan line by line), *linear back and forth* (scan line by line
   but in reverse direction each 2 lines), *spiral* (start from the center and scan as a spiral), *Random* (random
-  sampling of the *linear* case) and *Adaptive* (see :ref:`adaptive_scans`)
+  sampling of the *linear* case), *RandomSpread* (same as *Random* but the data are saved as *spread* data: a list of
+  points with their coordinates) and *Adaptive* (see :ref:`adaptive_scans`)
 * **Start, Stop, Step**: for each axes (each actuators)
 * **Rmax, Rstep, Npts/axis**: in case of spiral scan only. Rmax is the maximum radius of the spiral (calculated),
   and Npts/axis is the number of points for both axis (total number of points is therefore Npts/axis²).
@@ -98,6 +99,12 @@ Tabular
 +++++++
 
 The tabular scan type consists of a list of positions (for each selected actuators).
+
+.. note::
+
+   The *Tabular* scans (like the *RandomSpread* subtype of *Scan2D*) generate *spread* data. The averaging of scans
+   (*N average* of the :ref:`general_settings_daq_scan`) is not available for them: it is set to 1 and locked as long as
+   such a scan is selected.
 
 Tabular Linear/Manual case
 ##########################
