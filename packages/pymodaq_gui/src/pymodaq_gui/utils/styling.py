@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Union
 import dataclasses
 
-from PySide6.QtGui import QColor
+from qtpy.QtGui import QColor
 from qt_themes import get_theme
 
 import pyqtgraph as pg
