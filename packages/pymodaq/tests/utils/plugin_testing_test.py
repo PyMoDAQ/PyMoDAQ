@@ -196,3 +196,14 @@ def test_check_a_plugin_not_installed(repo, capsys):
     assert 'PMQ102' in out and 'PMQ103' in out  # the pyproject.toml is checked although its name is wrong
     assert 'the plugin is not installed' in out and 'No entry point' not in out
     assert '[ok] daq_move_Good' in out
+
+
+def test_unreplaced_template_import_is_a_todo_not_a_failure(fake_package, tmp_path):
+    (tmp_path / 'pymodaq_plugins_fake' / 'hardware').mkdir()
+    (tmp_path / 'pymodaq_plugins_fake' / 'hardware' / '__init__.py').write_text('')
+    code = 'from pymodaq_plugins_fake.hardware.python_wrapper_file_of_your_instrument import X'
+    (tmp_path / 'pymodaq_plugins_fake' / 'daq_move_plugins' / 'daq_move_Tpl.py').write_text(code)
+    result = pt.check_plugin_module(pt.PluginModule(fake_package, 'daq_move_Tpl', 'move'))
+    assert result.problems == [] and result.warnings
+    todos = pt.check_package_sources(fake_package).findings
+    assert any(f.code == 'PMQ203' for f in todos)  # and the placeholder is reported as a todo

@@ -36,8 +36,8 @@ from pyqtgraph.parametertree import Parameter
 from pymodaq_data import Unit
 from pymodaq_utils.utils import get_entrypoints
 
-from pymodaq.utils.plugin_rules import (Finding, Severity, check_leftovers, check_plugin_source, check_pyproject,
-                                        package_root, project_root)
+from pymodaq.utils.plugin_rules import (PLACEHOLDER_NAMES_RE, Finding, Severity, check_leftovers,
+                                        check_plugin_source, check_pyproject, package_root, project_root)
 from pymodaq.control_modules.move_utility_classes import DAQ_Move_base
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base
 
@@ -277,6 +277,8 @@ def _is_environmental(error: Exception, package: str) -> bool:
         return False
     if isinstance(error, ImportError):
         name = getattr(error, 'name', None) or ''
+        if PLACEHOLDER_NAMES_RE.search(name):  # the wrapper import of the template was not replaced yet: a todo
+            return True
         return not (name == 'pymodaq' or name.startswith('pymodaq.') or name.split('.')[0] == package)
     return isinstance(error, (OSError, KeyError))
 
