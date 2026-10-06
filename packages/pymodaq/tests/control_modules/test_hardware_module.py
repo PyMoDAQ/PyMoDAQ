@@ -259,3 +259,26 @@ class TestCaptions:
 
     def test_without_a_label_the_name_is_made_readable(self, module):
         assert module.get_toolbar('temperature').findChildren(QtWidgets.QLabel)[0].text() == 'TEMPERATURE'
+
+
+class TestSettings:
+
+    def test_an_edit_in_the_settings_dock_reaches_the_plugin(self, registry, qtbot):
+        class Gained(Camera):
+            params = [{'name': 'gain', 'type': 'float', 'value': 1.0}]
+
+            def __init__(self):
+                super().__init__()
+                self.committed = []
+
+            def commit_settings(self, param):
+                self.committed.append((param.name(), param.value()))
+
+        widget = HardwareModule(HardwareKey(hardware_class=Gained, controller_id=6), Gained, registry=registry)
+        qtbot.addWidget(widget)
+        widget.initialize()
+        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        widget.controller.settings.child('gain').setValue(3.0)
+        plugin = widget.controller.thread._plugin
+        qtbot.waitUntil(lambda: ('gain', 3.0) in plugin.committed, timeout=2000)
+        widget.release()

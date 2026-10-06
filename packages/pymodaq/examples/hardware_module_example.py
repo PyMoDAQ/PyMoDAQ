@@ -76,7 +76,7 @@ def main() -> int:
     app = mkQApp('HardwareModule example')  # applies the PyMoDAQ theme and style, as the other modules do
     key = HardwareKey(hardware_class=FakeSpectrometer, controller_id=0)
     module = HardwareModule(key, FakeSpectrometer)
-    module.resize(900, 520)
+    module.resize(1100, 600)
     module.show()
     return app.exec()
 

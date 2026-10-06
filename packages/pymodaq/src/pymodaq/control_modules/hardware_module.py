@@ -24,6 +24,7 @@ from pyqtgraph.parametertree import ParameterTree
 from qt_themes import get_theme
 from qtpy import QtWidgets
 from qtpy.QtCore import QMetaObject, Qt, Signal, Slot
+from qtpy import QtGui
 from qtpy.QtGui import QColor
 
 from pymodaq_gui.managers.action_manager import ActionManager
@@ -37,7 +38,9 @@ __all__ = ['HardwareModule']
 
 INSTRUMENT_TOOLBAR = 'instrument'
 HISTORY_LENGTH = 200  # points kept by the trace of a scalar measurement
-CHANNEL_DOCK_WIDTH = 440
+DISPLAY_WIDTH = 150  # fixed columns: every row's actions start at the same position
+VALUE_WIDTH = 130
+ACTION_WIDTH = 44  # room for one toolbar button
 
 
 class _ViewDock(QtWidgets.QDockWidget):
@@ -143,11 +146,14 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
                         checkable=True, icon_color=theme.red, icon_checked_color=theme.green,
                         toolbar=INSTRUMENT_TOOLBAR)
         self.connect_action('ini', lambda *_: self._set_device_open(self.get_action('ini').isChecked()))
-        self.add_widget('status', self.status_label, toolbar=INSTRUMENT_TOOLBAR)
         self.add_action('show_settings', 'Settings', 'settings', 'Show or hide the device settings',
                         checkable=True, icon_checked_color=theme.green, toolbar=INSTRUMENT_TOOLBAR)
         self.connect_action('show_settings', lambda *_: self.settings_dock.setVisible(
             self.get_action('show_settings').isChecked()))
+        spacer = QtWidgets.QWidget()  # pushes the status to the right end of the toolbar
+        spacer.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Preferred)
+        self.add_widget('spacer', spacer, toolbar=INSTRUMENT_TOOLBAR)
+        self.add_widget('status', self.status_label, toolbar=INSTRUMENT_TOOLBAR)
 
     def _build_settings(self) -> None:
         """The plugin's settings in a dock. Edits go to the hardware thread."""
@@ -172,10 +178,16 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
     def _build_channels(self, caps) -> None:
         """One toolbar per quantity, stacked in a dock on the left."""
         container = QtWidgets.QWidget()
-        container.setMinimumWidth(CHANNEL_DOCK_WIDTH)  # a full row, with its label, fits without the overflow arrow
         layout = QtWidgets.QVBoxLayout(container)
         layout.setSpacing(8)
-        for quantity in caps.measurements + caps.controls:
+        quantities = caps.measurements + caps.controls
+        bold = QtWidgets.QLabel().font()
+        bold.setBold(True)
+        self._name_width = max((QtGui.QFontMetrics(bold).horizontalAdvance(_caption(q)) for q in quantities),
+                               default=0) + 16
+        # a whole row fits without the toolbar's overflow arrow: name, display, value, four buttons, separators
+        container.setMinimumWidth(self._name_width + DISPLAY_WIDTH + VALUE_WIDTH + 4 * ACTION_WIDTH + 60)
+        for quantity in quantities:
             self._quantities[quantity.name] = quantity
             bar = QtWidgets.QToolBar(quantity.name, container)
             self.reference_toolbar(quantity.name, bar)
@@ -194,33 +206,41 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         return QColor(color).name()  # a hex string, which a style sheet accepts
 
     def _fill_channel_toolbar(self, quantity: Quantity) -> None:
-        """Name, then groups separated by a separator: display | value | read and grab | show graph."""
+        """Name, display, value, actions, show graph: each row has the same slots, so the actions line up."""
         name = quantity.name
         is_measurement = quantity.access is Access.MEASUREMENT
         label = QtWidgets.QLabel(_caption(quantity))  # the label shown; the name stays the identifier
         label.setStyleSheet(f'color: {self._access_color(quantity)}; font-weight: bold; letter-spacing: 1px;')
+        label.setFixedWidth(self._name_width)
         kind = 'measurement: read from the device' if is_measurement else 'control: set on the device'
         label.setToolTip(f'{name} ({kind})')
         self.add_widget(f'{name}_name', label, toolbar=name)
 
         widgets = toolbar_widgets(quantity)
-        groups = [
-            [lambda: self._add_display(quantity)] if is_measurement else [],
-            [lambda: self._add_value_spinbox(quantity)] if 'value' in widgets else [],
-            [lambda: self._add_selector(quantity)] if 'selector' in widgets else [],
-            [self._actions_of(quantity, widgets)],
-            [lambda: self._add_show_graph_action(name)] if 'show_graph' in widgets else [],
-        ]
         bar = self.get_toolbar(name)
-        started = False
-        for group in groups:
-            if not group:
-                continue
-            if started:
-                bar.addSeparator()
-            started = True
-            for add in group:
-                add()
+        bar.addSeparator()
+        if is_measurement:
+            self._add_display(quantity)
+        else:
+            self._add_placeholder(name, 'display', DISPLAY_WIDTH)
+        bar.addSeparator()
+        if 'value' in widgets:
+            self._add_value_spinbox(quantity)
+        elif 'selector' in widgets:
+            self._add_selector(quantity)
+        else:
+            self._add_placeholder(name, 'value', VALUE_WIDTH)
+        bar.addSeparator()
+        self._actions_of(quantity, widgets)()
+        if 'show_graph' in widgets:
+            bar.addSeparator()
+            self._add_show_graph_action(name)
+
+    def _add_placeholder(self, name: str, slot: str, width: int) -> None:
+        """An empty column, so that a row without this slot keeps the others aligned."""
+        spacer = QtWidgets.QWidget()
+        spacer.setFixedWidth(width)
+        self.add_widget(f'{name}_{slot}_slot', spacer, toolbar=name)
 
     def _actions_of(self, quantity: Quantity, widgets: list[str]):
         """A function adding the read, snap and grab actions that the quantity's widgets ask for."""
@@ -237,7 +257,7 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
 
     def _add_display(self, quantity: Quantity) -> None:
         display = QtWidgets.QLabel('-')
-        display.setMinimumWidth(90)
+        display.setFixedWidth(DISPLAY_WIDTH)
         display.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         self._displays[quantity.name] = display
         self.add_widget(f'{quantity.name}_display', display, toolbar=quantity.name)
@@ -265,6 +285,7 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         spin = QtWidgets.QDoubleSpinBox()
         spin.setRange(-1e12 if quantity.lo is None else quantity.lo, 1e12 if quantity.hi is None else quantity.hi)
         spin.setSuffix(f' {quantity.units}' if quantity.units else '')
+        spin.setFixedWidth(VALUE_WIDTH)
         spin.editingFinished.connect(lambda: self._write(quantity.name, spin.value()))
         self._value_widgets[quantity.name] = spin
         self.add_widget(f'{quantity.name}_value', spin, toolbar=quantity.name)
@@ -272,6 +293,7 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
     def _add_selector(self, quantity: Quantity) -> None:
         combo = QtWidgets.QComboBox()
         combo.addItems([str(v) for v in quantity.values])
+        combo.setFixedWidth(VALUE_WIDTH)
         combo.activated.connect(lambda index: self._write(quantity.name, quantity.values[index]))
         self._value_widgets[quantity.name] = combo
         self.add_widget(f'{quantity.name}_selector', combo, toolbar=quantity.name)
