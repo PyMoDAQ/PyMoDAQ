@@ -2,7 +2,6 @@ from pathlib import Path
 from typing import Union
 import dataclasses
 
-from PySide6.QtGui import QColor
 from qt_themes import get_theme
 
 import pyqtgraph as pg
@@ -410,7 +409,7 @@ def menu_style(level: int):
     """
 
 
-def color_from_depth(color: QColor, depth: int) -> QColor:
+def color_from_depth(color: QtGui.QColor, depth: int) -> QtGui.QColor:
     # Generate a distinct tint step per level
     # Dark themes: Stepwise lightening | Light themes: Stepwise darkening
     if get_theme().is_dark_theme():
