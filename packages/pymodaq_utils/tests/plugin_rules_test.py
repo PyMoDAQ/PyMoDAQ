@@ -3,8 +3,8 @@ import textwrap
 
 import pytest
 
-from pymodaq.utils import plugin_rules as pr
-from pymodaq.utils.plugin_rules import Severity
+from pymodaq_utils import plugin_rules as pr
+from pymodaq_utils.plugin_rules import Severity
 
 PYPROJECT = '''
 [features]
@@ -108,7 +108,3 @@ def test_source_syntax_error(tmp_path):
     path = tmp_path / 'daq_move_Foo.py'
     path.write_text('x = = 1')
     assert codes(pr.check_plugin_source(path, 'move', 'DAQ_Move_Foo')) == {'PMQ300'}
-
-
-def test_mock_has_no_error():
-    assert not codes(pr.check_package_sources('pymodaq_plugins_mock'), Severity.ERROR)

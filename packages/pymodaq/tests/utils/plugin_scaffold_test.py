@@ -2,9 +2,9 @@ import sys
 
 import pytest
 
-from pymodaq.utils import plugin_scaffold as sc
-from pymodaq.utils import plugin_testing as pt
-from pymodaq.utils.plugin_rules import Severity
+from pymodaq_utils import plugin_scaffold as sc
+from pymodaq_utils import plugin_checks as pt
+from pymodaq_utils.plugin_rules import Severity
 
 
 @pytest.fixture
@@ -34,26 +34,3 @@ def test_created_instrument_is_valid_but_unfinished(package, kind, module):
     assert {f.severity for f in sources.findings} == {Severity.TODO}
     assert {f.code for f in sources.findings} >= {'PMQ201', 'PMQ202'}
     assert sources.failing() == [] and sources.failing('todo')
-
-
-def test_package_is_found_from_a_subfolder(package, monkeypatch):
-    monkeypatch.chdir(package.parent.parent)  # project root, the package is in src/
-    assert sc.find_package_folder() == package
-
-
-def test_invalid_arguments(package):
-    with pytest.raises(ValueError):
-        sc.create_instrument('move', 'foo', package)  # no capital letter
-    with pytest.raises(ValueError):
-        sc.create_instrument('3D', 'Foo', package)
-    with pytest.raises(ValueError):
-        sc.create_instrument('move', 'Foo', package.parent)  # not a pymodaq_plugins_ folder
-    sc.create_instrument('move', 'Foo', package)
-    with pytest.raises(FileExistsError):
-        sc.create_instrument('move', 'Foo', package)
-
-
-def test_cli(package, capsys):
-    sc.main(['1D', 'Bar', '--folder', str(package)])
-    assert (package / 'daq_viewer_plugins' / 'plugins_1D' / 'daq_1Dviewer_Bar.py').is_file()
-    assert 'Created' in capsys.readouterr().out

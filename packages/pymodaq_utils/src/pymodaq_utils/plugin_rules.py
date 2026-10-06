@@ -10,13 +10,13 @@ Severities:
 * ``warning``: deprecated or suspicious, should be fixed
 * ``todo``: the plugin is not finished (leftover of the template: TODO comments, placeholders, ``NotImplementedError``)
 
-They are used by :mod:`pymodaq.utils.plugin_testing` but can be called directly::
+They are used by :mod:`pymodaq_utils.plugin_checks` but can be called directly::
 
-    from pymodaq.utils.plugin_rules import check_package_sources
+    from pymodaq_utils.plugin_rules import check_package_sources
     for finding in check_package_sources('pymodaq_plugins_xxxx'):
         print(finding)
 
-.. versionadded:: 5.3.0
+.. versionadded:: 5.4.0
 """
 from __future__ import annotations
 
@@ -29,8 +29,6 @@ from pathlib import Path
 from typing import Optional
 
 import toml
-
-from pymodaq_data import Unit
 
 DOC = 'https://pymodaq.cnrs.fr/en/latest/developer_folder/instrument_plugins.html'
 TEMPLATE_NAME = 'pymodaq_plugins_template'
@@ -93,6 +91,20 @@ class Finding:
         where = f' {self.location}' if self.location else ''
         hint = f'  -> {self.hint}' if self.hint else ''
         return f'{self.code} [{self.severity.value}]{where}: {self.message}{hint}'
+
+
+def is_valid_unit(unit: str) -> bool:
+    """Whether a unit is known from pint (with the units of PyMoDAQ if pymodaq_data is installed)"""
+    try:
+        from pymodaq_data import Unit
+    except ImportError:  # only pymodaq_utils is installed
+        from pint import UnitRegistry
+        Unit = UnitRegistry().Unit
+    try:
+        Unit(unit)
+    except Exception:
+        return False
+    return True
 
 
 def package_root(package: str) -> Optional[Path]:
@@ -383,9 +395,7 @@ def _check_move_source(path: Path, cls: ast.ClassDef, attrs: dict, static_fallba
                                         'define them with the same type', path, attrs['_controller_units'].lineno))
             units = list(units.values())
         for unit in units if isinstance(units, list) else []:
-            try:
-                Unit(unit)
-            except Exception:
+            if not is_valid_unit(unit):
                 findings.append(Finding('PMQ305', Severity.ERROR, f"unit '{unit}' is unknown from pint",
                                         'use a unit known from pint, for instance mm or degree', path,
                                         attrs['_controller_units'].lineno))
@@ -394,7 +404,7 @@ def _check_move_source(path: Path, cls: ast.ClassDef, attrs: dict, static_fallba
 
 def check_package_sources(package: str) -> list[Finding]:
     """All the static rules on an installed (or editable) plugin package: packaging, leftovers and plugin classes"""
-    from pymodaq.utils.plugin_testing import find_plugin_modules  # no import cycle at module level
+    from pymodaq_utils.plugin_checks import find_plugin_modules  # no import cycle at module level
 
     root = package_root(package)
     if root is None:

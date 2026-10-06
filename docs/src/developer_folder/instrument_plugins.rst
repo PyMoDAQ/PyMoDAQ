@@ -101,23 +101,27 @@ Testing your plugin
 
 A plugin contribution is accepted if it passes the acceptance checks shipped with PyMoDAQ. They need no hardware
 (they are static and import-level checks) and can be reused in any plugin repository, in a test module such as
-*tests/test_plugin.py*. They exist from PyMoDAQ 5.3.0 on, so the module should skip itself with older versions
-(the check is done on the release tuple, as a development version like ``5.3.0.dev1`` is lower than ``5.3``):
+*tests/test_plugin.py*. They are provided by ``pymodaq_utils`` (not ``pymodaq``, so that importing them does not start
+the whole PyMoDAQ initialization) from PyMoDAQ 5.4.0 on. The module should skip itself with older versions, where
+they do not exist:
 
 .. code-block:: python
 
-    from importlib.metadata import version
+    import importlib.util
 
     import pytest
-    from packaging.version import Version
 
-    if Version(version('pymodaq')).release[:2] < (5, 3):
-        pytest.skip('Plugin acceptance checks need pymodaq >= 5.3', allow_module_level=True)
+    try:
+        available = importlib.util.find_spec('pymodaq_utils.plugin_testing') is not None
+    except ModuleNotFoundError:  # pymodaq_utils is not installed
+        available = False
+    if not available:
+        pytest.skip('The plugin acceptance checks need PyMoDAQ >= 5.4', allow_module_level=True)
 
-    from pymodaq.utils.plugin_testing import PluginPackageChecks
+    from pymodaq_utils.plugin_testing import PluginPackageChecks
 
     class TestMyPlugin(PluginPackageChecks):
-        package_name = 'pymodaq_plugins_xxxx'  # optional, otherwise read from the nearest pyproject.toml
+        package_name = 'pymodaq_plugins_xxxx'  # optional, otherwise found from the package folder
 
 This file replaces any generic test file inherited from the template; keep only tests that are specific to your
 instrument next to it.
@@ -194,8 +198,8 @@ plugin repository:
 
 .. code-block:: bash
 
-    python -m pymodaq.utils.plugin_scaffold move Xxxx   # daq_move_Xxxx.py with the class DAQ_Move_Xxxx
-    python -m pymodaq.utils.plugin_scaffold 1D Xxxx     # daq_1Dviewer_Xxxx.py with the class DAQ_1DViewer_Xxxx
+    python -m pymodaq_utils.plugin_scaffold move Xxxx   # daq_move_Xxxx.py with the class DAQ_Move_Xxxx
+    python -m pymodaq_utils.plugin_scaffold 1D Xxxx     # daq_1Dviewer_Xxxx.py with the class DAQ_1DViewer_Xxxx
 
 (use ``--folder`` to give the *pymodaq_plugins_xxxx* package folder). The module derives from the right base class,
 declares the mandatory attributes and methods, and its ``TODO`` comments tell where to put your instrument code.

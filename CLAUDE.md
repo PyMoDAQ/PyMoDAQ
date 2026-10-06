@@ -55,7 +55,7 @@ Lint: CI only fails on `flake8 . --count --select=E9,F63,F7,F82 --show-source --
 the root `pyproject.toml` (line length 120) but not enforced.
 
 Entry points (console scripts of `pymodaq`): `dashboard`, `daq_move`, `daq_viewer`, `daq_scan`, `daq_logger`, `pymodaq`,
-`check_plugin` (report on a plugin package, see `pymodaq/utils/plugin_testing.py`).
+`check_plugin` (report on a plugin package, see `pymodaq_utils/plugin_checks.py`).
 
 ## Architecture
 

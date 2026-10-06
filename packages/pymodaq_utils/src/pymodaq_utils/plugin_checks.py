@@ -1,8 +1,8 @@
-"""Reusable acceptance checks for PyMoDAQ instrument plugins (``pymodaq_plugins_*``).
+"""Acceptance checks for PyMoDAQ instrument plugins (``pymodaq_plugins_*``), without any dependency on pytest.
 
 No hardware is needed: the checks are static / import-level. Use them in a plugin repository with::
 
-    from pymodaq.utils.plugin_testing import PluginPackageChecks
+    from pymodaq_utils.plugin_testing import PluginPackageChecks
 
     class TestMyPlugin(PluginPackageChecks):
         package_name = 'pymodaq_plugins_myinstrument'  # optional, read from the nearest pyproject.toml if omitted
@@ -12,10 +12,10 @@ Every check is also exposed as a plain function returning a list of problems (em
 
 To get a report without pytest, for any installed plugin package::
 
-    from pymodaq.utils.plugin_testing import check_plugin_package
+    from pymodaq_utils.plugin_checks import check_plugin_package
     print(check_plugin_package('pymodaq_plugins_mock'))
 
-.. versionadded:: 5.3.0
+.. versionadded:: 5.4.0
 """
 from __future__ import annotations
 
@@ -29,17 +29,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-import pytest
 import toml
-from pyqtgraph.parametertree import Parameter
 
-from pymodaq_data import Unit
 from pymodaq_utils.utils import get_entrypoints
 
-from pymodaq.utils.plugin_rules import (PLACEHOLDER_NAMES_RE, Finding, Severity, check_leftovers,
-                                        check_plugin_source, check_pyproject, package_root, project_root)
-from pymodaq.control_modules.move_utility_classes import DAQ_Move_base
-from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base
+from pymodaq_utils.plugin_rules import (PLACEHOLDER_NAMES_RE, Finding, Severity, check_leftovers,
+                                        check_plugin_source, check_pyproject, is_valid_unit, package_root,
+                                        project_root)
 
 VIEWER_DIMS = ('0D', '1D', '2D', 'ND')
 ENTRYPOINT_GROUPS = ('pymodaq.plugins', 'pymodaq.instruments')
@@ -86,10 +82,6 @@ class PluginModule:
     @property
     def class_name(self) -> str:
         return f'DAQ_Move_{self.name}' if self.kind == 'move' else f'DAQ_{self.kind}Viewer_{self.name}'
-
-    @property
-    def base_class(self) -> type:
-        return DAQ_Move_base if self.kind == 'move' else DAQ_Viewer_base
 
     def __str__(self):
         return self.module_name
@@ -200,6 +192,10 @@ def _check_params(klass: type) -> list[str]:
     if not isinstance(params, list) or not all(isinstance(p, dict) for p in params):
         return [f'{klass.__name__}.params should be a list of dict']
     try:
+        from pyqtgraph.parametertree import Parameter
+    except ImportError:  # only pymodaq_utils is installed
+        return problems
+    try:
         tree = Parameter.create(name='settings', type='group', children=params)
     except Exception as e:
         return [f'{klass.__name__}.params cannot build a Parameter tree: {e!r}']
@@ -219,6 +215,7 @@ def _check_methods(klass: type, base: type, mandatory) -> list[str]:
 
 def check_move_class(klass: type) -> list[str]:
     """Checks on an actuator plugin class"""
+    from pymodaq.control_modules.move_utility_classes import DAQ_Move_base  # only needed when checking the classes
     if not (inspect.isclass(klass) and issubclass(klass, DAQ_Move_base)):
         return [f'{klass} should derive from DAQ_Move_base']
     problems = _check_methods(klass, DAQ_Move_base, MANDATORY_MOVE_METHODS)
@@ -238,9 +235,7 @@ def check_move_class(klass: type) -> list[str]:
     else:
         return problems + [f'_controller_units has an invalid type: {type(units).__name__}']
     for unit in unit_list:
-        try:
-            Unit(unit)
-        except Exception:
+        if not is_valid_unit(unit):
             problems.append(f"Unit '{unit}' in _controller_units is unknown from pint")
 
     epsilons = klass._epsilons
@@ -256,6 +251,7 @@ def check_move_class(klass: type) -> list[str]:
 
 def check_viewer_class(klass: type) -> list[str]:
     """Checks on a detector plugin class"""
+    from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base
     if not (inspect.isclass(klass) and issubclass(klass, DAQ_Viewer_base)):
         return [f'{klass} should derive from DAQ_Viewer_base']
     problems = _check_methods(klass, DAQ_Viewer_base, MANDATORY_VIEWER_METHODS)
@@ -318,7 +314,7 @@ class CheckResult:
 
     ``problems`` are defects of the plugin found on the imported classes. ``warnings`` mean the item could not be
     fully checked, for instance because a third party module or a vendor SDK is not available in the current
-    environment. ``findings`` come from the static rules of :mod:`pymodaq.utils.plugin_rules`.
+    environment. ``findings`` come from the static rules of :mod:`pymodaq_utils.plugin_rules`.
     """
     item: str
     problems: list[str] = field(default_factory=list)
@@ -477,54 +473,6 @@ def check_plugin_package(package: str, fail_on: str = 'error', strict_imports: b
     return report
 
 
-class PluginPackageChecks:
-    """Mixin to subclass in a test module of a plugin repository, see the module documentation.
-
-    Test classes are parametrized per plugin module so that every failure is reported individually.
-    """
-    package_name: Optional[str] = None
-    fail_on = 'error'  # 'error', 'warning' or 'todo' (the unfinished parts: TODO comments, placeholders...): the
-    # findings of the static rules of this level and above fail the tests
-    strict_imports = False  # if True, a module that cannot be imported because of a missing third party module or
-    # SDK fails instead of being skipped (recommended in the CI of a plugin as its dependencies are installed there)
-
-    @pytest.fixture
-    def package(self, request) -> str:
-        return self.package_name or guess_package_name(Path(request.fspath).parent)
-
-    def pytest_generate_tests(self, metafunc):
-        if 'plugin_module' not in metafunc.fixturenames:
-            return
-        package = self.package_name or guess_package_name(Path(str(metafunc.definition.fspath)).parent)
-        kinds = {'move': ('move',), 'viewer': VIEWER_DIMS}
-        wanted = metafunc.function.__name__
-        modules = [m for m in find_plugin_modules(package)
-                   if m.kind in (kinds['move'] if '_move_' in wanted else kinds['viewer'])]
-        metafunc.parametrize('plugin_module', modules, ids=str)
-
-    def test_package_layout(self, package):
-        problems = check_package_layout(package)
-        assert not problems, '\n'.join(problems)
-
-    def test_move_plugin(self, plugin_module):
-        self._assert_module_ok(plugin_module)
-
-    def test_viewer_plugin(self, plugin_module):
-        self._assert_module_ok(plugin_module)
-
-    def test_package_sources(self, package):
-        result = check_package_sources(package)
-        messages = result.failing(self.fail_on)
-        assert not messages, '\n'.join(messages)
-
-    def _assert_module_ok(self, plugin_module: PluginModule):
-        result = check_plugin_module(plugin_module)
-        messages = result.failing(self.fail_on, self.strict_imports)
-        assert not messages, '\n'.join(messages)
-        if result.warnings:
-            pytest.skip('; '.join(result.warnings))
-
-
 def resolve_target(target: Optional[str] = None) -> tuple[str, Optional[Path]]:
     """Find the plugin package to check from a package name or from a folder, without needing it to be installed
 
@@ -568,7 +516,7 @@ def resolve_target(target: Optional[str] = None) -> tuple[str, Optional[Path]]:
 
 def main(argv=None) -> int:
     """Print the report of a plugin package, for the developer: the ``check_plugin`` command (or
-    ``python -m pymodaq.utils.plugin_testing``)
+    ``python -m pymodaq_utils.plugin_checks``)
 
     Returns 0 if the checks pass, 1 otherwise (so that it can also be used in a script or a CI).
     """

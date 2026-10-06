@@ -3,9 +3,10 @@ import textwrap
 
 import pytest
 
-from pymodaq.utils import plugin_testing as pt
-from pymodaq.utils.plugin_rules import Severity
-from pymodaq.utils.plugin_testing import PluginPackageChecks
+from pymodaq_utils import plugin_checks as pt
+from pymodaq_utils import plugin_rules as pt_rules
+from pymodaq_utils.plugin_rules import Severity
+from pymodaq_utils.plugin_testing import PluginPackageChecks
 
 
 class TestMockPlugin(PluginPackageChecks):
@@ -211,3 +212,8 @@ def test_unreplaced_template_import_is_a_todo_not_a_failure(fake_package, tmp_pa
 
 def test_package_name_from_folder_not_from_unmodified_pyproject(repo):
     assert pt.guess_package_name(repo / 'src') == 'pymodaq_plugins_notinstalled'
+
+
+def test_mock_has_no_error():
+    findings = pt_rules.check_package_sources('pymodaq_plugins_mock')
+    assert not [f for f in findings if f.severity == Severity.ERROR]

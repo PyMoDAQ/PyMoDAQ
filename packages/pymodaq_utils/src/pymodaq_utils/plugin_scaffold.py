@@ -1,16 +1,16 @@
 """Helper to add a new, correctly named, instrument to a PyMoDAQ plugin package (``pymodaq_plugins_*``).
 
-It is a development helper, independent of the plugin checks (see :mod:`pymodaq.utils.plugin_testing`). The generated
+It is a development helper, independent of the plugin checks (see :mod:`pymodaq_utils.plugin_checks`). The generated
 module follows the naming convention, derives from the right base class, declares the mandatory attributes and
 methods, and holds ``TODO`` comments (and ``NotImplementedError``) where the instrument specific code goes::
 
-    python -m pymodaq.utils.plugin_scaffold move Xxxx      # actuator: daq_move_Xxxx.py, class DAQ_Move_Xxxx
-    python -m pymodaq.utils.plugin_scaffold 1D Xxxx        # 1D detector: daq_1Dviewer_Xxxx.py, class DAQ_1DViewer_Xxxx
+    python -m pymodaq_utils.plugin_scaffold move Xxxx      # actuator: daq_move_Xxxx.py, class DAQ_Move_Xxxx
+    python -m pymodaq_utils.plugin_scaffold 1D Xxxx        # 1D detector: daq_1Dviewer_Xxxx.py, class DAQ_1DViewer_Xxxx
 
 from the root of the plugin repository (or use ``--folder`` to give the package folder). The same is available from
 python with :func:`create_instrument`.
 
-.. versionadded:: 5.3.0
+.. versionadded:: 5.4.0
 """
 from __future__ import annotations
 
