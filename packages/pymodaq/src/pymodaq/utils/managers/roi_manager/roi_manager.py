@@ -13,6 +13,7 @@ from pymodaq_gui.plotting.data_viewers import Viewer1D, Viewer2D
 from pymodaq_gui.plotting.items.roi_sync import RoiParameter
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq.utils.config import get_set_experiment_path
+from pymodaq_utils.config import GlobalConfig
 
 from pymodaq_gui.parameter import Parameter, ParameterTree
 from pymodaq_gui.managers.manager_base import ManagerBase
@@ -29,8 +30,36 @@ logger = set_logger(get_module_name(__file__))
 ser_factory = SerializableFactory()
 
 
+class _ResizeFilter(QtCore.QObject):
+    def __init__(self, callback: Callable, parent: QtCore.QObject = None):
+        super().__init__(parent)
+        self._callback = callback
+
+    def eventFilter(self, obj, event):
+        if event.type() == QtCore.QEvent.Type.Resize:
+            QtCore.QTimer.singleShot(0, self._callback)
+        return False
+
+
 class ROIList(ParameterManager):
     params = [{'title': 'ROIs', 'name': 'rois', 'type': 'itemselect', 'checkbox': True}]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._resize_filter = _ResizeFilter(self.fit_list_to_tree, self.tree.viewport())
+        self.tree.viewport().installEventFilter(self._resize_filter)
+
+    def fit_list_to_tree(self):
+        """ Make the list of ROIs use all the vertical space available in the tree"""
+        item = self.settings.child('rois').items
+        item = next(iter(item), None)
+        sub_item = getattr(item, 'subItem', None)
+        if sub_item is None or self.tree.viewport() is None:
+            return
+        top = self.tree.visualItemRect(sub_item).top()
+        height = max(self.tree.viewport().height() - top - 6, 70)
+        if sub_item.sizeHint(0).height() != height:
+            sub_item.setSizeHint(0, QtCore.QSize(10, height))
 
 
 class ROIManager(ManagerBase):
@@ -64,6 +93,8 @@ class ROIManager(ManagerBase):
         if experiment_name not in self.entries:
             self.create_entry(experiment_name, bypass_dialog=True)
         self.update_entry(experiment_name)
+        if GlobalConfig()('pymodaq', 'viewer', 'restore_rois'):
+            self.execute_entry(experiment_name)
 
     def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
         self.add_toolbar('management', 'Management',
@@ -130,9 +161,15 @@ class ROIManager(ManagerBase):
         objects_as_dicts = self.sort_rois_in_dict(objects)
         for module_name in objects_as_dicts:
             detector = self.modules_manager.get_mod_from_name(module_name)
+            if detector is None:
+                logger.warning(f'Cannot restore the ROIs of {module_name}: no such detector in the Dashboard')
+                continue
             for viewer_name in objects_as_dicts[module_name]:
-                viewer: Viewer1D | Viewer2D = \
-                find_objects_in_list_from_attr_name_val(detector.viewers, 'title', viewer_name)[0]
+                viewer: Viewer1D | Viewer2D = find_objects_in_list_from_attr_name_val(
+                    detector.viewers, 'title', viewer_name)[0]
+                if viewer is None:
+                    logger.warning(f'Cannot restore the ROIs of {module_name}/{viewer_name}: no such viewer')
+                    continue
                 viewer.do_math()
                 viewer.roi_manager.clear_settings_slot()
                 with viewer.roi_manager.rois_setting.treeChangeBlocker() as blocker:

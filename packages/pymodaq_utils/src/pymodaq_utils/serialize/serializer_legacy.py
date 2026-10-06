@@ -229,8 +229,7 @@ class Serializer:
 
 class DeSerializer:
     """Used to DeSerialize bytes to python objects, numpy arrays and PyMoDAQ Axis,
-     DataWithAxes and DataToExport
-    objects
+    DataWithAxes and DataToExport objects
 
     Parameters
     ----------
@@ -240,8 +239,8 @@ class DeSerializer:
 
     See Also
     --------
-    :py:class:`~pymodaq_data.serialize.mysocket.SocketString`
-    :py:class:`~pymodaq_data.serialize.mysocket.Socket`
+    pymodaq_utils.serialize.mysocket.SocketString
+    pymodaq_utils.serialize.mysocket.Socket
     """
 
     def __init__(self, bytes_string:  Union[bytes, Socket] = None) -> None:

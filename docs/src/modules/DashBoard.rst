@@ -97,11 +97,11 @@ The **Tools** menu will allow you to:
 * Load Extensions of the DashBoard
 * Look at the current log file in the default editor. The older logs can be found in the *.pymodaq* folder,
   see :ref:`section_configuration`.
-* Open and modify the Preferences related to all pymodaq modules and plugins (see Fig. :numref:`edit_config`)
+* Open and modify the Preferences related to all pymodaq modules and plugins (see Fig. :numref:`dashboard_edit_config`)
 * Run the leco Coordinator (see :ref:`leco_communication`)
 
 
-  .. _edit_config:
+  .. _dashboard_edit_config:
 
 .. figure:: /image/configuration/edit_config.png
    :alt: config_file
@@ -135,6 +135,33 @@ The **Extensions** menu let the user load a specific installed extensions. Defau
 *DAQ_Logger* ones. More specific ones can be installed, for instance the package `Pymodaq Femto`__
 
 __ https://pymodaq-femto.readthedocs.io/en/latest/
+
+
+.. _dashboard_external_toolbar:
+
+The DashBoard toolbar in extensions
+-----------------------------------
+
+Most extensions (DAQ_Scan, DAQ_Logger, PID, DataMixer, Sequencer, Ramping, optimizers...) display a *Dashboard
+toolbar* (see :numref:`dashboard_external_toolbar_fig`) so you can interact with the Dashboard without leaving the
+extension window:
+
+* **Show/Hide Dashboard**: shows or hides the Dashboard window (and its control modules). Closing the Dashboard
+  window only hides it, and it is shown again when the extension is closed
+* **Experiment**: a button to open the :ref:`experiment_manager`, a list of the available experiments and a button to
+  apply the selected one. The list is synchronized with the one of the Dashboard
+* **State**: a button to open the :ref:`state_manager`, a list of the states defined for the current experiment and a
+  button to apply the selected one
+
+  .. _dashboard_external_toolbar_fig:
+
+.. figure:: /image/dashboard/dashboard_external_toolbar.png
+   :alt: dashboard toolbar
+
+   The Dashboard toolbar as displayed in an extension.
+
+When developing an extension deriving from ``CustomExt``, this toolbar is added by calling its
+``create_dashboard_toolbar`` method, whose arguments allow to display or not each of the three groups above.
 
 
 

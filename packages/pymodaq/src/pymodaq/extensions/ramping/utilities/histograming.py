@@ -17,6 +17,7 @@ from pymodaq_data.h5modules.data_saving import DataLoader, GROUP
 
 from pymodaq_gui.h5modules.saving import H5Saver
 from pymodaq_gui.managers.parameter_manager import ParameterManager, Parameter
+from pymodaq_gui.parameter.utils import tree_change_blocker
 from pymodaq_gui.plotting.data_viewers import ViewerDispatcher
 from pymodaq_utils.math_utils import find_index
 
@@ -43,6 +44,10 @@ class H5Histogramming(QObject, ParameterManager):
         {'title': 'Compute Histogram', 'name': 'compute_histogram', 'type': 'action'}
     ]
 
+    # settings that cannot be changed while ramping (the other ones are used by the live histogram)
+    live_locked_settings = (('h5info', 'node_path'), ('histo', 'actuator'), ('histo', 'start'), ('histo', 'stop'),
+                            ('compute_histogram',))
+
     def __init__(self, h5_manager: H5Manager, viewer: ViewerDispatcher, parent=None):
         QObject.__init__(self, parent)
         ParameterManager.__init__(self)
@@ -54,6 +59,7 @@ class H5Histogramming(QObject, ParameterManager):
         self._data_loader: DataLoader = None
 
         self._histogram_processor: HistogramProcessor = None
+        self._live = False
 
         self._h5_manager.file_loaded_signal.connect(self.update_settings_from_file)
 
@@ -70,6 +76,37 @@ class H5Histogramming(QObject, ParameterManager):
 
             self._histogram_processor.data_processed_signal.connect(self._viewer.show_data)
         return self._histogram_processor
+
+    @property
+    def live(self) -> bool:
+        """ True while ramping: the histogram is computed by the ramping worker, not from here"""
+        return self._live
+
+    @live.setter
+    def live(self, live: bool):
+        self._live = live
+        for path in self.live_locked_settings:
+            self.settings.child(*path).setOpts(enabled=not live)
+
+    def get_selection(self, modules_type: str, available: list[str]) -> dict:
+        """ Get the itemselect value of the detectors or actuators to plot, keeping the current selection
+
+        Parameters
+        ----------
+        modules_type: str
+            either 'detectors' or 'actuators'
+        available: list of str
+            the names of the modules having data
+
+        Returns
+        -------
+        dict: all_items are the available modules, selected the ones already selected and still available, plus the
+        ones that were not listed before (all of them the first time)
+        """
+        current = self.settings['histo', modules_type]
+        selected = [name for name in available
+                    if name in current['selected'] or name not in current['all_items']]
+        return dict(all_items=list(available), selected=selected)
 
     def update_histogramer(self):
         self.histogram_processor.data_to_process_signal.emit(
@@ -95,7 +132,7 @@ class H5Histogramming(QObject, ParameterManager):
                                        swmr_mode=False)
         self.settings['h5info', 'h5path'] = str(file_path)
         nodes = self.get_main_nodes()
-        with self.settings.treeChangeBlocker(keep=set()):
+        with tree_change_blocker(self.settings, keep=set()):
             self.settings.child('h5info', 'node_path').setValue(node_param)
             node_param.setLimits(nodes)
             node_param.setValue(nodes[-1] if len(nodes) > 0 else None)
@@ -135,7 +172,7 @@ class H5Histogramming(QObject, ParameterManager):
         return self.data_loader.load_all(self._actuators[actuator_name])[0]
 
     def get_detector_dte(self, detector_name: str) -> DataToExport:
-        return self.data_loader.load_all(self._actuators[detector_name], with_bkg=False)
+        return self.data_loader.load_all(self._detectors[detector_name], with_bkg=False)
 
     def _on_node_path_change(self):
         self.update_control_modules()
@@ -160,7 +197,8 @@ class H5Histogramming(QObject, ParameterManager):
         elif param.name()  == 'autobin':
             self.settings.child('histo', 'nbins').setReadonly(param.value())
 
-        self.update_histogramer()
+        if not self._live:  # while ramping, the settings are used at the next refresh of the live histogram
+            self.update_histogramer()
 
     def get_set_bounds(self, actuator_name: str):
         dwa = self.data_loader.load_all(where=self._actuators[actuator_name])[0]
@@ -186,13 +224,11 @@ class H5Histogramming(QObject, ParameterManager):
             actuator_name = self.settings['histo', 'actuator']
             actuators_name.remove(self.settings['histo', 'actuator'])
 
-        with self.settings.treeChangeBlocker(keep=set()):
+        with tree_change_blocker(self.settings, keep=set()):
             group_histo.child('actuator').setOpts(limits=[actuator_name] + actuators_name)
 
-            group_histo.child('actuators').setValue(dict(all_items=actuators_name,
-                                                                    selected=actuators_name, ))
-            group_histo.child('detectors').setValue(dict(all_items=detectors_name,
-                                                                    selected=detectors_name, ))
+            group_histo.child('actuators').setValue(self.get_selection('actuators', actuators_name))
+            group_histo.child('detectors').setValue(self.get_selection('detectors', detectors_name))
             group_histo.child('actuator').setValue(actuator_name)
 
         self._on_actuator_changed(actuator_name)
@@ -253,6 +289,11 @@ class HistogramProcessor(ProcessorWorker):
         dte = self._data_loader.load_all(where=info.node_path)
         if len(dte) >= 2: # one for the xaxis and the other(s) for the y axes
             xdwa = dte.pop(dte.index_from_name_origin(info.xaxis_name))
+            # keep only the data of the selected modules (actuators data are named after their module)
+            dte = DataToExport(dte.name, data=[dwa for dwa in dte
+                                               if dwa.origin in info.other_names or dwa.name in info.other_names])
+            if len(dte) == 0:
+                return dte_out
 
             ((istart, vstart), (istop, vstop)) = find_index(
                 xdwa[0], threshold=[info.start, info.stop])

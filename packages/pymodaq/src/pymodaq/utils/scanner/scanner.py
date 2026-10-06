@@ -98,12 +98,12 @@ class Scanner(QObject, ParameterManager):
         self._scanner: ScannerBase = None
 
         self.setup_ui()
-        self.actuators = actuators
+        self.actuators = selected_actuators
         if self._scanner is not None:
             self.settings.child('n_steps').setValue(self._scanner.evaluate_steps())
 
     def __repr__(self):
-        return f'Scanner {self.scan_type}/{self.scan_sub_type} {self.n_steps} steps of {self.actuators}'
+        return f"Scanner {self.scan_type}/{self.scan_sub_type} {self.settings['n_steps']} steps of {self.actuators}"
 
     def to_dict(self, use_real_actuators = False) -> dict[str, Any]:
         """ Dictionary representation of the scanner object
@@ -133,6 +133,7 @@ class Scanner(QObject, ParameterManager):
         self.parent_widget.setLayout(QtWidgets.QVBoxLayout() if self.orientation == Orientation.VERTICAl
                                      else QtWidgets.QHBoxLayout())
         self.parent_widget.layout().setContentsMargins(0, 0, 0, 0)
+        self._settings_tree.collapsible_widget.setVisible(False)
         self.parent_widget.layout().addWidget(self.settings_tree)
         self._scanner_settings_widget = QtWidgets.QWidget()
         self._scanner_settings_widget.setLayout(QtWidgets.QVBoxLayout())
@@ -156,6 +157,7 @@ class Scanner(QObject, ParameterManager):
                 child.widget().deleteLater()
                 QtWidgets.QApplication.processEvents()
 
+            self._scanner._settings_tree.collapsible_widget.setVisible(False)
             self._scanner_settings_widget.layout().addWidget(self._scanner.settings_tree)
             self._scanner.settings.sigTreeStateChanged.connect(self._update_steps)
 
@@ -178,7 +180,7 @@ class Scanner(QObject, ParameterManager):
         if param.name() == 'scan_type':
             self.settings.child('scan_sub_type').setOpts(
                 limits=scanner_factory.scan_sub_types(param.value()))
-        if param.name() in ['scan_sub_type']:
+        if param.name() in ['scan_type', 'scan_sub_type']:
             self.settings.child('units_handling', 'display_units').show()
             self.set_scanner()
             self.settings.child('scan_type').setOpts(tip=self._scanner.__doc__)

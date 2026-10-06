@@ -451,7 +451,7 @@ class EllipseROI(ROI):
     **Arguments**
     pos            (length-2 sequence) The position of the ROI's origin.
     size           (length-2 sequence) The size of the ROI's bounding rectangle.
-    **args         All extra keyword arguments are passed to ROI()
+    \*\*args       All extra keyword arguments are passed to ROI()
     ============== =============================================================
 
     """
@@ -626,22 +626,27 @@ class RoiInfo:
     @classmethod
     def info_from_linear_roi(cls, roi: LinearROI):
         pos = roi.pos()
-        return cls(Point((pos[0],)), size=Point((pos[1] - pos[0],)), color=roi.color,
+        return cls(Point((pos[0],)), size=Point((pos[1] - pos[0],)), color=roi.color(),
                    roi_class=type(roi), index=roi.index)
 
     @classmethod
     def info_from_rect_roi(cls, roi: RectROI):
         return cls(Point(list(roi.pos())[::-1]), size=Point((roi.height(), roi.width())),
-                   color=roi.color, roi_class=type(roi), index=roi.index)
+                   angle=roi.angle(), color=roi.color(), roi_class=type(roi), index=roi.index)
+
+    def _half_size(self) -> Point:
+        return Point(tuple(size / 2 for size in self.size))
 
     def center_origin(self):
+        """Move the origin from the corner to the center of the ROI (1D or 2D)"""
         if not self.centered:
-            self.origin += Point((self.size[0] / 2, self.size[1] / 2))
+            self.origin = Point(tuple(o + h for o, h in zip(self.origin, self._half_size())))
             self.centered = True
 
     def uncenter_origin(self):
+        """Move the origin from the center to the corner of the ROI (1D or 2D)"""
         if self.centered:
-            self.origin -= Point((self.size[0] / 2, self.size[1] / 2))
+            self.origin = Point(tuple(o - h for o, h in zip(self.origin, self._half_size())))
             self.centered = False
 
     def __repr__(self):
@@ -655,6 +660,7 @@ class RoiInfo:
 
         return cls(Point(*[_slice.start for _slice in slices]),
                    size=Point(*[_slice.stop - _slice.start for _slice in slices]),
+                   angle=0. if len(slices) == 2 else None,
                    roi_class=RectROI if len(slices) == 2 else LinearROI)
 
     def to_slices(self, as_integer=True) -> IterableType[slice]:
@@ -663,6 +669,8 @@ class RoiInfo:
             cast = float
         else:
             cast = int
+        if self.roi_class is None:
+            raise ValueError('The roi_class of this RoiInfo is not defined, slices cannot be computed')
         if issubclass(self.roi_class, pgROI):
             if self.centered:
                 return (slice(cast(self.origin[0] - self.size[0] / 2),

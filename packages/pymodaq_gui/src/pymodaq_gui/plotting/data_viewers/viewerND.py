@@ -337,12 +337,16 @@ class SpreadDataDisplayer(BaseDataDisplayer):
         """ Update the signal display depending on the position of the crosshair in the navigation panels
 
         Spread data can be customly represented using:
-        if signal data is 0D:
-            * A viewer 1D with non-linearly spaced data points (for 1 navigation axis)
-            * A viewer 2D with its SpreadImage item (for 2 navigation axis)
-            * A double panel: viewer for signal data and viewer 1D for all nav axes as a function of index in the data
-        otherwise:
-            * A double panel: viewer for signal data and viewer 1D for all nav axes as a function of index in the data
+
+        * if signal data is 0D:
+
+          * A viewer 1D with non-linearly spaced data points (for 1 navigation axis)
+          * A viewer 2D with its SpreadImage item (for 2 navigation axis)
+          * A double panel: viewer for signal data and viewer 1D for all nav axes as a function of index in the data
+
+        * otherwise:
+
+          * A double panel: viewer for signal data and viewer 1D for all nav axes as a function of index in the data
             series
 
         Parameters

@@ -468,11 +468,11 @@ class TestGrabData:
         for det in blocker.args[0]:
             assert det in timeout_dets
 
-class TestGetDetDataList:
+class TestProbeDetectors:
 
     def test_no_detectors_returns_empty_dte(self, manager):
         manager.selected_detectors_name = []
-        result = manager.get_det_data_list()
+        result = manager.probe_detectors()
         assert isinstance(result, DataToExport)
         assert len(result) == 0
 
@@ -480,22 +480,22 @@ class TestGetDetDataList:
         manager.selected_detectors_name = ['Det1']
         dte = make_raw_dte('dte')
         with patch.object(manager, 'grab_data', return_value=dte):
-            manager.get_det_data_list()
+            manager.probe_detectors()
 
-        det_param = manager.settings.child('probe_data').children()[0]
+        det_param = manager.settings.child('probe_detectors_results').children()[0]
         assert det_param.name() in DataDim.names()
 
     def test_tree_cleared_on_repopulate(self, manager):
         manager.selected_detectors_name = ['Det1']
         dte = make_raw_dte('dte')
         with patch.object(manager, 'grab_data', return_value=dte):
-            manager.get_det_data_list()
-            manager.get_det_data_list()  # second call must not duplicate
+            manager.probe_detectors()
+            manager.probe_detectors()  # second call must not duplicate
 
         for dim in DataDim.names():
             for dwa in dte.get_data_from_dim(dim):
                 assert dwa.get_full_name() in [child.name() for child in
-                                           manager.settings.child('probe_data', dim).children()]
+                                           manager.settings.child('probe_detectors_results', dim).children()]
 
     def test_connect_detectors_released_on_exception(self, manager):
         """connect_detectors(False) must be called via finally even if grab_data raises."""
@@ -503,23 +503,45 @@ class TestGetDetDataList:
         with patch.object(manager, 'grab_data', side_effect=RuntimeError('oops')):
             with patch.object(manager, 'connect_detectors') as mock_connect:
                 with pytest.raises(RuntimeError):
-                    manager.get_det_data_list()
+                    manager.probe_detectors()
         mock_connect.assert_any_call(False)
+
+
+class TestBackwardCompatAliases:
+    """get_det_data_list/test_move_actuators are kept as deprecated aliases for
+    probe_detectors/probe_actuators."""
+
+    def test_get_det_data_list_is_alias_for_probe_detectors(self, manager):
+        manager.selected_detectors_name = ['Det1']
+        dte = make_raw_dte('dte')
+        with patch.object(manager, 'grab_data', return_value=dte):
+            with pytest.warns(DeprecationWarning):
+                result = manager.get_det_data_list()
+
+        assert result is dte
+        det_param = manager.settings.child('probe_detectors_results').children()[0]
+        assert det_param.name() in DataDim.names()
+
+    def test_test_move_actuators_is_alias_for_probe_actuators(self, manager):
+        with patch.object(manager, 'probe_actuators') as mock_probe:
+            with pytest.warns(DeprecationWarning):
+                manager.test_move_actuators()
+        mock_probe.assert_called_once()
 
 
 class TestShowOnlyControlModules:
 
     def test_hides_probe_params(self, manager):
-        probe = manager.settings.child('probe_data')
-        test_act = manager.settings.child('test_actuator')
+        probe = manager.settings.child('probe_detectors')
+        test_act = manager.settings.child('probe_actuators')
         with patch.object(probe, 'show') as p, patch.object(test_act, 'show') as t:
             manager.show_only_control_modules(True)
             p.assert_called_once_with(False)
             t.assert_called_once_with(False)
 
     def test_shows_probe_params(self, manager):
-        probe = manager.settings.child('probe_data')
-        test_act = manager.settings.child('test_actuator')
+        probe = manager.settings.child('probe_detectors')
+        test_act = manager.settings.child('probe_actuators')
         with patch.object(probe, 'show') as p, patch.object(test_act, 'show') as t:
             manager.show_only_control_modules(False)
             p.assert_called_once_with(True)
@@ -535,7 +557,7 @@ class TestTestActuatorTree:
         manager.move_done_positions.append(DataActuator('X_axis', data=3.14))
         manager.move_done_positions.append(DataActuator('Y_axis', data=2.71))
 
-        test_act = manager.settings.child('test_actuator')
+        test_act = manager.settings.child('probe_actuators_results')
         test_act.clearChildren()
         for dact in manager.move_done_positions:
             test_act.addChild(
@@ -551,7 +573,7 @@ class TestTestActuatorTree:
 
     def test_children_cleared_on_new_move(self, manager):
         """A second move replaces the previous children."""
-        test_act = manager.settings.child('test_actuator')
+        test_act = manager.settings.child('probe_actuators_results')
         test_act.addChild(
             {'title': 'X_axis', 'name': 'X_axis', 'type': 'float', 'value': 0.0, 'readonly': True},
         )

@@ -234,15 +234,17 @@ class MySaverLoader(CustomApp):
         """ Actions to perform when one of the param's value in self.settings is changed from the
         user interface
 
-        For instance:
-        if param.name() == 'do_something':
-            if param.value():
-                print('Do something')
-                self.settings.child('main_settings', 'something_done').setValue(False)
+        For instance::
+
+            if param.name() == 'do_something':
+                if param.value():
+                    print('Do something')
+                    self.settings.child('main_settings', 'something_done').setValue(False)
 
         Parameters
         ----------
-        param: (Parameter) the parameter whose value just changed
+        param: Parameter
+            the parameter whose value just changed
         """
         if param.name() == 'refresh_grab':
             self.data_generator.refresh_time = param.value()

@@ -10,4 +10,5 @@ Plotting utility classes
 .. currentmodule:: pymodaq_gui.utils.widgets.lcd
 
 .. autoclass:: LCD
+   :no-index:
    :members:

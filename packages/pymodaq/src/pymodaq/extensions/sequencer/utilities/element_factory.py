@@ -119,10 +119,24 @@ class SeqEltBase(QtCore.QObject, ActionManager):
         """ to be reimplemented in elements in order to save it's data (if Any)"""
         pass
 
-    def save_data(self, dte: DataToExport):
+    def save_data(self, dte: DataToExport, done=True):
+        """ By calling this method, data will be logged using the TimeSaver
+
+        Parameters
+        ----------
+        dte: DataToExport
+            data to log and eventually custom save in self._save_data (reimplemented)
+        done: bool
+            if True (default)the done signal is emitted ending this state
+
+        Returns
+        -------
+
+        """
         self._save_data(dte)
         self.data_to_log_signal.emit(dte)
-        self.done_signal.emit()
+        if done:
+            self.done_signal.emit()
 
     @property
     def parent(self) -> 'SeqEltBase':

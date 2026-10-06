@@ -117,7 +117,8 @@ class ActuatorValueSubEntryHandler(StateSubEntryHandler):
     def setup_widgets(self):
         self.actuator_cb = QtWidgets.QComboBox()
         self.actuator_cb.addItems(self.actuators)
-        self.value_sb = SpinBox(suffix=self.get_units_from_module_name(self.actuators[0]), siPrefix=True)
+        self.value_sb = SpinBox(suffix=self.get_units_from_module_name(self.actuators[0]),
+                                siPrefix=True)
         self.actuator_cb.currentTextChanged.connect(self.update_suffix_in_dialog)
 
         self.widget.layout().addWidget(self.actuator_cb)
@@ -149,7 +150,8 @@ class ActuatorValueSubEntryHandler(StateSubEntryHandler):
                     name=''.join(self.handler_name.split(' ')),
                     type='float',
                     value=self.value_sb.value(),
-                    suffix=self.value_sb.opts['suffix']),
+                    suffix=self.value_sb.opts['suffix'],
+                    siPrefix=True),
             path=()))
 
     def execute_subentry(self, entry: SubEntry, dashboard: 'DashBoard'):

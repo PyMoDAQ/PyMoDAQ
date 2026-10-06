@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Generator
 
 from pathlib import Path
 
@@ -27,6 +27,7 @@ main_config = GlobalConfig()
 
 class Sequence(CustomExt):
     sequence_finished = QtCore.Signal()
+    name_changed = QtCore.Signal(str, str)
     params = []
 
     def __init__(self, title: str, parent: QtWidgets.QWidget, dashboard):
@@ -44,6 +45,10 @@ class Sequence(CustomExt):
 
         self.setup_ui()
         self.setup_machine()
+
+    @property
+    def model(self) -> SequenceTreeModel:
+        return self._model
 
     def setup_docks_and_widgets(self):
         """Mandatory method to be subclassed to setup the docks layout
@@ -131,26 +136,26 @@ class Sequence(CustomExt):
 
         self.root_elt.mstate.addTransition(self.get_action('stop').triggered, self.done_state)
         self.machine.finished.connect(self.sequence_stopped)
+        self.get_action('name').widget.editingFinished.connect(self.update_name)
 
-    def value_changed(self, param):
-        """ Actions to perform when one of the param's value in self.settings is changed from the
-        user interface
-
-        For instance:
-        if param.name() == 'do_something':
-            if param.value():
-                print('Do something')
-                self.settings.child('main_settings', 'something_done').setValue(False)
-
-        Parameters
-        ----------
-        param: (Parameter) the parameter whose value just changed
-        """
-        pass
+    def update_name(self, name: str = None):
+        if name is None:
+            name = self.get_action('name').widget.text()
+        old_name = self.title
+        self.title = name
+        self.name_changed.emit(old_name, name)
 
     @property
     def root_elt(self) -> RootElt:
         return self._model.root_elt
+
+    def iterate_elts(self, elt: SeqEltBase = None) -> Generator[SeqEltBase, None, None]:
+        if elt is None:
+            elt = self.root_elt
+        for elt_child in elt.children:
+            yield elt_child
+            if elt_child.children_allowed:
+                yield from self.iterate_elts(elt_child)
 
     def setup_machine(self):
         for child in self.machine.children():

@@ -1,3 +1,5 @@
+from contextlib import contextmanager
+import warnings
 from typing import List, Union, TYPE_CHECKING, Optional, Sequence
 import numpy as np
 from typing import List, Union, TYPE_CHECKING, Optional, Sequence, Callable, Any
@@ -19,8 +21,8 @@ from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_data.data import DataToExport, DataSource, DataDim
 
 from pymodaq_gui.managers.parameter_manager import ParameterManager
-from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.utils import Dock
+from pymodaq_gui.messenger import messagebox
 
 from pymodaq.utils.data import DataActuator, DataToActuators
 from pymodaq.control_modules.thread_commands import ControlToHardwareMove, ControlToHardwareViewer
@@ -59,11 +61,16 @@ class ModulesManager(QObject, ParameterManager):
                                     # the received responses (see grab_data/move_actuators)
 
     params = [
+        {'title': "Probe detectors", 'name': 'probe_detectors', 'type': 'action_led', 'value': False},
+        {'title': "Probe actuators", 'name': 'probe_actuators', 'type': 'action_led', 'value': False},
+
         {'title': 'Detectors', 'name': 'detectors', 'type': 'itemselect', 'checkbox': True},
         {'title': 'Actuators', 'name': 'actuators', 'type': 'itemselect', 'checkbox': True},
 
-        {'title': "Probe detectors", 'name': 'probe_data', 'type': 'action_led', 'value': False, 'children': []},
-        {'title': "Probe actuators", 'name': 'test_actuator', 'type': 'action_led', 'value': False, 'children': []},
+        # Probe results live in their own group, not nested under the probe buttons above,
+        # so they render below the selection lists instead of pushing them out of view.
+        {'title': 'Probed detector data', 'name': 'probe_detectors_results', 'type': 'group', 'children': []},
+        {'title': 'Probed actuator positions', 'name': 'probe_actuators_results', 'type': 'group', 'children': []},
     ]
 
     def __init__(self,
@@ -96,8 +103,10 @@ class ModulesManager(QObject, ParameterManager):
         self.move_done_positions: DataToExport = None
         self.move_done_flag = False
 
-        self.settings.child('probe_data').sigActivated.connect(self.get_det_data_list)
-        self.settings.child('test_actuator').sigActivated.connect(self.test_move_actuators)
+        # sigActivated emits the param itself (ActionLedParameter.activate()), but neither
+        # handler takes any argument, so Qt drops it -- same as any other zero-arg slot.
+        self.settings.child('probe_detectors').sigActivated.connect(self.probe_detectors)
+        self.settings.child('probe_actuators').sigActivated.connect(self.probe_actuators)
 
         self._detectors = []
         self._actuators = []
@@ -153,8 +162,10 @@ class ModulesManager(QObject, ParameterManager):
             return f'ModulesManager of "{self.parent_name}"'
 
     def show_only_control_modules(self, show: True):
-        self.settings.child('probe_data').show(not show)
-        self.settings.child('test_actuator').show(not show)
+        self.settings.child('probe_detectors').show(not show)
+        self.settings.child('probe_actuators').show(not show)
+        self.settings.child('probe_detectors_results').show(not show)
+        self.settings.child('probe_actuators_results').show(not show)
 
     @classmethod
     def get_names(cls, modules:  list[Union['DAQ_Move', 'DAQ_Viewer']]):
@@ -337,29 +348,52 @@ class ModulesManager(QObject, ParameterManager):
 
     def value_changed(self, param):
         if param.name() == 'detectors':
+            # Previously probed channels no longer reflect the current selection
+            self.settings.child('probe_detectors_results').clearChildren()
             self.detectors_changed.emit(param.value()['selected'])
 
         elif param.name() == 'actuators':
+            self.settings.child('probe_actuators_results').clearChildren()
             self.actuators_changed.emit(param.value()['selected'])
 
-    def get_det_data_list(self, add_to_this_param: Parameter = None) -> DataToExport:
-        """Do a snap of selected detectors, to populate the data channels tree and return the data"""
+    @contextmanager
+    def _probing(self, connect, timeout_handler):
+        """Shared connect/timeout-watch/disconnect scaffold around a probe action.
+
+        Both get_det_data_list (grab_data) and probe_actuators (move_actuators) bracket
+        their actual hardware call the same way: connect modules, watch timeout_signal for
+        a reply, always disconnect both afterwards. Only what happens *inside* differs.
+
+        Parameters
+        ----------
+        connect: Callable[[bool], Any]
+            connect_detectors or connect_actuators
+        timeout_handler: Callable[[List[str]], Any]
+            _on_detector_probe_timeout or _on_actuator_probe_timeout
+        """
+        connect()
+        self.timeout_signal.connect(timeout_handler)
+        try:
+            yield
+        finally:
+            self.timeout_signal.disconnect(timeout_handler)
+            connect(False)
+
+    def probe_detectors(self) -> DataToExport:
+        """Do a snap of selected detectors, to populate the Detectors panel's result tree
+        (probe_detectors_results) and return the data"""
 
         if len(self.detectors) == 0:
             return DataToExport(name=__class__.__name__, control_module='DAQ_Viewer')
 
-        if add_to_this_param is None:
-            add_to_this_param = self.settings.child('probe_data')
-
-        self.connect_detectors()
-        try:
+        with self._probing(self.connect_detectors, self._on_detector_probe_timeout):
             datas: DataToExport = self.grab_data(Naverage=1)
             logger.debug(f'Acquired: {datas.get_full_names()}')
 
-            add_to_this_param.clearChildren()
+            results = self.settings.child('probe_detectors_results')
+            results.clearChildren()
 
             data_children = []
-
             for data_dim in DataDim.names():
                 data_from_dim = datas.get_data_from_dim(data_dim)
                 if len(data_from_dim) != 0:
@@ -368,10 +402,28 @@ class ModulesManager(QObject, ParameterManager):
                             {'title': dwa.origin, 'name': dwa.get_full_name(), 'type': 'str',
                              'value': dwa.name, 'readonly': True} for dwa in data_from_dim
                         ]})
-            add_to_this_param.addChildren(data_children)
-        finally:
-            self.connect_detectors(False)
+            results.addChildren(data_children)
         return datas
+
+    def get_det_data_list(self) -> DataToExport:
+        """Deprecated alias for probe_detectors(), kept for backward compatibility."""
+        warnings.warn(
+            "get_det_data_list() is deprecated, use probe_detectors() instead",
+            DeprecationWarning, stacklevel=2,
+        )
+        return self.probe_detectors()
+
+    def _report_probe_timeout(self, probe_param_name: str, kind: str, missing_modules: List[str]):
+        """ Reset the probe button's LED and report which modules failed to answer, by name """
+        self.settings.child(probe_param_name).setValue(False)
+        messagebox(text=f"The following {kind}(s) did not respond in time:\n"
+                        + "\n".join(missing_modules))
+
+    def _on_detector_probe_timeout(self, missing_modules: List[str]):
+        self._report_probe_timeout('probe_detectors', 'detector', missing_modules)
+
+    def _on_actuator_probe_timeout(self, missing_modules: List[str]):
+        self._report_probe_timeout('probe_actuators', 'actuator', missing_modules)
 
     def get_probed_data_full_names(self, dim: DataDim | str = None) -> List[str]:
         """Return full names (origin/name) of probed data, optionally filtered by dim.
@@ -388,7 +440,7 @@ class ModulesManager(QObject, ParameterManager):
         names = []
         if dim is not None:
             dim = enum_checker(DataDim, dim)
-        for det_param in self.settings.child('probe_data').children():
+        for det_param in self.settings.child('probe_detectors_results').children():
             if dim is None or det_param.name() == dim.name:
                 names.extend([child.name() for child in det_param.children()])
         return names
@@ -397,7 +449,7 @@ class ModulesManager(QObject, ParameterManager):
         self.det_done_datas = DataToExport(name=__class__.__name__, control_module='DAQ_Viewer')
         self._received_data = 0
         self.det_done_flag = False
-        self.settings.child('probe_data').setValue(self.det_done_flag)
+        self.settings.child('probe_detectors').setValue(self.det_done_flag)
 
         if check_do_override and 'DataMixer' in self.selected_detectors_name:
             overridden_detectors = self.get_mod_from_name(
@@ -556,8 +608,9 @@ class ModulesManager(QObject, ParameterManager):
 
         self.detectors_connected = connect
 
-    def test_move_actuators(self):
-        """Open a single dialog to set target positions for all selected actuators, then move them"""
+    def probe_actuators(self):
+        """Open a single dialog to set target positions for all selected actuators, move them,
+        then populate the Actuators panel's result tree (probe_actuators_results)"""
         actuators = self.actuators
         if not actuators:
             return
@@ -593,17 +646,24 @@ class ModulesManager(QObject, ParameterManager):
         for mod in actuators:
             dte_act.append(DataActuator(mod.title, data=spinboxes[mod.title].value()))
 
-        self.connect_actuators()
-        self.move_actuators(dte_act)
-        self.connect_actuators(False)
+        with self._probing(self.connect_actuators, self._on_actuator_probe_timeout):
+            self.move_actuators(dte_act)
 
-        test_actuator = self.settings.child('test_actuator')
-        test_actuator.clearChildren()
+        results = self.settings.child('probe_actuators_results')
+        results.clearChildren()
         for dact in self.move_done_positions:
-            test_actuator.addChild(
+            results.addChild(
                 {'title': dact.name, 'name': dact.name.replace(' ', '_'),
                  'type': 'float', 'value': dact.value(), 'readonly': True},
             )
+
+    def test_move_actuators(self):
+        """Deprecated alias for probe_actuators(), kept for backward compatibility."""
+        warnings.warn(
+            "test_move_actuators() is deprecated, use probe_actuators() instead",
+            DeprecationWarning, stacklevel=2,
+        )
+        return self.probe_actuators()
 
     def connect_and_move_actuators(self, dte_act: DataToExport,
                                    mode=MoveType.ABS,
@@ -673,7 +733,7 @@ class ModulesManager(QObject, ParameterManager):
                         mode: MoveType = MoveType.ABS,):
         self.move_done_positions = DataToExport(name=__class__.__name__, control_module='DAQ_Move')
         self.move_done_flag = False
-        self.settings.child('test_actuator').setValue(self.move_done_flag)
+        self.settings.child('probe_actuators').setValue(self.move_done_flag)
 
         if mode == MoveType.ABS:
             command = ControlToHardwareMove.MOVE_ABS
@@ -762,7 +822,7 @@ class ModulesManager(QObject, ParameterManager):
             if len(self.move_done_positions) == len(self.actuators):
                 self.actuators_timeout_timer.stop()
                 self.move_done_flag = True
-                self.settings.child('test_actuator').setValue(self.move_done_flag)
+                self.settings.child('probe_actuators').setValue(self.move_done_flag)
                 self.move_done_signal.emit(self.move_done_positions)
 
         except Exception as e:
@@ -777,7 +837,7 @@ class ModulesManager(QObject, ParameterManager):
             if self._received_data == len(self.detectors):
                 self.detectors_timeout_timer.stop()
                 self.det_done_flag = True
-                self.settings.child('probe_data').setValue(self.det_done_flag)
+                self.settings.child('probe_detectors').setValue(self.det_done_flag)
                 self.det_done_signal.emit(self.det_done_datas)
 
 

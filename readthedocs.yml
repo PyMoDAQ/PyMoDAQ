@@ -9,6 +9,11 @@ build:
   os: "ubuntu-24.04"
   tools:
     python: "3.12"
+  apt_packages:
+    # needed by QtWebEngine (qtmonaco editor) when importing modules for the API doc
+    - libnss3
+    - libasound2t64
+    - graphviz
 
   jobs:
     post_checkout:

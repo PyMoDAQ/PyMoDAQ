@@ -19,6 +19,49 @@ except ImportError:
     pass  #this could happen when creating /importing new MaterialIcons
 
 config = Config()
+
+TOOLBAR_BUTTON_STYLES = {
+    'icon_only': QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly,
+    'text_only': QtCore.Qt.ToolButtonStyle.ToolButtonTextOnly,
+    'text_beside_icon': QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
+    'text_under_icon': QtCore.Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+    'follow_style': QtCore.Qt.ToolButtonStyle.ToolButtonFollowStyle,
+}
+TOOLBAR_BUTTON_STYLE_LABELS = {
+    'icon_only': 'Icons only',
+    'text_only': 'Text only',
+    'text_beside_icon': 'Text beside icons',
+    'text_under_icon': 'Text under icons',
+    'follow_style': 'Follow system style',
+}
+
+
+def get_toolbar_button_style() -> QtCore.Qt.ToolButtonStyle | None:
+    name = config.get(('gui', 'style', 'toolbar_button_style'), [None])[0]
+    return TOOLBAR_BUTTON_STYLES.get(name)
+
+
+class ToolbarStyleSignaller(QtCore.QObject):
+    style_changed = QtCore.Signal(object)
+
+
+toolbar_style_signaller = ToolbarStyleSignaller()
+
+
+class ToolbarStyleChecks(QtCore.QObject):
+    """Keeps the checkable toolbar style actions in sync, lives as long as the menu it is parented to"""
+
+    def __init__(self, actions: dict[str, QtGui.QAction], parent: QtCore.QObject):
+        super().__init__(parent)
+        self._actions = actions
+        toolbar_style_signaller.style_changed.connect(self.sync)
+
+    @QtCore.Slot(object)
+    def sync(self, style: QtCore.Qt.ToolButtonStyle):
+        for name, action in self._actions.items():
+            action.setChecked(TOOLBAR_BUTTON_STYLES[name] == style)
+
+
 resource_folder = Path(__file__).parent.parent.joinpath('resources')
 QtCore.QDir.addSearchPath('icons', str(resource_folder.joinpath('icon_library')))
 
@@ -441,15 +484,19 @@ class ActionManager:
             set the current state of the action
         toolbar: str or QToolBar or None
             a toolbar where action should be added. Can be:
-            - None: adds to the default menu (self._toolbar)
+
+            - None: adds to the default toolbar (self._toolbar)
             - str: toolbar name as registered via add_toolbar()
             - QToolbar: direct QToolbar instance
-              Actions can also be added later see *affect_to*
+
+            Actions can also be added later see *affect_to*
         menu: str or QMenu or None
             Where to add the action. Can be:
+
             - None: adds to the default menu (self._menu)
             - str: menu name as registered via add_menu()
             - QMenu: direct QMenu instance
+
             Actions can also be added later see *affect_to*
         visible: bool
             display or not the action in the toolbar/menu
@@ -461,7 +508,7 @@ class ActionManager:
             if True add this action to the defined menu
         enabled: bool
             set the enabled state of this action
-        icon_checked: : str / Path / QtGui.QIcon / enum name
+        icon_checked: str / Path / QtGui.QIcon / enum name
             str/Path: the png file name/path to produce the icon
             QtGui.QIcon: the instance of a QIcon element
             ThemeIcon enum: the value of QtGui.QIcon.ThemeIcon (requires Qt>=6.7)
@@ -487,8 +534,7 @@ class ActionManager:
 
         See Also
         --------
-        affect_to, pymodaq.resources.QtDesigner_Ressources.icon_library,
-        pymodaq.utils.managers.action_manager.add_action
+        affect_to
         """
         toolbar = self._resolve_toolbar(toolbar, auto=auto_toolbar)
         menu = self._resolve_menu(menu, auto=auto_menu)
@@ -708,8 +754,35 @@ class ActionManager:
                 parent.addToolBar(area, toolbar)
             else:
                 parent.insertToolBar(before, toolbar)
+        style = get_toolbar_button_style()
+        if style is not None:
+            toolbar.setToolButtonStyle(style)
+        toolbar_style_signaller.style_changed.connect(toolbar.setToolButtonStyle)
         self._toolbars[short_name] = toolbar
         return toolbar
+
+    def setup_toolbar_style_menu(self, parent_menu: QtWidgets.QMenu | str):
+        """Add a 'Toolbar style' submenu choosing how the toolbar buttons of all windows are drawn"""
+        style_menu = self.add_menu('toolbar_style', 'Toolbar style', parent_menu=parent_menu)
+        group = QtGui.QActionGroup(style_menu)
+        group.setExclusive(True)
+
+        current_name = config.get(('gui', 'style', 'toolbar_button_style'), ['icon_only'])[0]
+        actions = {}
+        for name, label in TOOLBAR_BUTTON_STYLE_LABELS.items():
+            action = style_menu.addAction(label)
+            action.setCheckable(True)
+            action.setChecked(name == current_name)
+            action.setActionGroup(group)
+            action.triggered.connect(lambda _checked, n=name: self.apply_toolbar_style(n))
+            actions[name] = action
+        ToolbarStyleChecks(actions, parent=style_menu)
+
+    def apply_toolbar_style(self, name: str):
+        """Persist the toolbar button style and apply it to all toolbars"""
+        config['gui', 'style', 'toolbar_button_style'] = [name]
+        config.save()
+        toolbar_style_signaller.style_changed.emit(TOOLBAR_BUTTON_STYLES[name])
 
     def set_toolbar(self, toolbar: Union[QtWidgets.QToolBar, str]):
         """Set the default toolbar

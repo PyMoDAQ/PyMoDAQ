@@ -301,7 +301,8 @@ class View1D(ActionManager, QObject):
         self.plot_widget = PlotWidget()
         self.roi_manager = ROIViewerManager(self.plotitem.vb, ROIDim.ROI1D)
         self.roi_widget = WidgetWithLabelTitle(self.title, self.roi_manager.roiwidget,
-                                               closable=True, attachable=True)
+                                               closable=True, attachable=True,
+                                               expand_subwidget=True)
         self.roi_widget.sig_close.connect(lambda: self.get_action('do_math').trigger())
         self.roi_widget.closeEvent = lambda event: self.set_action_checked('do_math', False)
         self._rois_panel = DetachablePanel(
@@ -541,14 +542,15 @@ class View1D(ActionManager, QObject):
 
 
 class Viewer1D(ViewerBase):
-    """ DataWithAxis of type Data1D can be plotted using this data viewer
+    """ DataWithAxes of type Data1D can be plotted using this data viewer
 
     Methods
     -------
     show_data:
-        parameter:
-        * dwa: a DataWithaxis
-        * scatter_dwa: an optional extra DataWithAxis to be plotted with scatter points
+        parameters:
+
+        * dwa: a DataWithAxes
+        * scatter_dwa: an optional extra DataWithAxes to be plotted with scatter points
           it could define extra_attributes such as symbol: str (to define the symbol layout
           default: 'o') and symbol_size: int (to define the symbol size)
 

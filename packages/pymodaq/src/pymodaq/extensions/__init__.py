@@ -22,6 +22,7 @@ from .adaptive_optim.adaptive_optimization import AdaptiveOptimisation
 from .data_mixer.data_mixer import DataMixer
 from .console import Console
 
+from .ramping.ramping import RampExtension
 
 
 
@@ -35,6 +36,7 @@ class ExtensionEnum(StrEnum):
     DATAMIXER = 'DataMixer'
     CONSOLE = 'QtConsole'
     SEQUENCER = 'Sequencer'
+    RAMPING = 'Ramping'
 
 
 internal_extensions = {
@@ -47,6 +49,7 @@ internal_extensions = {
     ExtensionEnum.DATAMIXER.value: DataMixer,
     ExtensionEnum.CONSOLE.value: Console,
     ExtensionEnum.SEQUENCER.value: Sequencer,
+    ExtensionEnum.RAMPING.value: RampExtension
 }
 
 

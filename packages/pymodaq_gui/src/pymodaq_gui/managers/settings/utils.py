@@ -9,6 +9,7 @@ from qtpy.QtWidgets import QDialogButtonBox, QDialog
 
 from pymodaq_gui.managers.settings.subentries import SubEntryHandlerFactory, SubEntryHandlerTypes, \
     SubEntry
+from pymodaq_utils.math_utils import get_si_prefix
 from pymodaq_utils.utils import capitalize, read_binary_and_deserialize
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.enums import StrEnum
@@ -143,7 +144,7 @@ class SettingsManagerModel(TableModel):
                  header=('Type', 'Module', 'Title', 'Value'),
                  save_path: Path = None
                  ):
-        self._data: list[SubEntry] = None
+        self._data: list[SubEntry] | None = None
         self.save_path = save_path
         if data is None:
             data = []
@@ -181,7 +182,8 @@ class SettingsManagerModel(TableModel):
                     suffix = ''
                     if entry.setting.parameter.opts.get('suffix', None) is not None:
                         suffix = f' {entry.setting.parameter.opts.get("suffix")}'
-                    dat = f"{entry.setting.parameter.value()}{suffix}"
+                    val, prefix = get_si_prefix(entry.setting.parameter.value())
+                    dat = f"{val} {prefix}{suffix}"
                 else:
                     dat = ''
                 return dat

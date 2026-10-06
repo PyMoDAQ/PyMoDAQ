@@ -29,14 +29,17 @@ the CustomApp and CustomExt classes.
 .. currentmodule:: pymodaq_gui.managers.action_manager
 
 .. autoclass:: QAction
+   :no-index:
    :members:
 
 .. autofunction:: addaction
+   :no-index:
 
 
    .. _actionmanager_api:
 
 .. autoclass:: ActionManager
+   :no-index:
    :members:
 
 .. _api-managers_parameter_manager:
@@ -44,6 +47,7 @@ the CustomApp and CustomExt classes.
 .. currentmodule:: pymodaq_gui.managers.parameter_manager
 
 .. autoclass:: ParameterManager
+   :no-index:
    :members:
 
 
@@ -76,10 +80,10 @@ API of the various managers, special classes easing the experimental orchestrati
 .. currentmodule:: pymodaq.utils.managers
 
 .. autosummary::
-    experiment.experiment_manager::ExperimentManager
-    state.state_manager::StateManager
+    experiment.experiment_manager.ExperimentManager
+    state.state_manager.StateManager
 
-.. currentmodule:: pymodaq.utils.experiment.experiment_manager
+.. currentmodule:: pymodaq.utils.managers.experiment.experiment_manager
 
 .. autoclass:: ExperimentManager
 

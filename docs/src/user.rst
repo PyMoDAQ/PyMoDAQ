@@ -10,6 +10,7 @@ User's Guide
    user_folder/installation_tips
    user_folder/launcher
    user_folder/dashboard_control_modules
+   user_folder/viewers_usage
    user_folder/extensions
    user_folder/configuration
    user_folder/module_manager
@@ -19,4 +20,3 @@ User's Guide
    user_folder/plugin_manager
    user_folder/backup_environments
    user_folder/other_modules
-   user_folder/tcpip

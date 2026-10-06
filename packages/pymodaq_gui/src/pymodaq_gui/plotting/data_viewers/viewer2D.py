@@ -57,6 +57,7 @@ COLORS_DICT = dict(red=(255, 0, 0), green=(0, 255, 0), blue=(0, 0, 255), spread=
 IMAGE_TYPES = ['red', 'green', 'blue']
 COLOR_LIST = PlotColors()
 crosshair_pens = make_dashed_pens(color=(255, 255, 0))
+ROISELECT_Z_VALUE = 100  # above the image items (Z 0 to 2) and the isocurve (Z 5)
 config = GlobalConfig()
 
 
@@ -354,7 +355,8 @@ class View2D(ActionManager, QtCore.QObject):
         self.image_widget = ImageWidget()
         self.roi_manager = ROIViewerManager(self.image_widget.plotitem.vb, ROIDim.ROI2D)
         self.roi_widget = WidgetWithLabelTitle(self.title, self.roi_manager.roiwidget,
-                                               closable=True, attachable=True)
+                                               closable=True, attachable=True,
+                                               expand_subwidget=True)
         self.roi_widget.sig_close.connect(lambda: self.get_action('roi').trigger())
         self.roi_widget.closeEvent = lambda event: self.set_action_checked('roi', False)
         self._rois_panel = DetachablePanel(
@@ -401,7 +403,11 @@ class View2D(ActionManager, QtCore.QObject):
         return theme
 
     def setup_view_box(self):
-        """ create and axis-sync a viewbox dedicated to ROIselect """
+        """ create and axis-sync a viewbox for the top and right axes, and add the ROIselect
+
+        The ROIselect is added to the main plotitem (as in the Viewer1D), above the image items, so that it is drawn
+        on top of the images
+        """
         self.roi_vb = ViewBox()
         self.plotitem.scene().addItem(self.roi_vb)
         self.plotitem.getAxis('right').linkToView(self.roi_vb)
@@ -413,7 +419,8 @@ class View2D(ActionManager, QtCore.QObject):
         self.update_view_box()
         self.plotitem.vb.sigResized.connect(self.update_view_box)
 
-        self.roi_vb.addItem(self.ROIselect)
+        self.ROIselect.setZValue(ROISELECT_Z_VALUE)
+        self.plotitem.addItem(self.ROIselect)
 
     def update_view_box(self):
         self.roi_vb.setGeometry(self.plotitem.vb.sceneBoundingRect())
@@ -1138,9 +1145,11 @@ class Viewer2D(ViewerBase):
 
                     QtWidgets.QApplication.processEvents()
 
-                if not self._display_temporary:
-                    self.data_to_export_signal.emit(self.data_to_export)
-                self.ROI_changed.emit()
+            # emit even without ROI data (e.g. all ROIs with Process data off), otherwise the DAQ_Viewer
+            # would wait forever for this viewer's data
+            if not self._display_temporary:
+                self.data_to_export_signal.emit(self.data_to_export)
+            self.ROI_changed.emit()
 
 
 def main_spread():

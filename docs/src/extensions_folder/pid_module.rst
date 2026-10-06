@@ -3,8 +3,6 @@
 PID Module
 ==========
 
-.. note::
-
 Introduction
 ------------
 
@@ -130,7 +128,7 @@ You should now have this:
 
 
 Configurations from custom experiment
-^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If you choose to not use the proposed experiment, you can make your own. In that case, the required steps are the following:
 

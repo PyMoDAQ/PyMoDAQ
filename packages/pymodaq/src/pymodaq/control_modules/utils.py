@@ -47,11 +47,12 @@ class HardwareWorkerBase(QObject):
     worker classes share (ini_hardware, close).
 
     Subclasses must implement:
-        ini_hardware(params_state, controller) -> edict
-        close() -> str
-    and set class attribute:
-        _kind: str  e.g. 'actuator' or 'detector'
-    The settings key is derived automatically as "<kind>_settings".
+
+    * ``ini_hardware(params_state, controller) -> edict``
+    * ``close() -> str``
+
+    and set the class attribute ``_kind: str``, e.g. 'actuator' or 'detector'.
+    The settings key is derived automatically as ``"<kind>_settings"``.
     """
 
     status_sig = Signal(ThreadCommand)
@@ -347,19 +348,21 @@ class ControlModule(QObject):
         """Get back info (using the ThreadCommand object) from the hardware
 
         And re-emit this ThreadCommand using the custom_sig signal if it should be used in a higher level module
+
         Parameters
         ----------
         status: ThreadCommand
             The info returned from the hardware, the command (str) can be either:
-                * Update_Status: display messages and log info (deprecated)
-                * update_status: display info on the UI status bar
-                * close: close the current thread and delete corresponding attribute on cascade.
-                * update_settings: Update the "detector setting" node in the settings tree.
-                * update_main_settings: update the "main setting" node in the settings tree
-                * raise_timeout:
-                * show_splash: Display the splash screen with attribute as message
-                * close_splash
-                * show_config: display the plugin configuration
+
+            * Update_Status: display messages and log info (deprecated)
+            * update_status: display info on the UI status bar
+            * close: close the current thread and delete corresponding attribute on cascade.
+            * update_settings: Update the "detector setting" node in the settings tree.
+            * update_main_settings: update the "main setting" node in the settings tree
+            * raise_timeout:
+            * show_splash: Display the splash screen with attribute as message
+            * close_splash
+            * show_config: display the plugin configuration
         """
 
         if status.command == "Update_Status":
@@ -431,9 +434,6 @@ class ControlModule(QObject):
         raise NotImplementedError
 
     def append_data(self, *args, **kwargs):
-        raise NotImplementedError
-
-    def insert_data(self, *args, **kwargs):
         raise NotImplementedError
 
     def quit_fun(self):
@@ -660,7 +660,9 @@ class ParameterControlModule(ParameterManager, LECOComponentMixin, ControlModule
 
     def quit_fun(self):
         """Programmatic quitting: deinit hardware, emit quit signal, run cleanup hook, close UI."""
-        if self._controller_and_thread.initialized:
+        thread = self._controller_and_thread.thread
+        if self._controller_and_thread.initialized or (thread is not None and thread.isRunning()):
+            # also when the initialization is still ongoing (not yet initialized but its thread is running)
             self.init_hardware(False)
             # The hardware worker emits status_sig(CLOSE) just before self-exiting.
             # That signal is queued on the main thread.  Flush it now so that
@@ -707,7 +709,8 @@ class ParameterControlModule(ParameterManager, LECOComponentMixin, ControlModule
             QtWidgets.QApplication.processEvents()
             hardware = self.controller_and_thread.thread.remove_hardware(self.title)
             #remove the handle onto the hardware worker even if slave
-            hardware.status_sig.disconnect()
+            if hardware is not None:  # None if this module never registered its hardware (e.g. a not initialized slave)
+                hardware.status_sig.disconnect()
 
             if (self.controller_and_thread.is_master and self.controller_and_thread.thread is not None and
                     self.controller_and_thread.thread.isRunning()):

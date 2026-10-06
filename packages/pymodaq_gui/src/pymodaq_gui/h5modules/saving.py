@@ -94,6 +94,32 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
         {'title': 'Save type:', 'name': 'save_type', 'type': 'list', 'limits': SaveType.names(),
          'readonly': True},
     ] + dashboard_submodules_params + [
+        # Naming / current-file cluster: the most frequently touched settings (deciding
+        # whether/how to start a new file), so they come before the rarer Backend/Data format
+        # specifics below.
+        {'title': 'custom_name?:', 'name': 'custom_name', 'type': 'bool', 'default': False,
+         'value': False},
+        {'title': 'Close file after scan:', 'name': 'close_after_scan', 'type': 'bool',
+         'value': False,
+         'tooltip': 'Automatically close the HDF5 file when a scan completes.'},
+        {'title': 'Base path:', 'name': 'base_path', 'type': 'browsepath',
+         'value': config('data', 'data_saving', 'h5file', 'save_path'), 'filetype': False,
+         'readonly': True},
+        {'title': 'Base name:', 'name': 'base_name', 'type': 'str', 'value': 'Scan',
+         'readonly': True},
+        {'title': 'Current scan:', 'name': 'current_scan_name', 'type': 'str', 'value': '',
+         'readonly': True},
+        {'title': 'Current path:', 'name': 'current_scan_path', 'type': 'text',
+         'value': config('data', 'data_saving', 'h5file', 'save_path'), 'readonly': True,
+         'visible': False},
+        {'title': 'h5file:', 'name': 'current_h5_file', 'type': 'browsepath', 'value': '',
+         'filetype': True, 'filter': 'HDF5 Files (*.h5);;All Files (*)', 'readonly': True,
+         'tooltip': 'Currently active h5 file. Click the browse button to open a different one.'},
+        {'title': 'Browse file content', 'name': 'show_file', 'type': 'action',
+         'tip': 'Browse the content of the current HDF5 file with a H5Browser'},
+        {'title': 'New file', 'name': 'new_file', 'type': 'action'},
+
+        # Backend/Data format: specific, rarely-touched settings, so they go last.
         {'title': 'Backend:', 'name': 'backend', 'type': 'group', 'children': [
             {'title': 'Backend type:', 'name': 'backend_type', 'type': 'list',
              'value': config('data', 'data_saving', 'backend')[0],
@@ -118,27 +144,6 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
                  'value': config('data', 'data_saving', 'hsds', 'pwd'), 'readonly': False},
             ]},
         ]},
-        {'title': 'custom_name?:', 'name': 'custom_name', 'type': 'bool', 'default': False,
-         'value': False},
-        {'title': 'show file content?', 'name': 'show_file', 'type': 'bool_push', 'default': False,
-         'value': False},
-        {'title': 'Close file after scan:', 'name': 'close_after_scan', 'type': 'bool',
-         'value': False,
-         'tooltip': 'Automatically close the HDF5 file when a scan completes.'},
-        {'title': 'Base path:', 'name': 'base_path', 'type': 'browsepath',
-         'value': config('data', 'data_saving', 'h5file', 'save_path'), 'filetype': False,
-         'readonly': True},
-        {'title': 'Base name:', 'name': 'base_name', 'type': 'str', 'value': 'Scan',
-         'readonly': True},
-        {'title': 'Current scan:', 'name': 'current_scan_name', 'type': 'str', 'value': '',
-         'readonly': True},
-        {'title': 'Current path:', 'name': 'current_scan_path', 'type': 'text',
-         'value': config('data', 'data_saving', 'h5file', 'save_path'), 'readonly': True,
-         'visible': False},
-        {'title': 'h5file:', 'name': 'current_h5_file', 'type': 'text', 'value': '',
-         'readonly': True},
-        {'title': 'New file', 'name': 'new_file', 'type': 'action'},
-        {'title': 'Browse file...', 'name': 'browse_file', 'type': 'action'},
         {'title': 'Data format:', 'name': 'data_format', 'type': 'group', 'children': [
             {'title': 'Fill value:', 'name': 'fill_value', 'type': 'list',
              'limits': {'0': 0., 'nan': np.nan},
@@ -248,6 +253,7 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
                   metadata=dict([]),
                   mode: str = 'a'):
         """Initializes a new h5 file.
+
         Could set the h5_file attributes as:
 
         * a file with a name following a template if ``custom_naming`` is ``False`` and ``addhoc_file_path`` is ``None``
@@ -257,22 +263,21 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
         Parameters
         ----------
         update_h5: bool
-                   create a new h5 file with name specified by other parameters
-                   if false try to open an existing file and will append new data to it or just read it
+            create a new h5 file with name specified by other parameters
+            if false try to open an existing file and will append new data to it or just read it
         custom_naming: bool
-                       if True, a selection file dialog opens to set a new file name
+            if True, a selection file dialog opens to set a new file name
         addhoc_file_path: Path or str
-                          supplied name by the user for the new file
+            supplied name by the user for the new file
         metadata: dict
-                    dictionnary with pair of key, value that should be saved as attributes of the root group
-       mode: str
+            dictionnary with pair of key, value that should be saved as attributes of the root group
+        mode: str
             valid if update_h5 is False. Then could be 'r' for readonly or 'a' to append data
-
 
         Returns
         -------
-        update_h5: bool
-                   True if new file has been created, False otherwise
+        bool
+            True if new file has been created, False otherwise
         """
         datetime_now = datetime.datetime.now()
         if addhoc_file_path is None:
@@ -528,10 +533,15 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
             super().save_file_as(filename)
 
     def value_changed(self, param):
-        if param.name() == 'show_file':
-            if param.value():
-                param.setValue(False)
-                self.show_file_content()
+        if param.name() == 'current_h5_file':
+            # Also fires when init_file()/create_new_file() set this param to reflect the file
+            # they just opened/created -- only act when the value actually points somewhere
+            # else, i.e. the user just picked a new file via the browsepath's browse button.
+            new_path = param.value()
+            current_path = (str(self.h5_file_path.joinpath(self.h5_file_name))
+                            if self.h5_file_path is not None and self.h5_file_name is not None else None)
+            if new_path and new_path != current_path:
+                self.open_file_dialog_result(new_path)
 
         elif param.name() == 'base_path':
             try:
@@ -596,38 +606,29 @@ class H5Saver(H5SaverBase, QObject):
         H5SaverBase.__init__(self, *args, **kwargs)
 
         self.settings.child('new_file').sigActivated.connect(lambda *_: self.new_file_sig.emit())
-        self.settings.child('browse_file').sigActivated.connect(self.browse_file)
+        self.settings.child('show_file').sigActivated.connect(lambda *_: self.show_file_content())
 
     def close(self):
         self.close_file()
 
-    def browse_file(self):
-        """Open a file dialog to select an existing h5 file to append to."""
-        start_path = self.settings['base_path']
-        current_file = self.settings['current_h5_file']
-        if current_file:
-            start_path = str(Path(current_file).parent)
-
-        file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
-            None, "Select HDF5 File",
-            start_path,
-            "HDF5 Files (*.h5);;All Files (*)",
-        )
-        if file_path:
-            try:
-                # Close current file if open
-                if self.isopen():
-                    self.close_file()
-                # Open the selected file
-                self.init_file(addhoc_file_path=file_path)
-                logger.info(f"Opened h5 file: {file_path}")
-                self.file_changed_sig.emit(file_path)
-            except Exception as e:
-                logger.error(f"Could not open file {file_path}: {e}")
-                QtWidgets.QMessageBox.warning(
-                    None, "Error",
-                    f"Could not open file:\n{file_path}\n\nError: {e}",
-                )
+    def open_file_dialog_result(self, file_path: str):
+        """Open the h5 file the user just picked via the 'current_h5_file' browsepath's
+        browse button (not named open_file: that name is already the inherited low-level
+        H5Backend.open_file(fullpathname, mode, ...))."""
+        try:
+            # Close current file if open
+            if self.isopen():
+                self.close_file()
+            # Open the selected file
+            self.init_file(addhoc_file_path=file_path)
+            logger.info(f"Opened h5 file: {file_path}")
+            self.file_changed_sig.emit(file_path)
+        except Exception as e:
+            logger.error(f"Could not open file {file_path}: {e}")
+            QtWidgets.QMessageBox.warning(
+                None, "Error",
+                f"Could not open file:\n{file_path}\n\nError: {e}",
+            )
 
     def show_file_content(self):
         from pymodaq_gui.utils.widgets.window import make_window

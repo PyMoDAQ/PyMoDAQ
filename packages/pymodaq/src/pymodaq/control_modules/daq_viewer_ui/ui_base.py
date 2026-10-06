@@ -49,12 +49,13 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     command_sig: Signal[Threadcommand]
         This signal is emitted whenever some actions done by the user has to be
         applied on the main module. Possible commands are:
-            * init
-            * grab
-            * snap
-            * detector_changed
-            * daq_type_changed
-            * save_current
+
+        * init
+        * grab
+        * snap
+        * detector_changed
+        * daq_type_changed
+        * save_current
 
     Methods
     -------

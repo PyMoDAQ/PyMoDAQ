@@ -121,7 +121,7 @@ Toolbar:
 .. |ini| image:: bayesian_data/ini.png
 .. |run| image:: bayesian_data/run.png
 .. |goto| image:: bayesian_data/goto.png
-.. |go_to_best| image:: bayesian_data/go_to_best.png
+.. |go_to_best| image:: bayesian_data/go_to_best.PNG
 .. |stop| image:: bayesian_data/stop.png
 .. |restart| image:: bayesian_data/restart.png
 
@@ -160,7 +160,7 @@ see bottom of :numref:`bayesian_gui_settings_fig`.
 
 .. note::
 
-  Here the models should derive from `OptimizerModelDefault` located in the **pymodaq.extensions.optimizers_base.utils**
+  Here the models should derive from `OptimizerModelDefault` located in the **pymodaq.extensions.optimizers_base.models**
   module. That include many base class allowing to implement extensions behaving like the Bayesian one. For instance,
   the :ref:`adaptive_extension` extension, which is a kind of optimizer (it's optimizing the sampling), is using the same
   base classes than the Bayesian for its GUI, its
@@ -208,7 +208,7 @@ But it could converge before! Therefore you can choose some more intelligent sto
 * the *Predict* one. In this mode, if the last Npoints proposed coordinates have a relative standard deviation of less than
   the *tolerance* settings, the algorithm will stop!
 * The *Best* one. In this mode, the Npoints best fitness value will be used to extract the corresponding coordinates.
-  If those coordinates have a relative standard deviation of less than *toleranceù, the alorithm will stop!
+  If those coordinates have a relative standard deviation of less than *tolerance*, the algorithm will stop!
 * The *None* one: no stopping unless manually (not the cleverest one I guess...)
 
 Observable and Probed Data
