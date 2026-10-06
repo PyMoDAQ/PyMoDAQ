@@ -204,6 +204,10 @@ def test_unreplaced_template_import_is_a_todo_not_a_failure(fake_package, tmp_pa
     code = 'from pymodaq_plugins_fake.hardware.python_wrapper_file_of_your_instrument import X'
     (tmp_path / 'pymodaq_plugins_fake' / 'daq_move_plugins' / 'daq_move_Tpl.py').write_text(code)
     result = pt.check_plugin_module(pt.PluginModule(fake_package, 'daq_move_Tpl', 'move'))
-    assert result.problems == [] and result.warnings
-    todos = pt.check_package_sources(fake_package).findings
-    assert any(f.code == 'PMQ203' for f in todos)  # and the placeholder is reported as a todo
+    assert result.problems == [] and result.warnings == []  # not a failure, not even with strict_imports
+    assert [f.severity for f in result.findings if f.code == 'PMQ203'] == [Severity.TODO]
+    assert result.failing() == [] and result.failing('todo', strict_imports=True)
+
+
+def test_package_name_from_folder_not_from_unmodified_pyproject(repo):
+    assert pt.guess_package_name(repo / 'src') == 'pymodaq_plugins_notinstalled'

@@ -124,10 +124,18 @@ def find_plugin_modules(package: str) -> list[PluginModule]:
 
 
 def guess_package_name(start: Path) -> str:
-    """Get the plugin package name from the nearest pyproject.toml above ``start``"""
+    """Get the plugin package name from the nearest pyproject.toml above ``start``
+
+    The name of the (single) ``pymodaq_plugins_*`` folder of the project is used if there is one, as the project name
+    of the pyproject.toml may not have been modified yet, the project name otherwise.
+    """
     for folder in [start, *start.parents]:
         pyproject = folder / 'pyproject.toml'
         if pyproject.is_file():
+            for base in (folder / 'src', folder):
+                packages = [p for p in base.glob('pymodaq_plugins_*') if (p / '__init__.py').is_file()]
+                if len(packages) == 1:
+                    return packages[0].name
             return toml.load(pyproject)['project']['name'].replace('-', '_')
     raise FileNotFoundError(f'No pyproject.toml found above {start}, define package_name explicitly')
 
@@ -264,11 +272,14 @@ class PluginLoadError(Exception):
         True if the failure comes from the environment rather than from the plugin code: a third party module or
         vendor SDK/driver that is not installed or not available on this OS (``clr``, ``pyvisa``, ``windll``...).
         The plugin classes cannot be checked then, but this is not necessarily a defect of the plugin.
+    placeholder: bool
+        True if the module imports the fake wrapper of the template, that was not replaced yet: this is a todo
     """
 
-    def __init__(self, message: str, environmental: bool = False):
+    def __init__(self, message: str, environmental: bool = False, placeholder: bool = False):
         super().__init__(message)
         self.environmental = environmental
+        self.placeholder = placeholder
 
 
 def _is_environmental(error: Exception, package: str) -> bool:
@@ -277,8 +288,6 @@ def _is_environmental(error: Exception, package: str) -> bool:
         return False
     if isinstance(error, ImportError):
         name = getattr(error, 'name', None) or ''
-        if PLACEHOLDER_NAMES_RE.search(name):  # the wrapper import of the template was not replaced yet: a todo
-            return True
         return not (name == 'pymodaq' or name.startswith('pymodaq.') or name.split('.')[0] == package)
     return isinstance(error, (OSError, KeyError))
 
@@ -294,8 +303,9 @@ def load_plugin_class(plugin_module: PluginModule) -> type:
     try:
         module = importlib.import_module(plugin_module.import_path)
     except Exception as e:
+        placeholder = isinstance(e, ImportError) and bool(PLACEHOLDER_NAMES_RE.search(getattr(e, 'name', None) or ''))
         raise PluginLoadError(f'{plugin_module.import_path} cannot be imported: {e!r}',
-                              _is_environmental(e, plugin_module.package)) from e
+                              not placeholder and _is_environmental(e, plugin_module.package), placeholder) from e
     klass = getattr(module, plugin_module.class_name, None)
     if klass is None:
         raise PluginLoadError(f'{plugin_module.import_path} should define a class named {plugin_module.class_name}')
@@ -344,12 +354,17 @@ def check_plugin_module(plugin_module: PluginModule) -> CheckResult:
         klass = load_plugin_class(plugin_module)
         loaded = True
     except PluginLoadError as e:
-        (result.warnings if e.environmental else result.problems).append(str(e))
+        if e.placeholder:  # not finished: reported as a todo, controlled by fail_on
+            result.findings.append(Finding('PMQ203', Severity.TODO, str(e), 'replace the import of the fake wrapper '
+                                           'of the template with the one of your instrument',
+                                           Path(spec.origin) if spec is not None and spec.origin else None))
+        else:
+            (result.warnings if e.environmental else result.problems).append(str(e))
     if loaded:
         result.problems = check_move_class(klass) if plugin_module.kind == 'move' else check_viewer_class(klass)
     if path is not None:
-        result.findings = check_plugin_source(path, plugin_module.kind, plugin_module.class_name,
-                                              static_fallback=not loaded)
+        result.findings.extend(check_plugin_source(path, plugin_module.kind, plugin_module.class_name,
+                                                   static_fallback=not loaded))
     return result
 
 
