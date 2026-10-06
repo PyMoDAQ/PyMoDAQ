@@ -602,22 +602,37 @@ class DockLayoutMenu:
     ----------
     dock: Dock
     config_path: tuple[str, ...]
-        Path to a string config entry holding 'horizontal' or 'vertical' for this
-        dock kind, e.g. ('pymodaq', 'control_modules', 'settings_dock_layout')
+        Config entry holding the choice, e.g. ('pymodaq', 'control_modules', 'settings_dock_layout').
+    on_change: Callable[[Qt.Orientation], None] or None
+        Replaces the default reflow for docks not managed through :func:`display_in_dock`.
     """
     _orientations = {
         'horizontal': QtCore.Qt.Orientation.Horizontal,
         'vertical': QtCore.Qt.Orientation.Vertical,
     }
 
-    def __init__(self, dock: Dock, config_path: Tuple[str, ...]):
+    def __init__(self, dock: Dock, config_path: Tuple[str, ...],
+                on_change: Union[Callable[[QtCore.Qt.Orientation], None], None] = None):
         self.dock = dock
         self.config_path = config_path
-        self.orientation = self._orientations.get(
-            config(*config_path), QtCore.Qt.Orientation.Horizontal)
+        self._on_change = on_change
+        raw = config.get(config_path, None)
+        if raw is None:
+            # key missing from an older config file
+            current = 'horizontal'
+            config[config_path] = [current] + [n for n in self._orientations if n != current]
+            config.save()
+        else:
+            current = self._current_choice(raw)
+        self.orientation = self._orientations.get(current, QtCore.Qt.Orientation.Horizontal)
 
         dock.label.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         dock.label.customContextMenuRequested.connect(self._show_menu)
+
+    @staticmethod
+    def _current_choice(raw: Union[str, List[str]]) -> str:
+        """Active value, from either a list of choices or a legacy bare string."""
+        return raw[0] if isinstance(raw, list) else raw
 
     def _show_menu(self, pos):
         menu = QtWidgets.QMenu()
@@ -636,10 +651,14 @@ class DockLayoutMenu:
         if orientation == self.orientation:
             return
         self.orientation = orientation
-        config[self.config_path] = ('horizontal' if orientation == QtCore.Qt.Orientation.Horizontal
-                                    else 'vertical')
+        chosen = 'horizontal' if orientation == QtCore.Qt.Orientation.Horizontal else 'vertical'
+        others = [name for name in self._orientations if name != chosen]
+        config[self.config_path] = [chosen] + others
         config.save()
-        self._reflow()
+        if self._on_change is not None:
+            self._on_change(orientation)
+        else:
+            self._reflow()
 
     def _reflow(self):
         widgets = list(self.dock.widgets)
@@ -650,12 +669,14 @@ class DockLayoutMenu:
             display_in_dock(was_visible[widget], widget, self.dock, orientation=self.orientation)
 
 
-def get_dock_layout_menu(dock: Dock, config_path: Tuple[str, ...]) -> DockLayoutMenu:
-    """ Get the :class:`DockLayoutMenu` installed on this dock's title bar, creating it
-    (once) on first use """
+def get_dock_layout_menu(
+        dock: Dock, config_path: Tuple[str, ...],
+        on_change: Union[Callable[[QtCore.Qt.Orientation], None], None] = None,
+) -> DockLayoutMenu:
+    """ Get the :class:`DockLayoutMenu` on this dock's title bar, creating it on first use. """
     menu = getattr(dock, '_pymodaq_layout_menu', None)
     if menu is None:
-        menu = DockLayoutMenu(dock, config_path)
+        menu = DockLayoutMenu(dock, config_path, on_change=on_change)
         dock._pymodaq_layout_menu = menu
     return menu
 
