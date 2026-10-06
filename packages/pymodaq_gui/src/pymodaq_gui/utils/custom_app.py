@@ -205,14 +205,8 @@ class CustomApp(QObject, ActionManager, ParameterManager):
 
     @property
     def h5saver(self) -> H5Saver:
-        """ Convenience method to access the h5saver and for backcompatibility
-
-        Uses get_h5saver(create_new_file=False) rather than the h5_manager.h5saver property,
-        so merely accessing this (e.g. while building a settings UI) doesn't create a new h5
-        file as a side effect; callers that actually want to start saving still call
-        h5saver.init_file(...) explicitly.
-        """
-        return self.h5_manager.get_h5saver(create_new_file=False)
+        """ Convenience method to access the h5saver and for backcompatibility"""
+        return self.h5_manager.h5saver
 
     @classmethod
     def get_local_folder(cls, user=False) -> Path:
@@ -454,4 +448,4 @@ class CustomApp(QObject, ActionManager, ParameterManager):
 
     @property
     def module_and_data_saver(self) -> DataToExportSaver:
-        return DataToExportSaver(self.h5saver)
+        return DataToExportSaver(self.h5_manager.h5saver)
