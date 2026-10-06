@@ -20,13 +20,8 @@ Introduction
    :start-line: 2
    :end-before: <!-- end of intro -->
 
-Some experiments are not done by moving an actuator step by step and acquiring data once it has reached each
-position, as the :ref:`DAQ_Scan_module` does, but by *continuously* sweeping a parameter while recording everything:
-ramping the temperature of a cryostat or of an oven, the current of a magnet, the voltage of a power supply, the
-position of a delay line... For such continuous variations, waiting for each position to be reached would be too
-slow, or meaningless.
-
-The Ramping extension is therefore made for **fast and live acquisition**:
+The Ramping extension is made for **fast and live acquisition**, as opposed to the :ref:`DAQ_Scan_module` that
+moves an actuator step by step and acquires data once it has reached each position:
 
 * *fast*: the actuator never stops and the acquisition never waits for it. Each module is acquired continuously, at
   its own rate, as fast as the hardware (and the *Refresh Grab* setting) allows. Where a scan gives one point per
@@ -36,16 +31,10 @@ The Ramping extension is therefore made for **fast and live acquisition**:
   (the data as a function of the ramped value) is computed and plotted *during* the ramp, so you can follow the
   experiment and stop it as soon as you have seen what you were looking for
 
-The Ramping extension does exactly this:
-
-* it drives one actuator, the **ramping actuator**, linearly from a *start* to a *stop* value in a given *duration*
-  (or at a given *velocity*)
-* during the ramp, it continuously grabs the selected detectors and polls the values of the selected actuators,
-  independently of the ramp
-* everything is logged with time stamps in a h5 file, as the :ref:`DAQ_Logger <DAQ_Logger_module>` does
-* as the data are acquired asynchronously, the extension *rebuilds* the data as a function of the ramping
-  actuator value by binning them in time and averaging them: this is the **histogram**, plotted live during the ramp
-  and that can be recomputed later from the saved file
+Everything is logged with time stamps in a h5 file, as the :ref:`DAQ_Logger <DAQ_Logger_module>` does. As the data are
+acquired asynchronously, the extension *rebuilds* the data as a function of the ramping actuator value by binning them
+in time and averaging them: this is the **histogram**, plotted live during the ramp and that can be recomputed later
+from the saved file.
 
 Launching the Ramping extension
 +++++++++++++++++++++++++++++++
