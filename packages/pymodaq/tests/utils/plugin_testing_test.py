@@ -9,6 +9,12 @@ from pymodaq_utils.plugin_rules import Severity
 from pymodaq_utils.plugin_testing import PluginPackageChecks
 
 
+@pytest.fixture(autouse=True)
+def no_color(monkeypatch):
+    """The text of the reports is checked: the environment (FORCE_COLOR is set in some CI) must not color it"""
+    monkeypatch.setenv('NO_COLOR', '1')
+
+
 class TestMockPlugin(PluginPackageChecks):
     """The mock plugin, a hard dependency of PyMoDAQ, must pass all the checks"""
     package_name = 'pymodaq_plugins_mock'
