@@ -179,11 +179,11 @@ class DAQ_Viewer_base(PluginBase):
         Extensions that drive this plugin (e.g. ``DAQ_Scan``) may set caller context
         describing the active HDF5 file/node, so a plugin can mirror PyMoDAQ's file
         layout for its own files. Call ``self.get_caller()`` (inherited from
-        :class:`~pymodaq.control_modules.pluginBase.PluginBase`) at any point in the plugin's
+        :class:`~pymodaq.control_modules.plugin_base.PluginBase`) at any point in the plugin's
         lifetime — not just inside ``grab_data`` — to read it.
 
-        It is ``None`` only if the control module has never been configured to save at
-        all (never manually saved once, never had continuous saving enabled, never driven
+        It is ``None`` before the first grab, and afterwards only if the control module
+        has never been configured to save at all (never manually saved once, never had continuous saving enabled, never driven
         by an extension). Otherwise it may be either an explicit caller set by a driving
         extension, or the control module's own best-effort fallback describing whatever
         it is currently set up to save to (e.g. continuous-saving mode) — this fallback

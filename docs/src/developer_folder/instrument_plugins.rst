@@ -468,16 +468,18 @@ logfile...) alongside the HDF5 file PyMoDAQ itself is saving, and to mirror PyMo
 file layout when doing so (e.g. drop its files next to the current scan's node) rather
 than invent its own independent naming/session scheme.
 
-For this, any ``DAQ_Move_base``/``DAQ_Viewer_base`` plugin can call ``self.get_caller()``
-at any point in its lifetime (not just inside ``grab_data``) to get a
-:class:`~pymodaq.utils.caller.CallerInfo` describing the HDF5 file and node PyMoDAQ is
-currently associated with:
+For this, a ``DAQ_Viewer_base`` plugin can call ``self.get_caller()`` at any point in its
+lifetime (not just inside ``grab_data``) to get a :class:`~pymodaq.utils.caller.CallerInfo`
+describing the HDF5 file and node PyMoDAQ is currently associated with. It is set at the
+start of each grab (snap, grab or a grab requested by an extension), so it reflects the
+most recent one. The method is also available on ``DAQ_Move_base`` but actuators are not
+given a caller yet, so it always returns ``None`` there.
 
 .. code-block:: python
 
     def grab_data(self, Naverage=1, **kwargs):
         caller = self.get_caller()
-        if caller is not None and caller.h5_file_path is not None:
+        if caller is not None and caller.h5_file_path is not None and caller.node_name is not None:
             out_dir = Path(caller.h5_file_path).parent / caller.node_name
             out_dir.mkdir(parents=True, exist_ok=True)
             # save a proprietary file into out_dir, named however you like
@@ -485,7 +487,8 @@ currently associated with:
 ``CallerInfo`` carries:
 
 * ``h5_file_path``: absolute path to the HDF5 file PyMoDAQ is writing to
-* ``node_name``: name of the active HDF5 group for this call, e.g. ``'Scan001'``
+* ``node_name``: name of the active HDF5 group for this call, e.g. ``'Scan001'`` (``None``
+  if the HDF5 file is not currently open)
 * ``caller_name``: a descriptive label for what produced this caller
 * ``caller_type``: the caller's class name, e.g. ``'DAQScanCaller'``
 
@@ -495,9 +498,9 @@ caller subclass carrying extra fields. During a scan, ``get_caller()`` returns a
 ``ind_average`` (the current averaging pass) on top of the base fields above.
 
 .. important::
-    ``get_caller()`` is only ``None`` if the control module has *never* been configured
-    to save at all (no manual "save data", no continuous saving ever enabled, no
-    extension has ever driven it). Otherwise, absent a more specific caller from a
+    ``get_caller()`` is ``None`` before the first grab, and afterwards only if the control
+    module has *never* been configured to save at all (no manual "save data", no
+    continuous saving ever enabled, no extension has ever driven it). Otherwise, absent a more specific caller from a
     driving extension, the control module falls back to a best-effort ``CallerInfo``
     describing whatever it is currently set up to save to (e.g. continuous-saving mode).
     This fallback can be stale - it may still reflect a previously finished scan or a

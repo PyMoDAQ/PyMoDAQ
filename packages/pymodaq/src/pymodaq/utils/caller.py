@@ -23,14 +23,15 @@ class CallerInfo:
 
         def grab_data(self, Naverage=1, **kwargs):
             caller = self.get_caller()  # None only if this module has never been set up to save
-            if caller is not None and caller.h5_file_path is not None:
+            if caller is not None and caller.h5_file_path is not None and caller.node_name is not None:
                 out_dir = Path(caller.h5_file_path).parent / caller.node_name
                 ...
     """
     h5_file_path: Optional[str] = None
     """Absolute path to the HDF5 file being written by PyMoDAQ."""
     node_name: Optional[str] = None
-    """Name of the active HDF5 group for this call, e.g. ``'Scan001'``."""
+    """Name of the active HDF5 group for this call, e.g. ``'Scan001'``. ``None`` in the
+    module's own fallback if its HDF5 file is not currently open."""
     caller_name: Optional[str] = None
     """A descriptive label for what produced this caller. An extension sets its own name
     (e.g. ``'DAQScan'``); the module's own self-derived fallback (see
