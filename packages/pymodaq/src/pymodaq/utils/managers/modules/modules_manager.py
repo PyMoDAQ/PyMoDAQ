@@ -460,8 +460,14 @@ class ModulesManager(QObject, ParameterManager):
 
         for mod in self.detectors:
             if mod.title not in overridden_detectors:
-                kwargs.update(dict(Naverage=Naverage if Naverage is not None else mod.Naverage))
-                mod.command_hardware.emit(utils.ThreadCommand(ControlToHardwareViewer.SINGLE, kwargs))
+                # one dict per module: the command is queued to another thread, so a shared
+                # dict could be mutated (Naverage, caller) before a module reads it
+                mod_kwargs = dict(kwargs)
+                mod_kwargs['Naverage'] = Naverage if Naverage is not None else mod.Naverage
+                if mod_kwargs.get('caller') is None and hasattr(mod, 'get_caller'):
+                    # no explicit caller from the extension: use the module's own fallback
+                    mod_kwargs['caller'] = mod.get_caller()
+                mod.command_hardware.emit(utils.ThreadCommand(ControlToHardwareViewer.SINGLE, mod_kwargs))
 
     def grab_data_with_callback(self,
                                 check_do_override=True,

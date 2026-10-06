@@ -13,6 +13,7 @@ from pymodaq_data.data import DataToExport, DataRaw, DataSource, DataDim
 from pymodaq.utils.data import DataActuator
 from pymodaq.utils.managers.modules import ModulesManager, ModuleType
 from pymodaq_utils.utils import ThreadCommand
+from pymodaq.utils.caller import CallerInfo
 
 
 # ---------------------------------------------------------------------------
@@ -467,6 +468,50 @@ class TestGrabData:
             assert det in blocker.args[0]
         for det in blocker.args[0]:
             assert det in timeout_dets
+
+
+class TestGrabDataCaller:
+    @staticmethod
+    def _record_commands(manager):
+        commands = {}
+        for det in manager.detectors:
+            det.command_hardware.connect(
+                lambda cmd, title=det.title: commands.__setitem__(title, cmd))
+        return commands
+
+    def test_falls_back_to_each_module_caller(self, qtbot, manager):
+        manager.selected_detectors_name = ['Det1', 'Det3']
+        for det in manager.detectors:
+            det.get_caller = lambda title=det.title: CallerInfo(node_name=title)
+        commands = self._record_commands(manager)
+
+        manager.grab_data()
+
+        assert commands['Det1'].attribute['caller'] == CallerInfo(node_name='Det1')
+        assert commands['Det3'].attribute['caller'] == CallerInfo(node_name='Det3')
+
+    def test_explicit_caller_is_sent_to_all_modules(self, qtbot, manager):
+        manager.selected_detectors_name = ['Det1', 'Det3']
+        for det in manager.detectors:
+            det.get_caller = lambda: CallerInfo(caller_name='fallback')
+        commands = self._record_commands(manager)
+        caller = CallerInfo(caller_name='extension')
+
+        manager.grab_data(caller=caller)
+
+        assert commands['Det1'].attribute['caller'] is caller
+        assert commands['Det3'].attribute['caller'] is caller
+
+    def test_each_module_gets_its_own_naverage(self, qtbot, manager):
+        manager.selected_detectors_name = ['Det1', 'Det3']
+        manager.get_mod_from_name('Det1', mod=ModuleType.Detector).Naverage = 2
+        manager.get_mod_from_name('Det3', mod=ModuleType.Detector).Naverage = 5
+        commands = self._record_commands(manager)
+
+        manager.grab_data()
+
+        assert commands['Det1'].attribute['Naverage'] == 2
+        assert commands['Det3'].attribute['Naverage'] == 5
 
 class TestProbeDetectors:
 
