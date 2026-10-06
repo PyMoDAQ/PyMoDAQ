@@ -361,15 +361,23 @@ class ControlModule(QObject):
         extension name, since this fallback has no notion of which extension (if any)
         last configured that saver - that distinction lets a plugin tell live
         continuous-saving state apart from a saver shape leftover from a finished scan.
+
+        This is read-only: it never opens or creates an h5 file (it is called on every
+        snap/grab). ``h5_file_path`` is None if the saver has no h5saver attached, and
+        ``node_name`` is None unless the saver's h5 file is currently open.
         """
-        if self._module_and_data_saver is None:
+        saver = self._module_and_data_saver  # not the property: it may (re)open/create a file
+        if saver is None:
             return None
-        saver = self.module_and_data_saver  # property: lazily (re)attaches self.h5saver if needed
+        h5saver = saver.h5saver
+        h5_file_path = None
         node_name = None
-        if saver.module_group is not None:
-            node_name = saver.module_group.name.split('/')[-1]
+        if h5saver is not None:
+            h5_file_path = str(h5saver.settings['current_h5_file'])
+            if h5saver.isopen() and saver.module_group is not None:
+                node_name = saver.module_group.name.split('/')[-1]
         return CallerInfo(
-            h5_file_path=str(saver.h5saver.settings['current_h5_file']),
+            h5_file_path=h5_file_path,
             node_name=node_name,
             caller_name=type(saver).__name__,
         )

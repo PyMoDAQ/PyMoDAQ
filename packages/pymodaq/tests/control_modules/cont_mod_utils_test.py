@@ -32,17 +32,25 @@ class TestDAQType:
 
 
 class FakeH5Saver:
-    def __init__(self, current_h5_file='/tmp/data/Data_20260101.h5'):
+    def __init__(self, current_h5_file='/tmp/data/Data_20260101.h5', is_open=True):
         self.settings = {'current_h5_file': current_h5_file}
         self.h5_file = True  # truthy: skip the real H5Saver's init_file auto-call
+        self.is_open = is_open
 
     def isopen(self):
-        return True
+        return self.is_open
 
 
 class FakeGroup:
     def __init__(self, name='/RawData/Detector000'):
         self.name = name
+
+
+class ClosedGroup:
+    """Node of a closed h5 file: reading its name fails"""
+    @property
+    def name(self):
+        raise AttributeError("'NoneType' object has no attribute 'split'")
 
 
 class FakeModuleSaver:
@@ -56,17 +64,30 @@ class TestControlModuleGetCaller:
         cm = ControlModule()
         assert cm.get_caller() is None
 
-    def test_saver_without_h5saver_self_heals_via_property(self, qtbot, tmp_path):
-        # module_and_data_saver is a self-healing property: accessing it lazily attaches
-        # this module's own h5saver if the saver had none, rather than staying None.
+    def test_saver_without_h5saver_does_not_create_a_file(self, qtbot):
+        # get_caller is read-only: it must not go through the module_and_data_saver property,
+        # which would create/open this module's own h5 file
         cm = ControlModule()
-        cm._h5saver = FakeH5Saver(current_h5_file=str(tmp_path / 'default.h5'))
         cm._module_and_data_saver = FakeModuleSaver(h5saver=None)
 
         caller = cm.get_caller()
 
-        assert caller.h5_file_path == str(tmp_path / 'default.h5')
+        assert caller.h5_file_path is None
+        assert caller.node_name is None
         assert caller.caller_name == 'FakeModuleSaver'
+        assert cm._h5saver is None
+
+    def test_closed_h5_file_gives_path_but_no_node(self, qtbot):
+        # e.g. the saver left on a detector after a scan whose file has been closed
+        cm = ControlModule()
+        cm._module_and_data_saver = FakeModuleSaver(
+            h5saver=FakeH5Saver(is_open=False), module_group=ClosedGroup())
+
+        caller = cm.get_caller()
+
+        assert caller.h5_file_path == '/tmp/data/Data_20260101.h5'
+        assert caller.node_name is None
+        assert cm._h5saver is None
 
     def test_derives_caller_from_module_and_data_saver(self, qtbot):
         cm = ControlModule()
