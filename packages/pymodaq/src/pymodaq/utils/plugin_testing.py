@@ -495,7 +495,8 @@ def main(argv=None) -> int:
     Returns 0 if the checks pass, 1 otherwise (so that it can also be used in a script or a CI).
     """
     import argparse
-    parser = argparse.ArgumentParser(description='Check a PyMoDAQ plugin package and print a report')
+    parser = argparse.ArgumentParser(prog='check_plugin',
+                                     description='Check a PyMoDAQ plugin package and print a report')
     parser.add_argument('package', nargs='?', default=None,
                         help='installed plugin package, default: read from the pyproject.toml of the current folder')
     parser.add_argument('--fail-on', choices=list(FAIL_LEVELS), default='error',
