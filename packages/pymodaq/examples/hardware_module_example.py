@@ -94,9 +94,11 @@ class FakeSpectrometer:
         for name in names:
             if name == 'spectrum':
                 x = np.linspace(0, 4 * np.pi, 256)
-                signal = (np.sin(x + self._elapsed()) + 1.5) * self._exposure
-                noise = np.random.rand(256) / max(self._averaging, 1)
-                arrays[name] = signal * noise / 10
+                shape = np.sin(x + self._elapsed()) + 1.5  # ranges 0.5 .. 2.5, exposure-independent
+                signal = shape * self._exposure / 10
+                # Real averaging: the shape stays put, only the noise shrinks, by 1 / sqrt(N).
+                noise_std = (1.5 / 10) / np.sqrt(max(self._averaging, 1))
+                arrays[name] = signal + np.random.normal(0, noise_std, size=256)
         return _Reading(arrays)
 
     def _read_temperature(self):
