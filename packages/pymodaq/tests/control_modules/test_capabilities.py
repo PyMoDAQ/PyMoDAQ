@@ -137,7 +137,17 @@ class TestSerialization:
 class TestToolbarWidgets:
 
     def test_continuous_control_follows_the_move_toolbar(self):
-        assert toolbar_widgets(Spectrometer.exposure) == ['value', 'move_done_led', 'stop', 'show_controls']
+        assert toolbar_widgets(Spectrometer.exposure) == ['value', 'show_controls']
+
+    def test_stop_is_not_a_default_but_a_callback_adds_it(self):
+        # stop is device-specific (e.g. a motor axis), unlike value/show_controls, so it is opt-in
+        assert 'stop' not in toolbar_widgets(control(lo=0, hi=1))
+        widgets = toolbar_widgets(control(lo=0, hi=1, stop=lambda plugin: None))
+        assert widgets == ['value', 'show_controls', 'stop']
+
+    def test_stop_callback_can_still_be_removed(self):
+        q = control(lo=0, hi=1, stop=lambda plugin: None, ui_remove=('stop',))
+        assert 'stop' not in toolbar_widgets(q)
 
     def test_discrete_control_gets_a_selector(self):
         assert toolbar_widgets(Spectrometer.trigger) == ['selector']
@@ -296,3 +306,22 @@ class TestGetSet:
     def test_get_and_set_are_not_serialized(self):
         q = control(units='ms', get=lambda plugin: 1.0, set=lambda plugin, value: None)
         assert 'get' not in q.to_dict() and 'set' not in q.to_dict()
+
+
+class TestStop:
+
+    def test_kept_on_a_control(self):
+        stopper = lambda plugin: None
+        q = control(stop=stopper)
+        assert q.stop is stopper
+
+    def test_no_stop_by_default(self):
+        assert control().stop is None
+
+    def test_a_measurement_cannot_have_a_stop_callback(self):
+        with pytest.raises(ValueError, match='only a control'):
+            Quantity(Access.MEASUREMENT, stop=lambda plugin: None)
+
+    def test_stop_is_not_serialized(self):
+        q = control(stop=lambda plugin: None)
+        assert 'stop' not in q.to_dict()

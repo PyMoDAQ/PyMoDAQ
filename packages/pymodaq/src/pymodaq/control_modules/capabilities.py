@@ -56,12 +56,12 @@ class Domain(str, Enum):
 _IDENTIFIER = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
 
 UI_WIDGETS = frozenset({
-    'value', 'move_done_led', 'stop', 'show_controls', 'selector', 'label',
+    'value', 'stop', 'show_controls', 'selector', 'label',
     'read', 'show_graph', 'snap', 'grab', 'save', 'history', 'slider',
 })
 
 _DEFAULT_WIDGETS = {
-    (Access.CONTROL, Domain.CONTINUOUS): ('value', 'move_done_led', 'stop', 'show_controls'),
+    (Access.CONTROL, Domain.CONTINUOUS): ('value', 'show_controls'),
     (Access.CONTROL, Domain.DISCRETE): ('selector',),
     (Access.MEASUREMENT, Domain.DISCRETE): ('label', 'grab'),
     (Access.MEASUREMENT, Domain.CONTINUOUS, 'scalar'): ('read', 'grab', 'show_graph'),
@@ -70,7 +70,12 @@ _DEFAULT_WIDGETS = {
 
 
 def toolbar_widgets(quantity: 'Quantity') -> list[str]:
-    """Widgets for a channel group: the defaults of the existing modules, adjusted by the declaration."""
+    """Widgets for a channel group: the defaults of the existing modules, adjusted by the declaration.
+
+    ``stop`` is never a default: it only appears when the quantity declares a ``stop`` callback (it is
+    device-specific, e.g. a motor axis, not something every continuous control has), and even then
+    ``ui_remove=('stop',)`` can still suppress it.
+    """
     if quantity.access is Access.MEASUREMENT and quantity.domain is Domain.CONTINUOUS:
         scalar = len(quantity.shape) == 1 and quantity.shape[0] == 1
         defaults = _DEFAULT_WIDGETS[(Access.MEASUREMENT, Domain.CONTINUOUS, 'scalar' if scalar else 'array')]
@@ -78,6 +83,9 @@ def toolbar_widgets(quantity: 'Quantity') -> list[str]:
         defaults = _DEFAULT_WIDGETS[(quantity.access, quantity.domain)]
     widgets = [w for w in defaults if w not in quantity.ui_remove]
     widgets += [w for w in quantity.ui_add if w not in widgets]
+    if quantity.access is Access.CONTROL and quantity.stop is not None \
+            and 'stop' not in quantity.ui_remove and 'stop' not in widgets:
+        widgets.append('stop')
     return widgets
 
 
@@ -108,6 +116,7 @@ class Quantity:
         setting: bool | str = False,
         get: Callable[[Any], Any] | None = None,
         set: Callable[[Any, Any], None] | None = None,
+        stop: Callable[[Any], None] | None = None,
     ) -> None:
         self.access = Access(access)
         self.units = units
@@ -129,6 +138,8 @@ class Quantity:
         # An explicit (self) -> value getter / (self, value) -> None setter, read()/write() otherwise
         self.get = get
         self.set = set
+        # An explicit (self) -> None, called when the user asks this control to stop (e.g. a motor axis)
+        self.stop = stop
         self.name: str | None = None
         self._validate()
 
@@ -147,6 +158,8 @@ class Quantity:
             raise ValueError('only a control can have a set callback')
         if self.set is not None and self.setting:
             raise ValueError('a control cannot have both a set callback and a setting: pick one')
+        if self.stop is not None and self.access is not Access.CONTROL:
+            raise ValueError('only a control can have a stop callback')
         if self.push and self.access is not Access.MEASUREMENT:
             raise ValueError('only a measurement can be pushed by the plugin')
         if self.epsilon < 0:
@@ -255,6 +268,7 @@ def control(
     setting: bool | str = False,
     get: Callable[[Any], Any] | None = None,
     set: Callable[[Any, Any], None] | None = None,
+    stop: Callable[[Any], None] | None = None,
 ) -> Quantity:
     """Declare a readable and writable quantity: a target, with the device's actual value as a readback.
 
@@ -273,10 +287,16 @@ def control(
     instead of ``write``: the device thread sets the named parameter and calls ``commit_settings``.
     ``True`` uses the control's own name; a string names a differently-named parameter. The parameter
     itself must already be declared in ``params``; this is checked when the device opens, not here.
+
+    ``stop``, when given, adds a Stop button that calls ``stop(plugin)``: there is no generic notion of
+    "stop" that applies to every control, so it is opt-in, for the controls that need it (e.g. a motor
+    axis), not a default widget. With both ``readback`` and ``epsilon`` set, a write's pending indicator
+    also waits for the readback to settle within ``epsilon`` of the target instead of clearing as soon
+    as the plugin's write call returns, so Stop has something meaningful to interrupt.
     """
     return Quantity(Access.CONTROL, units=units, label=label, lo=lo, hi=hi, epsilon=epsilon,
                     values=values, docs=docs, ui_add=ui_add, ui_remove=ui_remove, readback=readback,
-                    setting=setting, get=get, set=set)
+                    setting=setting, get=get, set=set, stop=stop)
 
 
 def _readback_of(control: Quantity) -> Quantity:
