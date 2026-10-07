@@ -13,8 +13,13 @@ What to try:
   it reaches the plugin's commit_settings and reduces the spectrum's noise.
 - Set exposure above 500 ms: the plugin turns averaging off by itself, and the settings dock follows,
   without the GUI having written anything.
+
+temperature, status and trigger declare get/set directly and never go through read()/write(): see
+FakeSpectrometer's docstring. spectrum and exposure still do, since spectrum is the channel that
+would share a batched read with others like it on a real instrument.
 """
 import sys
+import time
 
 import numpy as np
 from pymodaq_gui.qt_utils import mkQApp
@@ -42,6 +47,11 @@ class FakeSpectrometer:
     spectrum is computed, through ``commit_settings``. It also shows the other direction: the
     plugin turns it off by itself for a long exposure, and the settings dock follows without a
     write from the GUI.
+
+    ``temperature``, ``status`` and ``trigger`` each answer their own read or write with a
+    ``get``/``set`` callback: a Grab of ``temperature`` never calls ``read()`` at all. ``spectrum``
+    and ``exposure`` stay in ``read()``/``write()``, since ``spectrum`` is the channel that would
+    share a batched ``read()`` call with others like it on a real multi-channel instrument.
     """
 
     params: list = [
@@ -50,17 +60,28 @@ class FakeSpectrometer:
     ]
 
     spectrum = measurement(units='counts', shape=(256,), label='Spectrum', docs='Replaced on each read')
-    temperature = measurement(units='K', label='Sensor temperature', docs='Sensor temperature')
-    status = measurement(values=['idle', 'running'], label='Device state', docs='Device state')
+    temperature = measurement(units='K', label='Sensor temperature', docs='Sensor temperature',
+                              get=lambda plugin: plugin._read_temperature())
+    status = measurement(values=['idle', 'running'], label='Device state', docs='Device state',
+                         get=lambda plugin: plugin._read_status())
     exposure = control(units='ms', lo=1, hi=1000, epsilon=0.1, label='Exposure', docs='Exposure time')
-    trigger = control(values=['internal', 'external'], label='Trigger source', docs='Trigger source')
+    trigger = control(values=['internal', 'external'], label='Trigger source', docs='Trigger source',
+                      set=lambda plugin, value: plugin._set_trigger(value))
 
     def __init__(self):
         self._exposure = 10.0
         self._trigger = 'internal'
         self._averaging = 8
-        self._phase = 0.0
+        self._start = time.monotonic()
         self._settings = None
+
+    def _elapsed(self) -> float:
+        """Wall-clock phase: each channel's own read advances it by however long it has been open,
+
+        instead of by how many times it has been read, so temperature and status drift at the
+        same rate whether or not spectrum is also being grabbed.
+        """
+        return time.monotonic() - self._start
 
     def open(self, settings):
         self._settings = settings
@@ -69,19 +90,23 @@ class FakeSpectrometer:
         pass
 
     def read(self, names=None, fresh=True):
-        self._phase += 0.1
         arrays = {}
         for name in names:
             if name == 'spectrum':
                 x = np.linspace(0, 4 * np.pi, 256)
-                signal = (np.sin(x + self._phase) + 1.5) * self._exposure
+                signal = (np.sin(x + self._elapsed()) + 1.5) * self._exposure
                 noise = np.random.rand(256) / max(self._averaging, 1)
                 arrays[name] = signal * noise / 10
-            elif name == 'temperature':
-                arrays[name] = np.array([293.1 + 0.5 * np.sin(self._phase)])
-            elif name == 'status':
-                arrays[name] = np.array(['running' if np.sin(self._phase) > 0 else 'idle'])
         return _Reading(arrays)
+
+    def _read_temperature(self):
+        return np.array([293.1 + 0.5 * np.sin(self._elapsed())])
+
+    def _read_status(self):
+        return np.array(['running' if np.sin(self._elapsed()) > 0 else 'idle'])
+
+    def _set_trigger(self, value):
+        self._trigger = value
 
     def write(self, name, value):
         if name == 'exposure':
@@ -91,8 +116,6 @@ class FakeSpectrometer:
                 # does not call commit_settings, and the settings dock must still follow it
                 self._averaging = 1
                 self._settings.child('averaging').setValue(1)
-        elif name == 'trigger':
-            self._trigger = value
 
     def commit_settings(self, param):
         if param.name() == 'averaging':

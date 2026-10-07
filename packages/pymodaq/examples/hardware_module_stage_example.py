@@ -9,6 +9,10 @@ at a fixed speed, and only while the device is read. So:
 - Move a target with the slider or the spinbox. The device gets the new target at once.
 - Grab the position of an axis (Grab, blue LED). Its display follows the target with a delay.
 - Motion shows "moving" while any axis is still on its way.
+
+Each target (x, y, z) has its own set callback, so writing one never goes through write() at all:
+the plugin does not define it. The positions and motion stay in read(), since they all depend on
+one shared _advance() step and would lose that if each had its own get.
 """
 import sys
 import time
@@ -32,14 +36,20 @@ class _Reading:
 
 
 class FakeStage:
-    """Three axes. Each target is a control whose readback, ``<axis>_readback``, is its position."""
+    """Three axes. Each target is a control whose readback, ``<axis>_readback``, is its position.
+
+    Each target's ``set`` writes straight to ``_target``, so the plugin needs no ``write()`` at all.
+    """
 
     params: list = []
     speed = 10.0  # mm/s, the same for every axis
 
-    x = control(units='mm', lo=0, hi=50, epsilon=0.01, label='X', ui_add=('slider',), readback=True)
-    y = control(units='mm', lo=0, hi=50, epsilon=0.01, label='Y', ui_add=('slider',), readback=True)
-    z = control(units='mm', lo=0, hi=10, epsilon=0.01, label='Z', ui_add=('slider',), readback="my_z_readback")
+    x = control(units='mm', lo=0, hi=50, epsilon=0.01, label='X', ui_add=('slider',), readback=True,
+               set=lambda plugin, value: plugin._set_target('x', value))
+    y = control(units='mm', lo=0, hi=50, epsilon=0.01, label='Y', ui_add=('slider',), readback=True,
+               set=lambda plugin, value: plugin._set_target('y', value))
+    z = control(units='mm', lo=0, hi=10, epsilon=0.01, label='Z', ui_add=('slider',), readback="my_z_readback",
+               set=lambda plugin, value: plugin._set_target('z', value))
     motion = measurement(values=['idle', 'moving'], label='Motion')
 
     AXES = ('x', 'y', 'z')
@@ -80,9 +90,8 @@ class FakeStage:
                 arrays[name] = np.array(['moving' if self._moving() else 'idle'])
         return _Reading(arrays)
 
-    def write(self, name, value):
-        if name in self.AXES:
-            self._target[name] = float(value)
+    def _set_target(self, axis, value):
+        self._target[axis] = float(value)
 
 
 def main() -> int:
