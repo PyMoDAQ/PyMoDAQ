@@ -12,6 +12,9 @@ at a fixed speed, and only while the device is read. So:
 - Stop an axis mid-move: the target freezes where the axis currently is, like a real motor's stop.
 - Grab the position of an axis (Grab, blue LED). Its display follows the target with a delay.
 - Motion shows "moving" while any axis is still on its way.
+- Settings (instrument toolbar): "speed", a plugin parameter, not a channel - it's shared by every
+  axis, so it belongs with the plugin's settings rather than any one row. Changing it reaches
+  commit_settings and takes effect on the next move.
 
 Each target (x, y, z) has its own set and stop callback, so writing or stopping one never goes through
 write() at all: the plugin does not define it. The positions and motion stay in read(), since they all
@@ -43,10 +46,18 @@ class FakeStage:
 
     Each target's ``set`` writes straight to ``_target``, and ``stop`` freezes it where the axis
     currently is, so the plugin needs no ``write()`` at all.
+
+    ``speed`` is a plain plugin setting, not a channel: it is shared by every axis, so it belongs in
+    the settings dock rather than in any one row, the same way ``averaging`` does in the spectrometer
+    example. A setting that genuinely belonged to one axis alone (e.g. a per-axis acceleration) would
+    still live here, just nested under a ``{'type': 'group', ...}`` named after the axis - the
+    settings dock already renders that, no per-row widget needed.
     """
 
-    params: list = []
-    speed = 10.0  # mm/s, the same for every axis
+    params: list = [
+        {'name': 'speed', 'type': 'float', 'value': 10.0, 'limits': (0.1, 100), 'suffix': 'mm/s',
+         'tip': 'Speed shared by every axis'},
+    ]
 
     x = control(units='mm', lo=0, hi=50, epsilon=0.01, label='X', ui_add=('slider',), readback=True,
                set=lambda plugin, value: plugin._set_target('x', value),
@@ -65,20 +76,26 @@ class FakeStage:
         self._target = {axis: 0.0 for axis in self.AXES}
         self._position = {axis: 0.0 for axis in self.AXES}
         self._last_update = time.monotonic()
+        self._speed = 10.0  # mm/s, overwritten by open() from the declared default, then by commit_settings
         # the readback names come from the declarations, so any name works
         self._axis_of_readback = {c.readback: c.name for c in Capabilities.from_device(type(self)).controls
                                   if c.readback}
 
     def open(self, settings):
         self._last_update = time.monotonic()
+        self._speed = settings.child('speed').value()
 
     def close(self):
         pass
 
+    def commit_settings(self, param):
+        if param.name() == 'speed':
+            self._speed = param.value()
+
     def _advance(self) -> None:
         """Move every axis towards its target for the time elapsed since the last update."""
         now = time.monotonic()
-        step = self.speed * (now - self._last_update)
+        step = self._speed * (now - self._last_update)
         self._last_update = now
         for axis in self.AXES:
             error = self._target[axis] - self._position[axis]
