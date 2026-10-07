@@ -24,7 +24,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import Any, Callable
 
 
 __all__ = [
@@ -106,6 +106,8 @@ class Quantity:
         push: bool = False,
         readback: bool | str = False,
         setting: bool | str = False,
+        get: Callable[[Any], Any] | None = None,
+        set: Callable[[Any, Any], None] | None = None,
     ) -> None:
         self.access = Access(access)
         self.units = units
@@ -124,6 +126,9 @@ class Quantity:
         self.readback = readback
         # True, or the name of the plugin parameter this control writes through; resolved by Capabilities
         self.setting = setting
+        # An explicit (self) -> value getter / (self, value) -> None setter, read()/write() otherwise
+        self.get = get
+        self.set = set
         self.name: str | None = None
         self._validate()
 
@@ -138,6 +143,10 @@ class Quantity:
             raise ValueError('only a control can have a readback')
         if self.setting and self.access is not Access.CONTROL:
             raise ValueError('only a control can be backed by a setting')
+        if self.set is not None and self.access is not Access.CONTROL:
+            raise ValueError('only a control can have a set callback')
+        if self.set is not None and self.setting:
+            raise ValueError('a control cannot have both a set callback and a setting: pick one')
         if self.push and self.access is not Access.MEASUREMENT:
             raise ValueError('only a measurement can be pushed by the plugin')
         if self.epsilon < 0:
@@ -215,13 +224,20 @@ def measurement(
     ui_add: tuple | list = (),
     ui_remove: tuple | list = (),
     push: bool = False,
+    get: Callable[[Any], Any] | None = None,
 ) -> Quantity:
     """Declare a read-only quantity: a sensor reading, a detector channel, a status.
 
     ``push=True`` means the plugin sends its readings with ``push_reading`` instead of being polled.
+
+    ``get``, when given, answers a read of this quantity on its own: ``get(plugin)`` returns the value,
+    instead of going through ``read(names, fresh)``. A single-channel read (Read, Snap, a one-shot
+    subscription) always uses it. A periodic read groups it with other channels sharing the same period
+    only for channels without their own ``get``; channels with one are read individually, so declaring
+    it opts a channel out of the plugin's batching.
     """
     return Quantity(Access.MEASUREMENT, units=units, label=label, dtype=dtype, shape=shape,
-                    values=values, docs=docs, ui_add=ui_add, ui_remove=ui_remove, push=push)
+                    values=values, docs=docs, ui_add=ui_add, ui_remove=ui_remove, push=push, get=get)
 
 
 def control(
@@ -237,11 +253,17 @@ def control(
     ui_remove: tuple | list = (),
     readback: bool | str = False,
     setting: bool | str = False,
+    get: Callable[[Any], Any] | None = None,
+    set: Callable[[Any, Any], None] | None = None,
 ) -> Quantity:
     """Declare a readable and writable quantity: a target, with the device's actual value as a readback.
 
     ``lo``, ``hi`` and ``epsilon`` describe a continuous range (``epsilon`` is the move tolerance).
     ``values`` describes a discrete set instead.
+
+    ``get`` and ``set`` answer a read or a write of this quantity directly: ``get(plugin)`` returns the
+    value, ``set(plugin, value)`` applies it, instead of ``read``/``write``. See :func:`measurement` for
+    how ``get`` interacts with periodic batching. ``set`` and ``setting`` cannot both be given.
 
     ``readback`` declares the measurement that reports the actual value, which the GUI shows in the same row.
     ``True`` names it ``<name>_readback``; a string names it. If a measurement of that name is already
@@ -254,7 +276,7 @@ def control(
     """
     return Quantity(Access.CONTROL, units=units, label=label, lo=lo, hi=hi, epsilon=epsilon,
                     values=values, docs=docs, ui_add=ui_add, ui_remove=ui_remove, readback=readback,
-                    setting=setting)
+                    setting=setting, get=get, set=set)
 
 
 def _readback_of(control: Quantity) -> Quantity:

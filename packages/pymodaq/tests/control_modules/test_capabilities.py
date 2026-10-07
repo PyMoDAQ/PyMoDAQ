@@ -266,3 +266,33 @@ class TestSetting:
         caps = Capabilities.from_device(Stage)
         restored = Capabilities.from_dict(json.loads(json.dumps(caps.to_dict())))
         assert restored.controls[0].setting == 'exposure'
+
+
+class TestGetSet:
+
+    def test_get_is_kept_on_a_measurement(self):
+        getter = lambda plugin: 42
+        q = measurement(get=getter)
+        assert q.get is getter
+
+    def test_get_and_set_are_kept_on_a_control(self):
+        getter = lambda plugin: 1.0
+        setter = lambda plugin, value: None
+        q = control(get=getter, set=setter)
+        assert q.get is getter and q.set is setter
+
+    def test_no_get_or_set_by_default(self):
+        assert measurement().get is None
+        assert control().get is None and control().set is None
+
+    def test_a_measurement_cannot_have_a_set_callback(self):
+        with pytest.raises(ValueError, match='only a control'):
+            Quantity(Access.MEASUREMENT, set=lambda plugin, value: None)
+
+    def test_set_and_setting_are_exclusive(self):
+        with pytest.raises(ValueError, match='pick one'):
+            control(setting=True, set=lambda plugin, value: None)
+
+    def test_get_and_set_are_not_serialized(self):
+        q = control(units='ms', get=lambda plugin: 1.0, set=lambda plugin, value: None)
+        assert 'get' not in q.to_dict() and 'set' not in q.to_dict()
