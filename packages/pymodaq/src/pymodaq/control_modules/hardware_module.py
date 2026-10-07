@@ -16,6 +16,7 @@ names are skipped until they are implemented.
 """
 from __future__ import annotations
 
+import time
 from collections import deque
 
 import numpy as np
@@ -23,7 +24,7 @@ import pyqtgraph as pg
 from pyqtgraph.parametertree import ParameterTree
 from qt_themes import get_theme
 from qtpy import QtWidgets
-from qtpy.QtCore import QMetaObject, Qt, Signal, Slot
+from qtpy.QtCore import QMetaObject, QTimer, Qt, Signal, Slot
 from qtpy import QtGui
 from qtpy.QtGui import QColor
 
@@ -43,6 +44,8 @@ VALUE_WIDTH = 130
 SLIDER_WIDTH = 120
 SLIDER_STEPS = 1000  # a slider maps its range onto this many steps
 ACTION_WIDTH = 44  # room for one toolbar button
+SETTLE_POLL_MS = 150.0  # how often a settling control's readback is checked against its target
+SETTLE_TIMEOUT_S = 10.0  # give up waiting for a control to settle after this long
 
 
 class _ViewDock(QtWidgets.QDockWidget):
@@ -135,9 +138,12 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         self._leds: dict[str, QtWidgets.QLabel] = {}
         self._row_of: dict[str, str] = {}  # a channel's row: a control's row holds its readback too
         self._row_channels: dict[str, list[str]] = {}  # the channels of each row
-        self._pending: set[str] = set()  # writes sent, not yet acknowledged
-        self._failed: set[str] = set()  # writes the plugin rejected
+        self._pending: set[str] = set()  # writes sent, not yet acknowledged, or not yet settled
+        self._failed: set[str] = set()  # writes the plugin rejected, or that never settled
         self._reading: set[str] = set()  # one-shot reads in flight
+        self._targets: dict[str, float] = {}  # a settling control's last requested value
+        self._settle_timers: dict[str, QTimer] = {}  # settling controls: readback polled until within epsilon
+        self._settle_deadlines: dict[str, float] = {}
         self.controller: Controller = self._registry.attach(key, plugin_class, params_state)
         self.setWindowTitle(plugin_class.__name__)
         self.setCentralWidget(QtWidgets.QWidget())  # the area the views will fill
@@ -297,7 +303,7 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         self.add_widget(f'{name}_{slot}_slot', spacer, toolbar=name)
 
     def _actions_of(self, channel: str, row: str, widgets: list[str]):
-        """A function adding the read, snap and grab actions that the widgets ask for, on the row's toolbar."""
+        """A function adding the read, snap, grab and stop actions that the widgets ask for, on the row's toolbar."""
 
         def add():
             if 'read' in widgets or 'label' in widgets:
@@ -306,6 +312,9 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
                 self._add_read_action(channel, row, 'Snap', ActionIconNames.SNAP)
             if 'grab' in widgets:
                 self._add_grab_action(channel, row)
+            if 'stop' in widgets:
+                # always the control's own channel: stop is declared on it, never on its readback
+                self._add_stop_action(row)
         return add
     def _add_display(self, channel: str, row: str) -> None:
         display = QtWidgets.QLabel('-')
@@ -323,6 +332,9 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
                         icon_checked_color=theme.green, toolbar=row)
         self.connect_action(f'{channel}_grab', lambda *_, channel=channel: self._set_grabbing(
             channel, self.get_action(f'{channel}_grab').isChecked()))
+    def _add_stop_action(self, name: str) -> None:
+        self.add_action(f'{name}_stop', 'Stop', 'stop_circle', 'Stop the move', toolbar=name)
+        self.connect_action(f'{name}_stop', lambda *_, name=name: self._stop(name))
     def _add_show_graph_action(self, channel: str, row: str) -> None:
         self.add_action(f'{channel}_show_graph', 'Show Graph', 'bid_landscape', 'Show or hide the graph',
                         checkable=True, icon_checked='bid_landscape', icon_checked_color=_colors().green,
@@ -414,6 +426,8 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         if self._attached:  # a widget can still emit after the device is released
             self._pending.add(name)
             self._failed.discard(name)
+            if self._settles(self._quantities[name]):
+                self._targets[name] = value
             self._refresh_led(name)
             setattr(self.controller, name, value)
 
@@ -422,6 +436,14 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
             self._reading.add(name)
             self._refresh_led(name)
             self.controller.read(name, lambda data: self._on_reading(name, data))
+
+    def _stop(self, name: str) -> None:
+        if self._attached:
+            self.controller.stop(name)
+            self._stop_settle_watch(name)
+            self._pending.discard(name)
+            self._failed.discard(name)
+            self._refresh_led(name)
 
     def _led_color(self, row: str) -> QColor:
         """Grey: device closed. Red: last write failed. Orange: write pending. Blue: read or grab active. Green: idle."""
@@ -443,16 +465,66 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         if led is not None:
             led.setStyleSheet(f'background-color: {self._led_color(row).name()}; border-radius: 6px; '
                               'border: 1px solid #616161;')
-    def _refresh_led(self, name: str) -> None:
-        led = self._leds.get(name)
-        if led is not None:
-            led.setStyleSheet(f'background-color: {self._led_color(name).name()}; border-radius: 6px; '
-                              'border: 1px solid #616161;')
+
+    # ── Settling: a control with a readback and an epsilon waits for the readback to reach the target ──
+
+    @staticmethod
+    def _settles(quantity: Quantity) -> bool:
+        """Whether writing *quantity* should stay pending until its readback is within epsilon of the target.
+
+        Without both a readback and a non-zero epsilon there is nothing to compare against, and the
+        existing behaviour (clear as soon as the plugin's write call returns) is the best available.
+        """
+        return bool(quantity.readback) and quantity.epsilon > 0
+
+    def _start_settle_watch(self, name: str) -> None:
+        self._stop_settle_watch(name)  # a new write restarts the watch, so only the latest target matters
+        self._settle_deadlines[name] = time.monotonic() + SETTLE_TIMEOUT_S
+        timer = QTimer(self)
+        timer.setInterval(int(SETTLE_POLL_MS))
+        timer.timeout.connect(lambda name=name: self._check_settled(name))
+        self._settle_timers[name] = timer
+        timer.start()
+
+    def _check_settled(self, name: str) -> None:
+        if name not in self._settle_timers:
+            return
+        if time.monotonic() > self._settle_deadlines.get(name, 0.0):
+            self._stop_settle_watch(name)
+            self._pending.discard(name)
+            self._failed.add(name)
+            self._refresh_led(name)
+            self.status_label.setText(f'error: {name}: did not settle within {SETTLE_TIMEOUT_S:.0f} s')
+            return
+        channel = self._quantities[name].readback
+        self.controller.read(channel, lambda data, name=name: self._on_settle_reading(name, data))
+
+    def _on_settle_reading(self, name: str, data: object) -> None:
+        if name not in self._settle_timers:
+            return  # a newer write, a stop, or a disconnect ended this watch; a late reply changes nothing
+        target = self._targets.get(name)
+        values = np.asarray(data).ravel()
+        if target is None or values.size != 1:
+            return
+        if abs(float(values[0]) - target) <= self._quantities[name].epsilon:
+            self._stop_settle_watch(name)
+            self._pending.discard(name)
+            self._failed.discard(name)
+            self._refresh_led(name)
+
+    def _stop_settle_watch(self, name: str) -> None:
+        timer = self._settle_timers.pop(name, None)
+        self._settle_deadlines.pop(name, None)
+        if timer is not None:
+            timer.stop()
+            timer.deleteLater()
 
     def release(self) -> None:
         """Detach from the registry. The device closes when the last module lets go of it."""
         if self._attached:
             self._attached = False
+            for name in list(self._settle_timers):
+                self._stop_settle_watch(name)
             self._registry.detach(self._key)
 
     def closeEvent(self, event):
@@ -465,6 +537,9 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
     def _on_status(self, connected: bool, info: str) -> None:
         state = 'open' if connected else 'closed'
         self.status_label.setText(f'{state}: {info}')
+        if not connected:  # a settle watch reads the device, which closed from under it
+            for name in list(self._settle_timers):
+                self._stop_settle_watch(name)
         for name in self._leds:
             self._refresh_led(name)
         ini = self.get_action('ini')
@@ -501,15 +576,19 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         self.status_label.setText(f'error: {message}')
 
     def _on_write_failed(self, name: str, message: str) -> None:
+        self._stop_settle_watch(name)  # a rejected write has nothing left to settle towards
         self._pending.discard(name)
         self._failed.add(name)
         self._refresh_led(name)
         self.status_label.setText(f'error: {name}: {message}')
 
     def _on_written(self, name: str, value: object) -> None:
-        self._pending.discard(name)
-        self._failed.discard(name)
-        self._refresh_led(name)
+        if self._settles(self._quantities[name]):
+            self._start_settle_watch(name)  # stays pending (orange) until the readback reaches the target
+        else:
+            self._pending.discard(name)
+            self._failed.discard(name)
+            self._refresh_led(name)
         slider = self._sliders.get(name)
         if slider is not None:  # show the value without writing it back
             lo, hi = _range_of(self._quantities[name])

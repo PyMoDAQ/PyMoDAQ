@@ -6,13 +6,16 @@ Each axis is one row: a target (a control, with a spinbox and a slider) and its 
 measurement, linked as the control's readback), like DAQ_Move. The position moves towards the target
 at a fixed speed, and only while the device is read. So:
 - Ini. opens the stage.
-- Move a target with the slider or the spinbox. The device gets the new target at once.
+- Move a target with the slider or the spinbox. The device gets the new target at once, and the row's
+  LED stays orange (settling) until the readback is within epsilon of it, not just until the device
+  accepted the move.
+- Stop an axis mid-move: the target freezes where the axis currently is, like a real motor's stop.
 - Grab the position of an axis (Grab, blue LED). Its display follows the target with a delay.
 - Motion shows "moving" while any axis is still on its way.
 
-Each target (x, y, z) has its own set callback, so writing one never goes through write() at all:
-the plugin does not define it. The positions and motion stay in read(), since they all depend on
-one shared _advance() step and would lose that if each had its own get.
+Each target (x, y, z) has its own set and stop callback, so writing or stopping one never goes through
+write() at all: the plugin does not define it. The positions and motion stay in read(), since they all
+depend on one shared _advance() step and would lose that if each had its own get.
 """
 import sys
 import time
@@ -38,18 +41,22 @@ class _Reading:
 class FakeStage:
     """Three axes. Each target is a control whose readback, ``<axis>_readback``, is its position.
 
-    Each target's ``set`` writes straight to ``_target``, so the plugin needs no ``write()`` at all.
+    Each target's ``set`` writes straight to ``_target``, and ``stop`` freezes it where the axis
+    currently is, so the plugin needs no ``write()`` at all.
     """
 
     params: list = []
     speed = 10.0  # mm/s, the same for every axis
 
     x = control(units='mm', lo=0, hi=50, epsilon=0.01, label='X', ui_add=('slider',), readback=True,
-               set=lambda plugin, value: plugin._set_target('x', value))
+               set=lambda plugin, value: plugin._set_target('x', value),
+               stop=lambda plugin: plugin._stop_axis('x'))
     y = control(units='mm', lo=0, hi=50, epsilon=0.01, label='Y', ui_add=('slider',), readback=True,
-               set=lambda plugin, value: plugin._set_target('y', value))
+               set=lambda plugin, value: plugin._set_target('y', value),
+               stop=lambda plugin: plugin._stop_axis('y'))
     z = control(units='mm', lo=0, hi=10, epsilon=0.01, label='Z', ui_add=('slider',), readback="my_z_readback",
-               set=lambda plugin, value: plugin._set_target('z', value))
+               set=lambda plugin, value: plugin._set_target('z', value),
+               stop=lambda plugin: plugin._stop_axis('z'))
     motion = measurement(values=['idle', 'moving'], label='Motion')
 
     AXES = ('x', 'y', 'z')
@@ -92,6 +99,10 @@ class FakeStage:
 
     def _set_target(self, axis, value):
         self._target[axis] = float(value)
+
+    def _stop_axis(self, axis):
+        """Freeze the target where the axis currently is, as a real motor's stop would."""
+        self._target[axis] = self._position[axis]
 
 
 def main() -> int:

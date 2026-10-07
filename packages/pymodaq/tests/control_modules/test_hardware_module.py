@@ -399,6 +399,13 @@ class TestReadbackRows:
         axis.get_action('temperature_grab').trigger()
         assert axis._led_color('x').name() == _colors().blue.name()
 
+    def test_the_led_widget_itself_refreshes_not_just_the_colour_lookup(self, axis):
+        # _refresh_led is called with the readback's own name here, not the row: it must still
+        # find and repaint the row's QLabel, not just leave _led_color correct on paper.
+        axis.get_action('temperature_grab').trigger()
+        led = axis._leds['x']
+        assert _colors().blue.name() in led.styleSheet()
+
 
 class _Values:
     """A reading holding the given arrays, one per channel."""
@@ -437,4 +444,108 @@ class TestNamedReadback:
         qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
         widget.get_action('my_z_readback_read').trigger()
         qtbot.waitUntil(lambda: widget._displays['my_z_readback'].text() == '4.5 mm', timeout=2000)
+        widget.release()
+
+
+class SettlingStage(Camera):
+    """A control whose readback trails the target until advance() is called: real settling, not instant."""
+
+    z = control(units='mm', lo=0, hi=50, epsilon=0.5, readback=True)
+
+    def __init__(self):
+        super().__init__()
+        self._position = 0.0
+        self.target = None
+
+    def write(self, name, value):
+        super().write(name, value)
+        if name == 'z':
+            self.target = value  # the device accepts the move at once; getting there takes longer
+
+    def read(self, names=None, fresh=True):
+        arrays = {}
+        for name in names:
+            arrays[name] = np.array([self._position]) if name == 'z_readback' else np.array([2.5])
+        return _Values(arrays)
+
+    def advance(self):
+        """Simulates the device reaching the target, as if polled motion had caught up."""
+        if self.target is not None:
+            self._position = self.target
+
+
+class TestSettle:
+    """A control with a readback and an epsilon stays pending until the readback reaches the target."""
+
+    @pytest.fixture
+    def stage(self, registry, qtbot):
+        widget = HardwareModule(HardwareKey(hardware_class=SettlingStage, controller_id=14),
+                                SettlingStage, registry=registry)
+        qtbot.addWidget(widget)
+        widget.initialize()
+        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        yield widget
+        widget.release()
+
+    def test_a_plain_write_without_readback_and_epsilon_clears_at_once(self, module, qtbot):
+        # Camera.exposure has no readback: nothing to settle towards, so write_done is enough (unchanged
+        # behaviour, kept here so a regression in _settles() shows up in both directions).
+        module.initialize()
+        qtbot.waitUntil(lambda: module.controller.connected, timeout=2000)
+        spin = module._value_widgets['exposure']
+        spin.setValue(20.0)
+        spin.editingFinished.emit()
+        qtbot.waitUntil(lambda: module._led_color('exposure').name() == _colors().green.name(), timeout=2000)
+
+    def test_led_stays_orange_after_write_done_until_the_readback_settles(self, stage, qtbot):
+        plugin = stage.controller.thread._plugin
+        spin = stage._value_widgets['z']
+        spin.setValue(20.0)
+        spin.editingFinished.emit()
+        qtbot.waitUntil(lambda: plugin.target == 20.0, timeout=2000)  # the write reached the plugin
+        assert stage._led_color('z').name() == _colors().orange.name()  # but the readback hasn't moved
+        plugin.advance()  # now it has
+        qtbot.waitUntil(lambda: stage._led_color('z').name() == _colors().green.name(), timeout=3000)
+
+    def test_a_rejected_write_cancels_the_settle_watch(self, registry, qtbot):
+        class Faulty(SettlingStage):
+            def write(self, name, value):
+                raise RuntimeError('stalled')
+
+        widget = HardwareModule(HardwareKey(hardware_class=Faulty, controller_id=15), Faulty, registry=registry)
+        qtbot.addWidget(widget)
+        widget.initialize()
+        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        spin = widget._value_widgets['z']
+        spin.setValue(20.0)
+        spin.editingFinished.emit()
+        qtbot.waitUntil(lambda: widget._led_color('z').name() == _colors().red.name(), timeout=2000)
+        assert 'z' not in widget._settle_timers
+        widget.release()
+
+
+class StoppableAxis(Camera):
+    z = control(units='mm', lo=0, hi=50, stop=lambda plugin: plugin.stop_calls.append(True))
+
+    def __init__(self):
+        super().__init__()
+        self.stop_calls = []
+
+
+class TestStopButton:
+    """stop is opt-in: only a control that declares a stop callback gets the button."""
+
+    def test_a_control_without_a_stop_callback_has_no_stop_action(self, module):
+        assert not module.has_action('exposure_stop')
+
+    def test_a_control_with_a_stop_callback_gets_one(self, registry, qtbot):
+        widget = HardwareModule(HardwareKey(hardware_class=StoppableAxis, controller_id=16),
+                                StoppableAxis, registry=registry)
+        qtbot.addWidget(widget)
+        assert widget.has_action('z_stop')
+        widget.initialize()
+        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        plugin = widget.controller.thread._plugin
+        widget.get_action('z_stop').trigger()
+        qtbot.waitUntil(lambda: plugin.stop_calls == [True], timeout=2000)
         widget.release()
