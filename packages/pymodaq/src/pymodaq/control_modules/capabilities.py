@@ -105,6 +105,7 @@ class Quantity:
         ui_remove: tuple | list = (),
         push: bool = False,
         readback: bool | str = False,
+        setting: bool | str = False,
     ) -> None:
         self.access = Access(access)
         self.units = units
@@ -121,6 +122,8 @@ class Quantity:
         self.push = bool(push)
         # True, or the name of the measurement that reports the device's actual value; resolved by Capabilities
         self.readback = readback
+        # True, or the name of the plugin parameter this control writes through; resolved by Capabilities
+        self.setting = setting
         self.name: str | None = None
         self._validate()
 
@@ -133,6 +136,8 @@ class Quantity:
             raise ValueError(f'lo ({self.lo}) is greater than hi ({self.hi})')
         if self.readback and self.access is not Access.CONTROL:
             raise ValueError('only a control can have a readback')
+        if self.setting and self.access is not Access.CONTROL:
+            raise ValueError('only a control can be backed by a setting')
         if self.push and self.access is not Access.MEASUREMENT:
             raise ValueError('only a measurement can be pushed by the plugin')
         if self.epsilon < 0:
@@ -162,6 +167,7 @@ class Quantity:
             'units': self.units,
             'label': self.label,
             'readback': self.readback,
+            'setting': self.setting,
             'dtype': self.dtype,
             'shape': list(self.shape),
             'lo': self.lo,
@@ -182,6 +188,7 @@ class Quantity:
             units=d.get('units', ''),
             label=d.get('label', ''),
             readback=d.get('readback', False),
+            setting=d.get('setting', False),
             dtype=d.get('dtype', 'float64'),
             shape=tuple(d.get('shape', (1,))),
             lo=d.get('lo'),
@@ -229,6 +236,7 @@ def control(
     ui_add: tuple | list = (),
     ui_remove: tuple | list = (),
     readback: bool | str = False,
+    setting: bool | str = False,
 ) -> Quantity:
     """Declare a readable and writable quantity: a target, with the device's actual value as a readback.
 
@@ -238,9 +246,15 @@ def control(
     ``readback`` declares the measurement that reports the actual value, which the GUI shows in the same row.
     ``True`` names it ``<name>_readback``; a string names it. If a measurement of that name is already
     declared, it is used; otherwise it is created with the units, shape and values of the control.
+
+    ``setting`` declares that writing this control goes through the plugin's own settings (``params``)
+    instead of ``write``: the device thread sets the named parameter and calls ``commit_settings``.
+    ``True`` uses the control's own name; a string names a differently-named parameter. The parameter
+    itself must already be declared in ``params``; this is checked when the device opens, not here.
     """
     return Quantity(Access.CONTROL, units=units, label=label, lo=lo, hi=hi, epsilon=epsilon,
-                    values=values, docs=docs, ui_add=ui_add, ui_remove=ui_remove, readback=readback)
+                    values=values, docs=docs, ui_add=ui_add, ui_remove=ui_remove, readback=readback,
+                    setting=setting)
 
 
 def _readback_of(control: Quantity) -> Quantity:
@@ -276,6 +290,9 @@ class Capabilities:
             if control.readback not in measured:
                 self.measurements.append(_readback_of(control))
                 measured.add(control.readback)
+        for control in self.controls:
+            if control.setting is True:
+                control.setting = control.name
 
     @classmethod
     def from_device(cls, device: type | Any) -> Capabilities:

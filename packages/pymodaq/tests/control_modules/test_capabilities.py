@@ -229,3 +229,40 @@ class TestReadback:
         caps = Capabilities.from_device(Stage)
         assert caps.controls[0].readback == 'my_z_readback'
         assert [q.name for q in caps.measurements] == ['my_z_readback']
+
+
+class TestSetting:
+
+    def test_true_uses_the_controls_own_name(self):
+        class Stage:
+            exposure = control(units='ms', lo=1, hi=1000, setting=True)
+
+        caps = Capabilities.from_device(Stage)
+        assert caps.controls[0].setting == 'exposure'
+
+    def test_a_string_names_a_different_parameter(self):
+        class Stage:
+            exposure = control(units='ms', setting='exp_time')
+
+        caps = Capabilities.from_device(Stage)
+        assert caps.controls[0].setting == 'exp_time'
+
+    def test_only_a_control_can_be_backed_by_a_setting(self):
+        with pytest.raises(ValueError, match='only a control'):
+            measurement()
+            Quantity(Access.MEASUREMENT, setting=True)
+
+    def test_no_setting_by_default(self):
+        class Stage:
+            exposure = control(units='ms')
+
+        caps = Capabilities.from_device(Stage)
+        assert caps.controls[0].setting is False
+
+    def test_the_setting_survives_serialization(self):
+        class Stage:
+            exposure = control(units='ms', setting=True)
+
+        caps = Capabilities.from_device(Stage)
+        restored = Capabilities.from_dict(json.loads(json.dumps(caps.to_dict())))
+        assert restored.controls[0].setting == 'exposure'
