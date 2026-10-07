@@ -156,6 +156,11 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         for name in self._quantities:
             self._refresh_led(name)
 
+    @property
+    def title(self) -> str:
+        """For SharedUI: lets it merge this module's toolbars and menus when run standalone."""
+        return self.windowTitle()
+
     # ── Layout ───────────────────────────────────────────────────────────────
 
     def setup_actions(self) -> None:

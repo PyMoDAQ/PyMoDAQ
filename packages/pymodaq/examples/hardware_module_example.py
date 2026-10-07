@@ -14,6 +14,7 @@ import sys
 
 import numpy as np
 from pymodaq_gui.qt_utils import mkQApp
+from pymodaq_gui.utils.shared_ui import SharedUI
 
 from pymodaq.control_modules.capabilities import control, measurement
 from pymodaq.control_modules.hardware_module import HardwareModule
@@ -77,7 +78,9 @@ def main() -> int:
     key = HardwareKey(hardware_class=FakeSpectrometer, controller_id=0)
     module = HardwareModule(key, FakeSpectrometer)
     module.resize(1100, 600)
-    module.show()
+    shared_ui = SharedUI(module)  # adds Help, Preferences and a Toolbars visibility menu, as the
+    shared_ui.affect_application(module)  # other standalone modules (daq_move.py, daq_viewer.py) do
+    shared_ui.show()
     return app.exec()
 
 
