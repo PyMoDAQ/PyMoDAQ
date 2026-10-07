@@ -164,9 +164,15 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
     # ── Layout ───────────────────────────────────────────────────────────────
 
     def setup_actions(self) -> None:
-        """The instrument toolbar: open or close the device, show its status, show its settings."""
+        """The instrument toolbar: the device's name, then Ini. and Settings, then its status far right."""
         theme = _colors()
-        self.add_toolbar(INSTRUMENT_TOOLBAR, 'Instrument', parent=self)
+        bar = self.add_toolbar(INSTRUMENT_TOOLBAR, 'Instrument', parent=self)
+
+        title = QtWidgets.QLabel(self.title)
+        title.setStyleSheet('font-weight: bold; font-size: 11pt;')
+        self.add_widget('title', title, toolbar=INSTRUMENT_TOOLBAR)
+        bar.addSeparator()
+
         self.add_action('ini', 'Ini.', ActionIconNames.INI, 'Open the device (uncheck to close it)',
                         checkable=True, icon_color=theme.red, icon_checked_color=theme.green,
                         toolbar=INSTRUMENT_TOOLBAR)
@@ -175,6 +181,8 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
                         checkable=True, icon_checked_color=theme.green, toolbar=INSTRUMENT_TOOLBAR)
         self.connect_action('show_settings', lambda *_: self.settings_dock.setVisible(
             self.get_action('show_settings').isChecked()))
+        bar.addSeparator()
+
         spacer = QtWidgets.QWidget()  # pushes the status to the right end of the toolbar
         spacer.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Preferred)
         self.add_widget('spacer', spacer, toolbar=INSTRUMENT_TOOLBAR)
