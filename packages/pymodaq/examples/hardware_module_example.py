@@ -45,7 +45,7 @@ class FakeSpectrometer:
     """
 
     params: list = [
-        {'name': 'averaging', 'type': 'int', 'value': 8, 'limits': (1, 64),
+        {'name': 'averaging', 'type': 'int', 'value': 8, 'limits': (1, 1000),
          'tip': 'Number of reads averaged into the spectrum; turned off above 500 ms exposure'},
     ]
 
