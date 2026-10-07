@@ -283,6 +283,21 @@ class TestSettings:
         qtbot.waitUntil(lambda: ('gain', 3.0) in plugin.committed, timeout=2000)
         widget.release()
 
+    def test_a_device_driven_change_updates_the_dock_widget(self, registry, qtbot):
+        """Guards against blocking the Parameter's signals on the GUI side, which would also silence the dock."""
+        class Gained(Camera):
+            params = [{'name': 'gain', 'type': 'float', 'value': 1.0}]
+
+        widget = HardwareModule(HardwareKey(hardware_class=Gained, controller_id=7), Gained, registry=registry)
+        qtbot.addWidget(widget)
+        widget.initialize()
+        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        widget.controller.thread._plugin_settings.child('gain').setValue(9.0)  # as the plugin would, on its own
+        qtbot.waitUntil(lambda: widget.controller.settings.child('gain').value() == 9.0, timeout=2000)
+        item = next(iter(widget.controller.settings.child('gain').items))
+        assert item.widget.value() == 9.0  # the dock's own widget refreshed, not just the model
+        widget.release()
+
 
 class TestChannelLeds:
 

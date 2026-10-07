@@ -201,8 +201,8 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
             lambda visible: self.get_action('show_settings').setChecked(visible))
 
     def _relay_settings_change(self, _, changes) -> None:
-        if not self._attached or self.controller.thread is None:
-            return
+        if not self._attached or self.controller.thread is None or self.controller._syncing_from_device:
+            return  # a change coming from the device, not the user: do not write it back
         for param, change, data in changes:
             path = self.controller.settings.childPath(param)
             if path is not None:

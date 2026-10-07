@@ -9,6 +9,10 @@ What to try:
 - spectrum: Snap reads the spectrum once; Show Graph opens a live view that polls it.
 - temperature: Read, or Show Graph for a live trace of the last 200 values.
 - status: read-only, shows the device state, which changes while the device is open.
+- Settings (instrument toolbar): a plugin parameter, "averaging", not declared as a channel. Changing
+  it reaches the plugin's commit_settings and reduces the spectrum's noise.
+- Set exposure above 500 ms: the plugin turns averaging off by itself, and the settings dock follows,
+  without the GUI having written anything.
 """
 import sys
 
@@ -32,9 +36,18 @@ class _Reading:
 
 
 class FakeSpectrometer:
-    """A plugin with the new-style API: declarations, open/close, read and write."""
+    """A plugin with the new-style API: declarations, open/close, read and write.
 
-    params: list = []
+    ``averaging`` is a plain plugin setting, not a declared channel: it only affects how the
+    spectrum is computed, through ``commit_settings``. It also shows the other direction: the
+    plugin turns it off by itself for a long exposure, and the settings dock follows without a
+    write from the GUI.
+    """
+
+    params: list = [
+        {'name': 'averaging', 'type': 'int', 'value': 8, 'limits': (1, 64),
+         'tip': 'Number of reads averaged into the spectrum; turned off above 500 ms exposure'},
+    ]
 
     spectrum = measurement(units='counts', shape=(256,), label='Spectrum', docs='Replaced on each read')
     temperature = measurement(units='K', label='Sensor temperature', docs='Sensor temperature')
@@ -45,10 +58,12 @@ class FakeSpectrometer:
     def __init__(self):
         self._exposure = 10.0
         self._trigger = 'internal'
+        self._averaging = 8
         self._phase = 0.0
+        self._settings = None
 
     def open(self, settings):
-        pass
+        self._settings = settings
 
     def close(self):
         pass
@@ -59,7 +74,9 @@ class FakeSpectrometer:
         for name in names:
             if name == 'spectrum':
                 x = np.linspace(0, 4 * np.pi, 256)
-                arrays[name] = (np.sin(x + self._phase) + 1.5) * self._exposure * np.random.rand(256) / 10
+                signal = (np.sin(x + self._phase) + 1.5) * self._exposure
+                noise = np.random.rand(256) / max(self._averaging, 1)
+                arrays[name] = signal * noise / 10
             elif name == 'temperature':
                 arrays[name] = np.array([293.1 + 0.5 * np.sin(self._phase)])
             elif name == 'status':
@@ -69,8 +86,17 @@ class FakeSpectrometer:
     def write(self, name, value):
         if name == 'exposure':
             self._exposure = value
+            if value > 500 and self._averaging != 1:
+                # the plugin's own decision, not a GUI write: update both, since setValue alone
+                # does not call commit_settings, and the settings dock must still follow it
+                self._averaging = 1
+                self._settings.child('averaging').setValue(1)
         elif name == 'trigger':
             self._trigger = value
+
+    def commit_settings(self, param):
+        if param.name() == 'averaging':
+            self._averaging = param.value()
 
 
 def main() -> int:
