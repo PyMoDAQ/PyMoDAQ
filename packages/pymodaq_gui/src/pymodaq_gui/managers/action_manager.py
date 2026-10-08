@@ -4,12 +4,13 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import Callable, Iterable as IterableType, Union, OrderedDict as OrderedDictType
 
+import qt_themes
 from multipledispatch import dispatch
 from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtWidgets import QAction as QtQAction
 
-from pymodaq_gui.qt_utils import theme_signaller
-from pymodaq_gui.utils.styling import create_icon, as_theme_role
+from pymodaq_gui.qt_utils import apply_theme, theme_signaller
+from pymodaq_gui.utils.styling import create_icon, as_theme_role, get_current_theme
 from pymodaq_utils.utils import find_keys_from_val
 from pymodaq_utils.warnings import deprecation_msg
 from pymodaq_utils.config import GlobalConfig as Config
@@ -61,6 +62,22 @@ class ToolbarStyleChecks(QtCore.QObject):
     def sync(self, style: QtCore.Qt.ToolButtonStyle):
         for name, action in self._actions.items():
             action.setChecked(TOOLBAR_BUTTON_STYLES[name] == style)
+
+
+class ThemeChecks(QtCore.QObject):
+    """Keeps the checkable theme actions in sync, lives as long as the menu it is parented to"""
+
+    def __init__(self, actions: dict[str, QtGui.QAction], themes: dict[str, qt_themes.Theme],
+                 parent: QtCore.QObject):
+        super().__init__(parent)
+        self._actions = actions
+        self._themes = themes
+        theme_signaller.theme_changed.connect(self.sync)
+
+    @QtCore.Slot(object)
+    def sync(self, theme: qt_themes.Theme):
+        for name, action in self._actions.items():
+            action.setChecked(self._themes[name] == theme)
 
 
 class MenuIconRefresher(QtCore.QObject):
@@ -856,6 +873,33 @@ class ActionManager:
             action.triggered.connect(lambda _checked, n=name: self.apply_toolbar_style(n))
             actions[name] = action
         ToolbarStyleChecks(actions, parent=style_menu)
+
+    def setup_theme_menu(self, parent_menu: QtWidgets.QMenu | str):
+        """Add a 'Theme' submenu choosing the qt_themes theme of the whole application"""
+        theme_menu = self.add_menu('theme', 'Theme', parent_menu=parent_menu)
+        group = QtGui.QActionGroup(theme_menu)
+        group.setExclusive(True)
+
+        themes = dict(sorted(qt_themes.get_themes().items()))
+        current = get_current_theme()
+        actions = {}
+        for name in themes:
+            action = theme_menu.addAction(name.replace('_', ' ').capitalize())
+            action.setCheckable(True)
+            action.setChecked(themes[name] == current)
+            action.setActionGroup(group)
+            action.triggered.connect(lambda _checked, n=name: self.apply_qt_theme(n))
+            actions[name] = action
+        ThemeChecks(actions, themes, parent=theme_menu)
+
+    def apply_qt_theme(self, name: str):
+        """Apply a qt_themes theme to the whole application and persist it as the default"""
+        if apply_theme(name) is None:
+            return
+        # pymodaq uses the first element of the configured list
+        themes = list(config('gui', 'style', 'theme'))
+        config['gui', 'style', 'theme'] = [name] + [t for t in themes if t != name]
+        config.save()
 
     def apply_toolbar_style(self, name: str):
         """Persist the toolbar button style and apply it to all toolbars"""

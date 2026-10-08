@@ -251,3 +251,40 @@ class TestRefreshIcons:
         expected = QtWidgets.QApplication.palette().color(
             QtGui.QPalette.ColorGroup.Normal, QtGui.QPalette.ColorRole.WindowText)
         assert dominant_color(menu.icon()) == expected.name()
+
+
+class TestThemeMenu:
+    @pytest.fixture
+    def no_config_save(self, monkeypatch):
+        """apply_qt_theme persists to the user config: keep it in memory only."""
+        from pymodaq_gui.managers import action_manager
+        saved = list(action_manager.config('gui', 'style', 'theme'))
+        monkeypatch.setattr(action_manager.config, 'save', lambda *args, **kwargs: None)
+        yield action_manager.config
+        action_manager.config['gui', 'style', 'theme'] = saved
+
+    def test_menu_lists_themes_with_current_checked(self, qtbot, restore_theme):
+        apply_theme(DARK)
+        manager = make_manager(qtbot)
+        manager.setup_theme_menu(manager.menu)
+        actions = manager.get_menu('theme').actions()
+        assert len(actions) == len(qt_themes.get_themes())
+        assert [a.text() for a in actions if a.isChecked()] == ['Catppuccin mocha']
+
+    def test_selecting_applies_persists_and_syncs(self, qtbot, restore_theme, no_config_save):
+        apply_theme(DARK)
+        manager = make_manager(qtbot)
+        other = make_manager(qtbot)  # e.g. a second window with its own menu
+        manager.setup_theme_menu(manager.menu)
+        other.setup_theme_menu(other.menu)
+        icon_action = other.add_action('a', 'A', ICON, icon_color='red')
+
+        latte = next(a for a in manager.get_menu('theme').actions() if a.text() == 'Catppuccin latte')
+        latte.trigger()
+
+        light = qt_themes.get_theme(LIGHT)
+        assert get_current_theme() == light
+        assert no_config_save('gui', 'style', 'theme')[0] == LIGHT
+        assert [a.text() for a in other.get_menu('theme').actions() if a.isChecked()] == \
+            ['Catppuccin latte']
+        assert dominant_color(icon_action.icon()) == light.red.name()

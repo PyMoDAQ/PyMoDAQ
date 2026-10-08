@@ -184,6 +184,7 @@ class SharedUI(CustomApp):
         self.add_menu(MenuToolbarNames.TOOLBARS, MenuToolbarNames.TOOLBARS.capitalize(), parent_menu=MenuToolbarNames.VIEW,
                       menu=StickyMenu())
         self.setup_toolbar_style_menu(MenuToolbarNames.VIEW)
+        self.setup_theme_menu(MenuToolbarNames.VIEW)
 
         # Tools menu
         self.add_menu(MenuToolbarNames.TOOLS, MenuToolbarNames.TOOLS.capitalize(), parent_menu=menubar)
