@@ -2,7 +2,7 @@
 from qtpy import QtWidgets, QtCore
 
 from pymodaq_gui.managers.action_manager import QAction, addaction, ActionManager
-from pymodaq_gui.utils.styling import Font
+from pymodaq_gui.utils.styling import Font, ThemeColor
 
 
 class WidgetWithToolbar(QtWidgets.QWidget, ActionManager):
@@ -60,12 +60,11 @@ class WidgetWithToolbar(QtWidgets.QWidget, ActionManager):
 
 if __name__ == '__main__':
     from pymodaq_gui.utils.utils import mkQApp
-    from qt_themes import get_theme
     app = mkQApp('WidgetToolbar')
     widget = WidgetWithToolbar(123, 'State')
 
     widget.add_action('quit', 'Quit', icon_name="cancel",
-                        tip="Quit PyMoDAQ", icon_color=get_theme().red)
+                        tip="Quit PyMoDAQ", icon_color=ThemeColor.RED)
     widget.connect_action('quit', widget.close)
     widget.show()
 

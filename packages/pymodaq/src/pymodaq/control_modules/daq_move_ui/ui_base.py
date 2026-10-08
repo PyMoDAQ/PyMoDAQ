@@ -28,6 +28,7 @@ from pymodaq_utils.enums import StrEnum
 
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq.control_modules.daq_move_ui.utils import UiType
+from pymodaq_gui.utils.styling import ThemeColor
 config = Config()
 
 
@@ -210,16 +211,16 @@ class DAQMoveUI(ControlModuleUI):
         self.current_value_sb.setMinimumHeight(20)
         self.current_value_sb.setMinimumWidth(80)
 
-        self.find_home_pb = PushButtonIcon('home', 'Find Home', icon_color=self.get_theme().magenta)
-        self.move_rel_plus_pb = PushButtonIcon('step_out', 'Set Rel. (+)', icon_color=self.get_theme().yellow)
+        self.find_home_pb = PushButtonIcon('home', 'Find Home', icon_color=ThemeColor.MAGENTA)
+        self.move_rel_plus_pb = PushButtonIcon('step_out', 'Set Rel. (+)', icon_color=ThemeColor.YELLOW)
         self.move_abs_pb = PushButtonIcon('step', 'Set Abs.',
                                           tip='Set the value of the actuator to the set absolute value',
-                                          icon_color=self.get_theme().green)
+                                          icon_color=ThemeColor.GREEN)
         self.rel_value_sb = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('pymodaq', 'actuator', 'siprefix'),
                                                  key_sequences=("Ctrl+E","Ctrl+Shift+E"),)
-        self.move_rel_minus_pb = PushButtonIcon('step_into', 'Set Rel. (-)', icon_color=self.get_theme().blue)
-        self.stop_pb = PushButtonIcon('stop_circle', 'Stop', icon_color=self.get_theme().red)
-        self.get_value_pb = PushButtonIcon('looks_one', 'Update Value', icon_color=self.get_theme().cyan)
+        self.move_rel_minus_pb = PushButtonIcon('step_into', 'Set Rel. (-)', icon_color=ThemeColor.BLUE)
+        self.stop_pb = PushButtonIcon('stop_circle', 'Stop', icon_color=ThemeColor.RED)
+        self.get_value_pb = PushButtonIcon('looks_one', 'Update Value', icon_color=ThemeColor.CYAN)
 
         self.statusbar.setMaximumHeight(30)
 
@@ -274,21 +275,21 @@ class DAQMoveUI(ControlModuleUI):
         self.add_widget('move_done', self.status_led, toolbar=toolbar)
 
         self.add_action('stop', 'Stop', 'stop_circle', "Stop Motion",
-                        toolbar=toolbar, icon_color=self.get_theme().red)
+                        toolbar=toolbar, icon_color=ThemeColor.RED)
         toolbar.addSeparator()
         self.add_action('show_controls', 'Show Controls',
                         'discover_tune', "Show more controls",
-                        icon_checked_color=self.get_theme().green,
+                        icon_checked_color=ThemeColor.GREEN,
                         checkable=True,
                         toolbar=toolbar)
         self.add_action('show_graph', 'Show Graph', 'bid_landscape', 'Show/Hide the Graph Widget',
                         checkable=True, checked=True, icon_checked='bid_landscape_disabled',
-                        icon_color=self.get_theme().green, icon_checked_color=self.get_theme().red,
+                        icon_color=ThemeColor.GREEN, icon_checked_color=ThemeColor.RED,
                         toolbar=toolbar)
         self.add_action('refresh_value', 'Refresh', 'repeat',
                         "Refresh Value Continuously", checkable=True,
                         toolbar=toolbar, icon_checked='repeat_on',
-                        icon_checked_color=self.get_theme().green)
+                        icon_checked_color=ThemeColor.GREEN)
         self.add_widget('status', self.statusbar, toolbar=toolbar)
 
     def setup_absolute_spinbox_actions(self, toolbar: QtWidgets.QToolBar = None):
@@ -309,12 +310,12 @@ class DAQMoveUI(ControlModuleUI):
 
         self.add_action('move_abs_green', 'Move Abs', 'step',
                         "Move to the set absolute value",
-                        icon_color=self.get_theme().green,
+                        icon_color=ThemeColor.GREEN,
                         toolbar=toolbar,
                         before='stop')
         self.add_action('move_abs_red', 'Move Abs', 'step',
                         "Move to the other set absolute value",
-                        icon_color=self.get_theme().red,
+                        icon_color=ThemeColor.RED,
                         toolbar=toolbar,
                         before='stop')
 
@@ -330,11 +331,11 @@ class DAQMoveUI(ControlModuleUI):
                         before='stop')
         self.add_action('move_rel_plus', 'Set Rel. (+)', 'step_out',
                         toolbar=toolbar,
-                        icon_color=self.get_theme().yellow,
+                        icon_color=ThemeColor.YELLOW,
                         before='stop')
         self.add_action('move_rel_minus', 'Set Rel. (-)', 'step_into',
                         toolbar=toolbar,
-                        icon_color=self.get_theme().blue,
+                        icon_color=ThemeColor.BLUE,
                         before='stop')
         self.add_action('reset_value', 'Reset Internal Value (no encoder)', 'restart_alt',
                         toolbar=toolbar,

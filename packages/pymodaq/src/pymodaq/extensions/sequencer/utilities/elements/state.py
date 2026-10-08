@@ -3,7 +3,6 @@ import weakref
 
 
 from qtpy import QtCore
-from qt_themes import get_theme
 from serializall import SerializableFactory
 
 from pymodaq.utils.data import DataActuator
@@ -16,6 +15,7 @@ from pymodaq_gui.utils.widgets.combo import ComboBox
 
 from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltBase, SeqEltFactory, ElementError
 from pymodaq.extensions.sequencer.utilities.widget_with_toolbar import WidgetWithToolbar
+from pymodaq_gui.utils.styling import ThemeColor
 
 if TYPE_CHECKING:
     from pymodaq.utils.managers.state.state_manager import StateManager
@@ -104,7 +104,7 @@ class StateElt(SeqEltBase):
 
         base_widget.add_action('show_state', 'Show Manager', self.state_manager.icon_name,
                         "Show State Manager",
-                        checkable=True, icon_checked_color=get_theme().green,
+                        checkable=True, icon_checked_color=ThemeColor.GREEN,
                         toolbar=base_widget.toolbar)
         base_widget.connect_action('show_state', self.state_manager.force_show)
         combo = ComboBox(base_widget)

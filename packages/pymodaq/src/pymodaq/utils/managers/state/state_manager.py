@@ -41,6 +41,7 @@ from datetime import datetime
 
 from pymodaq_gui.managers.settings.utils import SettingsManagerModel
 from pymodaq_utils.utils import read_binary_and_deserialize
+from pymodaq_gui.utils.styling import ThemeColor
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -302,8 +303,8 @@ class StateManager(SettingsManager):
         self.add_action('parallel_execution', 'Sequential/parallel Execution',
                         'format_list_numbered',
                         tip='if green (unchecked) perform a sequential execution else parallel',
-                        checkable=True, icon_color=self.get_theme().green,
-                        icon_checked_color=self.get_theme().red,
+                        checkable=True, icon_color=ThemeColor.GREEN,
+                        icon_checked_color=ThemeColor.RED,
                         before=self.get_action(ManagerActions.EXECUTE),)
         self.create_dashboard_toolbar(add_dashboard=__name__ == '__main__',
                                       add_experiment=True, add_state=False, add_break=False)

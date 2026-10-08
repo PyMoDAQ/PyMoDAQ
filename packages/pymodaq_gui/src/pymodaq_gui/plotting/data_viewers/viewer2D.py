@@ -40,6 +40,7 @@ from pymodaq_gui.plotting.utils.filter import Filter2DFromCrosshair, Filter2DFro
 from pymodaq_gui.plotting.utils.plot_utils import make_dashed_pens
 from pymodaq_gui.utils.dock import Dock
 from pymodaq_gui.plotting.utils.plot_utils import DetachablePanel
+from pymodaq_gui.utils.styling import ThemeColor
 
 logger = set_logger(get_module_name(__file__))
 
@@ -571,7 +572,7 @@ class View2D(ActionManager, QtCore.QObject):
 
         self.add_action('link_lineouts', 'Link Lineouts', 'link', tip='Link Lineouts',
                         checkable=True, checked=True, visible=False,
-                        icon_color=self.get_theme().red, icon_checked_color=self.get_theme().green)
+                        icon_color=ThemeColor.RED, icon_checked_color=ThemeColor.GREEN)
 
         self.add_action('isocurve', 'IsoCurve', 'altitude', tip='Show/Hide Isocurve', checkable=True)
         self.add_action('aspect_ratio', 'Aspect Ratio', 'aspect_ratio', tip='Fix Aspect Ratio', checkable=True, checked=True)

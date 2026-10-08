@@ -20,7 +20,7 @@ from pymodaq_gui.utils.widgets import LabelWithFont
 from pymodaq.extensions.sequencer.utilities.widget_with_toolbar import WidgetWithToolbar
 from pymodaq_utils.abstract import abstract_attribute
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_gui.utils.styling import Font
+from pymodaq_gui.utils.styling import Font, ThemeColor
 
 
 logger = set_logger(get_module_name(__file__))
@@ -331,7 +331,7 @@ class SeqEltBase(QtCore.QObject, ActionManager):
         base_widget.add_widget_top(name_widget)
         base_widget.add_action('execute', 'Execute', 'start',
                                tip='Execute the Sequencer Element',
-                               icon_color=get_theme().magenta,
+                               icon_color=ThemeColor.MAGENTA,
                                toolbar=base_widget.toolbar)
         base_widget.connect_action('execute', self.execute)
         return base_widget
