@@ -602,8 +602,8 @@ class DockLayoutMenu:
     ----------
     dock: Dock
     config_path: tuple[str, ...]
-        Path to a string config entry holding 'horizontal' or 'vertical' for this
-        dock kind, e.g. ('pymodaq', 'control_modules', 'settings_dock_layout')
+        Config entry holding the choice, e.g. ('pymodaq', 'control_modules', 'settings_dock_layout').
+        Either a legacy bare string ('horizontal'/'vertical') or a [current, ...other_choices] list.
     """
     _orientations = {
         'horizontal': QtCore.Qt.Orientation.Horizontal,
@@ -613,11 +613,23 @@ class DockLayoutMenu:
     def __init__(self, dock: Dock, config_path: Tuple[str, ...]):
         self.dock = dock
         self.config_path = config_path
-        self.orientation = self._orientations.get(
-            config(*config_path), QtCore.Qt.Orientation.Horizontal)
+        raw = config.get(config_path, None)
+        if raw is None:
+            # key missing from an older config file
+            current = 'horizontal'
+            config[config_path] = [current] + [n for n in self._orientations if n != current]
+            config.save()
+        else:
+            current = self._current_choice(raw)
+        self.orientation = self._orientations.get(current, QtCore.Qt.Orientation.Horizontal)
 
         dock.label.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         dock.label.customContextMenuRequested.connect(self._show_menu)
+
+    @staticmethod
+    def _current_choice(raw: Union[str, List[str]]) -> str:
+        """Active value, from either a list of choices or a legacy bare string."""
+        return raw[0] if isinstance(raw, list) else raw
 
     def _show_menu(self, pos):
         menu = QtWidgets.QMenu()
@@ -636,8 +648,9 @@ class DockLayoutMenu:
         if orientation == self.orientation:
             return
         self.orientation = orientation
-        config[self.config_path] = ('horizontal' if orientation == QtCore.Qt.Orientation.Horizontal
-                                    else 'vertical')
+        chosen = 'horizontal' if orientation == QtCore.Qt.Orientation.Horizontal else 'vertical'
+        others = [name for name in self._orientations if name != chosen]
+        config[self.config_path] = [chosen] + others
         config.save()
         self._reflow()
 
