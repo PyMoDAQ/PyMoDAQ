@@ -122,6 +122,11 @@ class QAction(QtQAction):
                 icon_name = self.icon_checked
             else:
                 icon_name = self.icon_unchecked
+            if icon_color is None:
+                # Already built with their colours: passing them through create_icon
+                # again would reset a MaterialIcon to the default palette colour.
+                self.setIcon(icon_name)
+                return
         self.setIcon(create_icon(icon_name, icon_color))
 
     def __repr__(self):
