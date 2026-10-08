@@ -10,7 +10,8 @@ from qtpy import QtCore, QtGui, QtWidgets
 
 from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_gui.qt_utils import WhiteCheckboxStyle, apply_theme, theme_signaller
-from pymodaq_gui.utils.styling import as_theme_role, create_color, get_current_theme
+from pymodaq_gui.utils.status_palette import StatusPalette, Status
+from pymodaq_gui.utils.styling import ThemeColor, as_theme_role, create_color, get_current_theme
 
 DARK = 'catppuccin_mocha'
 LIGHT = 'catppuccin_latte'
@@ -288,3 +289,49 @@ class TestThemeMenu:
         assert [a.text() for a in other.get_menu('theme').actions() if a.isChecked()] == \
             ['Catppuccin latte']
         assert dominant_color(icon_action.icon()) == light.red.name()
+
+
+class TestThemeColorNames:
+    @pytest.mark.parametrize('name', sorted(qt_themes.get_themes()))
+    def test_every_theme_defines_every_theme_color(self, name):
+        theme = qt_themes.get_themes()[name]
+        for role in ThemeColor:
+            color = getattr(theme, role.value, None)
+            assert isinstance(color, QtGui.QColor) and color.isValid(), (name, role)
+
+    def test_theme_color_is_a_plain_name(self):
+        assert ThemeColor.GREEN == 'green'
+        assert isinstance(ThemeColor.GREEN, str)
+
+    def test_as_theme_role_returns_theme_color(self, qtbot, restore_theme):
+        theme = apply_theme(DARK)
+        assert as_theme_role(theme.green) is ThemeColor.GREEN
+
+    def test_status_palette_role(self, qtbot, restore_theme):
+        theme = apply_theme(DARK)
+        assert StatusPalette.role(Status.RUNNING) is ThemeColor.BLUE
+        for status in Status:
+            assert StatusPalette.color(status) == getattr(theme, StatusPalette.role(status).value)
+        with pytest.raises(ValueError):
+            StatusPalette.role('nope')
+
+
+class TestFollowTheme:
+    def test_theme_color_follows(self, qtbot, restore_theme):
+        apply_theme(DARK)
+        manager = make_manager(qtbot)
+        action = manager.add_action('a', 'A', ICON, icon_color=ThemeColor.GREEN)
+        light = apply_theme(LIGHT)
+        assert dominant_color(action.icon()) == light.green.name()
+
+    @pytest.mark.parametrize('color', [ThemeColor.GREEN, 'green', 'resolved'])
+    def test_follow_theme_false_keeps_creation_color(self, qtbot, restore_theme, color):
+        dark = apply_theme(DARK)
+        if color == 'resolved':
+            color = dark.green
+        manager = make_manager(qtbot)
+        action = manager.add_action('a', 'A', ICON, icon_color=color, icon_checked_color='red',
+                                    checkable=True, follow_theme=False)
+        apply_theme(LIGHT)
+        assert dominant_color(action.icon()) == dark.green.name()
+        assert dominant_color(action.icon(), QtGui.QIcon.State.On) == dark.red.name()

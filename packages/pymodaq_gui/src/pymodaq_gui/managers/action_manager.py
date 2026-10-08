@@ -10,7 +10,7 @@ from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtWidgets import QAction as QtQAction
 
 from pymodaq_gui.qt_utils import apply_theme, theme_signaller
-from pymodaq_gui.utils.styling import create_icon, as_theme_role, get_current_theme
+from pymodaq_gui.utils.styling import create_icon, create_color, as_theme_role, get_current_theme
 from pymodaq_utils.utils import find_keys_from_val
 from pymodaq_utils.warnings import deprecation_msg
 from pymodaq_utils.config import GlobalConfig as Config
@@ -111,11 +111,13 @@ class QAction(QtQAction):
                  flip_v: bool = False,
                  rotate: int = 0,
                  fill: bool = None,
+                 follow_theme: bool = True,
                  ):
         super().__init__(name)
         # What the icon is made of, kept so it can be rebuilt (refresh_icon) when the
-        # theme changes: icons bake their colours at construction. Theme colours are
-        # kept by name (see as_theme_role) so that they are resolved again.
+        # theme changes: icons bake their colours at construction. With follow_theme,
+        # theme colours are kept by name (see as_theme_role); otherwise they are
+        # resolved now and kept as fixed colours.
         self._icon_spec = None
         # Only icons given by name/path are rebuilt: an icon instance keeps the
         # palette it was built under, rebuilding it would not follow the theme.
@@ -123,9 +125,10 @@ class QAction(QtQAction):
         self._icon_set_explicitly = False
         self._checked_icon_connected = False
         if icon_unchecked is not None:
+            keep = as_theme_role if follow_theme else create_color
             self._icon_spec = dict(icon_unchecked=icon_unchecked, icon_checked=icon_checked,
-                                   icon_color=as_theme_role(icon_color),
-                                   icon_checked_color=as_theme_role(icon_checked_color),
+                                   icon_color=keep(icon_color),
+                                   icon_checked_color=keep(icon_checked_color),
                                    flip_h=flip_h, flip_v=flip_v, rotate=rotate, fill=fill)
             self._build_icons()
             self.setIcon(self.icon_unchecked)
@@ -256,6 +259,7 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
               action: QtQAction | QtWidgets.QWidgetAction = None,
               fill: bool = None,
               rotate: int = 0,
+              follow_theme: bool = True,
               ):
     """Create a new action and add it eventually to a toolbar and a menu
 
@@ -290,10 +294,11 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
         QtGui.QIcon: the instance of a QIcon element
         ThemeIcon enum: the value of QtGui.QIcon.ThemeIcon (requires Qt>=6.7)
         Optional, if set, will be the icon when the action is checked (checkable will be set to True)
-    icon_color: QtGui.QColor / str
-        color to be applied (if possible) to the unchecked icon
-    icon_checked_color: QtGui.QColor / str
-        color to be applied to the checked icon (if any)
+    icon_color: ThemeColor / str / QtGui.QColor
+        color to be applied (if possible) to the unchecked icon. Give theme colours by
+        name (ThemeColor.GREEN or 'green') so they follow theme changes
+    icon_checked_color: ThemeColor / str / QtGui.QColor
+        color to be applied to the checked icon (if any), same as icon_color
     flip_h: bool
         mirror the icon horizontally (left ↔ right)
     flip_v: bool
@@ -308,6 +313,10 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
         Fill or not the icon, if None left to the user configuration
     rotate: int, optional
         Rotate the icon by this value in degree
+    follow_theme: bool
+        True (default): colours given as theme colours (:class:`~pymodaq_gui.utils.styling.ThemeColor`,
+        their names, or values resolved from the theme) follow theme changes. False: the
+        colours are resolved once, here, and kept as they are
     """
     if action is None:
         if icon_name is None or icon_name == '':
@@ -315,7 +324,8 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
         else:
             action = QAction(icon_name, name, icon_checked=icon_checked,
                              icon_color=icon_color, icon_checked_color=icon_checked_color,
-                             flip_h=flip_h, flip_v=flip_v, rotate=rotate, fill=fill)
+                             flip_h=flip_h, flip_v=flip_v, rotate=rotate, fill=fill,
+                             follow_theme=follow_theme)
 
     if slot is not None:
         action.connect_to(slot)
@@ -540,7 +550,8 @@ class ActionManager:
                    before: Union[str, 'QAction', WidgetActionProxy, None] = None,
                    action: QtQAction | QtWidgets.QWidgetAction = None,
                    fill: bool = None,
-                   rotate: int = 0
+                   rotate: int = 0,
+                   follow_theme: bool = True,
                    ):
         """Create a new action and add it to toolbar and menu
 
@@ -591,10 +602,11 @@ class ActionManager:
             QtGui.QIcon: the instance of a QIcon element
             ThemeIcon enum: the value of QtGui.QIcon.ThemeIcon (requires Qt>=6.7)
             Optional, if set, will be the icon when the action is checked
-        icon_color: QtGui.QColor / str
-            color to be applied (if possible) to the unchecked icon
-        icon_checked_color: QtGui.QColor / str
-            color to be applied to the checked icon (if any)
+        icon_color: ThemeColor / str / QtGui.QColor
+            color to be applied (if possible) to the unchecked icon. Give theme colours by
+            name (ThemeColor.GREEN or 'green') so they follow theme changes
+        icon_checked_color: ThemeColor / str / QtGui.QColor
+            color to be applied to the checked icon (if any), same as icon_color
         flip_h: bool
             mirror the icon horizontally (left ↔ right)
         flip_v: bool
@@ -609,6 +621,10 @@ class ActionManager:
             Fill or not the icon, if None left to the user configuration
         rotate: int, optional
             Rotate the icon by this value in degree
+        follow_theme: bool
+            True (default): colours given as theme colours (:class:`~pymodaq_gui.utils.styling.ThemeColor`,
+            their names, or values resolved from the theme) follow theme changes. False: the
+            colours are resolved once, here, and kept as they are
 
         See Also
         --------
@@ -629,7 +645,8 @@ class ActionManager:
                                               before=before,
                                               action=action,
                                               fill=fill,
-                                              rotate=rotate)
+                                              rotate=rotate,
+                                              follow_theme=follow_theme)
         return self._actions[short_name]
 
     def refresh_icons(self):
