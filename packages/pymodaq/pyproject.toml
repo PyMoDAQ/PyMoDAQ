@@ -54,7 +54,7 @@ dev = [
 
     "pyqt5",
     "pyqt6",
-    "pyside6",
+    "pyside6<6.12",
     "pytest-qt",
     "pytest-xvfb",
 ]
