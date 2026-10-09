@@ -96,8 +96,7 @@ class Scan1DLinear(Scan1DBase):
             self.settings.child('step').setOpts(title=f'{self.actuators[0].title} step:')
 
     def evaluate_steps(self) -> int:
-        n_steps = int(np.abs((self.settings['stop'] - self.settings['start']) / self.settings['step']) + 1)
-        return n_steps
+        return self.n_points_linspace_step(self.settings['start'], self.settings['stop'], self.settings['step'])
 
     def update_from_scan_selector(self, scan_selector: Selector):
         coordinates = scan_selector.get_coordinates()

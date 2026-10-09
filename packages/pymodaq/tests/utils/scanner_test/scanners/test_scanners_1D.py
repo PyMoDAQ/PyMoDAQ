@@ -6,10 +6,7 @@ Created the 04/11/2023
 """
 import pytest
 
-from .conftest import assert_steps_consistent, known_bug
-
-TRUNCATION = (
-    'evaluate_steps computes int(abs(delta / step) + 1) (float noise, no ceil) while set_scan uses linspace_step (ceil + tolerance)')
+from .conftest import assert_steps_consistent
 
 linear_conditions = [
     (0., 1., 0.1),
@@ -19,7 +16,7 @@ linear_conditions = [
     (0., 1., 1 / 3),
     (0., 10., 1.),
     (0., 1., 0.01),
-    known_bug(0., 0.7, 0.1, reason=TRUNCATION),
+    (0., 0.7, 0.1),
     (-1., 1., 0.2),
     (-5.3, 7.1, 0.37),
     (1., 0., -0.1),
