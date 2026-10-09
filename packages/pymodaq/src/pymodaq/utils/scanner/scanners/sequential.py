@@ -4,6 +4,7 @@ Created the 05/12/2022
 
 @author: Sebastien Weber
 """
+import itertools
 from typing import List, Tuple, TYPE_CHECKING, Iterable, Any
 
 import numpy as np
@@ -156,17 +157,21 @@ class SequentialScanner(ScannerBase):
                           for ind in range(self.table_model.rowCount(None))]
         return starts, stops, steps
 
-    def evaluate_steps(self) -> int:
+    def get_magnitudes(self) -> Tuple[List[float], List[float], List[float]]:
+        """Get the starts, stops and steps as magnitudes expressed in the unit of the stop of each axis"""
         starts, stops, steps = self.get_pos()
+        # When using temperatures (in °C) substraction give delta °C,
+        # To ensure everything is correct. The magnitude is taken with the unit
+        # of one of the elements
+        ref_units = [stop.units for stop in stops]
+        return ([start.to(unit).magnitude for start, unit in zip(starts, ref_units)],
+                [stop.to(unit).magnitude for stop, unit in zip(stops, ref_units)],
+                [step.to(unit).magnitude for step, unit in zip(steps, ref_units)])
+
+    def evaluate_steps(self) -> int:
         n_steps = 1
-        for ind in range(len(starts)):
-            # When using temperatures (in °C) substraction give delta °C,
-            # To ensure everything is correct. The magnitude is taken with the unit
-            # of one of the elements
-            stop = stops[ind].magnitude
-            start = starts[ind].to(stops[ind].units).magnitude #be sure everything is in the same unit
-            step = steps[ind].to(stops[ind].units).magnitude
-            n_steps *= (np.abs((stop - start) / step) + 1)
+        for start, stop, step in zip(*self.get_magnitudes()):
+            n_steps *= self.n_points_linspace_step(start, stop, step)
         return int(n_steps)
 
     @staticmethod
@@ -198,33 +203,15 @@ class SequentialScanner(ScannerBase):
         self.table_view.setDragDropOverwriteMode(False)
 
     def set_scan(self):
-        starts, stops, steps = self.get_pos()
+        axes = []
+        for start, stop, step in zip(*self.get_magnitudes()):
+            try:
+                axes.append(mutils.linspace_step(start, stop, step))
+            except ValueError:  # invalid parameters: the axis is reduced to its start value
+                axes.append(np.array([start]))
 
-        # Normalize everything to the same unit per axis, work in magnitudes
-        ref_units = [stop.units for stop in stops]
-        starts_mag = [s.to(u).magnitude for s, u in zip(starts, ref_units)]
-        stops_mag = [s.to(u).magnitude for s, u in zip(stops, ref_units)]
-        steps_mag = [s.to(u).magnitude for s, u in zip(steps, ref_units)]
-
-        all_positions = [starts_mag.copy()]
-        positions = starts_mag.copy()
-        state = self.pos_above_stops(positions, steps_mag, stops_mag)
-        if len(state) != 0:
-            while not state[0]:
-                if not np.any(np.array(state)):
-                    positions[-1] += steps_mag[-1]
-                else:
-                    indexes_true = np.where(np.array(state))
-                    positions[indexes_true[-1][0]] = starts_mag[indexes_true[-1][0]]
-                    positions[indexes_true[-1][0] - 1] += steps_mag[indexes_true[-1][0] - 1]
-
-                state = self.pos_above_stops(positions, steps_mag, stops_mag)
-                if not np.any(np.array(state)):
-                    all_positions.append(positions.copy())
-
-        all_positions = np.array(all_positions)
-        self.get_info_from_positions(all_positions)
-
+        # the first actuator is the slowest one, the last one the fastest
+        self.get_info_from_positions(np.array(list(itertools.product(*axes))))
 
     def get_nav_axes(self) -> List[Axis]:
         return [Axis(label=f'{act.title}', units=act.units, data=self.axes_unique[ind], index=ind)
