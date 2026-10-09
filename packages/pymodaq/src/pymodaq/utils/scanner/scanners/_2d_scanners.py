@@ -102,22 +102,26 @@ class Scan2DLinear(Scan2DBase):
         steps = np.array([self.settings[ax, f'step_{ax}'] for ax in self.axes])
         return starts, stops, steps
 
+    @staticmethod
+    def is_degenerate(starts: np.ndarray, stops: np.ndarray, steps: np.ndarray) -> bool:
+        """ True if the scan settings are invalid on at least one axis: the scan is then reduced to the start point"""
+        return bool(np.any(np.abs(steps) < 1e-12) or
+                    np.any(np.sign(stops - starts) != np.sign(steps)) or
+                    np.any(starts == stops))
+
     def evaluate_steps(self) -> int:
         starts, stops, steps = self.get_pos()
+        if self.is_degenerate(starts, stops, steps):
+            return 1
         n_steps = 1
-        for ind in range(starts.size):
-            n_steps *= np.abs((stops[ind] - starts[ind]) / steps[ind]) + 1
-        if np.isnan(n_steps) or np.isinf(n_steps):
-            n_steps = -1
+        for start, stop, step in zip(starts, stops, steps):
+            n_steps *= self.n_points_linspace_step(start, stop, step)
         return int(n_steps)
 
     def set_scan(self):
         starts, stops, steps = self.get_pos()
-        if np.any(np.abs(steps) < 1e-12) or \
-                np.any(np.sign(stops - starts) != np.sign(steps)) or \
-                np.any(starts == stops):
-
-            return np.array([starts])
+        if self.is_degenerate(starts, stops, steps):
+            positions = np.array([starts])
 
         else:
             axis_1_unique = mutils.linspace_step(starts[0], stops[0], steps[0])
@@ -169,11 +173,8 @@ class Scan2DLinearBF(Scan2DLinear):
 
     def set_scan(self):
         starts, stops, steps = self.get_pos()
-        if np.any(np.abs(steps) < 1e-12) or \
-                np.any(np.sign(stops - starts) != np.sign(steps)) or \
-                np.any(starts == stops):
-
-            return np.array([starts])
+        if self.is_degenerate(starts, stops, steps):
+            positions = np.array([starts])
 
         else:
             axis_1_unique = mutils.linspace_step(starts[0], stops[0], steps[0])
