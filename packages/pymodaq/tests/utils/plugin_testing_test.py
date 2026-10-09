@@ -6,7 +6,7 @@ import pytest
 from pymodaq_utils import plugin_checks as pt
 from pymodaq_utils import plugin_rules as pt_rules
 from pymodaq_utils.plugin_rules import Severity
-from pymodaq_utils.plugin_testing import PluginPackageChecks
+from pymodaq.utils.plugin_testing import PluginPackageChecks
 
 
 @pytest.fixture(autouse=True)
