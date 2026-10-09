@@ -19,12 +19,13 @@ What the Dashboard does and the helpers reproduce: the target given to the plugi
 actuator, ``move_done_signal`` is only emitted after ``poll_moving`` has been called, and a slave axis of a multi-axes
 controller is given the controller of its master.
 """
+from time import perf_counter, sleep
 from typing import Callable, Optional, Union
 
-from qtpy.QtCore import QEventLoop, QTimer
+from pyqtgraph import mkQApp
+from qtpy.QtWidgets import QApplication
 
 from pymodaq_data.data import DataToExport
-from pymodaq_gui.qt_utils import mkQApp
 
 from pymodaq.control_modules.thread_commands import ControllerStatus
 from pymodaq.utils.data import DataActuator
@@ -36,25 +37,30 @@ class SignalTimeout(AssertionError):
     """The expected signal was not emitted before the timeout."""
 
 
-def wait_for_signal(signal, action: Callable[[], object], timeout_ms: int = TIMEOUT_MS):
+def wait_for_signal(signal, action: Callable[[], object], timeout_ms: int = TIMEOUT_MS,
+                    poll: Optional[Callable[[], object]] = None):
     """Call ``action`` and return the first argument of the next emission of ``signal``.
 
     Raises ``SignalTimeout`` if nothing is emitted within ``timeout_ms``. The signal can be emitted before
-    ``action`` returns (synchronous plugins): it is not missed.
+    ``action`` returns (synchronous plugins): it is not missed. While waiting, the Qt events are processed and
+    ``poll`` (if given) is called every few milliseconds. The wait does not rely on Qt timers, whose delivery slows
+    down in a process where other tests left many widgets alive.
     """
     received = []
-    loop = QEventLoop()
 
     def slot(*args):
         received.append(args[0] if args else None)
-        loop.quit()
 
     signal.connect(slot)
     try:
         action()
-        if not received:
-            QTimer.singleShot(timeout_ms, loop.quit)
-            loop.exec()
+        deadline = perf_counter() + timeout_ms / 1000
+        while not received and perf_counter() < deadline:
+            if poll is not None:
+                poll()
+            QApplication.processEvents()
+            if not received:
+                sleep(0.005)
     finally:
         signal.disconnect(slot)
     if not received:
@@ -63,7 +69,9 @@ def wait_for_signal(signal, action: Callable[[], object], timeout_ms: int = TIME
 
 
 def _instantiate(plugin_class, controller, settings):
-    mkQApp('plugin_test')  # the plugins use Qt timers and signals: a QApplication must exist
+    # the plugins use Qt timers and signals: a QApplication must exist. pyqtgraph's mkQApp creates a bare one, without
+    # the PyMoDAQ theme (applying it queues style events for every widget alive and is only useful in tests of the GUI)
+    mkQApp('plugin_test')
     plugin = plugin_class()
     if controller is not None:
         # a plugin is given an existing controller only as a slave axis of a multi-axes controller
@@ -107,26 +115,39 @@ def _start_move(plugin, move: Callable[[], object]):
     plugin.poll_moving()
 
 
+def _move_and_wait(plugin, move: Callable[[], object], timeout_ms: int) -> DataActuator:
+    last_poll = [perf_counter()]
+
+    def poll():
+        # what the polling timer of the plugin does, at the same pace, but called from the wait loop
+        if plugin.poll_timer.isActive() and perf_counter() - last_poll[0] >= plugin.poll_timer.interval() / 1000:
+            last_poll[0] = perf_counter()
+            plugin.check_target_reached()
+
+    try:
+        return wait_for_signal(plugin.move_done_signal, lambda: _start_move(plugin, move), timeout_ms, poll=poll)
+    finally:
+        plugin.poll_timer.stop()
+
+
 def move_abs_and_wait(plugin, position: Union[float, DataActuator], timeout_ms: int = TIMEOUT_MS) -> DataActuator:
     """Move to an absolute position and return the position reported at the end.
 
     A float is taken in the axis unit of the actuator, a ``DataActuator`` in another unit is converted.
     """
     position = _in_axis_unit(plugin, position)
-    return wait_for_signal(plugin.move_done_signal,
-                           lambda: _start_move(plugin, lambda: plugin.move_abs(position)), timeout_ms)
+    return _move_and_wait(plugin, lambda: plugin.move_abs(position), timeout_ms)
 
 
 def move_rel_and_wait(plugin, shift: Union[float, DataActuator], timeout_ms: int = TIMEOUT_MS) -> DataActuator:
     """Move by a relative amount (see ``move_abs_and_wait`` for the units) and return the position reported at the end"""
     shift = _in_axis_unit(plugin, shift)
-    return wait_for_signal(plugin.move_done_signal,
-                           lambda: _start_move(plugin, lambda: plugin.move_rel(shift)), timeout_ms)
+    return _move_and_wait(plugin, lambda: plugin.move_rel(shift), timeout_ms)
 
 
 def move_home_and_wait(plugin, timeout_ms: int = TIMEOUT_MS) -> DataActuator:
     """Send the actuator home and return the position reported at the end"""
-    return wait_for_signal(plugin.move_done_signal, lambda: _start_move(plugin, plugin.move_home), timeout_ms)
+    return _move_and_wait(plugin, plugin.move_home, timeout_ms)
 
 
 def grab_and_wait(plugin, naverage: int = 1, timeout_ms: int = TIMEOUT_MS, **kwargs) -> DataToExport:
