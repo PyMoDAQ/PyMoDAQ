@@ -59,7 +59,7 @@ dev = [
 ]
 
 pyside6 = [
-    "pyside6"
+    "pyside6<6.12",
 ]
 
 pyqt6 = [
