@@ -2,7 +2,7 @@
 """Shared fixtures of the extensions tests"""
 import qt_themes
 from pytest import fixture
-from qtpy import QtWidgets
+from qtpy import QtCore, QtWidgets
 
 from pymodaq_utils.config import GlobalConfig
 
@@ -26,3 +26,10 @@ def scan(qtbot):
     daq_scan.quit_fun()
     QtWidgets.QApplication.processEvents()
     dashboard.quit_fun()
+    # the windows are not deleted by the quit functions: left alive (tens of thousands of widgets with the
+    # parameter trees), they slow down the event loop of every test that runs afterwards
+    for widget in (win_ext.mainwindow, shared_ui.parent, dashboard.tree):
+        widget.close()
+        widget.deleteLater()
+    QtCore.QCoreApplication.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete)
+    QtWidgets.QApplication.processEvents()
