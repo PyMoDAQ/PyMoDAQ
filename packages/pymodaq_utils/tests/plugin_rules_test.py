@@ -148,3 +148,88 @@ def test_finding_format_color():
     assert str(finding) == finding.format() == 'PMQ999 [error]: message  -> a hint'
     assert '\033[31m[error]\033[0m' in finding.format(color=True)
     assert '\033' not in finding.format()
+
+
+def test_deprecated_api_of_actuators(tmp_path):
+    path = tmp_path / 'daq_move_Foo.py'
+    path.write_text(textwrap.dedent('''
+        from pymodaq.control_modules.move_utility_classes import DAQ_Move_base, comon_parameters, comon_parameters_fun
+
+        class DAQ_Move_Foo(DAQ_Move_base):
+            """doc"""
+            params = [{'name': 'a', 'type': 'int'}] + comon_parameters
+            def check_position(self):
+                return self.current_position
+            def move_Abs(self, value):
+                self.target_position = value
+            def close(self): pass
+            def ini_stage(self, controller=None):
+                return '', True
+        '''))
+    findings = pr.check_plugin_source(path, 'move', 'DAQ_Move_Foo', static_fallback=True)
+    assert {'PMQ312', 'PMQ313', 'PMQ314'} <= codes(findings)
+    assert codes(findings, Severity.ERROR) >= {'PMQ314'}
+    assert len([f for f in findings if f.code == 'PMQ312']) == 2  # check_position and move_Abs
+    # check_position is still accepted in place of get_actuator_value
+    assert 'PMQ306' not in codes(findings)
+
+
+def test_comon_parameters_called_or_of_a_viewer_is_fine(tmp_path):
+    path = tmp_path / 'daq_move_Foo.py'
+    path.write_text(textwrap.dedent('''
+        from pymodaq.control_modules.move_utility_classes import DAQ_Move_base, comon_parameters
+
+        class DAQ_Move_Foo(DAQ_Move_base):
+            """doc"""
+            params = comon_parameters(epsilon=0.1)
+        '''))
+    assert 'PMQ314' not in codes(pr.check_plugin_source(path, 'move', 'DAQ_Move_Foo'))
+    path = tmp_path / 'daq_0Dviewer_Foo.py'
+    path.write_text(textwrap.dedent('''
+        from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base, comon_parameters
+
+        class DAQ_0DViewer_Foo(DAQ_Viewer_base):
+            """doc"""
+            params = [{'name': 'a', 'type': 'int'}] + comon_parameters
+        '''))
+    assert 'PMQ314' not in codes(pr.check_plugin_source(path, '0D', 'DAQ_0DViewer_Foo'))
+
+
+def test_legacy_settings_names(tmp_path):
+    path = tmp_path / 'daq_move_Foo.py'
+    path.write_text(textwrap.dedent('''
+        class DAQ_Move_Foo(DAQ_Move_base):
+            """doc"""
+            def ini_stage(self, controller=None):
+                if self.settings.child('multiaxes', 'multi_status').value() == 'Master':
+                    pass
+                return '', True
+        '''))
+    findings = [f for f in pr.check_plugin_source(path, 'move', 'DAQ_Move_Foo') if f.code == 'PMQ316']
+    assert len(findings) == 1 and findings[0].line == 5
+    assert '2 times' in findings[0].message
+
+
+def test_python_code_rules(tmp_path):
+    root = tmp_path / 'pymodaq_plugins_foo'
+    (root / 'hardware').mkdir(parents=True)
+    (root / 'hardware' / 'sdk.py').write_text(textwrap.dedent(r'''
+        from ctypes import windll
+        PATH = "C:\Program Files\Vendor"
+        '''))
+    (root / 'hardware' / 'guarded.py').write_text(textwrap.dedent('''
+        import sys
+        try:
+            from ctypes import windll
+        except ImportError:
+            windll = None
+        if sys.platform == 'win32':
+            import winreg
+            DLL = 'C:/Windows/System32/x.dll'
+        '''))
+    findings = pr.check_python_code(root)
+    by_file = {(f.path.name, f.code) for f in findings}
+    assert ('sdk.py', 'PMQ315') in by_file and ('sdk.py', 'PMQ317') in by_file
+    assert not [f for f in findings if f.path.name == 'guarded.py']
+    windows = next(f for f in findings if f.code == 'PMQ317')
+    assert 'windll' in windows.message and '1 more' in windows.message
