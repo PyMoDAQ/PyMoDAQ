@@ -25,6 +25,7 @@ import importlib.util
 import os
 import re
 import sys
+import warnings
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -44,6 +45,17 @@ PLACEHOLDER_NAMES_RE = re.compile(r'python_wrapper_file_of_your_instrument|Pytho
 
 MANDATORY_MOVE_METHODS = ('ini_stage', 'get_actuator_value', 'close')  # stop_motion has a default that does nothing
 MANDATORY_VIEWER_METHODS = ('ini_detector', 'grab_data', 'stop', 'close')
+
+# hooks of the plugins that were renamed: PyMoDAQ still calls the old ones, with a deprecation warning
+DEPRECATED_HOOKS = {'check_position': 'get_actuator_value', 'move_Abs': 'move_abs', 'move_Rel': 'move_rel',
+                    'move_Home': 'move_home'}
+# attributes of the actuators that were renamed
+DEPRECATED_ATTRIBUTES = {'current_position': 'current_value', 'target_position': 'target_value'}
+# names of the groups of settings that were renamed: PyMoDAQ only translates them in settings[...], not in
+# settings.child(...)
+LEGACY_SETTINGS = {'multiaxes': 'controller', 'multi_status': 'controller_status'}
+WINDOWS_ONLY_IMPORTS = {'winreg', 'msvcrt', '_winreg', 'win32api', 'win32com'}
+WINDOWS_PATH_RE = re.compile(r'^[A-Za-z]:[\\/]')
 
 # features of [features] in pyproject.toml -> folders (relative to the package) holding the corresponding code
 FEATURE_FOLDERS = {'instruments': ('daq_move_plugins', 'daq_viewer_plugins'),
@@ -192,6 +204,65 @@ def check_file_names(root: Path) -> list[Finding]:
                     '(Dropbox, OneDrive, Syncthing...) or an editor backup', path)
             for path in sorted(root.rglob('*.py'))
             if '__pycache__' not in path.parts and path.stem not in IGNORED_MODULES and not path.stem.isidentifier()]
+
+
+def _guarded(node: ast.AST, parents: dict) -> bool:
+    """Whether a node is inside a ``try`` with handlers or an ``if`` testing the platform"""
+    parent = parents.get(node)
+    while parent is not None:
+        if isinstance(parent, ast.Try) and parent.handlers:
+            return True
+        if isinstance(parent, ast.If) and re.search(r'platform|os\.name|\'nt\'|win32|system\(', ast.dump(parent.test)):
+            return True
+        parent = parents.get(parent)
+    return False
+
+
+def check_python_code(root: Path) -> list[Finding]:
+    """Rules on all the python files of the package (plugins and hardware wrappers)
+
+    * PMQ315: invalid escape sequence in a string (``"C:\\Program Files"``): a warning of python since 3.6, a
+      ``SyntaxWarning`` since 3.12, that will be an error
+    * PMQ317: code that only works on Windows and is executed when the module is imported (``windll``, ``winreg``,
+      path with a drive letter): the plugin cannot be imported, nor listed, on the other systems
+    """
+    findings = []
+    for path in _python_files(root):
+        source = path.read_text(errors='replace')
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter('always')
+            try:
+                tree = ast.parse(source, filename=str(path))
+            except SyntaxError:
+                continue  # reported by the other rules
+        for warning in caught:
+            if 'invalid escape sequence' in str(warning.message):
+                findings.append(Finding('PMQ315', Severity.WARNING, str(warning.message),
+                                        "use a raw string (r'...') or double the backslash", path, warning.lineno))
+        parents = {child: node for node in ast.walk(tree) for child in ast.iter_child_nodes(node)}
+        windows = []
+        for node in ast.walk(tree):
+            what = None
+            if isinstance(node, ast.ImportFrom) and node.module == 'ctypes' and any(a.name == 'windll' for a in
+                                                                                    node.names):
+                what = 'ctypes.windll'
+            elif isinstance(node, ast.Import) and any(a.name.split('.')[0] in WINDOWS_ONLY_IMPORTS
+                                                      for a in node.names):
+                what = next(a.name for a in node.names if a.name.split('.')[0] in WINDOWS_ONLY_IMPORTS)
+            elif isinstance(node, ast.ImportFrom) and (node.module or '').split('.')[0] in WINDOWS_ONLY_IMPORTS:
+                what = node.module
+            elif isinstance(node, ast.Constant) and isinstance(node.value, str) and WINDOWS_PATH_RE.match(node.value):
+                what = f'the path {node.value!r}'
+            if what is not None and not _guarded(node, parents):
+                windows.append((node.lineno, what))
+        if windows:
+            line, what = windows[0]
+            more = f' (and {len(windows) - 1} more in this file)' if len(windows) > 1 else ''
+            findings.append(Finding('PMQ317', Severity.WARNING, f'only works on Windows: {what}{more}',
+                                    'import it lazily, in the method that needs it, or guard it with '
+                                    'sys.platform, so that the plugin can be imported on the other systems',
+                                    path, line))
+    return findings
 
 
 # -------------------------------------------------------------------------------------------------------------------
@@ -406,13 +477,16 @@ def check_plugin_source(path: Path, kind: str, class_name: str, static_fallback:
     methods = {n.name: n for n in cls.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))}
     if kind == 'move':
         findings.extend(_check_move_source(path, cls, attrs, static_fallback))
+        findings.extend(_check_deprecated_api(path, tree, methods))
         mandatory = MANDATORY_MOVE_METHODS
     else:
         mandatory = MANDATORY_VIEWER_METHODS
+    findings.extend(_check_legacy_settings(path, tree))
     simple_bases = all(b in ('DAQ_Move_base', 'DAQ_Viewer_base') for b in _base_names(cls))
     if static_fallback and simple_bases:
         for meth in mandatory:
-            if meth not in methods:
+            # the base class still calls check_position if get_actuator_value is not defined (see PMQ312)
+            if meth not in methods and not (meth == 'get_actuator_value' and 'check_position' in methods):
                 findings.append(Finding('PMQ306', Severity.ERROR, f'{class_name} should define {meth}()',
                                         'implement it (see the template)', path, cls.lineno))
     init = methods.get('ini_stage' if kind == 'move' else 'ini_detector')
@@ -461,6 +535,48 @@ def _check_move_source(path: Path, cls: ast.ClassDef, attrs: dict, static_fallba
     return findings
 
 
+def _check_deprecated_api(path: Path, tree: ast.Module, methods: dict) -> list[Finding]:
+    """PMQ312-314: parts of the API of an actuator that were renamed or changed"""
+    findings = []
+    for old, new in DEPRECATED_HOOKS.items():
+        if old in methods:
+            findings.append(Finding('PMQ312', Severity.WARNING, f'{old}() is deprecated, it is still called but with '
+                                    f'a warning', f'rename it {new}()', path, methods[old].lineno))
+    for attr, new in DEPRECATED_ATTRIBUTES.items():
+        uses = [n for n in ast.walk(tree) if isinstance(n, ast.Attribute) and n.attr == attr and
+                isinstance(n.value, ast.Name) and n.value.id == 'self']
+        if uses:
+            more = f' ({len(uses)} times in this file)' if len(uses) > 1 else ''
+            findings.append(Finding('PMQ313', Severity.WARNING, f"'{attr}' is deprecated{more}", f"use '{new}'",
+                                    path, min(n.lineno for n in uses)))
+    # comon_parameters of the actuators is a function since pymodaq 5 (it was a list), the one of the viewers a list
+    names = {a.asname or a.name for n in ast.walk(tree) if isinstance(n, ast.ImportFrom) and
+             (n.module or '').endswith('move_utility_classes') for a in n.names if a.name == 'comon_parameters'}
+    if names:
+        called = {id(n.func) for n in ast.walk(tree) if isinstance(n, ast.Call)}
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Name) and node.id in names and isinstance(node.ctx, ast.Load) and \
+                    id(node) not in called:
+                findings.append(Finding('PMQ314', Severity.ERROR, "'comon_parameters' is used as a list but it is "
+                                        "a function", "call it: comon_parameters_fun(is_multiaxes, axis_names=..., "
+                                        "epsilon=...), or comon_parameters(epsilon)", path, node.lineno))
+    return findings
+
+
+def _check_legacy_settings(path: Path, tree: ast.Module) -> list[Finding]:
+    """PMQ316: names of groups of settings that were renamed"""
+    hits = [n for n in ast.walk(tree) if isinstance(n, ast.Constant) and n.value in LEGACY_SETTINGS]
+    if not hits:
+        return []
+    first = min(hits, key=lambda n: n.lineno)
+    more = f' ({len(hits)} times in this file)' if len(hits) > 1 else ''
+    return [Finding('PMQ316', Severity.WARNING, f"settings group '{first.value}' was renamed "
+                    f"'{LEGACY_SETTINGS[first.value]}'{more}",
+                    "PyMoDAQ only translates the old names in settings[...], not in settings.child(...): use the "
+                    "new ones", path,
+                    first.lineno)]
+
+
 def check_package_sources(package: str) -> list[Finding]:
     """All the static rules on an installed (or editable) plugin package: packaging, leftovers and plugin classes"""
     from pymodaq_utils.plugin_checks import find_plugin_modules  # no import cycle at module level
@@ -472,6 +588,7 @@ def check_package_sources(package: str) -> list[Finding]:
     findings = check_pyproject(package, project) if project is not None else []
     findings.extend(check_file_names(root))
     findings.extend(check_leftovers(package, root, project))
+    findings.extend(check_python_code(root))
     for mod in find_plugin_modules(package):
         file = Path(importlib.util.find_spec(mod.import_path).origin)
         findings.extend(check_plugin_source(file, mod.kind, mod.class_name))

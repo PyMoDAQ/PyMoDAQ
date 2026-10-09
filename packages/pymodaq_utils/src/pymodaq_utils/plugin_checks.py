@@ -34,7 +34,7 @@ import toml
 from pymodaq_utils.utils import get_entrypoints
 
 from pymodaq_utils.plugin_rules import (PLACEHOLDER_NAMES_RE, Finding, Severity, check_file_names, check_leftovers,
-                                        check_plugin_source, check_pyproject, colorize, is_valid_unit, package_root,
+                                        check_plugin_source, check_python_code, check_pyproject, colorize, is_valid_unit, package_root,
                                         project_root, use_color)
 
 VIEWER_DIMS = ('0D', '1D', '2D', 'ND')
@@ -452,6 +452,7 @@ def check_package_sources(package: str, project: Optional[Path] = None) -> Check
         result.findings.extend(check_pyproject(package, project))
     result.findings.extend(check_file_names(root))
     result.findings.extend(check_leftovers(package, root, project))
+    result.findings.extend(check_python_code(root))
     return result
 
 

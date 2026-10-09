@@ -165,6 +165,12 @@ PMQ307   import of the removed ``pymodaq.daq_utils``
 PMQ308   no ``if __name__ == '__main__': main(__file__)`` block to run the plugin standalone
 PMQ309   ``ini_stage`` / ``ini_detector`` do not return ``(info, initialized)``
 PMQ310   the plugin class has no docstring. PMQ311: *stop_motion* not overridden, the Stop of the actuator does nothing
+PMQ312   deprecated hook of an actuator (``check_position``, ``move_Abs``, ``move_Rel``, ``move_Home``)
+PMQ313   deprecated attribute ``current_position`` / ``target_position`` (use ``*_value`` instead)
+PMQ314   ``comon_parameters`` of the actuators used as a list: it is a function, the import fails
+PMQ315   invalid escape sequence in a string, such as ``"C:\Program Files"`` (use a raw string)
+PMQ316   settings group ``multiaxes`` / ``multi_status`` renamed ``controller`` / ``controller_status``
+PMQ317   code that only works on Windows and runs on import (``windll``, ``winreg``, drive path)
 ======== =================================================================================================
 
 .. _plugin_behaviour_tests:
