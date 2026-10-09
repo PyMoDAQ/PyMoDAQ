@@ -16,11 +16,12 @@ from pymodaq_gui.utils import SpinBoxDelegate
 from pymodaq_utils.logger import set_logger, get_module_name
 
 from pymodaq_gui import utils as gutils
-from ..scan_factory import ScannerFactory, ScannerBase, ScanParameterManager
+from ..scan_factory import ScannerFactory, ScannerBase, ScanParameterManager, config
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.parameter.pymodaq_ptypes import TableViewCustom
 from pymodaq.utils.scanner.scan_selector import Selector
-from pymodaq_gui.plotting.utils.plot_utils import Point, get_sub_segmented_positions
+from pymodaq_gui.plotting.utils.plot_utils import (Point, get_sub_segmented_positions,
+                                                       get_sub_segmented_n_positions)
 
 from pymodaq_data.data import parse_quantity
 
@@ -320,9 +321,25 @@ class TabularScannerSubSegmented(TabularScanner):
         self.table_view_points.load_data_signal.connect(self.table_model_points.load_txt)
         self.table_view_points.save_data_signal.connect(self.table_model_points.save_txt)
 
+    def get_points(self) -> List[Point]:
+        """The Points defined in the points table, as floats (the table stores strings, possibly with units)"""
+        return [Point([parse_quantity(elt).magnitude for elt in coordinates])
+                for coordinates in self.table_model_points.get_data_all()]
+
+    def evaluate_steps(self) -> int:
+        points = self.get_points()
+        step = self.settings['tabular_step']
+        if step <= 0:  # no sub-segmentation possible
+            return len(points)
+        return get_sub_segmented_n_positions(step, points, config('pymodaq', 'scan', 'steps_limit'))
+
     def set_scan(self):
-        points = [Point(coordinates) for coordinates in self.table_model_points.get_data_all()]
-        positions = get_sub_segmented_positions(self.settings['tabular_step'], points)
+        points = self.get_points()
+        step = self.settings['tabular_step']
+        if step <= 0:  # no sub-segmentation possible (and it would never end), keep the points as they are
+            positions = [point.coordinates for point in points]
+        else:
+            positions = get_sub_segmented_positions(step, points)
         self.table_model.set_data_all(positions)
         positions = np.array([[Q_(elt).magnitude for elt in line] for line in self.table_model.get_data_all()])
         self.get_info_from_positions(positions)

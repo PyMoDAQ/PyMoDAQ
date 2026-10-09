@@ -27,14 +27,15 @@ class TestScannerTabular:
         scanner = make_scanner('Tabular', 'Linear', n_act=2)
         assert_steps_consistent(scanner)
 
-    @pytest.mark.parametrize('step', [0.1, 0.3, 0.5, 1.])
+    @pytest.mark.parametrize('step', [0.1, 0.3, 0.5, 1., 0.07, 2.5, 0.])
     @pytest.mark.parametrize('points', [
         [[0., 0.], [1., 1.]],
         [[0., 0.], [1., 0.], [1., 1.]],
         [[0., 0.], [1., 0.], [1., 1.], [0., 1.], [0., 0.]],
+        [[0., 0.]],  # a single point
+        [[0., 0.], [0., 0.], [1.3, 0.7]],  # a null segment
+        [[0.1, -0.2], [0.35, 1.1], [-2.7, 0.3], [0.4, 0.4]],
     ])
-    @pytest.mark.xfail(strict=True, reason='TableModelTabular casts cells to str and set_scan builds Points from them '
-                                          '(numpy cannot subtract strings): set_scan fails with 2 points or more')
     def test_evaluate_steps_subsegmented(self, make_scanner, points, step):
         scanner = make_scanner('Tabular', 'SubSegmented', n_act=2)
         scanner.settings['tabular_step'] = step
