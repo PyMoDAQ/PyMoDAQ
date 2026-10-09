@@ -53,3 +53,13 @@ class TestScanner1D:
         scanner = make_scanner('Scan1D', 'Sparse')
         scanner.settings['parsed_string'] = parsed_string
         assert_steps_consistent(scanner)
+
+    @pytest.mark.parametrize('subtype', ['Linear', 'Random'])
+    def test_evaluate_steps_above_limit_is_not_built(self, make_scanner, subtype):
+        """A huge number of steps is evaluated without allocating the positions (would be ~ 8 GB here)"""
+        scanner = make_scanner('Scan1D', subtype)
+        scanner.settings['start'] = 0.
+        scanner.settings['stop'] = 1.
+        scanner.settings['step'] = 1e-9
+        assert scanner.evaluate_steps() >= 1e9 - 1
+        assert not scanner.check_steps()
