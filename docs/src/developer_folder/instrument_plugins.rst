@@ -210,6 +210,12 @@ expressed in the axis unit before reaching ``move_abs``, and the end of a move i
 run. The tests of the helpers themselves (*tests/utils/plugin_harness_test.py* in the PyMoDAQ repository) contain
 complete fake actuators (single and multi-axes) and a fake detector to copy.
 
+.. note::
+    These tests check the plugin's side of its contract with PyMoDAQ (return types, units, signals, shared controller,
+    ``close``) against a fake that encodes what you believe the driver does. They say nothing about the device itself:
+    timing, error replies, real ranges and units. A passing run is not a hardware validation, say in a contribution
+    what was tested on the real instrument and what only against a fake.
+
 From the root of your plugin repository you can also print this report from the command line, the exit code being
 non zero when the checks fail:
 
