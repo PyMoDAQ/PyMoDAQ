@@ -7,6 +7,7 @@ from qtpy import QtWidgets
 
 from qtpy.QtCore import Qt
 
+from pymodaq.control_modules import hardware_module
 from pymodaq.control_modules.capabilities import Action, control, measurement
 from pymodaq.control_modules.hardware_module import HardwareModule, SLIDER_WIDTH, _colors
 from pymodaq.control_modules.hardware_registry import HardwareKey, HardwareRegistry
@@ -578,6 +579,44 @@ class TestSettle:
         widget.controller.thread.ini_hardware()
         qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
         assert widget._led_color('z').name() == _colors().green.name()  # idle again, not stuck
+        widget.release()
+
+
+class TestWriteTimeout:
+    """A write with no readback/epsilon has nothing to settle towards, but it still needs a
+    deadline: write_done/write_failed getting lost must not leave the row pending forever."""
+
+    def test_a_write_with_no_response_times_out(self, registry, qtbot, monkeypatch):
+        monkeypatch.setattr(hardware_module, 'WRITE_TIMEOUT_S', 0.05)
+        widget = HardwareModule(HardwareKey(hardware_class=Camera, controller_id=17), Camera, registry=registry)
+        qtbot.addWidget(widget)
+        widget.initialize()
+        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        # Simulate write_done/write_failed never reaching the module - not the device refusing,
+        # the module simply never hearing back, which is the gap this timeout closes.
+        widget.controller.written.disconnect(widget._on_written)
+        widget.controller.write_failed.disconnect(widget._on_write_failed)
+        spin = widget._value_widgets['exposure']
+        spin.setValue(20.0)
+        spin.editingFinished.emit()
+        qtbot.waitUntil(lambda: 'exposure' in widget._failed, timeout=2000)
+        assert 'exposure' not in widget._pending
+        assert widget._led_color('exposure').name() == _colors().red.name()
+        widget.release()
+
+    def test_a_timely_response_cancels_the_write_timeout(self, registry, qtbot, monkeypatch):
+        monkeypatch.setattr(hardware_module, 'WRITE_TIMEOUT_S', 0.05)
+        widget = HardwareModule(HardwareKey(hardware_class=Camera, controller_id=18), Camera, registry=registry)
+        qtbot.addWidget(widget)
+        widget.initialize()
+        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        spin = widget._value_widgets['exposure']
+        spin.setValue(20.0)
+        spin.editingFinished.emit()
+        qtbot.waitUntil(lambda: widget._led_color('exposure').name() == _colors().green.name(), timeout=2000)
+        qtbot.wait(150)  # well past the patched timeout - the already-cancelled timer must not fire late
+        assert widget._led_color('exposure').name() == _colors().green.name()
+        assert 'exposure' not in widget._failed
         widget.release()
 
 

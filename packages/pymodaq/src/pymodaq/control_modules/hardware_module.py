@@ -48,6 +48,7 @@ SLIDER_STEPS = 1000  # a slider maps its range onto this many steps
 ACTION_WIDTH = 44  # room for one toolbar button
 SETTLE_POLL_MS = 150.0  # how often a settling control's readback is checked against its target
 SETTLE_TIMEOUT_S = 10.0  # give up waiting for a control to settle after this long
+WRITE_TIMEOUT_S = 10.0  # give up waiting for write_done/write_failed after this long, settling or not
 
 
 class _ViewDock(QtWidgets.QDockWidget):
@@ -165,6 +166,10 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         self._targets: dict[str, float] = {}  # a settling control's last requested value
         self._settle_timers: dict[str, QTimer] = {}  # settling controls: readback polled until within epsilon
         self._settle_deadlines: dict[str, float] = {}
+        # any write: running from _write until write_done/write_failed arrives, whether or not it then
+        # settles - closes the gap a settle watch alone doesn't, since that one only starts once
+        # write_done has already arrived.
+        self._write_timeout_timers: dict[str, QTimer] = {}
         self.controller: Controller = self._registry.attach(key, plugin_class, params_state)
         self.setWindowTitle(plugin_class.__name__)
         self.setCentralWidget(QtWidgets.QWidget())  # the area the views will fill
@@ -544,6 +549,7 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
             if self._settles(self._quantities[name]):
                 self._targets[name] = value
             self._refresh_led(name)
+            self._start_write_timeout(name)
             setattr(self.controller, name, value)
 
     def _read(self, name: str) -> None:
@@ -578,6 +584,7 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         ``stop``, not a general consequence of reporting a value)."""
         if action_name == 'stop':
             self._stop_settle_watch(name)
+            self._stop_write_timeout(name)
             self._pending.discard(name)
             self._failed.discard(name)
             self._refresh_led(name)
@@ -671,12 +678,40 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
             timer.stop()
             timer.deleteLater()
 
+    # ── Write timeout: any write stays pending until write_done/write_failed, or this long ──────
+
+    def _start_write_timeout(self, name: str) -> None:
+        self._stop_write_timeout(name)  # a new write replaces the wait, so only the latest one matters
+        timer = QTimer(self)
+        timer.setSingleShot(True)
+        timer.setInterval(int(WRITE_TIMEOUT_S * 1000))
+        timer.timeout.connect(lambda name=name: self._on_write_timeout(name))
+        self._write_timeout_timers[name] = timer
+        timer.start()
+
+    def _on_write_timeout(self, name: str) -> None:
+        if name not in self._write_timeout_timers:
+            return  # write_done/write_failed already arrived, or the device closed; nothing to do
+        self._stop_write_timeout(name)
+        self._pending.discard(name)
+        self._failed.add(name)
+        self._refresh_led(name)
+        self.status_label.setText(f'error: {name}: no response within {WRITE_TIMEOUT_S:.0f} s')
+
+    def _stop_write_timeout(self, name: str) -> None:
+        timer = self._write_timeout_timers.pop(name, None)
+        if timer is not None:
+            timer.stop()
+            timer.deleteLater()
+
     def release(self) -> None:
         """Detach from the registry. The device closes when the last module lets go of it."""
         if self._attached:
             self._attached = False
             for name in list(self._settle_timers):
                 self._stop_settle_watch(name)
+            for name in list(self._write_timeout_timers):
+                self._stop_write_timeout(name)
             self._registry.detach(self._key)
 
     def closeEvent(self, event):
@@ -692,6 +727,8 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         if not connected:  # a settle watch reads the device, which closed from under it
             for name in list(self._settle_timers):
                 self._stop_settle_watch(name)
+            for name in list(self._write_timeout_timers):
+                self._stop_write_timeout(name)
             # Any write, settle or one-shot read in flight when the device dropped has no watcher
             # left to ever confirm or fail it - unlike _grabbing, which _on_status(True) below
             # restarts itself, nothing else clears these, so a reconnected row would otherwise show
@@ -736,12 +773,14 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
 
     def _on_write_failed(self, name: str, message: str) -> None:
         self._stop_settle_watch(name)  # a rejected write has nothing left to settle towards
+        self._stop_write_timeout(name)  # an answer arrived, even if it was a rejection
         self._pending.discard(name)
         self._failed.add(name)
         self._refresh_led(name)
         self.status_label.setText(f'error: {name}: {message}')
 
     def _on_written(self, name: str, value: object) -> None:
+        self._stop_write_timeout(name)  # an answer arrived, in time
         if self._settles(self._quantities[name]):
             self._start_settle_watch(name)  # stays pending (orange) until the readback reaches the target
         else:
