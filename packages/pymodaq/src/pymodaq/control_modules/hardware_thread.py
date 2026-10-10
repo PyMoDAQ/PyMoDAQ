@@ -112,13 +112,12 @@ class HardwareThread(QObject):
                                                            # error; result is None when the callback, as
                                                            # most do, reported nothing back
     action_failed = Signal(str, str, str)                 # (channel, action name, message): the callback raised
+    read_failed = Signal(str, str)                        # (channel, message): a read/poll raised
 
     # ── Device status, not tied to one request ──
     hardware_status = Signal(bool, str)                 # (connected, info): open and close only
     capabilities = Signal(object)                       # Capabilities the plugin instance sets after open
-    error = Signal(str)                                 # a read failed; the plugin stays open. Write and
-                                                         # action failures have their own, channeled signals
-                                                         # above instead - only a read has none of its own.
+    error = Signal(str)                                 # anything else unexpected; the plugin stays open
     settings_changed = Signal(list, object, str)        # (path, data, change): the plugin changed its own settings
 
     # ── Internal plumbing, not part of the outward signal surface above ──
@@ -321,7 +320,13 @@ class HardwareThread(QObject):
 
     @_when_open
     def _read_now(self, sub: Subscription) -> None:
-        self._send(sub, self._read_channel(sub.channel), time.monotonic())
+        try:
+            data = self._read_channel(sub.channel)
+        except Exception as exc:
+            logger.exception(f'read of {sub.channel!r} failed')
+            self.read_failed.emit(sub.channel, str(exc))
+            return
+        self._send(sub, data, time.monotonic())
 
     def _read_channel(self, channel: str) -> object:
         """One channel's value: its own ``get`` if declared, otherwise a single-channel ``read``."""
@@ -406,10 +411,21 @@ class HardwareThread(QObject):
         if not channels:
             return
         batched = [channel for channel in channels if channel not in self._get_of]
-        dte = self._plugin.read(names=batched, fresh=True) if batched else None
+        try:
+            dte = self._plugin.read(names=batched, fresh=True) if batched else None
+        except Exception as exc:
+            logger.exception(f'batched read of {batched} failed')
+            for channel in batched:
+                self.read_failed.emit(channel, str(exc))
+            return
         for channel in channels:
             getter = self._get_of.get(channel)
-            data = getter(self._plugin) if getter is not None else dte.get_data_from_name(channel)
+            try:
+                data = getter(self._plugin) if getter is not None else dte.get_data_from_name(channel)
+            except Exception as exc:
+                logger.exception(f'read of {channel!r} failed')
+                self.read_failed.emit(channel, str(exc))
+                continue
             self._deliver(channel, data, period_ms)
 
     def _deliver(self, channel: str, data: object, period_ms: float) -> None:

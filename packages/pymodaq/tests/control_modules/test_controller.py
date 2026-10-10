@@ -6,6 +6,7 @@ import threading
 import numpy as np
 import pytest
 
+from pymodaq.control_modules import controller as controller_module
 from pymodaq.control_modules.capabilities import Action, control, measurement
 from pymodaq.control_modules.controller import Controller, controller_class
 from pymodaq.control_modules.hardware_registry import HardwareKey, HardwareRegistry
@@ -100,6 +101,69 @@ class TestWrite:
         assert blocker.args == ['exposure', 20.0]
 
 
+class TestWriteTimeout:
+    """written/write_failed never reaching this Controller at all must not leave a write
+    outstanding forever - for a script driving it directly, same as for any GUI built on it."""
+
+    def test_a_write_with_no_response_times_out(self, registry, qtbot, monkeypatch):
+        monkeypatch.setattr(controller_module, 'WRITE_TIMEOUT_S', 0.05)
+        key, ctrl = attach(registry)
+        ctrl.thread.ini_hardware()
+        # Simulate the answer never reaching this Controller at all - not the device refusing,
+        # which write_failed already covers without any of this. Disconnects Controller's own
+        # outgoing signal, not one owned by the hardware-thread object - thread-safe either way.
+        ctrl.write_requested.disconnect(ctrl.thread.request_write)
+        with qtbot.waitSignal(ctrl.write_failed, timeout=2000) as blocker:
+            ctrl.exposure = 20.0
+        name, message = blocker.args
+        assert name == 'exposure'
+        assert 'no response' in message
+
+    def test_a_timely_response_cancels_the_write_timeout(self, registry, qtbot, monkeypatch):
+        monkeypatch.setattr(controller_module, 'WRITE_TIMEOUT_S', 0.05)
+        key, ctrl = attach(registry)
+        ctrl.thread.ini_hardware()
+        failures = []
+        ctrl.write_failed.connect(lambda name, message: failures.append((name, message)))
+        with qtbot.waitSignal(ctrl.written, timeout=2000):
+            ctrl.exposure = 20.0
+        qtbot.wait(150)  # well past the patched timeout - the already-cancelled timer must not fire late
+        assert failures == []
+
+    def test_a_successful_stop_cancels_the_write_timeout(self, registry, qtbot, monkeypatch):
+        monkeypatch.setattr(controller_module, 'WRITE_TIMEOUT_S', 0.05)
+        key = HardwareKey(hardware_class=Stoppable, controller_id=29)
+        ctrl = registry.attach(key, Stoppable)
+        ctrl.thread.ini_hardware()
+        ctrl.write_requested.disconnect(ctrl.thread.request_write)  # the write's own answer never arrives
+        failures = []
+        ctrl.write_failed.connect(lambda name, message: failures.append((name, message)))
+        ctrl.axis = 5.0
+        with qtbot.waitSignal(ctrl.action_done, timeout=2000):
+            ctrl.stop('axis')
+        qtbot.wait(150)  # well past the patched timeout - stop already resolved it, nothing left to time out
+        assert failures == []
+
+    def test_any_interrupts_action_cancels_it_not_just_one_named_stop(self, registry, qtbot, monkeypatch):
+        monkeypatch.setattr(controller_module, 'WRITE_TIMEOUT_S', 0.05)
+
+        class Abortable(Spectrometer):
+            axis = control(units='mm', lo=0, hi=10,
+                           actions={'abort': Action(lambda plugin: None, interrupts=True)})
+
+        key = HardwareKey(hardware_class=Abortable, controller_id=30)
+        ctrl = registry.attach(key, Abortable)
+        ctrl.thread.ini_hardware()
+        ctrl.write_requested.disconnect(ctrl.thread.request_write)
+        failures = []
+        ctrl.write_failed.connect(lambda name, message: failures.append((name, message)))
+        ctrl.axis = 5.0
+        with qtbot.waitSignal(ctrl.action_done, timeout=2000):
+            ctrl.run_action('axis', 'abort')
+        qtbot.wait(150)
+        assert failures == []
+
+
 class Stoppable(Spectrometer):
     axis = control(units='mm', lo=0, hi=10, stop=lambda plugin: plugin.stop_calls.append(True),
                    actions={'home': lambda plugin: plugin.home_calls.append(True)})
@@ -108,6 +172,41 @@ class Stoppable(Spectrometer):
         super().__init__()
         self.stop_calls = []
         self.home_calls = []
+
+
+class TestReadTimeout:
+    """Mirrors TestWriteTimeout: read() getting no answer at all must not hang forever either."""
+
+    def test_a_read_with_no_response_times_out(self, registry, qtbot, monkeypatch):
+        monkeypatch.setattr(controller_module, 'READ_TIMEOUT_S', 0.05)
+        key, ctrl = attach(registry)
+        ctrl.thread.ini_hardware()
+        ctrl.subscribe_requested.disconnect(ctrl.thread.subscribe)  # the request never reaches the thread
+        with qtbot.waitSignal(ctrl.read_failed, timeout=2000) as blocker:
+            ctrl.read('exposure', lambda data: None)
+        name, message = blocker.args
+        assert name == 'exposure'
+        assert 'no response' in message
+
+    def test_a_timely_response_cancels_the_read_timeout(self, registry, qtbot, monkeypatch):
+        monkeypatch.setattr(controller_module, 'READ_TIMEOUT_S', 0.05)
+        key, ctrl = attach(registry)
+        ctrl.thread.ini_hardware()
+        failures = []
+        ctrl.read_failed.connect(lambda name, message: failures.append((name, message)))
+        received = []
+        ctrl.read('exposure', received.append)
+        qtbot.waitUntil(lambda: bool(received), timeout=2000)
+        qtbot.wait(150)  # well past the patched timeout - the already-cancelled timer must not fire late
+        assert failures == []
+
+    def test_a_real_read_failure_is_relayed(self, registry, qtbot):
+        key, ctrl = attach(registry)
+        ctrl.thread.ini_hardware()
+        ctrl.thread._plugin.read = lambda names=None, fresh=True: (_ for _ in ()).throw(RuntimeError('bus error'))
+        with qtbot.waitSignal(ctrl.read_failed, timeout=2000) as blocker:
+            ctrl.read('exposure', lambda data: None)
+        assert blocker.args == ['exposure', 'bus error']
 
 
 class TestStop:

@@ -274,17 +274,17 @@ class TestOneShotRead:
         assert released.count == 1
         assert plugin.query_calls == []
 
-    def test_one_shot_exception_emits_error_and_releases(self, qapp):
+    def test_one_shot_exception_emits_read_failed_and_releases(self, qapp):
         thread_obj, plugin = make_thread()
         thread_obj.ini_hardware()
         plugin._query_raises = RuntimeError('read failed')
-        statuses, errors, released = Collector(), Collector(), Collector()
+        statuses, failed, released = Collector(), Collector(), Collector()
         thread_obj.hardware_status.connect(statuses)
-        thread_obj.error.connect(errors)
+        thread_obj.read_failed.connect(failed)
         sub = Subscription('axis_x', None)
         sub.released.connect(released)
         thread_obj.subscribe(sub)
-        assert 'read failed' in errors.last()[0]
+        assert failed.last() == ('axis_x', 'read failed')
         assert statuses.count == 0
         assert thread_obj._plugin is not None
         assert released.count == 1
@@ -817,11 +817,11 @@ class TestPeriods:
         plugin._query_raises = RuntimeError('bus error')
         plugin.read = lambda names=None, fresh=True: (_ for _ in ()).throw(RuntimeError('bus error'))
         sub = Subscription('ch', 100.0)
-        errors = Collector()
-        thread_obj.error.connect(errors)
+        failed = Collector()
+        thread_obj.read_failed.connect(failed)
         thread_obj.subscribe(sub)
         thread_obj._on_period_tick(100.0)
-        assert errors.last()[0] == 'bus error'
+        assert failed.last() == ('ch', 'bus error')
         assert thread_obj._timers[100.0].isActive()
         thread_obj.unsubscribe(sub)
 

@@ -10,12 +10,15 @@ from __future__ import annotations
 import functools
 import threading
 
-from qtpy.QtCore import QObject, Qt, Signal
+from qtpy.QtCore import QObject, QTimer, Qt, Signal
 
 from pymodaq.control_modules.capabilities import Access, Capabilities, Quantity
 from pymodaq.control_modules.subscription import Subscription
 
 __all__ = ['Controller', 'controller_class']
+
+WRITE_TIMEOUT_S = 10.0  # give up waiting for write_done/write_failed after this long
+READ_TIMEOUT_S = 10.0  # give up waiting for a one-shot read() reply after this long
 
 
 def _quantity_property(quantity: Quantity) -> property:
@@ -49,6 +52,7 @@ class Controller(QObject):
     write_failed = Signal(str, str)            # ← thread.write_failed: (name, message), the device is still open
     action_done = Signal(str, str, object)     # ← thread.action_done: (name, action name, result or None)
     action_failed = Signal(str, str, str)      # ← thread.action_failed: (name, action name, message)
+    read_failed = Signal(str, str)             # ← thread.read_failed, or a read() that timed out
     new_reading = Signal(str, object)          # ← a poll's reading: (name, data), also stored in the property
 
     def __init__(self, thread, settings, capabilities: Capabilities, parent: QObject | None = None):
@@ -60,16 +64,26 @@ class Controller(QObject):
         self._syncing_from_device = False  # True while applying a setting the plugin changed itself
         self._last_values: dict[str, object] = {}
         self._polled: dict[str, Subscription] = {}
+        # Outstanding requests, one QTimer per (kind, name): started when sent, stopped by whichever
+        # answer arrives first. Lives here, not in a GUI, so a script gets the same guarantee a widget
+        # does - on timeout, write_failed/read_failed fire same as a real rejection would.
+        self._timers: dict[tuple[str, str], QTimer] = {}
         self.write_requested.connect(thread.request_write)
+        self.write_requested.connect(self._start_write_timeout)
         self.action_requested.connect(thread.request_action)
         self.subscribe_requested.connect(thread.subscribe)
         self.unsubscribe_requested.connect(thread.unsubscribe)
         thread.hardware_status.connect(self._on_status)
         thread.error.connect(self.device_error)
         thread.write_done.connect(self.written)
+        thread.write_done.connect(self._stop_write_timeout)
         thread.write_failed.connect(self.write_failed)
+        thread.write_failed.connect(self._stop_write_timeout)
         thread.action_done.connect(self.action_done)
+        self.action_done.connect(self._on_action_done)
         thread.action_failed.connect(self.action_failed)
+        thread.read_failed.connect(self.read_failed)
+        thread.read_failed.connect(self._stop_read_timeout)
         thread.capabilities.connect(self._on_instance_capabilities)
         thread.settings_changed.connect(self._on_device_settings_changed)
 
@@ -93,7 +107,72 @@ class Controller(QObject):
         self._connected = connected
         if not connected:
             self._polled.clear()  # the thread released these subscriptions when it closed the device
+            for kind, name in list(self._timers):
+                self._stop_timeout(kind, name)
         self.device_status.emit(connected, info)
+
+    def _on_action_done(self, name: str, action_name: str, result: object) -> None:
+        """An ``interrupts=True`` action resolves whatever write was in flight too."""
+        quantity = self._quantity_named(name)
+        action = quantity.actions.get(action_name) if quantity is not None else None
+        if action is not None and action.interrupts:
+            self._stop_write_timeout(name)
+
+    def _quantity_named(self, name: str) -> Quantity | None:
+        """The declared quantity called *name*, looked up fresh (capabilities can be replaced)."""
+        for quantity in self.capabilities.measurements + self.capabilities.controls:
+            if quantity.name == name:
+                return quantity
+        return None
+
+    # ── Timeouts: one QTimer per (kind, name), started on request, stopped by whichever answer ──
+    #
+    # No lambda on the timeout connection: PyQt/PySide only auto-drops a connection once its
+    # receiver is destroyed when that receiver is a bound method connected directly - a lambda
+    # is just a generic callable to the binding, so it gets no such protection, and calling
+    # through one into an already-destroyed Controller is exactly how this used to crash. kind/
+    # name travel as Qt properties on the timer itself instead, read back via sender() in one
+    # plain bound-method slot.
+
+    def _start_timeout(self, kind: str, name: str, seconds: float) -> None:
+        self._stop_timeout(kind, name)  # a new request replaces the wait, only the latest matters
+        timer = QTimer(self)
+        timer.setSingleShot(True)
+        timer.setInterval(int(seconds * 1000))
+        timer.setProperty('kind', kind)
+        timer.setProperty('name', name)
+        timer.timeout.connect(self._on_timeout)
+        self._timers[kind, name] = timer
+        timer.start()
+
+    def _stop_timeout(self, kind: str, name: str) -> None:
+        timer = self._timers.pop((kind, name), None)
+        if timer is not None:
+            timer.stop()
+            timer.deleteLater()
+
+    def _on_timeout(self) -> None:
+        timer = self.sender()
+        kind, name = timer.property('kind'), timer.property('name')
+        if (kind, name) not in self._timers:
+            return  # the answer, an interrupting action, or a disconnect already ended the wait
+        self._stop_timeout(kind, name)
+        if kind == 'write':
+            self.write_failed.emit(name, f'no response within {WRITE_TIMEOUT_S:.0f} s')
+        else:
+            self.read_failed.emit(name, f'no response within {READ_TIMEOUT_S:.0f} s')
+
+    def _start_write_timeout(self, name: str, _value: object = None) -> None:
+        self._start_timeout('write', name, WRITE_TIMEOUT_S)
+
+    def _stop_write_timeout(self, name: str, _value: object = None) -> None:
+        self._stop_timeout('write', name)
+
+    def _start_read_timeout(self, name: str) -> None:
+        self._start_timeout('read', name, READ_TIMEOUT_S)
+
+    def _stop_read_timeout(self, name: str, _value: object = None) -> None:
+        self._stop_timeout('read', name)
 
     def _require_open(self, name: str) -> None:
         if not self._connected:
@@ -140,8 +219,14 @@ class Controller(QObject):
     def read(self, name: str, on_value) -> Subscription:
         """Read *name* once, asynchronously: *on_value(data)* is called when the reading arrives."""
         self._require_open(name)
+        self._start_read_timeout(name)
         sub = Subscription(name, None)
-        sub.data_ready.connect(lambda data, is_temp, t: (sub.acknowledge(), on_value(data)))
+
+        def _on_value(data):
+            self._stop_read_timeout(name)
+            on_value(data)
+
+        sub.data_ready.connect(lambda data, is_temp, t: (sub.acknowledge(), _on_value(data)))
         self.subscribe_requested.emit(sub)
         return sub
 
@@ -167,10 +252,12 @@ class Controller(QObject):
         return result['value']
 
     def close(self) -> None:
-        """Stop every poll."""
+        """Stop every poll and any outstanding write/read-timeout wait."""
         for sub in self._polled.values():
             self.unsubscribe_requested.emit(sub)
         self._polled.clear()
+        for kind, name in list(self._timers):
+            self._stop_timeout(kind, name)
 
     def _on_reading(self, name: str, data: object, sub: Subscription) -> None:
         self._last_values[name] = data

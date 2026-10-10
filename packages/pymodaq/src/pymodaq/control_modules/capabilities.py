@@ -101,6 +101,9 @@ class Action:
     declaration would otherwise get for free (see :func:`toolbar_widgets`), and an action is never one
     of those - you only get it by declaring it, so "declared but buttonless" belongs here, not there.
 
+    ``interrupts=True`` means a successful run resolves any write still in flight for this control
+    (pending, settling, or unanswered) - not just one named ``'stop'``. ``stop=`` sets it automatically.
+
     ``actions={'home': callback}`` is shorthand for ``actions={'home': Action(callback)}``.
     """
 
@@ -109,6 +112,7 @@ class Action:
     label: str = ''
     checkable: bool = False
     button: bool = True
+    interrupts: bool = False
     opts: dict = field(default_factory=dict)
 
 
@@ -213,7 +217,8 @@ class Quantity:
         if stop is not None:
             if self.access is not Access.CONTROL:
                 raise ValueError('only a control can have a stop callback')
-            self.actions.setdefault('stop', Action(callback=stop, icon='stop_circle', label='Stop'))
+            self.actions.setdefault(
+                'stop', Action(callback=stop, icon='stop_circle', label='Stop', interrupts=True))
         # The name of another control whose own row this one's two values render into, as a checkable
         # action, instead of this control getting a row of its own (e.g. an axis's enable button, right
         # next to its move controls). Resolved against the sibling controls by Capabilities.
@@ -238,6 +243,9 @@ class Quantity:
             raise ValueError('a control cannot have both a set callback and a setting: pick one')
         if self.push and self.access is not Access.MEASUREMENT:
             raise ValueError('only a measurement can be pushed by the plugin')
+        if self.access is not Access.CONTROL and any(action.interrupts for action in self.actions.values()):
+            raise ValueError(
+                'only a control can have an interrupts=True action - a measurement has no write to interrupt')
         if self.epsilon < 0:
             raise ValueError(f'epsilon must be non-negative, got {self.epsilon}')
         unknown = (set(self.ui_add) | set(self.ui_remove)) - UI_WIDGETS
