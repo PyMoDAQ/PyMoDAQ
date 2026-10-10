@@ -201,24 +201,12 @@ class TestTeardownOnHardwareThread:
 
 class TestStoppingThreads:
 
-    class _FakeQThread:
-        def __init__(self):
-            self.finished = False
-
-        def isFinished(self):
-            return self.finished
-
-    def test_unfinished_thread_is_kept_until_it_finishes(self):
-        registry = HardwareRegistry()
-        qt_thread = self._FakeQThread()
-        registry._stopping.append((object(), qt_thread))
-        registry._reap_stopping()
-        assert len(registry._stopping) == 1
-        qt_thread.finished = True
-        registry._reap_stopping()
-        assert registry._stopping == []
-
-    def test_stalled_device_thread_is_held_until_it_really_finishes(self, qapp):
+    def test_a_stalled_thread_is_waited_for_unconditionally_not_abandoned(self, qapp):
+        """A 2 s wait timing out must never make detach() return while the thread might still be
+        running - that used to be handled by stashing a reference "to keep it alive", but that
+        reference died with the registry the moment its caller dropped it, same problem one step
+        removed (this is the real fix for the cross-process crash logged in
+        device_module_status.md). detach() must instead fall back to an unconditional wait."""
         import qtpy.QtCore as QtCore
 
         class _Plugin:
@@ -244,15 +232,22 @@ class TestStoppingThreads:
         QtCore.QMetaObject.invokeMethod(
             thread_obj, 'ini_hardware', QtCore.Qt.ConnectionType.BlockingQueuedConnection)
 
-        qt_thread.wait = lambda *args, **kwargs: False  # simulate a thread that ignores the stop request
+        real_wait = type(qt_thread).wait
+        calls = []
+
+        def fake_wait(*args):
+            calls.append(args)
+            if args:
+                return False  # the bounded 2000 ms call "times out"
+            return real_wait(qt_thread)  # the unconditional fallback call waits for real - no
+            # dangling QThread left behind once this test ends, unlike the mock it replaces.
+
+        qt_thread.wait = fake_wait
         registry.detach(key)
         del qt_thread.wait
 
-        assert len(registry._stopping) == 1
-        assert registry._stopping[0][1] is qt_thread
-        assert qt_thread.wait(5000)
-        registry._reap_stopping()
-        assert registry._stopping == []
+        assert calls == [(2000,), ()]  # bounded wait tried first, then an unconditional one - never abandoned
+        assert not qt_thread.isRunning()
 
 
 class TestShutdownHook:

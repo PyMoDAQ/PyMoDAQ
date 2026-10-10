@@ -7,6 +7,7 @@ the last one stops the thread.
 """
 from __future__ import annotations
 
+import gc
 import threading
 from dataclasses import dataclass
 from typing import Any, ClassVar
@@ -60,10 +61,6 @@ class HardwareRegistry:
     def __init__(self) -> None:
         self._entries: dict[HardwareKey, _Entry] = {}
         self._lock = threading.Lock()
-        # (HardwareThread, QThread) pairs that were asked to stop but had not finished yet.
-        # Holding them keeps a running QThread alive: destroying it aborts the process.
-        self._stopping: list[tuple[Any, Any]] = []
-        self._stopping_lock = threading.Lock()
 
     @classmethod
     def get(cls) -> HardwareRegistry:
@@ -137,7 +134,14 @@ class HardwareRegistry:
 
         The plugin is created later, by ``ini_hardware``, so the caller can connect signals first.
         Tests override this method to inject a double.
+
+        ``gc.collect()`` runs first, deliberately: starting a QThread while Python's cyclic GC
+        happens to sweep a leftover, thread-affinitized QTimer/QThread from some earlier, unrelated
+        device - its own cleanup already correct, just not yet collected - was found to crash
+        (reproduced on Linux/PySide6; see device_module_status.md). Collecting first, on this
+        thread, before a new one starts, keeps that collection from ever racing a thread's startup.
         """
+        gc.collect()
         thread_obj = HardwareThread(plugin_class, params_state)
         qt_thread = QtCore.QThread()
         thread_obj.moveToThread(qt_thread)
@@ -145,19 +149,28 @@ class HardwareRegistry:
         qt_thread.start()
         return thread_obj
 
-    def _reap_stopping(self) -> None:
-        """Forget stopping threads that have finished; their wrappers can now be garbage-collected."""
-        with self._stopping_lock:
-            self._stopping = [(t, q) for t, q in self._stopping if not q.isFinished()]
-
     def _teardown(self, entry: _Entry) -> None:
         """Stop the hardware thread of *entry*. Called without the registry lock held.
 
-        Hardware is closed on the hardware thread, through a blocking queued call. A thread that does
-        not stop within 2 s is kept referenced until it finishes. A thread whose QThread has already
-        stopped has no event loop left to run the close, so it is skipped.
+        Hardware is closed on the hardware thread, through a blocking queued call, then the
+        QThread is asked to quit and *unconditionally* waited for - never just for up to some
+        bound and then given up on. Returning while it might still be running would leave its
+        QObject/QTimer children affinitized to a thread nothing then confirms is dead: garbage
+        collected at some later, unrelated moment, from whatever thread that GC pass happens to
+        run on - exactly what Qt's own cross-thread-deletion guards exist to catch (this used to
+        be handled by stashing the pair in a list "to keep it referenced", but that list dies
+        with this registry the moment the caller drops it, same problem one step removed). A
+        thread whose QThread has already stopped has no event loop left to run the close, so it
+        is skipped.
+
+        A move-back-to-the-main-thread fix was tried here (and inside close_hardware) and
+        reverted: moveToThread() must be called from the object's own current thread, so it has
+        to happen from inside close_hardware - but changing self's own thread affinity from
+        within a slot that is itself running via BlockingQueuedConnection corrupts Qt's own
+        return-to-caller bookkeeping for that call, breaking later, unrelated
+        QMetaObject.invokeMethod() calls (confirmed: this regressed PyQt6, previously 100%
+        reliable, to a different fatal crash). See device_module_status.md.
         """
-        self._reap_stopping()
         entry.controller.close()
         thread_obj = entry.thread
         qt_thread = getattr(thread_obj, 'parent_qt_thread', None)
@@ -170,6 +183,5 @@ class HardwareRegistry:
             thread_obj, 'close_hardware', QtCore.Qt.ConnectionType.BlockingQueuedConnection)
         qt_thread.quit()
         if not qt_thread.wait(2000):
-            logger.warning('Hardware thread did not stop within 2 s; it is released once it finishes')
-            with self._stopping_lock:
-                self._stopping.append((thread_obj, qt_thread))
+            logger.warning('Hardware thread taking longer than 2 s to stop; waiting for it to finish')
+            qt_thread.wait()

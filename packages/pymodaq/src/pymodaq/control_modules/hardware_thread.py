@@ -372,6 +372,13 @@ class HardwareThread(QObject):
         timer = self._timers.pop(period_ms, None)
         if timer is not None:
             timer.stop()
+            # The lambda above closes over self, so self -> _timers -> timer -> (connection) ->
+            # lambda -> self is a genuine reference cycle: only Python's cyclic GC can free it,
+            # at an unpredictable later point, possibly after this thread has already stopped -
+            # exactly what QTimer's own cross-thread-deletion guard warns about. Disconnecting
+            # breaks the cycle synchronously, right here, on this timer's own thread.
+            timer.timeout.disconnect()
+            timer.deleteLater()
 
     def _on_period_tick(self, period_ms: float) -> None:
         """One read for every channel subscribed at *period_ms*, then schedule the next tick.
@@ -423,6 +430,8 @@ class HardwareThread(QObject):
     def _release_all_subscriptions(self) -> None:
         for timer in self._timers.values():
             timer.stop()
+            timer.timeout.disconnect()  # breaks the self-referencing cycle - see _drop_timer
+            timer.deleteLater()
         self._timers.clear()
         subs = self._subscriptions()
         self._subscribers.clear()
