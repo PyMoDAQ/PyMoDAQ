@@ -692,6 +692,13 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         if not connected:  # a settle watch reads the device, which closed from under it
             for name in list(self._settle_timers):
                 self._stop_settle_watch(name)
+            # Any write, settle or one-shot read in flight when the device dropped has no watcher
+            # left to ever confirm or fail it - unlike _grabbing, which _on_status(True) below
+            # restarts itself, nothing else clears these, so a reconnected row would otherwise show
+            # pending/rejected forever.
+            self._pending.clear()
+            self._failed.clear()
+            self._reading.clear()
         for name in self._leds:
             self._refresh_led(name)
         ini = self.get_action('ini')

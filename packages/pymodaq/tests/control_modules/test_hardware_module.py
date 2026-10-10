@@ -558,6 +558,28 @@ class TestSettle:
         assert 'z' not in widget._settle_timers
         widget.release()
 
+    def test_a_pending_settle_does_not_survive_a_disconnect(self, registry, qtbot):
+        # Found while writing device_module_connections.md: a write/settle in flight when the device
+        # drops used to stay pending/rejected forever, even after reconnecting, since nothing was left
+        # to ever confirm or fail it.
+        widget = HardwareModule(HardwareKey(hardware_class=SettlingStage, controller_id=16),
+                                SettlingStage, registry=registry)
+        qtbot.addWidget(widget)
+        widget.initialize()
+        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        spin = widget._value_widgets['z']
+        spin.setValue(20.0)
+        spin.editingFinished.emit()
+        qtbot.waitUntil(lambda: 'z' in widget._pending, timeout=2000)  # pending, readback hasn't moved
+        widget.controller.thread.close_hardware()
+        qtbot.waitUntil(lambda: not widget.controller.connected, timeout=2000)
+        assert 'z' not in widget._pending
+        assert 'z' not in widget._failed
+        widget.controller.thread.ini_hardware()
+        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        assert widget._led_color('z').name() == _colors().green.name()  # idle again, not stuck
+        widget.release()
+
 
 class StoppableAxis(Camera):
     z = control(units='mm', lo=0, hi=50, stop=lambda plugin: plugin.stop_calls.append(True))
