@@ -7,7 +7,7 @@ from qtpy import QtWidgets
 
 from qtpy.QtCore import Qt
 
-from pymodaq.control_modules import hardware_module
+from pymodaq.control_modules import controller
 from pymodaq.control_modules.capabilities import Action, control, measurement
 from pymodaq.control_modules.hardware_module import HardwareModule, SLIDER_WIDTH, _colors
 from pymodaq.control_modules.hardware_registry import HardwareKey, HardwareRegistry
@@ -583,19 +583,20 @@ class TestSettle:
 
 
 class TestWriteTimeout:
-    """A write with no readback/epsilon has nothing to settle towards, but it still needs a
-    deadline: write_done/write_failed getting lost must not leave the row pending forever."""
+    """The write-timeout mechanism itself lives in Controller (test_controller.py), so a script
+    gets the same guarantee a widget does; this only checks the GUI reacts to it like any other
+    write_failed - no HardwareModule-specific handling needed."""
 
-    def test_a_write_with_no_response_times_out(self, registry, qtbot, monkeypatch):
-        monkeypatch.setattr(hardware_module, 'WRITE_TIMEOUT_S', 0.05)
+    def test_a_write_with_no_response_turns_the_row_rejected(self, registry, qtbot, monkeypatch):
+        monkeypatch.setattr(controller, 'WRITE_TIMEOUT_S', 0.05)
         widget = HardwareModule(HardwareKey(hardware_class=Camera, controller_id=17), Camera, registry=registry)
         qtbot.addWidget(widget)
         widget.initialize()
         qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
-        # Simulate write_done/write_failed never reaching the module - not the device refusing,
-        # the module simply never hearing back, which is the gap this timeout closes.
-        widget.controller.written.disconnect(widget._on_written)
-        widget.controller.write_failed.disconnect(widget._on_write_failed)
+        # Simulate the answer never reaching the Controller at all, not the device refusing.
+        # Disconnects Controller's own outgoing signal, not one owned by the hardware-thread
+        # object, from the wrong thread.
+        widget.controller.write_requested.disconnect(widget.controller.thread.request_write)
         spin = widget._value_widgets['exposure']
         spin.setValue(20.0)
         spin.editingFinished.emit()
@@ -604,20 +605,30 @@ class TestWriteTimeout:
         assert widget._led_color('exposure').name() == _colors().red.name()
         widget.release()
 
-    def test_a_timely_response_cancels_the_write_timeout(self, registry, qtbot, monkeypatch):
-        monkeypatch.setattr(hardware_module, 'WRITE_TIMEOUT_S', 0.05)
-        widget = HardwareModule(HardwareKey(hardware_class=Camera, controller_id=18), Camera, registry=registry)
-        qtbot.addWidget(widget)
-        widget.initialize()
-        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
-        spin = widget._value_widgets['exposure']
-        spin.setValue(20.0)
-        spin.editingFinished.emit()
-        qtbot.waitUntil(lambda: widget._led_color('exposure').name() == _colors().green.name(), timeout=2000)
-        qtbot.wait(150)  # well past the patched timeout - the already-cancelled timer must not fire late
-        assert widget._led_color('exposure').name() == _colors().green.name()
-        assert 'exposure' not in widget._failed
-        widget.release()
+
+class TestReadFailure:
+
+    def test_a_read_failure_turns_the_row_rejected(self, module, qtbot):
+        module.initialize()
+        qtbot.waitUntil(lambda: module.controller.connected, timeout=2000)
+        plugin = module.controller.thread._plugin
+        plugin.read = lambda names=None, fresh=True: (_ for _ in ()).throw(RuntimeError('bus error'))
+        module.get_action('temperature_read').trigger()
+        qtbot.waitUntil(lambda: 'temperature' in module._failed, timeout=2000)
+        assert module._led_color('temperature').name() == _colors().red.name()
+
+    def test_a_recovered_read_clears_the_rejected_state(self, module, qtbot):
+        module.initialize()
+        qtbot.waitUntil(lambda: module.controller.connected, timeout=2000)
+        plugin = module.controller.thread._plugin
+        good_read = plugin.read
+        plugin.read = lambda names=None, fresh=True: (_ for _ in ()).throw(RuntimeError('bus error'))
+        module.get_action('temperature_read').trigger()
+        qtbot.waitUntil(lambda: 'temperature' in module._failed, timeout=2000)
+        plugin.read = good_read
+        module.get_action('temperature_read').trigger()
+        qtbot.waitUntil(lambda: 'temperature' not in module._failed, timeout=2000)
+        assert module._led_color('temperature').name() == _colors().green.name()
 
 
 class StoppableAxis(Camera):
