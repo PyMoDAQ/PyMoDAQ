@@ -11,6 +11,7 @@ from pymodaq_gui.utils import CustomApp, DockArea
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 from pymodaq.utils.h5modules.module_saving import ModuleSaver
 from pymodaq_utils.utils import ThreadCommand
+from pymodaq_gui.utils.styling import ThemeColor
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -167,9 +168,9 @@ class CustomExt(CustomApp):
             #                 toolbar='dashboard')
             self.add_action(DashBoardToolbarActions.SHOW, 'Show Dashboard', 'visibility',
                             'Show/Hide the Dashboard window', checkable=True,
-                            icon_color=self.get_theme().green,
+                            icon_color=ThemeColor.GREEN,
                             icon_checked='visibility_off',
-                            icon_checked_color=self.get_theme().red,
+                            icon_checked_color=ThemeColor.RED,
                             toolbar='dashboard')
             self.get_toolbar('dashboard').addSeparator()
             self.connect_action(DashBoardToolbarActions.SHOW, self.show_dashboard)

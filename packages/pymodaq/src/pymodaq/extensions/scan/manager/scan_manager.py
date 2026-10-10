@@ -27,6 +27,7 @@ from pymodaq_gui.managers.settings.settings_manager import SettingsManager
 
 from pymodaq.utils.scanner.scanner import Scanner
 from pymodaq_utils.utils import read_binary_and_deserialize
+from pymodaq_gui.utils.styling import ThemeColor
 
 if TYPE_CHECKING:
     from pymodaq.extensions import DAQScan
@@ -229,8 +230,8 @@ class ScanManager(SettingsManager):
         self.add_action('start_scan', 'Start Scan', 'motion_play',
                         tip="Start the scan after all settings have been applied.",
                         auto_menu=False, toolbar='after_settings', checkable=True,
-                        icon_color=self.get_theme().red,
-                        icon_checked_color=self.get_theme().green)
+                        icon_color=ThemeColor.RED,
+                        icon_checked_color=ThemeColor.GREEN)
         self.settings_to_apply.set_title('(i) Settings to Apply:')
         self.settings_to_apply.insert_widget(
             WidgetWithLabelTitle('(ii) StartScan...or not',

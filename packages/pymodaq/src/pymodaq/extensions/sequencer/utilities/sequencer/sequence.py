@@ -19,6 +19,7 @@ from pymodaq_utils.config import Config, GlobalConfig
 from pymodaq_utils.logger import set_logger, get_module_name
 
 from pymodaq.extensions.utils import CustomExt
+from pymodaq_gui.utils.styling import ThemeColor
 
 logger = set_logger(get_module_name(__file__))
 
@@ -120,13 +121,13 @@ class Sequence(CustomExt):
                         tip='Set the name of this Sequence')
         self._toolbar.addSeparator()
         self.add_action('start', 'Start', 'motion_play', "Start the Sequence",
-                        icon_color=self.get_theme().green, toolbar=self.toolbar)
+                        icon_color=ThemeColor.GREEN, toolbar=self.toolbar)
         self.add_action('stop', 'Stop', 'stop_circle', "Stop the Sequence",
-                        icon_color=self.get_theme().red, toolbar=self.toolbar)
+                        icon_color=ThemeColor.RED, toolbar=self.toolbar)
         self.add_action('pause', 'Pause', 'pause_circle',
                         tip="Pause/resume the sequence",
                         checkable=True, toolbar=self.toolbar,
-                        icon_checked_color=self.get_theme().orange)
+                        icon_checked_color=ThemeColor.ORANGE)
         self._toolbar.addSeparator()
 
     def connect_things(self):

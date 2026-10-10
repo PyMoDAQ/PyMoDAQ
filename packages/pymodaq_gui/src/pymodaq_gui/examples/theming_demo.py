@@ -6,49 +6,43 @@ Run this file directly::
 
     python theming_demo.py
 
-One theme control drives two different rebuild strategies
------------------------------------------------------------
+Switching theme at runtime
+--------------------------
 Switching theme (combobox, or the Play button to auto-cycle through every
-``qt_themes`` theme) calls a single ``_refresh_colors()`` that rebuilds
-*everything* color-dependent in this window from scratch:
+``qt_themes`` theme) calls ``pymodaq_gui.qt_utils.apply_theme(name)``, which
+sets the palette and style, keeps PyMoDAQ's dark-theme checkbox rule and
+emits ``theme_signaller.theme_changed``. Then:
 
+- the toolbar, built *once* with an ``ActionManager``, re-colors itself.
+  ``MaterialIcon`` (pymodaq_gui.resources.material_icons) bakes the palette
+  color into a pixmap at construction (see ``SVGIcon._init_colors``), so each
+  action keeps what its icon is made of and rebuilds it with the current theme
+  colors on ``theme_changed`` (``ActionManager.refresh_icons()`` does it on
+  demand). Colors given by name (``ThemeColor.GREEN``, ``'green'``,
+  ``StatusPalette.role('running')``) follow the new theme; literal colors
+  (``'#3f8f7f'``) are kept, as is any color of an action created with
+  ``follow_theme=False``;
 - the status-color reference table and the live ``MultistateLED`` demo
-  (community-proposed six-state convention, see ``utils/status_palette.py``);
-- a ``QToolBar`` of ``MaterialIcon`` actions.
-
-Rebuilding from scratch is required for the icons specifically:
-``MaterialIcon`` (pymodaq_gui.resources.material_icons) bakes the active
-``QApplication.palette()`` color into a rasterized QPixmap exactly once, at
-construction time (see ``SVGIcon._init_colors``). There is no
-``paletteChanged`` hook, so simply calling ``qt_themes.set_theme(...)`` on an
-already-built toolbar leaves every icon in its old color — only icons built
-*after* the switch pick up the new palette. That is the same change a real
-DAQ_Move / DAQ_Viewer toolbar would need to retheme live.
+  (community-proposed six-state convention, see ``utils/status_palette.py``)
+  are plain widgets with colors computed once, so they are rebuilt.
 
 The toolbar also shows two independent, non-animated uses of icon color:
 
 - a *momentary* action (Refresh / Save / Stop) tinted from the same
   six-state ``StatusPalette`` convention as the LEDs above it;
-- a *checkable* action (Pause / Grid / Zoom) whose ``MaterialIcon`` carries
-  two distinct pixmaps, one per ``QIcon.State`` (On/Off) — the same
-  mechanism ``action_manager.QAction`` uses for its own
-  ``icon_checked`` / ``icon_unchecked`` pair. Qt swaps between them on its
-  own from ``QAction.isChecked()``; click a toggle button to see it.
-
-  Note for anyone reusing this pattern: ``QIcon`` is a copy-on-write value
-  type, so ``QAction(icon, ...)`` takes its own copy at construction time.
-  Both icon states must be set on the icon *before* it is handed to the
-  QAction -- mutating it afterwards detaches and lands only on the local
-  reference, never reaching the action.
+- a *checkable* action (Pause / Grid / Zoom) whose icon carries two distinct
+  pixmaps, one per ``QIcon.State`` (On/Off), from ``icon_checked_color``.
+  Qt swaps between them on its own from ``QAction.isChecked()``; click a
+  toggle button to see it.
 """
 
 import sys
 
 import qt_themes
 from qtpy import QtCore, QtGui, QtWidgets
-from qtpy.QtWidgets import QAction
 
-from pymodaq_gui.resources.material_icons import MaterialIcon
+from pymodaq_gui.managers.action_manager import ActionManager
+from pymodaq_gui.qt_utils import apply_theme
 from pymodaq_gui.utils.widgets.multistate_led import MultistateLED
 from pymodaq_gui.utils.status_palette import StatusPalette, _DEFINITIONS
 
@@ -103,15 +97,16 @@ _LOG_LEVEL = {
 #    pixmaps, one per QIcon.State (On/Off) -- exactly what action_manager.py's
 #    own QAction does for icon_checked/icon_unchecked. Qt swaps between them
 #    natively based on QAction.isChecked(); no timer, no manual repaint.
+# Theme colors follow theme changes; _ACCENT_ON, a literal, is kept.
 _ACCENT_ON = '#3f8f7f'  # generic "toggled on" tint for plain UI toggles (not a device state)
 _STATUS_NAMES = {'off', 'idle', 'running', 'warning', 'error', 'critical'}
 
 
-def _resolve_checked_color(spec: str) -> QtGui.QColor:
+def _resolve_checked_color(spec: str) -> str:
     """A checked_color entry is either a StatusPalette state name or a literal hex."""
     if spec in _STATUS_NAMES:
-        return StatusPalette.color(spec)
-    return QtGui.QColor(spec)
+        return StatusPalette.role(spec)  # a theme colour name: follows the theme
+    return spec
 
 
 _TOOLBAR_ACTIONS = [
@@ -137,10 +132,9 @@ class ThemingDemo(QtWidgets.QWidget):
         super().__init__(parent)
         self.setWindowTitle('PyMoDAQ — Theming Demo (status colors + icons)')
         self._content_widget = None
-        self._toolbar = None
-        self._actions = []
         self._build_skeleton()
-        self._refresh_colors()
+        self._build_toolbar()
+        self._rebuild_status_widgets()
 
     # ── Fixed structure (built once) ────────────────────────────────────────
 
@@ -160,9 +154,8 @@ class ThemingDemo(QtWidgets.QWidget):
 
         subtitle = QtWidgets.QLabel(
             'A shared six-state status vocabulary for LEDs, icons, and status bars,\n'
-            'plus a MaterialIcon toolbar rebuilt from scratch on every theme change --\n'
-            'colors are baked into a pixmap once, at construction, so repainting them\n'
-            'in place is not an option. Use the combobox below to switch themes live.'
+            'plus a MaterialIcon toolbar built once with an ActionManager: its icons re-color\n'
+            'themselves on every theme change. Use the combobox below to switch themes live.'
         )
         subtitle.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         subtitle.setWordWrap(True)
@@ -213,19 +206,47 @@ class ThemingDemo(QtWidgets.QWidget):
 
         self._root.addWidget(_hline())
 
-        # State table + LED demo + toolbar + snippet easily exceed a
+        self._toolbar_layout = QtWidgets.QVBoxLayout()
+        self._root.addLayout(self._toolbar_layout)
+
+        # State table + LED demo + snippet easily exceed a
         # reasonable fixed window height once the table rows are sized
-        # correctly (see _refresh_colors); scroll rather than let anything
+        # correctly (see _rebuild_status_widgets); scroll rather than let anything
         # after the table get squeezed into whatever space is left.
         self._scroll_area = QtWidgets.QScrollArea()
         self._scroll_area.setWidgetResizable(True)
         self._scroll_area.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
         self._root.addWidget(self._scroll_area, 1)
 
-    # ── Color-dependent content (rebuilt on every theme change) ─────────────
+    def _build_toolbar(self):
+        """Material icon toolbar, built once: its actions re-color themselves on theme change."""
+        toolbar_box = QtWidgets.QGroupBox(
+            'Material icon toolbar — status-tinted + checkable actions'
+        )
+        toolbar_layout = QtWidgets.QVBoxLayout(toolbar_box)
 
-    def _refresh_colors(self):
-        """Tear down and rebuild every color-dependent widget: LEDs and icons alike."""
+        toolbar = QtWidgets.QToolBar()
+        toolbar.setIconSize(QtCore.QSize(28, 28))
+        toolbar.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
+        self._action_manager = ActionManager(toolbar=toolbar)
+
+        for (icon_name, label, tooltip, status_key, checkable,
+             checked_color, start_checked) in _TOOLBAR_ACTIONS:
+            # Theme colours by name (StatusPalette.role -> ThemeColor): they follow the theme
+            self._action_manager.add_action(
+                icon_name, label, icon_name, tip=tooltip,
+                checkable=checkable, checked=start_checked,
+                icon_color=StatusPalette.role(status_key) if status_key is not None else None,
+                icon_checked_color=_resolve_checked_color(checked_color) if checkable else None,
+            )
+
+        toolbar_layout.addWidget(toolbar)
+        self._toolbar_layout.addWidget(toolbar_box)
+
+    # ── Color-dependent widgets (rebuilt on every theme change) ─────────────
+
+    def _rebuild_status_widgets(self):
+        """Tear down and rebuild the status table and LED demo, whose colors are computed once."""
         # QScrollArea.setWidget() below takes ownership of the new widget and
         # deletes whatever widget it previously held -- no manual teardown needed.
         self._content_widget = QtWidgets.QWidget()
@@ -328,68 +349,28 @@ class ThemingDemo(QtWidgets.QWidget):
 
         layout.addWidget(_hline())
 
-        # ── Material icon toolbar ───────────────────────────────────────
-        toolbar_box = QtWidgets.QGroupBox(
-            'Material icon toolbar — status-tinted + checkable actions'
-        )
-        toolbar_layout = QtWidgets.QVBoxLayout(toolbar_box)
-
-        self._toolbar = QtWidgets.QToolBar()
-        self._toolbar.setIconSize(QtCore.QSize(28, 28))
-        self._toolbar.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
-        self._actions = []
-
-        for (icon_name, label, tooltip, status_key, checkable,
-             checked_color, start_checked) in _TOOLBAR_ACTIONS:
-            # Only the 'rounded' style is bundled with pymodaq_gui (see resources/icons.toml)
-            icon = MaterialIcon(icon_name, style=MaterialIcon.ROUNDED)
-
-            if status_key is not None:
-                # Re-resolved against the *current* theme on every rebuild, same
-                # as StatusPalette.as_states() does for the LED table above.
-                icon.set_color(StatusPalette.color(status_key))
-
-            if checkable:
-                # Both states must be set on `icon` BEFORE it is handed to
-                # QAction() below -- see the module docstring's note on
-                # QIcon's copy-on-write semantics.
-                icon.set_color(_resolve_checked_color(checked_color), state=QtGui.QIcon.State.On)
-
-            action = QAction(icon, label, self._toolbar)
-            action.setToolTip(tooltip)
-
-            if checkable:
-                action.setCheckable(True)
-                action.setChecked(start_checked)
-
-            self._toolbar.addAction(action)
-            self._actions.append(action)
-
-        toolbar_layout.addWidget(self._toolbar)
-        layout.addWidget(toolbar_box)
-
-        layout.addWidget(_hline())
-
         # ── Usage snippet ───────────────────────────────────────────────
         layout.addWidget(QtWidgets.QLabel('<b>Usage</b>'))
 
         snippet = QtWidgets.QPlainTextEdit()
         snippet.setReadOnly(True)
-        snippet.setMaximumHeight(140)
+        snippet.setMaximumHeight(200)
         snippet.setFont(QtGui.QFont('monospace'))
         snippet.setPlainText(
             'from pymodaq_gui.utils.status_palette import StatusPalette\n'
             'from pymodaq_gui.utils.widgets.multistate_led import MultistateLED\n'
-            'from pymodaq_gui.resources.material_icons import MaterialIcon\n\n'
+            'from pymodaq_gui.managers.action_manager import ActionManager\n'
+            'from pymodaq_gui.qt_utils import apply_theme\n\n'
             '# LED, in a widget\n'
             'led = MultistateLED(states=StatusPalette.as_states())\n'
             "led.set_state('running')\n\n"
             '# LED, in a parameter tree\n'
             "params = [{'name': 'status', 'type': 'action_multistate_led',\n"
             "           'value': 'off', 'states': StatusPalette.as_states()}]\n\n"
-            "# Icon tinted with a status color\n"
-            "icon = MaterialIcon('refresh', style=MaterialIcon.ROUNDED)\n"
-            "icon.set_color(StatusPalette.color('running'))"
+            "# Action tinted with a status color, following theme changes\n"
+            "manager.add_action('refresh', 'Refresh', 'refresh',\n"
+            "                   icon_color=StatusPalette.role('running'))\n"
+            "apply_theme('nord')  # icons follow, no rebuild needed"
         )
         layout.addWidget(snippet)
 
@@ -402,11 +383,9 @@ class ThemingDemo(QtWidgets.QWidget):
     # ── Slots ─────────────────────────────────────────────────────────────
 
     def _on_theme_changed(self, name: str):
-        try:
-            qt_themes.set_theme(name)
-        except Exception:
-            pass
-        self._refresh_colors()
+        if apply_theme(name) is None:
+            return
+        self._rebuild_status_widgets()
 
     def _on_play_toggled(self, checked: bool):
         if checked:

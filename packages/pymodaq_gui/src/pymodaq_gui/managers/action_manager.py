@@ -4,11 +4,13 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import Callable, Iterable as IterableType, Union, OrderedDict as OrderedDictType
 
+import qt_themes
 from multipledispatch import dispatch
 from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtWidgets import QAction as QtQAction
 
-from pymodaq_gui.utils.styling import create_icon
+from pymodaq_gui.qt_utils import apply_theme, theme_signaller
+from pymodaq_gui.utils.styling import create_icon, create_color, as_theme_role, get_current_theme
 from pymodaq_utils.utils import find_keys_from_val
 from pymodaq_utils.warnings import deprecation_msg
 from pymodaq_utils.config import GlobalConfig as Config
@@ -62,6 +64,35 @@ class ToolbarStyleChecks(QtCore.QObject):
             action.setChecked(TOOLBAR_BUTTON_STYLES[name] == style)
 
 
+class ThemeChecks(QtCore.QObject):
+    """Keeps the checkable theme actions in sync, lives as long as the menu it is parented to"""
+
+    def __init__(self, actions: dict[str, QtGui.QAction], themes: dict[str, qt_themes.Theme],
+                 parent: QtCore.QObject):
+        super().__init__(parent)
+        self._actions = actions
+        self._themes = themes
+        theme_signaller.theme_changed.connect(self.sync)
+
+    @QtCore.Slot(object)
+    def sync(self, theme: qt_themes.Theme):
+        for name, action in self._actions.items():
+            action.setChecked(self._themes[name] == theme)
+
+
+class MenuIconRefresher(QtCore.QObject):
+    """Rebuilds a menu icon on theme change, lives as long as the menu it is parented to"""
+
+    def __init__(self, icon_name: Union[str, Path], parent: QtWidgets.QMenu):
+        super().__init__(parent)
+        self._icon_name = icon_name
+        theme_signaller.theme_changed.connect(self.refresh)
+
+    @QtCore.Slot(object)
+    def refresh(self, _theme=None):
+        self.parent().setIcon(create_icon(self._icon_name))
+
+
 resource_folder = Path(__file__).parent.parent.joinpath('resources')
 QtCore.QDir.addSearchPath('icons', str(resource_folder.joinpath('icon_library')))
 
@@ -80,26 +111,68 @@ class QAction(QtQAction):
                  flip_v: bool = False,
                  rotate: int = 0,
                  fill: bool = None,
+                 follow_theme: bool = True,
                  ):
-
+        super().__init__(name)
+        # What the icon is made of, kept so it can be rebuilt (refresh_icon) when the
+        # theme changes: icons bake their colours at construction. With follow_theme,
+        # theme colours are kept by name (see as_theme_role); otherwise they are
+        # resolved now and kept as fixed colours.
+        self._icon_spec = None
+        # Only icons given by name/path are rebuilt: an icon instance keeps the
+        # palette it was built under, rebuilding it would not follow the theme.
+        self._icon_rebuildable = isinstance(icon_unchecked, (str, Path))
+        self._icon_set_explicitly = False
+        self._checked_icon_connected = False
         if icon_unchecked is not None:
-            self.icon_unchecked = create_icon(icon_unchecked, icon_color, icon_checked_color,
-                                              flip_h=flip_h, flip_v=flip_v, rotate=rotate,
-                                              fill=fill)
-            super().__init__(self.icon_unchecked, name)
-        else:
-            super().__init__(name)
+            keep = as_theme_role if follow_theme else create_color
+            self._icon_spec = dict(icon_unchecked=icon_unchecked, icon_checked=icon_checked,
+                                   icon_color=keep(icon_color),
+                                   icon_checked_color=keep(icon_checked_color),
+                                   flip_h=flip_h, flip_v=flip_v, rotate=rotate, fill=fill)
+            self._build_icons()
+            self.setIcon(self.icon_unchecked)
+            if self._icon_rebuildable:
+                # follow theme changes (apply_theme), whichever window triggers them;
+                # a slot of this QObject, so Qt disconnects it when the action is deleted
+                theme_signaller.theme_changed.connect(self.refresh_icon)
 
-        if icon_unchecked is not None and icon_checked is not None and not isinstance(icon_checked, QtGui.QIcon):
-            icon_checked = create_icon(icon_checked, icon_checked_color, icon_checked_color,
-                                       flip_h=flip_h, flip_v=flip_v, rotate=rotate,
-                                       fill=fill)
-            if isinstance(icon_unchecked, MaterialIcon):
+    def _build_icons(self):
+        spec = self._icon_spec
+        transforms = dict(flip_h=spec['flip_h'], flip_v=spec['flip_v'], rotate=spec['rotate'],
+                          fill=spec['fill'])
+        self.icon_unchecked = create_icon(spec['icon_unchecked'], spec['icon_color'],
+                                          spec['icon_checked_color'], **transforms)
+        icon_checked = spec['icon_checked']
+        if icon_checked is not None and not isinstance(icon_checked, QtGui.QIcon):
+            icon_checked = create_icon(icon_checked, spec['icon_checked_color'],
+                                       spec['icon_checked_color'], **transforms)
+            if isinstance(spec['icon_unchecked'], MaterialIcon):
                 self.icon_unchecked.set_icon(icon_checked, state=QtGui.QIcon.State.On)
             else:
                 self.icon_checked = icon_checked
-                if icon_checked is not None:
+                if not self._checked_icon_connected:
                     self.triggered.connect(lambda: self.set_icon())
+                    self._checked_icon_connected = True
+
+    @QtCore.Slot()
+    @QtCore.Slot(object)
+    def refresh_icon(self, _theme=None):
+        """Rebuild the icon(s) with the current theme colours. Called automatically
+        when :func:`pymodaq_gui.qt_utils.apply_theme` changes the theme.
+
+        No-op for actions created without icon or with an icon instance (QIcon,
+        MaterialIcon) rather than a name, and for actions whose icon was then replaced
+        with ``set_icon(icon)``: their owner manages that icon (e.g. a state colour),
+        rebuilding the original one would undo it.
+        """
+        if self._icon_spec is None or not self._icon_rebuildable or self._icon_set_explicitly:
+            return
+        self._build_icons()
+        if self.isChecked() and getattr(self, 'icon_checked', None) is not None:
+            self.setIcon(self.icon_checked)
+        else:
+            self.setIcon(self.icon_unchecked)
 
     def click(self):
         deprecation_msg("click for PyMoDAQ's QAction is deprecated, use *trigger*",
@@ -122,6 +195,13 @@ class QAction(QtQAction):
                 icon_name = self.icon_checked
             else:
                 icon_name = self.icon_unchecked
+            if icon_color is None:
+                # Already built with their colours: passing them through create_icon
+                # again would reset a MaterialIcon to the default palette colour.
+                self.setIcon(icon_name)
+                return
+        else:
+            self._icon_set_explicitly = True
         self.setIcon(create_icon(icon_name, icon_color))
 
     def __repr__(self):
@@ -179,6 +259,7 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
               action: QtQAction | QtWidgets.QWidgetAction = None,
               fill: bool = None,
               rotate: int = 0,
+              follow_theme: bool = True,
               ):
     """Create a new action and add it eventually to a toolbar and a menu
 
@@ -213,10 +294,11 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
         QtGui.QIcon: the instance of a QIcon element
         ThemeIcon enum: the value of QtGui.QIcon.ThemeIcon (requires Qt>=6.7)
         Optional, if set, will be the icon when the action is checked (checkable will be set to True)
-    icon_color: QtGui.QColor / str
-        color to be applied (if possible) to the unchecked icon
-    icon_checked_color: QtGui.QColor / str
-        color to be applied to the checked icon (if any)
+    icon_color: ThemeColor / str / QtGui.QColor
+        color to be applied (if possible) to the unchecked icon. Give theme colours by
+        name (ThemeColor.GREEN or 'green') so they follow theme changes
+    icon_checked_color: ThemeColor / str / QtGui.QColor
+        color to be applied to the checked icon (if any), same as icon_color
     flip_h: bool
         mirror the icon horizontally (left ↔ right)
     flip_v: bool
@@ -231,6 +313,10 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
         Fill or not the icon, if None left to the user configuration
     rotate: int, optional
         Rotate the icon by this value in degree
+    follow_theme: bool
+        True (default): colours given as theme colours (:class:`~pymodaq_gui.utils.styling.ThemeColor`,
+        their names, or values resolved from the theme) follow theme changes. False: the
+        colours are resolved once, here, and kept as they are
     """
     if action is None:
         if icon_name is None or icon_name == '':
@@ -238,7 +324,8 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
         else:
             action = QAction(icon_name, name, icon_checked=icon_checked,
                              icon_color=icon_color, icon_checked_color=icon_checked_color,
-                             flip_h=flip_h, flip_v=flip_v, rotate=rotate, fill=fill)
+                             flip_h=flip_h, flip_v=flip_v, rotate=rotate, fill=fill,
+                             follow_theme=follow_theme)
 
     if slot is not None:
         action.connect_to(slot)
@@ -354,6 +441,7 @@ class ActionManager:
     def __init__(self, toolbar: QtWidgets.QToolBar = None, menu: QtWidgets.QMenu = None):
         self._actions: OrderedDictType[str, QAction] = OrderedDict([])
         self._menus: OrderedDictType[str, QtWidgets.QMenu] = OrderedDict([])
+        self._menu_icon_names: dict[str, Union[str, Path]] = {}
         self._toolbars: OrderedDictType[str, QtWidgets.QToolBar] = OrderedDict([])
 
         self._toolbar: QtWidgets.QToolBar = None
@@ -462,7 +550,8 @@ class ActionManager:
                    before: Union[str, 'QAction', WidgetActionProxy, None] = None,
                    action: QtQAction | QtWidgets.QWidgetAction = None,
                    fill: bool = None,
-                   rotate: int = 0
+                   rotate: int = 0,
+                   follow_theme: bool = True,
                    ):
         """Create a new action and add it to toolbar and menu
 
@@ -513,10 +602,11 @@ class ActionManager:
             QtGui.QIcon: the instance of a QIcon element
             ThemeIcon enum: the value of QtGui.QIcon.ThemeIcon (requires Qt>=6.7)
             Optional, if set, will be the icon when the action is checked
-        icon_color: QtGui.QColor / str
-            color to be applied (if possible) to the unchecked icon
-        icon_checked_color: QtGui.QColor / str
-            color to be applied to the checked icon (if any)
+        icon_color: ThemeColor / str / QtGui.QColor
+            color to be applied (if possible) to the unchecked icon. Give theme colours by
+            name (ThemeColor.GREEN or 'green') so they follow theme changes
+        icon_checked_color: ThemeColor / str / QtGui.QColor
+            color to be applied to the checked icon (if any), same as icon_color
         flip_h: bool
             mirror the icon horizontally (left ↔ right)
         flip_v: bool
@@ -531,6 +621,10 @@ class ActionManager:
             Fill or not the icon, if None left to the user configuration
         rotate: int, optional
             Rotate the icon by this value in degree
+        follow_theme: bool
+            True (default): colours given as theme colours (:class:`~pymodaq_gui.utils.styling.ThemeColor`,
+            their names, or values resolved from the theme) follow theme changes. False: the
+            colours are resolved once, here, and kept as they are
 
         See Also
         --------
@@ -551,8 +645,25 @@ class ActionManager:
                                               before=before,
                                               action=action,
                                               fill=fill,
-                                              rotate=rotate)
+                                              rotate=rotate,
+                                              follow_theme=follow_theme)
         return self._actions[short_name]
+
+    def refresh_icons(self):
+        """Rebuild the icons of all managed actions and menus with the current theme colours.
+
+        Icons bake their colours when created. This is done automatically when
+        :func:`pymodaq_gui.qt_utils.apply_theme` changes the theme; call it if the
+        palette was changed by other means. Only icons given by name are rebuilt,
+        see :meth:`QAction.refresh_icon`.
+        """
+        for action in self._actions.values():
+            if isinstance(action, QAction):
+                action.refresh_icon()
+        for short_name, icon_name in self._menu_icon_names.items():
+            menu = self._menus.get(short_name)
+            if menu is not None:
+                menu.setIcon(create_icon(icon_name))
 
     def remove_action(self, toolbar: QtWidgets.QToolBar | str = None,
                       action: str | QAction | WidgetActionProxy | None = None,):
@@ -679,6 +790,8 @@ class ActionManager:
                 new_menu.setIcon(icon_name)
             else:
                 new_menu.setIcon(create_icon(icon_name))
+                self._menu_icon_names[short_name] = icon_name
+                MenuIconRefresher(icon_name, parent=new_menu)
 
         # Add to parent menu if specified
         if parent_menu is not None:
@@ -777,6 +890,33 @@ class ActionManager:
             action.triggered.connect(lambda _checked, n=name: self.apply_toolbar_style(n))
             actions[name] = action
         ToolbarStyleChecks(actions, parent=style_menu)
+
+    def setup_theme_menu(self, parent_menu: QtWidgets.QMenu | str):
+        """Add a 'Theme' submenu choosing the qt_themes theme of the whole application"""
+        theme_menu = self.add_menu('theme', 'Theme', parent_menu=parent_menu)
+        group = QtGui.QActionGroup(theme_menu)
+        group.setExclusive(True)
+
+        themes = dict(sorted(qt_themes.get_themes().items()))
+        current = get_current_theme()
+        actions = {}
+        for name in themes:
+            action = theme_menu.addAction(name.replace('_', ' ').capitalize())
+            action.setCheckable(True)
+            action.setChecked(themes[name] == current)
+            action.setActionGroup(group)
+            action.triggered.connect(lambda _checked, n=name: self.apply_qt_theme(n))
+            actions[name] = action
+        ThemeChecks(actions, themes, parent=theme_menu)
+
+    def apply_qt_theme(self, name: str):
+        """Apply a qt_themes theme to the whole application and persist it as the default"""
+        if apply_theme(name) is None:
+            return
+        # pymodaq uses the first element of the configured list
+        themes = list(config('gui', 'style', 'theme'))
+        config['gui', 'style', 'theme'] = [name] + [t for t in themes if t != name]
+        config.save()
 
     def apply_toolbar_style(self, name: str):
         """Persist the toolbar button style and apply it to all toolbars"""

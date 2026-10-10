@@ -24,6 +24,7 @@ from pymodaq.extensions.daq_logger.h5logging import H5Logger
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 from pymodaq.utils.data import DataActuator, DataToExport
 from pymodaq.utils.custom_ext import CustomExt
+from pymodaq_gui.utils.styling import ThemeColor
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -83,10 +84,10 @@ class DAQ_Logger(CustomExt):
         logger.debug('setting actions')
         self.add_action('start', 'Start Logging', 'timer', "Start the logging",
                         checkable=True, toolbar=self.toolbar,
-                        icon_color=self.get_theme().green)
+                        icon_color=ThemeColor.GREEN)
         self.add_action('stop', 'Stop', 'timer_off', 'Stop/pause logging',
                         checkable=False, toolbar=self.toolbar,
-                        icon_color=self.get_theme().red)
+                        icon_color=ThemeColor.RED)
 
         log_type_combo = QtWidgets.QComboBox()
         log_type_combo.addItems(LOG_TYPES)
