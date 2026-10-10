@@ -29,6 +29,8 @@ from qtpy import QtGui
 from qtpy.QtGui import QColor
 
 from pymodaq_gui.managers.action_manager import ActionManager
+from pymodaq_gui.utils.widget_sync import SyncMode, ValueSync
+from pymodaq_gui.utils.widgets.multistate_led import MultistateLED
 
 from pymodaq.control_modules.capabilities import Access, Quantity, toolbar_widgets
 from pymodaq.control_modules.controller import Controller
@@ -72,6 +74,19 @@ def _colors():
     """The current theme, so that the icon colours follow the application's theme."""
     theme = get_theme()
     return theme if theme is not None else _FallbackColors
+
+
+def _led_states() -> list[tuple[str, str]]:
+    """The channel LED's five states, named for :meth:`HardwareModule._led_state`, coloured from
+    the current theme like everything else here."""
+    colors = _colors()
+    return [
+        ('closed', '#9e9e9e'),
+        ('rejected', QColor(colors.red).name()),
+        ('pending', QColor(colors.orange).name()),
+        ('active', QColor(colors.blue).name()),
+        ('idle', QColor(colors.green).name()),
+    ]
 
 
 def _caption(quantity: Quantity) -> str:
@@ -135,9 +150,15 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         self._views: dict[str, _ViewDock] = {}
         self._curves: dict[str, pg.PlotDataItem] = {}
         self._history: dict[str, deque] = {}
-        self._leds: dict[str, QtWidgets.QLabel] = {}
+        self._leds: dict[str, MultistateLED] = {}
         self._row_of: dict[str, str] = {}  # a channel's row: a control's row holds its readback too
         self._row_channels: dict[str, list[str]] = {}  # the channels of each row
+        self._merged_into: dict[str, list[Quantity]] = {}  # a row's name: the controls merged into it
+        # a quantity's name: a ValueSync every widget showing it is bound to (FROM_SYNC: the device's
+        # confirmed value drives the widgets, not the other way - each widget's own edit still writes
+        # through _write as before). Setting .value fans out to all of them, blockSignals handled by
+        # the sync itself. See pymodaq_gui.utils.widget_sync.
+        self._syncs: dict[str, ValueSync] = {}
         self._pending: set[str] = set()  # writes sent, not yet acknowledged, or not yet settled
         self._failed: set[str] = set()  # writes the plugin rejected, or that never settled
         self._reading: set[str] = set()  # one-shot reads in flight
@@ -158,6 +179,8 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         self.controller.device_error.connect(self._on_error)
         self.controller.written.connect(self._on_written)
         self.controller.write_failed.connect(self._on_write_failed)
+        self.controller.action_done.connect(self._on_action_done)
+        self.controller.action_failed.connect(self._on_action_failed)
         self.controller.new_reading.connect(self._on_reading)
         for name in self._quantities:
             self._refresh_led(name)
@@ -222,14 +245,20 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         quantities = caps.measurements + caps.controls
         for quantity in quantities:
             self._quantities[quantity.name] = quantity
-        linked = {q.readback for q in caps.controls if q.readback}
+        for control in caps.controls:
+            if control.merge_into:
+                self._merged_into.setdefault(control.merge_into, []).append(control)
+        merged_names = {c.name for controls in self._merged_into.values() for c in controls}
+        linked = {q.readback for q in caps.controls if q.readback} | merged_names
         rows = [q for q in quantities if q.name not in linked]
         bold = QtWidgets.QLabel().font()
         bold.setBold(True)
         self._name_width = max((QtGui.QFontMetrics(bold).horizontalAdvance(_caption(q)) for q in rows),
                                default=0) + 16
-        # a whole row fits without the toolbar's overflow arrow: name, display, value, four buttons, separators
-        container.setMinimumWidth(self._name_width + DISPLAY_WIDTH + VALUE_WIDTH + SLIDER_WIDTH + 4 * ACTION_WIDTH + 60)
+        # a whole row fits without the toolbar's overflow arrow: name, display, value, its buttons, separators
+        max_actions = max((self._row_action_count(q) for q in rows), default=4)
+        container.setMinimumWidth(
+            self._name_width + DISPLAY_WIDTH + VALUE_WIDTH + SLIDER_WIDTH + max_actions * ACTION_WIDTH + 60)
         for quantity in rows:
             bar = QtWidgets.QToolBar(quantity.name, container)
             self.reference_toolbar(quantity.name, bar)
@@ -239,6 +268,26 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         self.channels_dock = QtWidgets.QDockWidget('Channels', self)
         self.channels_dock.setWidget(container)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.channels_dock)
+
+    def _row_action_count(self, quantity: Quantity) -> int:
+        """How many action buttons *quantity*'s row ends up with, to size the dock: its own, its
+        readback's, and one per control merged into it."""
+        channel = quantity.readback or quantity.name
+        widgets = toolbar_widgets(quantity)
+        if channel != quantity.name:
+            widgets += [w for w in toolbar_widgets(self._quantities[channel]) if w not in widgets]
+        return self._action_count(widgets) + len(self._merged_into.get(quantity.name, []))
+
+    @staticmethod
+    def _action_count(widgets: list[str]) -> int:
+        """How many buttons :meth:`_actions_of` adds for *widgets*: read and label share one slot."""
+        count = 1 if ('read' in widgets or 'label' in widgets) else 0
+        count += sum(1 for w in ('snap', 'grab', 'show_graph') if w in widgets)
+        not_a_button = {'value', 'selector', 'slider', 'toggle', 'show_controls', 'label',
+                        'read', 'snap', 'grab', 'show_graph', 'save', 'history'}
+        count += sum(1 for w in widgets if w not in not_a_button)  # stop, or any other declared action
+        return count
+
     @staticmethod
     def _access_color(quantity: Quantity) -> str:
         """Measurements are blue and controls magenta, so the two kinds can be told apart at a glance."""
@@ -260,8 +309,7 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         self._row_channels[row] = [row, channel] if channel != row else [row]
         self._row_of[channel] = row
 
-        led = QtWidgets.QLabel()  # the channel status: see _led_color
-        led.setFixedSize(12, 12)
+        led = MultistateLED(states=_led_states(), size=12, readonly=True)  # the channel status: see _led_state
         self._leds[row] = led
         self.add_widget(f'{row}_led', led, toolbar=row)
         label = QtWidgets.QLabel(_caption(quantity))  # the label shown; the name stays the identifier
@@ -283,6 +331,8 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         bar.addSeparator()
         if 'value' in widgets:
             self._add_value_spinbox(quantity)
+        elif 'toggle' in widgets:
+            self._add_toggle(quantity)
         elif 'selector' in widgets:
             self._add_selector(quantity)
         else:
@@ -293,6 +343,8 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
             self._add_placeholder(row, 'slider', SLIDER_WIDTH)
         bar.addSeparator()
         self._actions_of(channel, row, widgets)()
+        for merged in self._merged_into.get(row, []):
+            self._add_merged_action(row, merged)
         if 'show_graph' in widgets:
             bar.addSeparator()
             self._add_show_graph_action(channel, row)
@@ -303,7 +355,7 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         self.add_widget(f'{name}_{slot}_slot', spacer, toolbar=name)
 
     def _actions_of(self, channel: str, row: str, widgets: list[str]):
-        """A function adding the read, snap, grab and stop actions that the widgets ask for, on the row's toolbar."""
+        """A function adding the read, snap, grab and declared-action buttons the widgets ask for."""
 
         def add():
             if 'read' in widgets or 'label' in widgets:
@@ -312,9 +364,10 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
                 self._add_read_action(channel, row, 'Snap', ActionIconNames.SNAP)
             if 'grab' in widgets:
                 self._add_grab_action(channel, row)
-            if 'stop' in widgets:
-                # always the control's own channel: stop is declared on it, never on its readback
-                self._add_stop_action(row)
+            # always the control's own channel: an action is declared on it, never on its readback
+            for action_name in self._quantities[row].actions:
+                if action_name in widgets:
+                    self._add_action_button(row, action_name)
         return add
     def _add_display(self, channel: str, row: str) -> None:
         display = QtWidgets.QLabel('-')
@@ -332,9 +385,42 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
                         icon_checked_color=theme.green, toolbar=row)
         self.connect_action(f'{channel}_grab', lambda *_, channel=channel: self._set_grabbing(
             channel, self.get_action(f'{channel}_grab').isChecked()))
-    def _add_stop_action(self, name: str) -> None:
-        self.add_action(f'{name}_stop', 'Stop', 'stop_circle', 'Stop the move', toolbar=name)
-        self.connect_action(f'{name}_stop', lambda *_, name=name: self._stop(name))
+    def _add_action_button(self, name: str, action_name: str) -> None:
+        """A channel's one declared action as a button in its own row, its look taken from the
+        declared :class:`~pymodaq.control_modules.capabilities.Action` (icon and label).
+
+        A ``checkable`` one (e.g. a hardware dark-reference toggle) stays pressed between clicks
+        instead of firing once; its new checked state is read off the button itself and passed along,
+        since ``_run_action`` otherwise has no way to know which way it just flipped."""
+        action = self._quantities[name].actions[action_name]
+        label = action.label or action_name.replace('_', ' ').title()
+        self.add_action(f'{name}_{action_name}', label, action.icon, f'{label} this control', toolbar=name,
+                        checkable=action.checkable, **action.opts)
+        button_name = f'{name}_{action_name}'
+        if action.checkable:
+            self.connect_action(button_name, lambda *_, name=name, action_name=action_name, button_name=button_name:
+                                self._run_action(name, action_name, self.get_action(button_name).isChecked()))
+        else:
+            self.connect_action(button_name, lambda *_, name=name, action_name=action_name:
+                                self._run_action(name, action_name))
+
+    def _add_merged_action(self, row: str, quantity: Quantity) -> None:
+        """A binary control (``merge_into``) as a checkable action in another control's own row, e.g.
+        an axis's enable button, right next to its move controls instead of in a row of its own."""
+        theme = _colors()
+        label = _caption(quantity)
+        self.add_action(f'{quantity.name}_merged', label, '', f'Toggle {label.lower()}', checkable=True,
+                        icon_checked_color=theme.green, toolbar=row)
+        self.connect_action(f'{quantity.name}_merged', lambda *_, quantity=quantity: self._write(
+            quantity.name, quantity.values[1] if self.get_action(f'{quantity.name}_merged').isChecked()
+            else quantity.values[0]))
+        self._row_of[quantity.name] = row
+        self._row_channels[row].append(quantity.name)
+        action = self.get_action(f'{quantity.name}_merged')
+        self._sync_for(quantity.name).bind(
+            action, setter=lambda v: action.setChecked(quantity.values.index(v) == 1),
+            mode=SyncMode.FROM_SYNC, init_from=None)
+
     def _add_show_graph_action(self, channel: str, row: str) -> None:
         self.add_action(f'{channel}_show_graph', 'Show Graph', 'bid_landscape', 'Show or hide the graph',
                         checkable=True, icon_checked='bid_landscape', icon_checked_color=_colors().green,
@@ -349,6 +435,7 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         spin.editingFinished.connect(lambda: self._write(quantity.name, spin.value()))
         self._value_widgets[quantity.name] = spin
         self.add_widget(f'{quantity.name}_value', spin, toolbar=quantity.name)
+        self._sync_for(quantity.name).bind(spin, setter=spin.setValue, mode=SyncMode.FROM_SYNC, init_from=None)
 
     def _add_slider(self, quantity: Quantity) -> None:
         """A slider over the declared range. It writes when released, or at once for keyboard and wheel steps."""
@@ -360,6 +447,11 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
                                     self._write(quantity.name, self._slider_value(quantity.name)))
         self._sliders[quantity.name] = slider
         self.add_widget(f'{quantity.name}_slider', slider, toolbar=quantity.name)
+
+        def set_slider(value, slider=slider, quantity=quantity):
+            lo, hi = _range_of(quantity)
+            slider.setValue(round((value - lo) / (hi - lo) * SLIDER_STEPS))
+        self._sync_for(quantity.name).bind(slider, setter=set_slider, mode=SyncMode.FROM_SYNC, init_from=None)
 
     def _slider_value(self, name: str) -> float:
         quantity = self._quantities[name]
@@ -373,6 +465,29 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         combo.activated.connect(lambda index: self._write(quantity.name, quantity.values[index]))
         self._value_widgets[quantity.name] = combo
         self.add_widget(f'{quantity.name}_selector', combo, toolbar=quantity.name)
+
+        def set_combo(value, combo=combo, quantity=quantity):
+            combo.setCurrentIndex(quantity.values.index(value))
+        self._sync_for(quantity.name).bind(combo, setter=set_combo, mode=SyncMode.FROM_SYNC, init_from=None)
+
+    def _add_toggle(self, quantity: Quantity) -> None:
+        """A two-valued control as a checkable push button: pressed is the second value, like led_push."""
+        button = QtWidgets.QPushButton(str(quantity.values[0]))
+        button.setCheckable(True)
+        button.setFixedWidth(VALUE_WIDTH)
+        button.toggled.connect(lambda checked, quantity=quantity: self._toggle_clicked(quantity, checked))
+        self._value_widgets[quantity.name] = button
+        self.add_widget(f'{quantity.name}_toggle', button, toolbar=quantity.name)
+
+        def set_toggle(value, button=button, quantity=quantity):
+            button.setChecked(quantity.values.index(value) == 1)
+            button.setText(str(value))
+        self._sync_for(quantity.name).bind(button, setter=set_toggle, mode=SyncMode.FROM_SYNC, init_from=None)
+
+    def _toggle_clicked(self, quantity: Quantity, checked: bool) -> None:
+        value = quantity.values[1] if checked else quantity.values[0]
+        self._value_widgets[quantity.name].setText(str(value))
+        self._write(quantity.name, value)
 
     def _view(self, name: str) -> _ViewDock:
         """The view dock of *name*, created on first use and hidden until shown."""
@@ -437,34 +552,71 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
             self._refresh_led(name)
             self.controller.read(name, lambda data: self._on_reading(name, data))
 
-    def _stop(self, name: str) -> None:
-        if self._attached:
-            self.controller.stop(name)
+    def _run_action(self, name: str, action_name: str, checked: bool | None = None) -> None:
+        """Call one of a channel's declared actions. Only queues the request - ``run_action`` is a
+        queued cross-thread call, so nothing about the action having run, let alone succeeded, is known
+        yet; see :meth:`_on_action_done` for the side effects that depend on that.
+
+        *checked* is the button's new state for a ``checkable`` action, read off the button by the
+        caller (see :meth:`_add_action_button`); ``None`` for a plain action."""
+        if not self._attached:
+            return
+        self.controller.run_action(name, action_name, checked)
+
+    def _on_action_done(self, name: str, action_name: str, result: object) -> None:
+        """An action's callback ran without raising. ``stop`` also clears the settle watch and any
+        pending/rejected state, since it interrupts a pending move; that side effect is specific to it,
+        not to a custom action in general. Done here, once confirmed, rather than optimistically in
+        _run_action on click: a failing stop goes through :meth:`_on_action_failed` instead and leaves
+        the row's state untouched, rather than this showing a false "stopped" state that never actually
+        happened.
+
+        If the callback also reported a value (``result`` is not ``None`` - e.g. Stop freezing a
+        target at the axis's current position), every widget showing this control updates to it, the
+        same fan-out a confirmed write uses. Deliberately not routed through _on_written: an action is
+        not a write (no settling of its own; the pending/failed bookkeeping above is specific to
+        ``stop``, not a general consequence of reporting a value)."""
+        if action_name == 'stop':
             self._stop_settle_watch(name)
             self._pending.discard(name)
             self._failed.discard(name)
             self._refresh_led(name)
+        if result is not None:
+            self._sync_for(name).value = result
 
-    def _led_color(self, row: str) -> QColor:
-        """Grey: device closed. Red: last write failed. Orange: write pending. Blue: read or grab active. Green: idle."""
-        colors = _colors()
+    def _on_action_failed(self, name: str, action_name: str, message: str) -> None:
+        """An action's callback raised - e.g. a real stop the hardware refused. Turns the row red, the
+        same way a rejected write does, rather than the invisible, channel-less ``error`` this used to
+        go through. Does not touch an in-progress settle watch or pending state: nothing about a move
+        already underway changed because this action failed, so there is nothing to cancel."""
+        self._failed.add(name)
+        self._refresh_led(name)
+        self.status_label.setText(f'error: {name}: {message}')
+
+    def _led_state(self, row: str) -> str:
+        """closed: device shut. rejected: last write or action failed. pending: write pending or
+        settling. active: read or grab in progress. idle: none of the above."""
         names = self._row_channels.get(row, [row])
         if not self.controller.connected:
-            return QColor('#9e9e9e')
+            return 'closed'
         if any(n in self._failed for n in names):
-            return QColor(colors.red)
+            return 'rejected'
         if any(n in self._pending for n in names):
-            return QColor(colors.orange)
+            return 'pending'
         if any(n in self._reading or n in self._grabbing for n in names):
-            return QColor(colors.blue)
-        return QColor(colors.green)
+            return 'active'
+        return 'idle'
+
+    def _led_color(self, row: str) -> QColor:
+        """The QColor for :meth:`_led_state`'s current state, for callers that want the colour
+        directly rather than the state name (e.g. comparing against a theme colour in a test)."""
+        return QColor(dict(_led_states())[self._led_state(row)])
 
     def _refresh_led(self, name: str) -> None:
         row = self._row_of.get(name, name)
         led = self._leds.get(row)
         if led is not None:
-            led.setStyleSheet(f'background-color: {self._led_color(row).name()}; border-radius: 6px; '
-                              'border: 1px solid #616161;')
+            led.set_state(self._led_state(row))
 
     # ── Settling: a control with a readback and an epsilon waits for the readback to reach the target ──
 
@@ -589,21 +741,13 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
             self._pending.discard(name)
             self._failed.discard(name)
             self._refresh_led(name)
-        slider = self._sliders.get(name)
-        if slider is not None:  # show the value without writing it back
-            lo, hi = _range_of(self._quantities[name])
-            slider.blockSignals(True)
-            slider.setValue(round((value - lo) / (hi - lo) * SLIDER_STEPS))
-            slider.blockSignals(False)
-        widget = self._value_widgets.get(name)
-        if widget is None:
-            return
-        # Block the widget's own signals so that showing a value does not write it back to the device.
-        widget.blockSignals(True)
-        try:
-            if isinstance(widget, QtWidgets.QComboBox):
-                widget.setCurrentIndex(self._quantities[name].values.index(value))
-            else:
-                widget.setValue(value)
-        finally:
-            widget.blockSignals(False)
+        # Every widget bound to this quantity's sync - value widget, slider, a merged control's
+        # action, any number of them - updates to the confirmed value, without writing it back.
+        self._sync_for(name).value = value
+
+    def _sync_for(self, name: str) -> ValueSync:
+        """The :class:`ValueSync` every widget showing *name* is bound to (FROM_SYNC), created on
+        first use. Setting its ``.value`` fans out to all of them; see pymodaq_gui.utils.widget_sync."""
+        if name not in self._syncs:
+            self._syncs[name] = ValueSync()
+        return self._syncs[name]

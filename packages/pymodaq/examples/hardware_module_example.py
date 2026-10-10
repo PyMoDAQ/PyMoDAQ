@@ -2,6 +2,10 @@
 
     python hardware_module_example.py
 
+Step 2 of 3: builds on hardware_module_minimal_example.py (a bare control and measurement) by adding
+get/set shortcuts and a plugin setting. hardware_module_stage_example.py is step 3, adding a readback,
+settling, Stop, Enable and Home.
+
 What to try:
 - Ini. (instrument toolbar) opens the fake device; the status line shows "open".
 - exposure: type a value and press Enter. The device gets it and the spinbox follows the device.

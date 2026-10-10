@@ -7,7 +7,7 @@ from qtpy import QtWidgets
 
 from qtpy.QtCore import Qt
 
-from pymodaq.control_modules.capabilities import control, measurement
+from pymodaq.control_modules.capabilities import Action, control, measurement
 from pymodaq.control_modules.hardware_module import HardwareModule, SLIDER_WIDTH, _colors
 from pymodaq.control_modules.hardware_registry import HardwareKey, HardwareRegistry
 
@@ -372,6 +372,41 @@ class TestSlider:
         assert stage._sliders['x'].width() == SLIDER_WIDTH
 
 
+class TestToggle:
+
+    @pytest.fixture
+    def powered(self, registry, qtbot):
+        class Switch(Camera):
+            powered = control(values=['off', 'on'], widget='toggle')
+
+        widget = HardwareModule(HardwareKey(hardware_class=Switch, controller_id=13), Switch, registry=registry)
+        qtbot.addWidget(widget)
+        widget.initialize()
+        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        yield widget
+        widget.release()
+
+    def test_a_toggle_opts_into_a_checkable_button_instead_of_a_selector(self, powered):
+        button = powered._value_widgets['powered']
+        assert isinstance(button, QtWidgets.QPushButton)
+        assert button.isCheckable()
+        assert button.text() == 'off'
+
+    def test_clicking_the_button_writes_the_second_value(self, powered, qtbot):
+        button = powered._value_widgets['powered']
+        button.setChecked(True)
+        plugin = powered.controller.thread._plugin
+        qtbot.waitUntil(lambda: plugin.written == [('powered', 'on')], timeout=2000)
+        assert button.text() == 'on'
+
+    def test_a_device_write_updates_the_button_without_writing_back(self, powered, qtbot):
+        plugin = powered.controller.thread._plugin
+        powered.controller.powered = 'on'
+        qtbot.waitUntil(lambda: powered._value_widgets['powered'].isChecked(), timeout=2000)
+        assert powered._value_widgets['powered'].text() == 'on'
+        assert plugin.written == [('powered', 'on')]  # the programmatic update did not write again
+
+
 class TestReadbackRows:
 
     @pytest.fixture
@@ -401,10 +436,10 @@ class TestReadbackRows:
 
     def test_the_led_widget_itself_refreshes_not_just_the_colour_lookup(self, axis):
         # _refresh_led is called with the readback's own name here, not the row: it must still
-        # find and repaint the row's QLabel, not just leave _led_color correct on paper.
+        # find and repaint the row's MultistateLED, not just leave _led_state correct on paper.
         axis.get_action('temperature_grab').trigger()
         led = axis._leds['x']
-        assert _colors().blue.name() in led.styleSheet()
+        assert led.get_state() == 'active'
 
 
 class _Values:
@@ -549,3 +584,290 @@ class TestStopButton:
         widget.get_action('z_stop').trigger()
         qtbot.waitUntil(lambda: plugin.stop_calls == [True], timeout=2000)
         widget.release()
+
+
+class StoppableSettlingStage(SettlingStage):
+    """Like SettlingStage, but z's stop freezes the target at the current position and reports it
+    back - the stage example's real pattern, exercised together with settling."""
+
+    z = control(units='mm', lo=0, hi=50, epsilon=0.5, readback=True, stop=lambda plugin: plugin._freeze())
+
+    def _freeze(self):
+        self.target = self._position
+        return self.target
+
+
+class FailingStopStage(SettlingStage):
+    """z's stop always raises, as a real hardware refusal would."""
+
+    z = control(units='mm', lo=0, hi=50, epsilon=0.5, readback=True,
+               stop=lambda plugin: (_ for _ in ()).throw(RuntimeError('refused')))
+
+
+class TestStopConfirmation:
+    """A row's pending/rejected state clears for stop only once it is confirmed to have run, not
+    optimistically when the button is clicked - a real hardware refusal must not look like success."""
+
+    def test_a_failing_stop_does_not_clear_the_pending_state(self, registry, qtbot):
+        widget = HardwareModule(HardwareKey(hardware_class=FailingStopStage, controller_id=28),
+                                FailingStopStage, registry=registry)
+        qtbot.addWidget(widget)
+        widget.initialize()
+        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        spin = widget._value_widgets['z']
+        spin.setValue(20.0)
+        spin.editingFinished.emit()
+        qtbot.waitUntil(lambda: 'z' in widget._pending, timeout=2000)  # accepted, now settling (orange)
+        widget.get_action('z_stop').trigger()
+        qtbot.wait(300)  # give the (failing) stop every chance to run and report back
+        assert 'z' in widget._pending  # the callback raised: must not look like a successful stop
+        assert widget._led_color('z').name() != _colors().green.name()
+        widget.release()
+
+    def test_a_successful_stop_clears_the_pending_state_once_confirmed(self, registry, qtbot):
+        widget = HardwareModule(HardwareKey(hardware_class=StoppableSettlingStage, controller_id=29),
+                                StoppableSettlingStage, registry=registry)
+        qtbot.addWidget(widget)
+        widget.initialize()
+        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        plugin = widget.controller.thread._plugin
+        spin = widget._value_widgets['z']
+        spin.setValue(20.0)
+        spin.editingFinished.emit()
+        qtbot.waitUntil(lambda: 'z' in widget._pending, timeout=2000)  # accepted, now settling (orange)
+        plugin._position = 7.0  # the axis is partway there when stop is pressed
+        widget.get_action('z_stop').trigger()
+        qtbot.waitUntil(lambda: 'z' not in widget._pending, timeout=2000)
+        assert widget._led_color('z').name() == _colors().green.name()
+
+    def test_a_successful_stop_updates_the_spinbox_to_the_frozen_position(self, registry, qtbot):
+        widget = HardwareModule(HardwareKey(hardware_class=StoppableSettlingStage, controller_id=30),
+                                StoppableSettlingStage, registry=registry)
+        qtbot.addWidget(widget)
+        widget.initialize()
+        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        plugin = widget.controller.thread._plugin
+        spin = widget._value_widgets['z']
+        spin.setValue(20.0)
+        spin.editingFinished.emit()
+        qtbot.waitUntil(lambda: 'z' in widget._pending, timeout=2000)
+        plugin._position = 7.0
+        widget.get_action('z_stop').trigger()
+        qtbot.waitUntil(lambda: spin.value() == 7.0, timeout=2000)  # not left at the stale 20.0
+
+
+class HomableAxis(Camera):
+    z = control(units='mm', lo=0, hi=50, actions={'home': lambda plugin: plugin.home_calls.append(True)})
+
+    def __init__(self):
+        super().__init__()
+        self.home_calls = []
+
+
+class TestCustomAction:
+    """A control's one declared action, under its own name, not just 'stop'."""
+
+    def test_the_button_is_named_and_labelled_after_the_action(self, registry, qtbot):
+        widget = HardwareModule(HardwareKey(hardware_class=HomableAxis, controller_id=17),
+                                HomableAxis, registry=registry)
+        qtbot.addWidget(widget)
+        assert widget.has_action('z_home')
+        assert widget.get_action('z_home').text() == 'Home'
+        widget.release()
+
+    def test_clicking_it_calls_the_action(self, registry, qtbot):
+        widget = HardwareModule(HardwareKey(hardware_class=HomableAxis, controller_id=18),
+                                HomableAxis, registry=registry)
+        qtbot.addWidget(widget)
+        widget.initialize()
+        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        plugin = widget.controller.thread._plugin
+        widget.get_action('z_home').trigger()
+        qtbot.waitUntil(lambda: plugin.home_calls == [True], timeout=2000)
+        widget.release()
+
+
+class MeasurementWithAction(Camera):
+    temperature = measurement(units='K', actions={'take_background': lambda plugin: plugin.bkg_calls.append(True)})
+
+    def __init__(self):
+        super().__init__()
+        self.bkg_calls = []
+
+
+class CheckableAction(Camera):
+    temperature = measurement(units='K', actions={
+        'subtract_bkg': Action(lambda plugin, checked: plugin.toggle_calls.append(checked), checkable=True),
+    })
+
+    def __init__(self):
+        super().__init__()
+        self.toggle_calls = []
+
+
+class TestActionOnAMeasurement:
+    """An action isn't control-specific: a measurement can declare one too (e.g. a spectrum's
+    background capture), and a checkable one reports which way it flipped."""
+
+    def test_a_measurement_can_have_an_action_button(self, registry, qtbot):
+        widget = HardwareModule(HardwareKey(hardware_class=MeasurementWithAction, controller_id=30),
+                                MeasurementWithAction, registry=registry)
+        qtbot.addWidget(widget)
+        assert widget.has_action('temperature_take_background')
+        widget.release()
+
+    def test_clicking_a_measurements_action_calls_it(self, registry, qtbot):
+        widget = HardwareModule(HardwareKey(hardware_class=MeasurementWithAction, controller_id=31),
+                                MeasurementWithAction, registry=registry)
+        qtbot.addWidget(widget)
+        widget.initialize()
+        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        plugin = widget.controller.thread._plugin
+        widget.get_action('temperature_take_background').trigger()
+        qtbot.waitUntil(lambda: plugin.bkg_calls == [True], timeout=2000)
+        widget.release()
+
+    def test_a_checkable_action_reports_the_new_checked_state_each_click(self, registry, qtbot):
+        widget = HardwareModule(HardwareKey(hardware_class=CheckableAction, controller_id=32),
+                                CheckableAction, registry=registry)
+        qtbot.addWidget(widget)
+        widget.initialize()
+        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        plugin = widget.controller.thread._plugin
+        button = widget.get_action('temperature_subtract_bkg')
+        assert button.isCheckable()
+        button.trigger()  # checks it
+        qtbot.waitUntil(lambda: plugin.toggle_calls == [True], timeout=2000)
+        button.trigger()  # unchecks it
+        qtbot.waitUntil(lambda: plugin.toggle_calls == [True, False], timeout=2000)
+        widget.release()
+
+
+class StageWithEnable(Camera):
+    x = control(units='mm', lo=0, hi=50)
+    x_enable = control(values=['disabled', 'enabled'], merge_into='x',
+                       set=lambda plugin, value: plugin.enable_writes.append(value))
+
+    def __init__(self):
+        super().__init__()
+        self.enable_writes = []
+
+
+class TestMergedAction:
+    """merge_into: a binary control rendered as a checkable action in another control's own row."""
+
+    @pytest.fixture
+    def stage(self, registry, qtbot):
+        widget = HardwareModule(HardwareKey(hardware_class=StageWithEnable, controller_id=19),
+                                StageWithEnable, registry=registry)
+        qtbot.addWidget(widget)
+        widget.initialize()
+        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        yield widget
+        widget.release()
+
+    def test_the_merged_control_has_no_row_of_its_own(self, stage):
+        assert not stage.has_toolbar('x_enable')
+        assert stage.has_toolbar('x')
+
+    def test_it_renders_as_a_checkable_action_on_the_hosts_row(self, stage):
+        action = stage.get_action('x_enable_merged')
+        assert action.isCheckable()
+        assert not action.isChecked()
+
+    def test_triggering_it_writes_the_merged_controls_second_value(self, stage, qtbot):
+        plugin = stage.controller.thread._plugin
+        stage.get_action('x_enable_merged').trigger()
+        qtbot.waitUntil(lambda: plugin.enable_writes == ['enabled'], timeout=2000)
+
+    def test_a_device_write_updates_the_action_without_writing_back(self, stage, qtbot):
+        plugin = stage.controller.thread._plugin
+        stage.controller.x_enable = 'enabled'
+        qtbot.waitUntil(lambda: stage.get_action('x_enable_merged').isChecked(), timeout=2000)
+        assert plugin.enable_writes == ['enabled']  # the programmatic update did not write again
+
+class StageWithFailingEnable(Camera):
+    x = control(units='mm', lo=0, hi=50)
+    x_enable = control(values=['disabled', 'enabled'], merge_into='x',
+                       set=lambda plugin, value: (_ for _ in ()).throw(RuntimeError('nope')))
+
+
+class TestMergedActionFailure:
+
+    def test_a_rejected_merged_write_turns_the_hosts_row_red(self, registry, qtbot):
+        widget = HardwareModule(HardwareKey(hardware_class=StageWithFailingEnable, controller_id=20),
+                                StageWithFailingEnable, registry=registry)
+        qtbot.addWidget(widget)
+        widget.initialize()
+        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        widget.get_action('x_enable_merged').trigger()
+        qtbot.waitUntil(lambda: widget._led_color('x').name() == _colors().red.name(), timeout=2000)
+        widget.release()
+
+
+class CameraWithChannelEnable(Camera):
+    temperature_enable = control(values=['disabled', 'enabled'], merge_into='temperature',
+                                 set=lambda plugin, value: plugin.enable_writes.append(value))
+
+    def __init__(self):
+        super().__init__()
+        self.enable_writes = []
+
+
+class TestMergedActionOnAMeasurement:
+    """merge_into isn't control-only either: a channel's enable rides along its own row the same
+    way an axis's enable does - the write still goes through the control's own set, only where the
+    button is drawn changes."""
+
+    @pytest.fixture
+    def camera(self, registry, qtbot):
+        widget = HardwareModule(HardwareKey(hardware_class=CameraWithChannelEnable, controller_id=33),
+                                CameraWithChannelEnable, registry=registry)
+        qtbot.addWidget(widget)
+        widget.initialize()
+        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        yield widget
+        widget.release()
+
+    def test_the_merged_control_has_no_row_of_its_own(self, camera):
+        assert not camera.has_toolbar('temperature_enable')
+        assert camera.has_toolbar('temperature')
+
+    def test_triggering_it_writes_the_merged_controls_second_value(self, camera, qtbot):
+        plugin = camera.controller.thread._plugin
+        camera.get_action('temperature_enable_merged').trigger()
+        qtbot.waitUntil(lambda: plugin.enable_writes == ['enabled'], timeout=2000)
+
+
+class TestWidgetSync:
+    """A quantity shown by several widgets (value spinbox, slider, ...) all stay in sync with one write."""
+
+    @pytest.fixture
+    def axis(self, registry, qtbot):
+        class Axis(Camera):
+            x = control(units='mm', lo=0, hi=50, ui_add=('slider',))
+
+        widget = HardwareModule(HardwareKey(hardware_class=Axis, controller_id=22), Axis, registry=registry)
+        qtbot.addWidget(widget)
+        widget.initialize()
+        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        yield widget
+        widget.release()
+
+    def test_a_device_write_updates_both_the_spinbox_and_the_slider(self, axis, qtbot):
+        axis.controller.x = 25.0
+        qtbot.waitUntil(lambda: axis._value_widgets['x'].value() == 25.0, timeout=2000)
+        assert axis._sliders['x'].value() == 500  # half of the 0-50 mm range
+
+    def test_writing_through_the_slider_updates_the_spinbox_too(self, axis, qtbot):
+        axis._sliders['x'].setValue(200)  # 20% of 0-50 mm
+        axis._sliders['x'].sliderReleased.emit()
+        qtbot.waitUntil(lambda: axis._value_widgets['x'].value() == 10.0, timeout=2000)
+
+    def test_a_write_from_the_controller_updates_both_widgets_too(self, axis, qtbot):
+        axis._value_widgets['x'].setValue(25.0)
+        axis._value_widgets['x'].editingFinished.emit()
+        qtbot.waitUntil(lambda: axis._sliders['x'].value() == 500, timeout=2000)
+        axis.controller.x = 10.0
+        qtbot.waitUntil(lambda: axis._value_widgets['x'].value() == 10.0, timeout=2000)
+        assert axis._sliders['x'].value() == 200
