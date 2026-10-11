@@ -532,6 +532,9 @@ class Capabilities:
         """Collect the quantities declared on *device* and its base classes."""
         klass = device if isinstance(device, type) else type(device)
         declared: dict[str, Quantity] = {}
+        # __mro__ runs most-derived class first, object last; reversed() walks it base-to-derived
+        # so a subclass's own Quantity overwrites same-named dict entry last, same as normal
+        # attribute lookup - a subclass redeclaring a parent's control/measurement wins.
         for base in reversed(klass.__mro__):
             for name, value in vars(base).items():
                 if isinstance(value, Quantity):
