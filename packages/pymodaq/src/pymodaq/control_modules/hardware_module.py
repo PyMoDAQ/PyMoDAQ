@@ -27,6 +27,8 @@ from qtpy.QtCore import QMetaObject, QTimer, Qt, Signal, Slot
 from qtpy import QtGui
 from qtpy.QtGui import QColor
 
+from pymodaq_utils.config import GlobalConfig as Config
+
 from pymodaq_data.data import DataRaw
 
 from pymodaq_gui.managers.action_manager import ActionManager
@@ -43,14 +45,19 @@ from pymodaq.control_modules.representations import RepresentationFactory, Repre
 
 __all__ = ['HardwareModule']
 
+config = Config()
+
 INSTRUMENT_TOOLBAR = 'instrument'
 DISPLAY_WIDTH = 150  # fixed columns: every row's actions start at the same position
 VALUE_WIDTH = 130
 SLIDER_WIDTH = 120
 SLIDER_STEPS = 1000  # a slider maps its range onto this many steps
 ACTION_WIDTH = 44  # room for one toolbar button
-SETTLE_POLL_MS = 150.0  # how often a settling control's readback is checked against its target
-SETTLE_TIMEOUT_S = 10.0  # give up waiting for a control to settle after this long
+# Defaults come from config_template.toml's [hardware_module] section; both stay plain module
+# globals (not inlined where used) so a test can still monkeypatch them directly.
+SETTLE_POLL_MS = config('pymodaq', 'hardware_module', 'settle_poll_ms')
+SETTLE_TIMEOUT_S = config('pymodaq', 'hardware_module', 'settle_timeout_s')
+DEFAULT_GRAB_PERIOD_MS = config('pymodaq', 'hardware_module', 'grab_period_ms')
 
 
 class _ViewDock(QtWidgets.QDockWidget):
@@ -138,7 +145,8 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
     registry :
         Registry to attach to. Defaults to the process-wide one.
     grab_period_ms :
-        Polling period of a grabbed channel.
+        Polling period of a grabbed channel. Defaults to config_template.toml's
+        ``[hardware_module] grab_period_ms``.
     """
 
     # Settings edited in the settings dock, sent to the hardware thread: (path, value, change).
@@ -146,7 +154,7 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
 
     def __init__(self, key: HardwareKey, plugin_class: type, params_state: dict | None = None,
                  registry: HardwareRegistry | None = None, parent: QtWidgets.QWidget | None = None,
-                 grab_period_ms: float = 200.0):
+                 grab_period_ms: float = DEFAULT_GRAB_PERIOD_MS):
         QtWidgets.QMainWindow.__init__(self, parent)
         ActionManager.__init__(self)
         self._registry = registry if registry is not None else HardwareRegistry.get()

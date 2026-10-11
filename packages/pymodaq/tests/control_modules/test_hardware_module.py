@@ -9,7 +9,8 @@ from qtpy.QtCore import Qt
 
 from pymodaq.control_modules.hardware import controller
 from pymodaq.control_modules.hardware.capabilities import Action, control, measurement
-from pymodaq.control_modules.hardware_module import HardwareModule, SLIDER_WIDTH, _colors
+from pymodaq.control_modules.hardware_module import (
+    HardwareModule, SLIDER_WIDTH, DEFAULT_GRAB_PERIOD_MS, SETTLE_POLL_MS, SETTLE_TIMEOUT_S, _colors)
 from pymodaq.control_modules.hardware.hardware_registry import HardwareKey, HardwareRegistry
 
 
@@ -249,6 +250,39 @@ class TestGrab:
         qtbot.waitUntil(lambda: not scope.controller.connected, timeout=2000)
         scope.controller.thread.ini_hardware()
         qtbot.waitUntil(lambda: 'spectrum' in scope.controller._polled, timeout=2000)
+
+    def test_grab_polls_at_the_configured_default_period(self, scope, qtbot):
+        # scope was built without an explicit grab_period_ms - it should fall back to
+        # config_template.toml's [hardware_module] grab_period_ms, not a hardcoded literal.
+        scope.get_action('spectrum_grab').trigger()
+        assert scope.controller._polled['spectrum'].period_ms == DEFAULT_GRAB_PERIOD_MS
+
+
+class TestConfigDefaults:
+    """SETTLE_POLL_MS/SETTLE_TIMEOUT_S/DEFAULT_GRAB_PERIOD_MS come from config_template.toml's
+    [hardware_module] section, not a hardcoded literal - but stay plain module globals so this
+    file's other tests can keep monkeypatching them directly, as before this moved to config."""
+
+    def test_settle_poll_comes_from_config(self):
+        from pymodaq_utils.config import GlobalConfig as Config
+        config = Config()
+        assert SETTLE_POLL_MS == config('pymodaq', 'hardware_module', 'settle_poll_ms')
+
+    def test_settle_timeout_comes_from_config(self):
+        from pymodaq_utils.config import GlobalConfig as Config
+        config = Config()
+        assert SETTLE_TIMEOUT_S == config('pymodaq', 'hardware_module', 'settle_timeout_s')
+
+    def test_grab_period_comes_from_config(self):
+        from pymodaq_utils.config import GlobalConfig as Config
+        config = Config()
+        assert DEFAULT_GRAB_PERIOD_MS == config('pymodaq', 'hardware_module', 'grab_period_ms')
+
+    def test_a_module_built_without_grab_period_ms_uses_the_config_default(self, registry, qtbot):
+        widget = HardwareModule(HardwareKey(hardware_class=Camera, controller_id=701), Camera, registry=registry)
+        qtbot.addWidget(widget)
+        assert widget._grab_period_ms == DEFAULT_GRAB_PERIOD_MS
+        widget.release()
 
 
 class TestInstrumentToolbar:
