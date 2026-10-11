@@ -332,7 +332,6 @@ class TestSetting:
 
     def test_only_a_control_can_be_backed_by_a_setting(self):
         with pytest.raises(ValueError, match='only a control'):
-            measurement()
             Quantity(Access.MEASUREMENT, setting=True)
 
     def test_no_setting_by_default(self):

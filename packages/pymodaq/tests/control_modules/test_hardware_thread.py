@@ -103,6 +103,16 @@ def make_thread(plugin_instance: MockPlugin | None = None) -> tuple[HardwareThre
     return thread_obj, plugin_instance
 
 
+def make_initialised_thread(plugin_instance: MockPlugin) -> tuple[HardwareThread, MockPlugin]:
+    """Like make_thread(), but also runs ini_hardware() - for tests that need a MockPlugin
+    subclass declaring its own channels/settings (make_thread()'s own default covers the plain
+    'axis_x' case; this one takes an already-built instance so a test can still close over a
+    local `calls` list from inside its subclass's own body)."""
+    thread_obj, plugin_instance = make_thread(plugin_instance)
+    thread_obj.ini_hardware()
+    return thread_obj, plugin_instance
+
+
 # ---------------------------------------------------------------------------
 # Signal collector
 # ---------------------------------------------------------------------------
@@ -245,7 +255,6 @@ class TestOneShotRead:
     def test_one_shot_delivers_the_reading_then_releases(self, qapp):
         thread_obj, plugin = make_thread()
         thread_obj.ini_hardware()
-        plugin.read = lambda names=None, fresh=True: _StubDTE(names)
         sub = Subscription('axis_x', None)
         got, released = Collector(), Collector()
         sub.data_ready.connect(got)
@@ -258,7 +267,6 @@ class TestOneShotRead:
     def test_one_shot_is_not_polled(self, qapp):
         thread_obj, plugin = make_thread()
         thread_obj.ini_hardware()
-        plugin.read = lambda names=None, fresh=True: _StubDTE(names)
         thread_obj.subscribe(Subscription('axis_x', None))
         assert thread_obj._timers == {}
         assert thread_obj._subscribers == {}
@@ -304,7 +312,6 @@ class TestOneShotRead:
     def test_one_shot_applies_its_transform(self, qapp):
         thread_obj, plugin = make_thread()
         thread_obj.ini_hardware()
-        plugin.read = lambda names=None, fresh=True: _StubDTE(names)
         sub = Subscription('axis_x', None, transform=lambda data: ('roi', data))
         got = Collector()
         sub.data_ready.connect(got)
@@ -368,9 +375,7 @@ class TestRequestAction:
         class _Plugin(MockPlugin):
             axis_x = control(lo=0, hi=10, stop=lambda plugin: calls.append('stopped'))
 
-        instance = _Plugin()
-        thread_obj = HardwareThread(plugin_class=make_plugin_class(instance), params_state=None)
-        thread_obj.ini_hardware()
+        thread_obj, instance = make_initialised_thread(_Plugin())
         return thread_obj, instance, calls
 
     def test_request_action_calls_the_declared_callback(self, qapp):
@@ -401,9 +406,7 @@ class TestRequestAction:
             axis_x = control(lo=0, hi=10, stop=lambda plugin: calls.append('stopped'),
                              actions={'home': lambda plugin: calls.append('homed')})
 
-        instance = _Plugin()
-        thread_obj = HardwareThread(plugin_class=make_plugin_class(instance), params_state=None)
-        thread_obj.ini_hardware()
+        thread_obj, instance = make_initialised_thread(_Plugin())
         thread_obj.request_action('axis_x', 'home')
         thread_obj.request_action('axis_x', 'stop')
         assert calls == ['homed', 'stopped']
@@ -415,9 +418,7 @@ class TestRequestAction:
         class _Plugin(MockPlugin):
             axis_x = control(lo=0, hi=10, stop=_raise)
 
-        instance = _Plugin()
-        thread_obj = HardwareThread(plugin_class=make_plugin_class(instance), params_state=None)
-        thread_obj.ini_hardware()
+        thread_obj, instance = make_initialised_thread(_Plugin())
         failed_action, failed_write, done = Collector(), Collector(), Collector()
         thread_obj.action_failed.connect(failed_action)
         thread_obj.write_failed.connect(failed_write)
@@ -438,9 +439,7 @@ class TestRequestAction:
         class _Plugin(MockPlugin):
             axis_x = control(lo=0, hi=10, stop=lambda plugin: 7.5)
 
-        instance = _Plugin()
-        thread_obj = HardwareThread(plugin_class=make_plugin_class(instance), params_state=None)
-        thread_obj.ini_hardware()
+        thread_obj, instance = make_initialised_thread(_Plugin())
         done = Collector()
         thread_obj.action_done.connect(done)
         thread_obj.request_action('axis_x', 'stop')
@@ -452,9 +451,7 @@ class TestRequestAction:
         class _Plugin(MockPlugin):
             spectrum = measurement(shape=(4,), actions={'take_background': lambda plugin: calls.append('bkg')})
 
-        instance = _Plugin()
-        thread_obj = HardwareThread(plugin_class=make_plugin_class(instance), params_state=None)
-        thread_obj.ini_hardware()
+        thread_obj, instance = make_initialised_thread(_Plugin())
         thread_obj.request_action('spectrum', 'take_background')
         assert calls == ['bkg']
 
@@ -466,9 +463,7 @@ class TestRequestAction:
                 'subtract_bkg': Action(lambda plugin, checked: calls.append(checked), checkable=True),
             })
 
-        instance = _Plugin()
-        thread_obj = HardwareThread(plugin_class=make_plugin_class(instance), params_state=None)
-        thread_obj.ini_hardware()
+        thread_obj, instance = make_initialised_thread(_Plugin())
         thread_obj.request_action('spectrum', 'subtract_bkg', True)
         thread_obj.request_action('spectrum', 'subtract_bkg', False)
         assert calls == [True, False]
@@ -499,7 +494,6 @@ class TestSubscriptions:
     def _thread_with_stub(self):
         thread_obj, plugin = make_thread()
         thread_obj.ini_hardware()
-        plugin.read = lambda names=None, fresh=True: _StubDTE(names)
         return thread_obj, plugin
 
     def test_subscriber_receives_only_its_channel(self, qapp, qtbot):
@@ -588,12 +582,7 @@ class TestUpdateSettings:
             def write(self, name, value): pass
             capabilities = None
 
-        instance = _PluginNoCommit()
-        thread_obj = HardwareThread(
-            plugin_class=make_plugin_class(instance),
-            params_state=None,
-        )
-        thread_obj.ini_hardware()
+        thread_obj, _ = make_initialised_thread(_PluginNoCommit())
         thread_obj.update_settings(['param'], 1, 'value')  # must not raise
 
 
@@ -639,7 +628,6 @@ class TestSubscriptionTransformAndTime:
     def test_transform_selects_what_the_subscriber_receives(self, qapp):
         thread_obj, plugin = make_thread()
         thread_obj.ini_hardware()
-        plugin.read = lambda names=None, fresh=True: _StubDTE(names)
         sub = Subscription('ch', 100.0, transform=lambda data: ('roi', data[1]))
         got = Collector()
         sub.data_ready.connect(got)
@@ -651,7 +639,6 @@ class TestSubscriptionTransformAndTime:
     def test_each_subscriber_gets_its_own_transform(self, qapp):
         thread_obj, plugin = make_thread()
         thread_obj.ini_hardware()
-        plugin.read = lambda names=None, fresh=True: _StubDTE(names)
         whole = Subscription('ch', 100.0)
         roi = Subscription('ch', 100.0, transform=lambda data: 'roi')
         got_whole, got_roi = Collector(), Collector()
@@ -668,7 +655,6 @@ class TestSubscriptionTransformAndTime:
     def test_read_time_is_monotonic_and_sent_with_each_reading(self, qapp):
         thread_obj, plugin = make_thread()
         thread_obj.ini_hardware()
-        plugin.read = lambda names=None, fresh=True: _StubDTE(names)
         sub = Subscription('ch', 100.0)
         got = Collector()
         sub.data_ready.connect(got)
@@ -685,7 +671,6 @@ class TestSubscriptionBackpressure:
     def _thread(self):
         thread_obj, plugin = make_thread()
         thread_obj.ini_hardware()
-        plugin.read = lambda names=None, fresh=True: _StubDTE(names)
         return thread_obj
 
     def test_latest_skips_readings_until_acknowledged(self, qapp):
@@ -739,7 +724,6 @@ class TestSubscriptionRelease:
     def test_unsubscribe_releases_the_subscription(self, qapp, qtbot):
         thread_obj, plugin = make_thread()
         thread_obj.ini_hardware()
-        plugin.read = lambda names=None, fresh=True: _StubDTE(names)
         sub = Subscription('ch', 100.0)
         released = Collector()
         sub.released.connect(released)
@@ -889,10 +873,7 @@ class TestSettingsChanged:
         class _GainPlugin(MockPlugin):
             params = [{'name': 'gain', 'type': 'float', 'value': 1.0}]
 
-        instance = _GainPlugin()
-        thread_obj = HardwareThread(plugin_class=make_plugin_class(instance), params_state=None)
-        thread_obj.ini_hardware()
-        return thread_obj, instance
+        return make_initialised_thread(_GainPlugin())
 
     def test_a_change_the_plugin_makes_itself_is_forwarded(self, qapp):
         thread_obj, plugin = self._thread_with_gain(qapp)
@@ -922,10 +903,7 @@ class TestSettingBackedWrite:
             params = [{'name': 'exposure', 'type': 'float', 'value': 1.0}]
             exposure = control(units='ms', lo=1, hi=1000, setting=True)
 
-        instance = _ExposurePlugin()
-        thread_obj = HardwareThread(plugin_class=make_plugin_class(instance), params_state=None)
-        thread_obj.ini_hardware()
-        return thread_obj, instance
+        return make_initialised_thread(_ExposurePlugin())
 
     def test_the_plugin_write_method_is_not_called(self, qapp):
         thread_obj, plugin = self._thread_with_exposure(qapp)
@@ -984,9 +962,7 @@ class TestGetSet:
             level = control(get=lambda plugin: (calls['get'].append('level'), 3.0)[1],
                             set=lambda plugin, value: calls['set'].append(value))
 
-        instance = _Plugin()
-        thread_obj = HardwareThread(plugin_class=make_plugin_class(instance), params_state=None)
-        thread_obj.ini_hardware()
+        thread_obj, instance = make_initialised_thread(_Plugin())
         return thread_obj, instance, calls
 
     def test_a_set_callback_is_used_instead_of_write(self, qapp):

@@ -48,9 +48,9 @@ def registry():
     registry.close_all()
 
 
-def attach(registry, controller_id=0):
-    key = HardwareKey(hardware_class=Spectrometer, controller_id=controller_id)
-    return key, registry.attach(key, Spectrometer)
+def attach(registry, hardware_class=Spectrometer, controller_id=0):
+    key = HardwareKey(hardware_class=hardware_class, controller_id=controller_id)
+    return key, registry.attach(key, hardware_class)
 
 
 class TestGeneratedProperties:
@@ -132,8 +132,7 @@ class TestWriteTimeout:
 
     def test_a_successful_stop_cancels_the_write_timeout(self, registry, qtbot, monkeypatch):
         monkeypatch.setattr(controller_module, 'WRITE_TIMEOUT_S', 0.05)
-        key = HardwareKey(hardware_class=Stoppable, controller_id=29)
-        ctrl = registry.attach(key, Stoppable)
+        key, ctrl = attach(registry, hardware_class=Stoppable, controller_id=29)
         ctrl.thread.ini_hardware()
         ctrl.write_requested.disconnect(ctrl.thread.request_write)  # the write's own answer never arrives
         failures = []
@@ -151,8 +150,7 @@ class TestWriteTimeout:
             axis = control(units='mm', lo=0, hi=10,
                            actions={'abort': Action(lambda plugin: None, interrupts=True)})
 
-        key = HardwareKey(hardware_class=Abortable, controller_id=30)
-        ctrl = registry.attach(key, Abortable)
+        key, ctrl = attach(registry, hardware_class=Abortable, controller_id=30)
         ctrl.thread.ini_hardware()
         ctrl.write_requested.disconnect(ctrl.thread.request_write)
         failures = []
@@ -212,8 +210,7 @@ class TestReadTimeout:
 class TestStop:
 
     def test_stop_calls_the_declared_callback(self, registry, qtbot):
-        key = HardwareKey(hardware_class=Stoppable, controller_id=23)
-        ctrl = registry.attach(key, Stoppable)
+        key, ctrl = attach(registry, hardware_class=Stoppable, controller_id=23)
         ctrl.thread.ini_hardware()
         plugin = ctrl.thread._plugin
         ctrl.stop('axis')
@@ -225,8 +222,7 @@ class TestStop:
             ctrl.stop('exposure')
 
     def test_run_action_calls_a_differently_named_declared_callback(self, registry, qtbot):
-        key = HardwareKey(hardware_class=Stoppable, controller_id=24)
-        ctrl = registry.attach(key, Stoppable)
+        key, ctrl = attach(registry, hardware_class=Stoppable, controller_id=24)
         ctrl.thread.ini_hardware()
         plugin = ctrl.thread._plugin
         ctrl.run_action('axis', 'home')
@@ -239,8 +235,7 @@ class TestStop:
             ctrl.run_action('exposure', 'home')
 
     def test_a_successful_action_emits_action_done_with_no_result(self, registry, qtbot):
-        key = HardwareKey(hardware_class=Stoppable, controller_id=25)
-        ctrl = registry.attach(key, Stoppable)
+        key, ctrl = attach(registry, hardware_class=Stoppable, controller_id=25)
         ctrl.thread.ini_hardware()
         with qtbot.waitSignal(ctrl.action_done, timeout=2000) as blocker:
             ctrl.stop('axis')
@@ -250,8 +245,7 @@ class TestStop:
         class Reporting(Spectrometer):
             axis = control(units='mm', lo=0, hi=10, stop=lambda plugin: 4.2)
 
-        key = HardwareKey(hardware_class=Reporting, controller_id=26)
-        ctrl = registry.attach(key, Reporting)
+        key, ctrl = attach(registry, hardware_class=Reporting, controller_id=26)
         ctrl.thread.ini_hardware()
         with qtbot.waitSignal(ctrl.action_done, timeout=2000) as blocker:
             ctrl.stop('axis')
@@ -262,8 +256,7 @@ class TestStop:
             axis = control(units='mm', lo=0, hi=10,
                            stop=lambda plugin: (_ for _ in ()).throw(RuntimeError('refused')))
 
-        key = HardwareKey(hardware_class=Faulty, controller_id=27)
-        ctrl = registry.attach(key, Faulty)
+        key, ctrl = attach(registry, hardware_class=Faulty, controller_id=27)
         ctrl.thread.ini_hardware()
         with qtbot.waitSignal(ctrl.action_failed, timeout=2000) as blocker:
             ctrl.stop('axis')
@@ -280,8 +273,7 @@ class TestStop:
                 super().__init__()
                 self.toggle_calls = []
 
-        key = HardwareKey(hardware_class=WithToggle, controller_id=28)
-        ctrl = registry.attach(key, WithToggle)
+        key, ctrl = attach(registry, hardware_class=WithToggle, controller_id=28)
         ctrl.thread.ini_hardware()
         plugin = ctrl.thread._plugin
         ctrl.run_action('spectrum', 'subtract_bkg', True)
@@ -399,15 +391,13 @@ class Gained(Spectrometer):
 class TestDeviceSettingsChanged:
 
     def test_a_plugin_driven_change_updates_the_settings_tree(self, registry, qtbot):
-        key = HardwareKey(hardware_class=Gained, controller_id=20)
-        ctrl = registry.attach(key, Gained)
+        key, ctrl = attach(registry, hardware_class=Gained, controller_id=20)
         ctrl.thread.ini_hardware()
         ctrl.thread._plugin_settings.child('gain').setValue(3.0)  # as the plugin would, on its own
         qtbot.waitUntil(lambda: ctrl.settings.child('gain').value() == 3.0, timeout=2000)
 
     def test_it_does_not_loop_back_as_a_write_to_the_device_settings(self, registry, qtbot):
-        key = HardwareKey(hardware_class=Gained, controller_id=21)
-        ctrl = registry.attach(key, Gained)
+        key, ctrl = attach(registry, hardware_class=Gained, controller_id=21)
         ctrl.thread.ini_hardware()
         calls = []
         ctrl.settings.sigTreeStateChanged.connect(lambda *_: calls.append(None))
@@ -426,8 +416,7 @@ class Exposed(Spectrometer):
 class TestSettingBackedControl:
 
     def test_setting_the_property_commits_the_setting_not_write(self, registry, qtbot):
-        key = HardwareKey(hardware_class=Exposed, controller_id=22)
-        ctrl = registry.attach(key, Exposed)
+        key, ctrl = attach(registry, hardware_class=Exposed, controller_id=22)
         ctrl.thread.ini_hardware()
         ctrl.exposure = 500.0  # the scan-style write: a plain property assignment
         qtbot.waitUntil(lambda: ctrl.settings.child('exposure').value() == 500.0, timeout=2000)
