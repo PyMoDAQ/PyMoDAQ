@@ -29,9 +29,9 @@ import numpy as np
 from pymodaq_gui.qt_utils import mkQApp
 from pymodaq_gui.utils.shared_ui import SharedUI
 
-from pymodaq.control_modules.capabilities import control, measurement
+from pymodaq.control_modules.hardware.capabilities import control, measurement
 from pymodaq.control_modules.hardware_module import HardwareModule
-from pymodaq.control_modules.hardware_registry import HardwareKey, HardwareRegistry
+from pymodaq.control_modules.hardware.hardware_registry import HardwareKey, HardwareRegistry
 
 
 class _Reading:

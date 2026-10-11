@@ -7,10 +7,10 @@ from qtpy import QtWidgets
 
 from qtpy.QtCore import Qt
 
-from pymodaq.control_modules import controller
-from pymodaq.control_modules.capabilities import Action, control, measurement
+from pymodaq.control_modules.hardware import controller
+from pymodaq.control_modules.hardware.capabilities import Action, control, measurement
 from pymodaq.control_modules.hardware_module import HardwareModule, SLIDER_WIDTH, _colors
-from pymodaq.control_modules.hardware_registry import HardwareKey, HardwareRegistry
+from pymodaq.control_modules.hardware.hardware_registry import HardwareKey, HardwareRegistry
 
 
 class _Reading:
@@ -450,6 +450,74 @@ class TestToggle:
         qtbot.waitUntil(lambda: powered._value_widgets['powered'].isChecked(), timeout=2000)
         assert powered._value_widgets['powered'].text() == 'on'
         assert plugin.written == [('powered', 'on')]  # the programmatic update did not write again
+
+
+class _FancySpinBox(QtWidgets.QDoubleSpinBox):
+    """A drop-in QDoubleSpinBox subclass - same standard property/signal, just a styling hook a
+    plugin author might use for e.g. fancy colors. Stands in for widget_class='s intended use case."""
+
+
+class _FancyToggle(QtWidgets.QPushButton):
+    """Same idea as _FancySpinBox, for the 'toggle' representation."""
+
+
+class TestWidgetClass:
+    """widget_class= substitutes the Qt class built for a control's representation, as long as it
+    exposes the property/signal that representation needs - checked here (not in capabilities.py,
+    which stays Qt-free) since only here is there an actual Qt instance to check."""
+
+    @pytest.fixture
+    def module(self, registry, qtbot):
+        class Instrument(Camera):
+            exposure = control(units='ms', lo=1, hi=1000, widget_class=_FancySpinBox)
+            powered = control(values=['off', 'on'], widget='toggle', widget_class=_FancyToggle)
+
+        widget = HardwareModule(HardwareKey(hardware_class=Instrument, controller_id=22), Instrument,
+                                registry=registry)
+        qtbot.addWidget(widget)
+        widget.initialize()
+        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        yield widget
+        widget.release()
+
+    def test_the_declared_class_is_built_for_the_value_representation(self, module):
+        assert isinstance(module._value_widgets['exposure'], _FancySpinBox)
+
+    def test_the_declared_class_is_built_for_the_toggle_representation(self, module):
+        assert isinstance(module._value_widgets['powered'], _FancyToggle)
+
+    def test_a_custom_spinbox_still_writes_on_editing_finished(self, module, qtbot):
+        spin = module._value_widgets['exposure']
+        spin.setValue(321.0)
+        spin.editingFinished.emit()
+        plugin = module.controller.thread._plugin
+        qtbot.waitUntil(lambda: plugin.written == [('exposure', 321.0)], timeout=2000)
+
+    def test_a_custom_spinbox_still_follows_a_confirmed_device_value(self, module, qtbot):
+        module.controller.exposure = 55.0
+        qtbot.waitUntil(lambda: module._value_widgets['exposure'].value() == 55.0, timeout=2000)
+
+    def test_a_custom_toggle_still_updates_its_own_text_optimistically(self, module):
+        button = module._value_widgets['powered']
+        button.setChecked(True)
+        assert button.text() == 'on'
+
+    def test_missing_the_needed_property_raises_at_build_time(self, registry, qtbot):
+        class Instrument(Camera):
+            exposure = control(units='ms', lo=1, hi=1000, widget_class=QtWidgets.QLabel)
+
+        with pytest.raises(ValueError, match="has no 'value' property"):
+            HardwareModule(HardwareKey(hardware_class=Instrument, controller_id=23), Instrument,
+                           registry=registry)
+
+    def test_missing_the_needed_signal_raises_at_build_time(self, registry, qtbot):
+        class Instrument(Camera):
+            # QSlider has a 'value' property but no 'editingFinished' signal.
+            exposure = control(units='ms', lo=1, hi=1000, widget_class=QtWidgets.QSlider)
+
+        with pytest.raises(ValueError, match="has no 'editingFinished' signal"):
+            HardwareModule(HardwareKey(hardware_class=Instrument, controller_id=24), Instrument,
+                           registry=registry)
 
 
 class TestReadbackRows:

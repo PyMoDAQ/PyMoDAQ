@@ -1,12 +1,12 @@
 """GUI side of one device: a window with an instrument toolbar and one toolbar per quantity.
 
 A :class:`HardwareModule` attaches to the registry for its device and drives the returned
-:class:`~pymodaq.control_modules.controller.Controller`. It never touches the plugin or the
+:class:`~pymodaq.control_modules.hardware.controller.Controller`. It never touches the plugin or the
 hardware thread directly.
 
 Layout: the instrument toolbar sits on top (Ini., status, Settings). A channel dock on the left holds
 one ``QToolBar`` per declared quantity, built from
-:func:`~pymodaq.control_modules.capabilities.toolbar_widgets`. Views (plots) open on the right.
+:func:`~pymodaq.control_modules.hardware.capabilities.toolbar_widgets`. Views (plots) open on the right.
 
 The device is only polled while a channel is grabbed: ``Grab`` polls continuously, ``Snap`` and
 ``Read`` read once. ``Show Graph`` only opens or closes the view; a view shows whatever readings arrive.
@@ -17,6 +17,7 @@ names are skipped until they are implemented.
 from __future__ import annotations
 
 import time
+from weakref import ref
 
 import numpy as np
 from pyqtgraph.parametertree import ParameterTree
@@ -31,13 +32,14 @@ from pymodaq_data.data import DataRaw
 from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_gui.plotting.data_viewers.base import ViewerBase, ViewersEnum
 from pymodaq_gui.plotting.data_viewers.viewer import viewer_factory
-from pymodaq_gui.utils.widget_sync import SyncMode, ValueSync
+from pymodaq_gui.utils.widget_sync import SyncMode, ValueSync, make_property_getter, make_property_setter
 from pymodaq_gui.utils.widgets.multistate_led import MultistateLED
 
-from pymodaq.control_modules.capabilities import Access, Quantity, toolbar_widgets
-from pymodaq.control_modules.controller import Controller
+from pymodaq.control_modules.hardware.capabilities import Access, Quantity, toolbar_widgets
+from pymodaq.control_modules.hardware.controller import Controller
 from pymodaq.control_modules.enums import ActionIconNames
-from pymodaq.control_modules.hardware_registry import HardwareKey, HardwareRegistry
+from pymodaq.control_modules.hardware.hardware_registry import HardwareKey, HardwareRegistry
+from pymodaq.control_modules.representations import RepresentationFactory, RepresentationRule, representation_of
 
 __all__ = ['HardwareModule']
 
@@ -338,12 +340,8 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         else:
             self._add_placeholder(row, 'display', DISPLAY_WIDTH)
         bar.addSeparator()
-        if 'value' in widgets:
-            self._add_value_spinbox(quantity)
-        elif 'toggle' in widgets:
-            self._add_toggle(quantity)
-        elif 'selector' in widgets:
-            self._add_selector(quantity)
+        if 'value' in widgets or 'toggle' in widgets or 'selector' in widgets:
+            self._add_representation(quantity)
         else:
             self._add_placeholder(row, 'value', VALUE_WIDTH)
         if 'slider' in widgets:
@@ -396,7 +394,7 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
             channel, self.get_action(f'{channel}_grab').isChecked()))
     def _add_action_button(self, name: str, action_name: str) -> None:
         """A channel's one declared action as a button in its own row, its look taken from the
-        declared :class:`~pymodaq.control_modules.capabilities.Action` (icon and label).
+        declared :class:`~pymodaq.control_modules.hardware.capabilities.Action` (icon and label).
 
         A ``checkable`` one (e.g. a hardware dark-reference toggle) stays pressed between clicks
         instead of firing once; its new checked state is read off the button itself and passed along,
@@ -436,15 +434,63 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
                         toolbar=row)
         self.connect_action(f'{channel}_show_graph', lambda *_, channel=channel: self._view(channel).setVisible(
             self.get_action(f'{channel}_show_graph').isChecked()))
-    def _add_value_spinbox(self, quantity: Quantity) -> None:
-        spin = QtWidgets.QDoubleSpinBox()
-        spin.setRange(-1e12 if quantity.lo is None else quantity.lo, 1e12 if quantity.hi is None else quantity.hi)
-        spin.setSuffix(f' {quantity.units}' if quantity.units else '')
-        spin.setFixedWidth(VALUE_WIDTH)
-        spin.editingFinished.connect(lambda: self._write(quantity.name, spin.value()))
-        self._value_widgets[quantity.name] = spin
-        self.add_widget(f'{quantity.name}_value', spin, toolbar=quantity.name)
-        self._sync_for(quantity.name).bind(spin, setter=spin.setValue, mode=SyncMode.FROM_SYNC, init_from=None)
+    def _add_representation(self, quantity: Quantity) -> None:
+        """The one widget showing/editing this control's value - a spinbox, selector or toggle,
+        picked by :func:`~pymodaq.control_modules.representations.representation_of` and built from
+        the matching :class:`~pymodaq.control_modules.representations.RepresentationRule`, or
+        ``quantity.widget_class`` in its place when one was declared (see
+        :func:`~pymodaq.control_modules.hardware.capabilities.control`)."""
+        kind = representation_of(quantity)
+        rule = RepresentationFactory.create(kind)
+        widget = (quantity.widget_class or rule.default_class)()
+        if quantity.widget_class is not None:
+            self._check_representation_compatible(widget, rule, quantity)
+        widget.setFixedWidth(VALUE_WIDTH)
+        if kind == 'value':
+            widget.setRange(-1e12 if quantity.lo is None else quantity.lo,
+                            1e12 if quantity.hi is None else quantity.hi)
+            if quantity.units:
+                widget.setSuffix(f' {quantity.units}')
+        elif kind == 'selector':
+            widget.addItems([str(v) for v in quantity.values])
+        elif kind == 'toggle':
+            widget.setCheckable(True)
+            widget.setText(str(quantity.values[0]))
+
+        widget_ref = ref(widget)
+        getter = make_property_getter(widget_ref, rule.property_name)
+        setter = make_property_setter(widget_ref, rule.property_name)
+
+        def on_commit(*_args, quantity=quantity, rule=rule, getter=getter, widget=widget):
+            value = rule.from_widget(getter(), quantity)
+            if rule.extra_setter is not None:  # optimistic, e.g. a toggle's own text - matches the
+                rule.extra_setter(widget, value)  # instant checked-state change Qt already made
+            self._write(quantity.name, value)
+        getattr(widget, rule.commit_signal).connect(on_commit)
+
+        self._value_widgets[quantity.name] = widget
+        self.add_widget(f'{quantity.name}_{kind}', widget, toolbar=quantity.name)
+
+        def set_value(value, setter=setter, rule=rule, quantity=quantity, widget=widget):
+            setter(rule.to_widget(value, quantity))
+            if rule.extra_setter is not None:
+                rule.extra_setter(widget, value)
+        self._sync_for(quantity.name).bind(widget, setter=set_value, mode=SyncMode.FROM_SYNC, init_from=None)
+
+    @staticmethod
+    def _check_representation_compatible(widget: QtWidgets.QWidget, rule: RepresentationRule,
+                                         quantity: Quantity) -> None:
+        """The real ``widget_class=`` compatibility check, done here with a real instance in hand -
+        not in ``capabilities.py``, which stays Qt-free (see :class:`RepresentationRule`)."""
+        meta = widget.metaObject()
+        if meta.indexOfProperty(rule.property_name) == -1:
+            raise ValueError(
+                f'widget_class={type(widget).__name__} has no {rule.property_name!r} property, '
+                f'needed for {quantity.name!r}\'s representation')
+        if not hasattr(widget, rule.commit_signal):
+            raise ValueError(
+                f'widget_class={type(widget).__name__} has no {rule.commit_signal!r} signal, '
+                f'needed for {quantity.name!r}\'s representation')
 
     def _add_slider(self, quantity: Quantity) -> None:
         """A slider over the declared range. It writes when released, or at once for keyboard and wheel steps."""
@@ -466,37 +512,6 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         quantity = self._quantities[name]
         lo, hi = _range_of(quantity)
         return lo + (hi - lo) * self._sliders[name].value() / SLIDER_STEPS
-
-    def _add_selector(self, quantity: Quantity) -> None:
-        combo = QtWidgets.QComboBox()
-        combo.addItems([str(v) for v in quantity.values])
-        combo.setFixedWidth(VALUE_WIDTH)
-        combo.activated.connect(lambda index: self._write(quantity.name, quantity.values[index]))
-        self._value_widgets[quantity.name] = combo
-        self.add_widget(f'{quantity.name}_selector', combo, toolbar=quantity.name)
-
-        def set_combo(value, combo=combo, quantity=quantity):
-            combo.setCurrentIndex(quantity.values.index(value))
-        self._sync_for(quantity.name).bind(combo, setter=set_combo, mode=SyncMode.FROM_SYNC, init_from=None)
-
-    def _add_toggle(self, quantity: Quantity) -> None:
-        """A two-valued control as a checkable push button: pressed is the second value, like led_push."""
-        button = QtWidgets.QPushButton(str(quantity.values[0]))
-        button.setCheckable(True)
-        button.setFixedWidth(VALUE_WIDTH)
-        button.toggled.connect(lambda checked, quantity=quantity: self._toggle_clicked(quantity, checked))
-        self._value_widgets[quantity.name] = button
-        self.add_widget(f'{quantity.name}_toggle', button, toolbar=quantity.name)
-
-        def set_toggle(value, button=button, quantity=quantity):
-            button.setChecked(quantity.values.index(value) == 1)
-            button.setText(str(value))
-        self._sync_for(quantity.name).bind(button, setter=set_toggle, mode=SyncMode.FROM_SYNC, init_from=None)
-
-    def _toggle_clicked(self, quantity: Quantity, checked: bool) -> None:
-        value = quantity.values[1] if checked else quantity.values[0]
-        self._value_widgets[quantity.name].setText(str(value))
-        self._write(quantity.name, value)
 
     def _view(self, name: str) -> _ViewDock:
         """The view dock of *name*, created on first use and hidden until shown.
