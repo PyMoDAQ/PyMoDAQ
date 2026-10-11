@@ -171,3 +171,25 @@ Text version:
 
 ``EXTENSION_NAME`` is the label displayed in the menu and ``CLASS_NAME`` the name of the class. With these two attributes
 and an entry point, nothing else is needed for the Dashboard to offer the extension.
+
+.. _extension_example:
+
+A complete small example
+------------------------
+
+The package `pymodaq_plugins_mockexamples <https://github.com/PyMoDAQ/pymodaq_plugins_mockexamples>`__ contains the
+smallest useful extension, *Move and Grab* (``extensions/move_and_grab.py``, about 130 lines), to start from. With the mock
+instruments of PyMoDAQ it shows, in order:
+
+* the module variables ``EXTENSION_NAME`` and ``CLASS_NAME``, and the ``main()`` function of this page;
+* the lifecycle methods of :ref:`custom_app_lifecycle`, and the Dashboard toolbar of :ref:`customext_experiment_state`;
+* ``do_things_after_experiment_set`` refreshing the lists of actuators and detectors;
+* the instruments used through ``self.modules_manager`` (``move_actuators_with_callback``, ``grab_data_with_callback`` and
+  ``forget_callback``): the next step is done in a callback when the control module signals the end of the previous
+  one, never by waiting in the GUI thread;
+* a position with units (``DataActuator``), data as ``DataToExport``, shown in a ``ViewerDispatcher`` and saved with
+  ``DataToExportSaver`` in the file of the ``H5Manager``;
+* a clean shutdown: a timeout handler so that the extension is never stuck busy, and ``_quit_fun`` refusing to quit
+  while a move or a grab is going on.
+
+Its tests (``tests/test_move_and_grab.py``) show how to test an extension against a Dashboard holding mock instruments.
