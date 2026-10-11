@@ -130,9 +130,15 @@ def test_report_fake(fake_package):
     ('import not_a_module_xyz', True),
     ('raise OSError("cannot load library")', True),
     ('from pymodaq.not_a_module import x', False),
-    ('x = = 1', False),
+    ('raise ValueError("bug in the plugin")', False),
+    ('raise NotImplementedError("bug in the plugin")', False),
+    ('import fake_vendor_sdk', True),  # the vendor module refuses to load: ValueError raised by third party code
 ])
-def test_import_failure_classification(fake_package, tmp_path, body, environmental):
+def test_import_failure_classification(fake_package, tmp_path, monkeypatch, body, environmental):
+    vendor = tmp_path / 'vendor'
+    vendor.mkdir()
+    (vendor / 'fake_vendor_sdk.py').write_text('raise ValueError("Could not locate a VISA implementation")')
+    monkeypatch.syspath_prepend(str(vendor))
     (tmp_path / 'pymodaq_plugins_fake' / 'daq_move_plugins' / 'daq_move_Broken.py').write_text(body)
     result = pt.check_plugin_module(pt.PluginModule(fake_package, 'daq_move_Broken', 'move'))
     assert bool(result.warnings) is environmental
