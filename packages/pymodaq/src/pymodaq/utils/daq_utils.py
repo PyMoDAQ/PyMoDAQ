@@ -1,5 +1,6 @@
 
 import importlib
+import inspect
 from packaging import version as version_mod
 import pkgutil
 import platform
@@ -139,6 +140,30 @@ def get_instrument_plugins():  # pragma: no cover
 
     plugins_import.sort(key=lambda mod: mod['name'])
     return plugins_import
+
+
+def find_model_class(model_module, base: type):
+    """ Get the model class of a module of the ``models`` folder of a plugin
+
+    It is the class defined in the module (not imported in it) that derives from ``base`` and that is not itself the
+    base class of another one defined there. Deriving from an intermediate class of your own is therefore possible.
+
+    Parameters
+    ----------
+    model_module: module
+        a module of the ``models`` folder of a plugin package
+    base: type
+        the generic model class of the extension (``PIDModelGeneric``, ``DataMixerModel``...)
+
+    Returns
+    -------
+    type or None: the model class, None if the module defines none
+    """
+    candidates = [klass for _, klass in inspect.getmembers(model_module, inspect.isclass)
+                  if issubclass(klass, base) and klass is not base and klass.__module__ == model_module.__name__]
+    leaves = [klass for klass in candidates if not any(other is not klass and issubclass(other, klass)
+                                                       for other in candidates)]
+    return leaves[0] if leaves else None
 
 
 def get_plugins(plugin_type='daq_0Dviewer'):  # pragma: no cover

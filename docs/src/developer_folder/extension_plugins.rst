@@ -75,3 +75,46 @@ extensions. Then you'll have to code the inners of your extension following the 
 (see :ref:`custom_app`). The big difference between extensions and Standalone apps resides in the fact that your
 dashboard instance is available here, hence all the control modules it contains. You'll be able to use all their
 functionalities only focusing on your extension layout!
+
+.. _plugin_models:
+
+Models of the extensions
+------------------------
+
+Some extensions delegate the part that depends on your experiment to a *model*: a small class that you write and that
+the extension finds in your plugin package. Four extensions use models:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 30 40
+
+   * - Extension
+     - Base class of the model
+     - Example in *pymodaq_plugins_mockexamples*
+   * - :ref:`PID <PID_module>`
+     - ``PIDModelGeneric``
+     - ``PIDModelBeamSteering``, ``PIDModelMockHeater``
+   * - :ref:`Bayesian <bayesian_extension>` and :ref:`Adaptive <adaptive_extension>`
+     - ``OptimizerModelGeneric`` or ``OptimizerModelDefault``
+     - ``BayesianModelMock``
+   * - :ref:`DataMixer <datamixer_extension>`
+     - ``DataMixerModel``
+     - ``DataMixerModelFit``
+   * - Sequencer, see :ref:`Extending the Sequencer <sequencer_developer>`
+     - ``ChoiceModelBase``, registered with the ``@ChoiceModelFactory.register_choice()`` decorator (the model is not
+       found by its base class)
+     - ``UserInput``, ``ThresholdChoiceModel``, ``TrueChoiceModel`` and ``FalseChoiceModel`` in
+       ``pymodaq/extensions/sequencer/models``
+
+To make your models visible:
+
+* set ``models = true`` in the ``[features]`` section of the *pyproject.toml* of your package (this creates the
+  ``pymodaq.models`` entry point);
+* put each model in its own module of the ``models`` folder at the root of the package (the file name is the name of the
+  model in the extension). The class of the module that derives from the base class of the extension is the model.
+  It can derive from an intermediate class of your own, and the base class itself or classes imported from other
+  modules are ignored.
+
+The package `pymodaq_plugins_mockexamples <https://github.com/PyMoDAQ/pymodaq_plugins_mockexamples>`__ gathers working
+examples of models together with the mock actuators and detectors to try them with: start from there rather than from
+a blank file, and see the page of each extension for the methods to implement.
