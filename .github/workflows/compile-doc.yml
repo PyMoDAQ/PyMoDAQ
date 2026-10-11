@@ -27,7 +27,7 @@ jobs:
 
       - name: Setup compilation environment
         run: |
-          sudo apt-get install -y graphviz  # dot, needed by sphinx.ext.graphviz
+          sudo apt-get install -y graphviz libegl1 libgl1  # dot for sphinx.ext.graphviz; libEGL/libGL so that PySide6 can be imported by autodoc
           python install-packages.py
           pip install -r docs/requirements.txt
 
