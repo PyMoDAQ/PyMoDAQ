@@ -101,8 +101,10 @@ the extension finds in your plugin package. Four extensions use models:
      - ``DataMixerModel``
      - ``DataMixerModelFit``
    * - Sequencer, see :ref:`Extending the Sequencer <sequencer_developer>`
-     - ``ChoiceModelBase``
-     - none yet
+     - ``ChoiceModelBase``, registered with the ``@ChoiceModelFactory.register_choice()`` decorator (the model is not
+       found by its base class)
+     - ``UserInput``, ``ThresholdChoiceModel``, ``TrueChoiceModel`` and ``FalseChoiceModel`` in
+       ``pymodaq/extensions/sequencer/models``
 
 To make your models visible:
 
