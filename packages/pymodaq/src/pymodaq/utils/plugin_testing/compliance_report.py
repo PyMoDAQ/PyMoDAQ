@@ -169,7 +169,8 @@ def check(full_name: str, pypi: Optional[dict] = None) -> dict:
 
     pulls = request(f'{API}/repos/{full_name}/pulls?state=open&per_page=100')
     mine = [f"#{p['number']}" for p in pulls
-            if re.search(r'plugin acceptance|plugin_testing', p['title'] + p['head']['ref'], re.I)]
+            if re.search(r'plugin[ _]acceptance|plugin_testing|follow the plugin template', p['title'] + p['head']['ref'],
+                         re.I)]
     result['pr'] = ' '.join(mine) or '-'
     result['compliant'] = (result['host'].startswith('ok') and
                            all(result[k] == 'ok' for k in ('agents', 'tests', 'workflows', 'floor')))
@@ -216,7 +217,9 @@ def main(argv: Optional[List[str]] = None) -> int:
             print(f'Cannot list the organization ({error}): give the repositories on the command line',
                   file=sys.stderr)
             return 2
-    names += [repo for _, repo in published.values() if repo and repo not in names]
+    for _, repo in published.values():  # the template is sometimes the only link an author gave on PyPI
+        if repo and repo not in names and repo != TEMPLATE:
+            names.append(repo)
 
     rows = []
     for name in names:

@@ -53,7 +53,10 @@ def test_old_repository_and_outside_host(monkeypatch):
     old = {'tests/test_plugin_package_structure.py': 'import pymodaq_utils', '.github/workflows/Test.yml': '',
            'pyproject.toml': '"pymodaq>=4.4.7"'}
     monkeypatch.setattr(cr, 'request', make_request(old, owner='someone', pulls=[
-        {'number': 3, 'title': 'Use the plugin acceptance checks', 'head': {'ref': 'x'}}]))
+        {'number': 3, 'title': 'Use the plugin acceptance checks', 'head': {'ref': 'x'}},
+        {'number': 4, 'title': 'Follow the plugin template: shared workflows', 'head': {'ref': 'y'}},
+        {'number': 5, 'title': 'Unrelated', 'head': {'ref': 'feature/plugin_acceptance_tests'}},
+        {'number': 6, 'title': 'Unrelated', 'head': {'ref': 'z'}}]))
     monkeypatch.setattr(cr, 'fetch', lambda full_name, branch, path: old.get(path, ''))
     result = cr.check('someone/pymodaq_plugins_old', {'pymodaq_plugins_old': ('1.0.0', 'someone/pymodaq_plugins_old')})
     assert result['host'].startswith('OUTSIDE someone')
@@ -61,7 +64,7 @@ def test_old_repository_and_outside_host(monkeypatch):
     assert result['tests'].startswith('OLD')
     assert 'legacy Test.yml' in result['workflows'] and 'no tests.yml' in result['workflows']
     assert result['floor'] == 'OLD pymodaq>=4.4.7'
-    assert result['pr'] == '#3'
+    assert result['pr'] == '#3 #4 #5'
     assert not result['compliant']
 
 
