@@ -18,6 +18,80 @@ interface build using only PyMoDAQ's building blocks. The corresponding script t
 
    A custom application build using PyMoDAQ's modules.
 
+.. _custom_app_context:
+
+The big picture
+---------------
+
+PyMoDAQ is split in four packages, each building on the previous one: ``pymodaq_utils`` (helpers, no GUI),
+``pymodaq_data`` (data objects and h5 saving), ``pymodaq_gui`` (widgets, ``CustomApp``, the managers) and ``pymodaq``
+(the instrument layer: control modules, the Dashboard and the extensions). What you build depends on whether your
+interface needs instruments, and where it is meant to live:
+
+* The :ref:`control modules <control_modules>` (``DAQ_Move`` for actuators, ``DAQ_Viewer`` for detectors) are the
+  objects that talk to the instruments, through the instrument plugins, each plugin running in its own thread.
+* The :ref:`Dashboard <Dashboard_module>` creates and owns the control modules of an *experiment*, and lists the
+  installed *extensions* in its menu. The extensions that ship with PyMoDAQ (:ref:`DAQ_Scan_module`, DAQ_Logger,
+  PID, optimizers, data mixer, sequencer, ramping...) and the ones installed from plugin packages
+  (see :ref:`extension_plugins`) are all built the same way.
+* An *application* is a program that you start yourself, independent of the Dashboard.
+
+``CustomApp`` is the common base of the Dashboard, of the extensions and of the applications: it provides the
+user-interface skeleton (docks, menus, toolbars, actions, settings tree, status bar, h5 file handling, worker
+threads). ``CustomExt`` is the specialisation for what runs inside a Dashboard, because it needs to use the
+instruments the Dashboard already controls. So the rule is:
+
+.. list-table::
+   :header-rows: 1
+
+   * - You want to build
+     - Derive from
+     - Instruments come from
+     - Started by
+   * - An interface that needs no instrument (data viewer, analysis tool, h5 browser)
+     - ``CustomApp``
+     - none
+     - your script
+   * - A tool using the instruments of the current experiment (scan, logging, feedback, optimization)
+     - ``CustomExt``
+     - the Dashboard, through ``self.modules_manager``
+     - the Dashboard *Extensions* menu, or your script through ``create_extension``
+   * - A dedicated application with its own instruments, without Dashboard
+     - ``CustomApp``
+     - control modules you create yourself
+     - your script
+
+.. graphviz::
+   :caption: Where CustomApp and CustomExt sit among PyMoDAQ's objects
+
+   digraph context {
+     rankdir=TB; node [shape=box, fontname="Helvetica", fontsize=10]; compound=true;
+     subgraph cluster_gui { label="pymodaq_gui"; style=dashed; CustomApp [label="CustomApp"]; }
+     subgraph cluster_pymodaq { label="pymodaq"; style=dashed;
+       CustomExt [label="CustomExt"]; DashBoard [label="DashBoard"];
+       ext [label="Extensions\n(DAQ_Scan, DAQ_Logger, ...,\nand those of plugin packages)"];
+       cm [label="Control modules\nDAQ_Move / DAQ_Viewer"];
+     }
+     plugins [label="Instrument plugins\n(pymodaq_plugins_*)"]; hw [label="Hardware", shape=ellipse];
+     apps [label="Your standalone apps"];
+     CustomExt -> CustomApp [label="extends"]; DashBoard -> CustomApp [label="extends"];
+     ext -> CustomExt [label="extend"]; apps -> CustomApp [label="extend"];
+     DashBoard -> cm [label="creates"]; DashBoard -> ext [label="loads (entry points)"];
+     ext -> cm [label="use through the\nModulesManager", style=dashed];
+     apps -> cm [label="may create", style=dashed];
+     cm -> plugins [label="load"]; plugins -> hw [label="drive"];
+   }
+
+Text version of the diagram:
+
+* ``CustomApp`` (in ``pymodaq_gui``) is extended by ``DashBoard``, by ``CustomExt`` and by your standalone applications.
+* ``CustomExt`` (in ``pymodaq``) is extended by every Dashboard extension, those shipped with PyMoDAQ as well as those
+  in plugin packages.
+* The ``DashBoard`` creates the control modules and loads the extensions declared as entry points.
+* An extension uses the control modules of the Dashboard through its ``ModulesManager``; it does not create them.
+* A standalone application may create its own control modules.
+* The control modules load the instrument plugins, which drive the hardware.
+
 .. note::
 
   A generic base class ``CustomApp`` located in ``pymodaq_gui.utils.custom_app`` can be used to
@@ -25,6 +99,9 @@ interface build using only PyMoDAQ's building blocks. The corresponding script t
   with what deals with instruments and the Dashboard, and is the base class of any *Dashboard extension*
   (the *DAQ_Logger* extension has been built using it, as well as some examples in the example folder).
   See :ref:`custom_app_structure`.
+
+Writing a CustomApp or a CustomExt
+----------------------------------
 
 Below you'll find the skeleton of a *CustomApp* (a *CustomExt* is written the same way) subclassing the base class and methods you
 have to override with your App/Extension specifics:

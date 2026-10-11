@@ -11,6 +11,12 @@ PyMoDAQ's plugins allows to add functionnalities to PyMoDAQ from external packag
 instrument type plugins and somehow of the PID models plugins. Here we are highlighting how to built dashboard
 extensions such as the :ref:`DAQ_Scan_module`.
 
+An extension is a user interface that runs inside the Dashboard and uses the instruments (control modules) the
+Dashboard already manages, for instance to scan an actuator while recording a detector, or to log their data. The base
+class for such an interface is ``CustomExt``: it is ``CustomApp`` (the generic user-interface skeleton also used by
+standalone applications and by the Dashboard itself) plus what deals with instruments and the Dashboard. The big
+picture, with diagrams, is in :ref:`custom_app_context`.
+
 For your package to be considered as a PyMoDAQ's dashboard extension, you should make sure of a few things:
 
 * The entrypoint in the *pyproject.toml* file should be correctly configured, see :numref:`extension_entrypoint_fig`
