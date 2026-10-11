@@ -21,6 +21,18 @@ class _Reading:
         return self._arrays[name]
 
 
+class _ArrayReading:
+    """Like _Reading, but 'spectrum' is a real 4-element array, not every channel collapsing to
+    the same single-element placeholder - needed to tell a Viewer0D/Viewer1D mismatch apart from
+    a scalar simply being read into the wrong one."""
+
+    def __init__(self, names):
+        self._arrays = {name: (np.arange(4.0) if name == 'spectrum' else np.array([2.5])) for name in names}
+
+    def get_data_from_name(self, name):
+        return self._arrays[name]
+
+
 class Camera:
     params: list = []
     temperature = measurement(units='K')
@@ -144,6 +156,21 @@ class TestRelease:
 
 class TestViews:
 
+    @pytest.fixture
+    def scope(self, registry, qtbot):
+        class Scope(Camera):
+            spectrum = measurement(shape=(4,))
+
+            def read(self, names=None, fresh=True):
+                return _ArrayReading(names)
+
+        widget = HardwareModule(HardwareKey(hardware_class=Scope, controller_id=21), Scope, registry=registry)
+        qtbot.addWidget(widget)
+        widget.initialize()
+        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        yield widget
+        widget.release()
+
     def test_a_control_has_no_graph(self, module):
         assert not module.has_action('exposure_show_graph')
         assert module.has_action('temperature_show_graph')
@@ -160,8 +187,25 @@ class TestViews:
         qtbot.waitUntil(lambda: module.controller.connected, timeout=2000)
         module.get_action('temperature_show_graph').trigger()
         module.get_action('temperature_read').trigger()
-        qtbot.waitUntil(lambda: len(module._history['temperature']) == 1, timeout=2000)
+        history = module._viewers['temperature'].view.data_displayer._data
+        qtbot.waitUntil(lambda: history.size == 1, timeout=2000)
         assert module._displays['temperature'].text() == '2.5 K'
+
+    def test_a_scalar_measurement_gets_a_viewer0d(self, module):
+        from pymodaq_gui.plotting.data_viewers.viewer0D import Viewer0D
+        module.get_action('temperature_show_graph').trigger()
+        assert isinstance(module._viewers['temperature'], Viewer0D)
+
+    def test_an_array_measurement_gets_a_viewer1d(self, scope):
+        from pymodaq_gui.plotting.data_viewers.viewer1D import Viewer1D
+        scope.get_action('spectrum_show_graph').trigger()
+        assert isinstance(scope._viewers['spectrum'], Viewer1D)
+
+    def test_an_array_read_reaches_the_viewer1d_with_its_real_shape(self, scope, qtbot):
+        scope.get_action('spectrum_show_graph').trigger()
+        scope.get_action('spectrum_read').trigger()
+        qtbot.waitUntil(lambda: scope._viewers['spectrum']._raw_data is not None, timeout=2000)
+        assert scope._viewers['spectrum']._raw_data.shape == (4,)
 
     def test_closing_the_view_unchecks_show_graph(self, module, qtbot):
         module.get_action('temperature_show_graph').trigger()

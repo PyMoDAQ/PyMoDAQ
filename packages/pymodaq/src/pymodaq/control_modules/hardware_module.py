@@ -17,10 +17,8 @@ names are skipped until they are implemented.
 from __future__ import annotations
 
 import time
-from collections import deque
 
 import numpy as np
-import pyqtgraph as pg
 from pyqtgraph.parametertree import ParameterTree
 from qt_themes import get_theme
 from qtpy import QtWidgets
@@ -28,7 +26,11 @@ from qtpy.QtCore import QMetaObject, QTimer, Qt, Signal, Slot
 from qtpy import QtGui
 from qtpy.QtGui import QColor
 
+from pymodaq_data.data import DataRaw
+
 from pymodaq_gui.managers.action_manager import ActionManager
+from pymodaq_gui.plotting.data_viewers.base import ViewerBase, ViewersEnum
+from pymodaq_gui.plotting.data_viewers.viewer import viewer_factory
 from pymodaq_gui.utils.widget_sync import SyncMode, ValueSync
 from pymodaq_gui.utils.widgets.multistate_led import MultistateLED
 
@@ -40,7 +42,6 @@ from pymodaq.control_modules.hardware_registry import HardwareKey, HardwareRegis
 __all__ = ['HardwareModule']
 
 INSTRUMENT_TOOLBAR = 'instrument'
-HISTORY_LENGTH = 200  # points kept by the trace of a scalar measurement
 DISPLAY_WIDTH = 150  # fixed columns: every row's actions start at the same position
 VALUE_WIDTH = 130
 SLIDER_WIDTH = 120
@@ -113,6 +114,14 @@ def _format(data) -> str:
     return str(values.shape)
 
 
+def _viewer_type(quantity: Quantity) -> ViewersEnum:
+    """Which standard data viewer a quantity's trace should use, from its declared shape -
+    the same scalar/array split :func:`toolbar_widgets` already makes for ``read``/``snap``."""
+    if len(quantity.shape) >= 2:
+        return ViewersEnum.Viewer2D
+    return ViewersEnum.Viewer0D if quantity.shape[0] == 1 else ViewersEnum.Viewer1D
+
+
 class HardwareModule(QtWidgets.QMainWindow, ActionManager):
     """One device: instrument toolbar on top, channel toolbars in a dock on the left.
 
@@ -148,8 +157,7 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         self._sliders: dict[str, QtWidgets.QSlider] = {}
         self._displays: dict[str, QtWidgets.QLabel] = {}
         self._views: dict[str, _ViewDock] = {}
-        self._curves: dict[str, pg.PlotDataItem] = {}
-        self._history: dict[str, deque] = {}
+        self._viewers: dict[str, ViewerBase] = {}
         self._leds: dict[str, MultistateLED] = {}
         self._row_of: dict[str, str] = {}  # a channel's row: a control's row holds its readback too
         self._row_channels: dict[str, list[str]] = {}  # the channels of each row
@@ -491,13 +499,19 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         self._write(quantity.name, value)
 
     def _view(self, name: str) -> _ViewDock:
-        """The view dock of *name*, created on first use and hidden until shown."""
+        """The view dock of *name*, created on first use and hidden until shown.
+
+        Uses the standard PyMoDAQ data viewer matching the quantity's declared shape
+        (:func:`_viewer_type`) - the same ``Viewer0D``/``Viewer1D``/``Viewer2D`` ``DAQ_Viewer``
+        itself uses, picked once here instead of a hand-rolled curve/history widget - rather than
+        a replacement for it.
+        """
         if name not in self._views:
-            plot = pg.PlotWidget()
-            self._curves[name] = plot.plot()
-            self._history[name] = deque(maxlen=HISTORY_LENGTH)
+            widget = QtWidgets.QWidget()
+            self._viewers[name] = viewer_factory.get(_viewer_type(self._quantities[name]).name,
+                                                      parent=widget, title=name)
             dock = _ViewDock(name, self)
-            dock.setWidget(plot)
+            dock.setWidget(widget)
             dock.closed.connect(lambda name=name: self._on_view_closed(name))
             self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
             dock.hide()
@@ -713,16 +727,16 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         self._refresh_led(name)
         if name in self._displays:
             self._displays[name].setText(self._display_text(name, data))
-        if name not in self._curves:
+        if name not in self._viewers:
             return
         values = np.asarray(data)
         if not np.issubdtype(values.dtype, np.number):
             return  # a label such as a discrete state has no trace
-        if values.size == 1:  # a scalar: plot its history
-            self._history[name].append(float(values.ravel()[0]))
-            self._curves[name].setData(list(self._history[name]))
-        else:
-            self._curves[name].setData(values.ravel())
+        # Shape kept as-is (no .ravel()): Viewer0D keeps its own scrolling history for a scalar,
+        # Viewer1D/Viewer2D show the array as declared - a real 2D reading no longer gets silently
+        # flattened the way the old hand-rolled curve did.
+        self._viewers[name].show_data(DataRaw(name, data=[values], units=self._quantities[name].units,
+                                              labels=[name]))
 
     def _display_text(self, name: str, data: object) -> str:
         text = _format(data)
