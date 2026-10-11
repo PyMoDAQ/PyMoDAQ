@@ -165,6 +165,14 @@ class HardwareRegistry:
         thread whose QThread has already stopped has no event loop left to run the close, so it
         is skipped.
 
+        The BlockingQueuedConnection call below is skipped entirely when *thread_obj* already
+        lives on the calling thread - not as a shortcut, but because that connection type
+        deadlocks when caller and target share a thread (it blocks until the target's event loop
+        processes the call, and the caller is the one that would have to pump it). In production
+        every entry's thread is moveToThread()'d in _make_thread, so this only triggers for a
+        test double that skips that step - but the check itself is Qt's own thread-identity
+        rule, not a test-only carve-out.
+
         A move-back-to-the-main-thread fix was tried here (and inside close_hardware) and
         reverted: moveToThread() must be called from the object's own current thread, so it has
         to happen from inside close_hardware - but changing self's own thread affinity from
@@ -175,10 +183,10 @@ class HardwareRegistry:
         """
         entry.controller.close()
         thread_obj = entry.thread
-        qt_thread = getattr(thread_obj, 'parent_qt_thread', None)
-        if qt_thread is None:
+        if thread_obj.thread() is QtCore.QThread.currentThread():
             thread_obj.close_hardware()
             return
+        qt_thread = thread_obj.parent_qt_thread  # kept referenced here so it isn't GC'd mid-run
         if not qt_thread.isRunning():
             return
         QtCore.QMetaObject.invokeMethod(

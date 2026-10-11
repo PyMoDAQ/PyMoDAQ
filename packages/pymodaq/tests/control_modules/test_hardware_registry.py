@@ -7,6 +7,7 @@ import textwrap
 import threading
 
 import pytest
+from qtpy import QtCore
 
 from pymodaq.control_modules.hardware import hardware_registry
 from pymodaq.control_modules.hardware.hardware_registry import HardwareKey, HardwareRegistry
@@ -39,6 +40,37 @@ class PluginB:
 
 def key_for(hardware_class=PluginA, controller_id=0):
     return HardwareKey(hardware_class=hardware_class, controller_id=controller_id)
+
+
+def stub_plugin_class(on_close=None):
+    """A minimal plugin for the real-QThread tests below: open/read/write are no-ops, close()
+    calls *on_close* (if given) so a test can record when/where it ran. One shared stub instead
+    of each test below writing its own near-identical class."""
+    class _Plugin:
+        params: list = []
+
+        def open(self, settings):
+            pass
+
+        def close(self):
+            if on_close is not None:
+                on_close()
+
+        def read(self, names=None, fresh=True):
+            return None
+
+        def write(self, name, value):
+            pass
+    return _Plugin
+
+
+def attach_and_init(registry, key, plugin_class):
+    """Attach *plugin_class* at *key* and run ini_hardware() to completion on its own thread -
+    the setup every real-QThread test below needs before it can exercise detach()/close_all()."""
+    ctrl = registry.attach(key, plugin_class)
+    QtCore.QMetaObject.invokeMethod(
+        ctrl.thread, 'ini_hardware', QtCore.Qt.ConnectionType.BlockingQueuedConnection)
+    return ctrl
 
 
 class TestHardwareKey:
@@ -164,33 +196,14 @@ class TestSingleton:
 class TestTeardownOnHardwareThread:
 
     def test_close_runs_on_device_thread_and_thread_stops(self, qapp):
-        import qtpy.QtCore as QtCore
         from qtpy.QtWidgets import QApplication
 
         closed_on = []
-
-        class _Plugin:
-            params: list = []
-
-            def open(self, settings):
-                pass
-
-            def close(self):
-                closed_on.append(QtCore.QThread.currentThread())
-
-            def read(self, names=None, fresh=True):
-                return None
-
-            def write(self, name, value):
-                pass
-
+        plugin_class = stub_plugin_class(on_close=lambda: closed_on.append(QtCore.QThread.currentThread()))
         registry = HardwareRegistry()
-        key = key_for(hardware_class=_Plugin)
-        ctrl = registry.attach(key, _Plugin)
-        thread_obj, _ = ctrl.thread, ctrl.settings
-        qt_thread = thread_obj.parent_qt_thread
-        QtCore.QMetaObject.invokeMethod(
-            thread_obj, 'ini_hardware', QtCore.Qt.ConnectionType.BlockingQueuedConnection)
+        key = key_for(hardware_class=plugin_class)
+        ctrl = attach_and_init(registry, key, plugin_class)
+        qt_thread = ctrl.thread.parent_qt_thread
 
         registry.detach(key)
 
@@ -207,30 +220,11 @@ class TestStoppingThreads:
         reference died with the registry the moment its caller dropped it, same problem one step
         removed (this is the real fix for the cross-process crash logged in
         device_module_status.md). detach() must instead fall back to an unconditional wait."""
-        import qtpy.QtCore as QtCore
-
-        class _Plugin:
-            params: list = []
-
-            def open(self, settings):
-                pass
-
-            def close(self):
-                pass
-
-            def read(self, names=None, fresh=True):
-                return None
-
-            def write(self, name, value):
-                pass
-
         registry = HardwareRegistry()
-        key = key_for(hardware_class=_Plugin, controller_id=2)
-        ctrl = registry.attach(key, _Plugin)
-        thread_obj, _ = ctrl.thread, ctrl.settings
-        qt_thread = thread_obj.parent_qt_thread
-        QtCore.QMetaObject.invokeMethod(
-            thread_obj, 'ini_hardware', QtCore.Qt.ConnectionType.BlockingQueuedConnection)
+        plugin_class = stub_plugin_class()
+        key = key_for(hardware_class=plugin_class, controller_id=2)
+        ctrl = attach_and_init(registry, key, plugin_class)
+        qt_thread = ctrl.thread.parent_qt_thread
 
         real_wait = type(qt_thread).wait
         calls = []
@@ -253,32 +247,13 @@ class TestStoppingThreads:
 class TestShutdownHook:
 
     def test_application_quit_closes_devices(self, qapp):
-        import qtpy.QtCore as QtCore
-
         closed = []
-
-        class _Plugin:
-            params: list = []
-
-            def open(self, settings):
-                pass
-
-            def close(self):
-                closed.append(True)
-
-            def read(self, names=None, fresh=True):
-                return None
-
-            def write(self, name, value):
-                pass
+        plugin_class = stub_plugin_class(on_close=lambda: closed.append(True))
 
         HardwareRegistry._reset_global()
         registry = HardwareRegistry.get()
-        key = key_for(hardware_class=_Plugin, controller_id=3)
-        ctrl = registry.attach(key, _Plugin)
-        thread_obj, _ = ctrl.thread, ctrl.settings
-        QtCore.QMetaObject.invokeMethod(
-            thread_obj, 'ini_hardware', QtCore.Qt.ConnectionType.BlockingQueuedConnection)
+        key = key_for(hardware_class=plugin_class, controller_id=3)
+        attach_and_init(registry, key, plugin_class)
 
         qapp.aboutToQuit.emit()
 
