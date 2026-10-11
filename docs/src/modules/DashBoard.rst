@@ -161,7 +161,7 @@ extension window:
    The Dashboard toolbar as displayed in an extension.
 
 When developing an extension deriving from ``CustomExt``, this toolbar is added by calling its
-``create_dashboard_toolbar`` method, whose arguments allow to display or not each of the three groups above.
+``create_dashboard_toolbar`` method, whose arguments allow to display or not each of the three groups above. See :ref:`customext_experiment_state` for how an extension uses the Experiment and State managers.
 
 
 

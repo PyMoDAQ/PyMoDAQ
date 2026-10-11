@@ -97,6 +97,18 @@ modules; third-party extensions register through the `pymodaq.extensions` entry 
 **Remote control**: LECO (`utils/leco`, pyleco) lets control modules be driven from other processes (TCP/IP was
 removed in 5.3); `pymodaq_scripting` and other control modules GUI can be used to control a Dashboard remotely.
 
+### CustomApp and CustomExt
+
+`CustomApp(QObject, ActionManager, ParameterManager)` (`pymodaq_gui/utils/custom_app.py`): actions and their toolbar/menu
+placement come from `ActionManager`, the settings tree and `value_changed` from `ParameterManager`, the dock area, status bar,
+`H5Manager` (`h5_manager`) and `WorkerThreadManager` (`thread_manager`) from `CustomApp`. `CustomExt(CustomApp)`
+(`pymodaq/utils/custom_ext.py`) adds the `dashboard`, a `ModulesManager` and the Dashboard toolbar. `setup_ui` calls
+`setup_docks_and_widgets`, `setup_menus_and_toolbars`, `setup_workflow_actions` (if `show_workflow_actions`), `setup_actions`,
+`connect_things`, `do_things_after_ui_setup`, in this order. Long work goes in an `ExtensionWorker`
+(`pymodaq_gui/utils/app_worker.py`) with a `SaverWorker` in its own thread; talk to workers with signals only. Two patterns: a standalone app (`CustomApp`, no instrument) or a Dashboard extension (`CustomExt`, any use of instruments); embedding
+control modules in a `CustomApp` is possible but not advised, use a `CustomExt`. Diagrams and text versions:
+`docs/src/developer_folder/custom_app.rst`.
+
 ## Conventions
 
 - Backward compatibility with existing external plugins matters: keep old names working through shims and emit
