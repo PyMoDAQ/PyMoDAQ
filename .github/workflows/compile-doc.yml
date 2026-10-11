@@ -27,6 +27,7 @@ jobs:
 
       - name: Setup compilation environment
         run: |
+          sudo apt-get install -y graphviz  # dot, needed by sphinx.ext.graphviz
           python install-packages.py
           pip install -r docs/requirements.txt
 
