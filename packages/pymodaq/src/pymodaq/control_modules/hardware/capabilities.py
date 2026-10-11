@@ -480,6 +480,7 @@ class Capabilities:
         if duplicates:
             raise ValueError(f'quantity names must be unique, duplicated: {duplicates}')
         measured = {q.name for q in self.measurements}
+        controlled = {q.name for q in self.controls}
         readback_owner: dict[str, str] = {}
         for control in self.controls:
             if not control.readback:
@@ -490,6 +491,16 @@ class Capabilities:
                 raise ValueError(
                     f'readback {control.readback!r} is declared by both '
                     f'{readback_owner[control.readback]!r} and {control.name!r}'
+                )
+            if control.readback in controlled:
+                # a readback can reuse an existing *measurement* (see the docstring on `control`),
+                # but reusing a control's name would silently alias a writable quantity as if it
+                # were this control's read-only readback - almost certainly not what either
+                # declaration intended, and not caught by the checks above since this name only
+                # exists once this loop generates it, after the blanket duplicate-name check already ran
+                raise ValueError(
+                    f'{control.name!r} declares readback {control.readback!r}, which is itself a '
+                    f'declared control'
                 )
             readback_owner[control.readback] = control.name
             if control.readback not in measured:

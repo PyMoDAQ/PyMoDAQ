@@ -313,6 +313,19 @@ class TestReadback:
         with pytest.raises(ValueError, match="readback 'position' is declared by both 'x' and 'y'"):
             Capabilities.from_device(Stage)
 
+    def test_a_readback_cannot_collide_with_an_unrelated_controls_name(self):
+        """Unlike test_a_declared_measurement_is_linked_not_duplicated above: reusing an existing
+        *measurement* by name is the documented way to attach a readback, but a control's own name
+        is a different namespace - silently aliasing it as a readback would make it look read-only
+        where it's actually still writable, so this must raise rather than quietly link the two."""
+        class Stage:
+            x = control(units='mm', readback=True)  # auto-names 'x_readback'
+            x_readback = control(units='mm')  # an unrelated control that happens to collide
+
+        with pytest.raises(ValueError, match="'x' declares readback 'x_readback', which is itself "
+                                              "a declared control"):
+            Capabilities.from_device(Stage)
+
 
 class TestSetting:
 
