@@ -105,8 +105,8 @@ placement come from `ActionManager`, the settings tree and `value_changed` from 
 (`pymodaq/utils/custom_ext.py`) adds the `dashboard`, a `ModulesManager` and the Dashboard toolbar. `setup_ui` calls
 `setup_docks_and_widgets`, `setup_menus_and_toolbars`, `setup_workflow_actions` (if `show_workflow_actions`), `setup_actions`,
 `connect_things`, `do_things_after_ui_setup`, in this order. Long work goes in an `ExtensionWorker`
-(`pymodaq_gui/utils/app_worker.py`) with a `SaverWorker` in its own thread; talk to workers with signals only. Three patterns
-(standalone app, Dashboard extension, app embedding control modules) with diagrams and text versions:
+(`pymodaq_gui/utils/app_worker.py`) with a `SaverWorker` in its own thread; talk to workers with signals only. Two patterns: a standalone app (`CustomApp`, no instrument) or a Dashboard extension (`CustomExt`, any use of instruments); embedding
+control modules in a `CustomApp` is possible but not advised, use a `CustomExt`. Diagrams and text versions:
 `docs/src/developer_folder/custom_app.rst`.
 
 ## Conventions

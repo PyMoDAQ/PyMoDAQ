@@ -34,7 +34,7 @@ interface needs instruments, and where it is meant to live:
   installed *extensions* in its menu. The extensions that ship with PyMoDAQ (:ref:`DAQ_Scan_module`, DAQ_Logger,
   PID, optimizers, data mixer, sequencer, ramping...) and the ones installed from plugin packages
   (see :ref:`extension_plugins`) are all built the same way.
-* An *application* is a program that you start yourself, independent of the Dashboard.
+* An *application* is a program that you start yourself, independent of the Dashboard. It is the right choice only when no instrument is involved.
 
 ``CustomApp`` is the common base of the Dashboard, of the extensions and of the applications: it provides the
 user-interface skeleton (docks, menus, toolbars, actions, settings tree, status bar, h5 file handling, worker
@@ -56,10 +56,6 @@ instruments the Dashboard already controls. So the rule is:
      - ``CustomExt``
      - the Dashboard, through ``self.modules_manager``
      - the Dashboard *Extensions* menu, or your script through ``create_extension``
-   * - A dedicated application with its own instruments, without Dashboard
-     - ``CustomApp``
-     - control modules you create yourself
-     - your script
 
 .. graphviz::
    :caption: Where CustomApp and CustomExt sit among PyMoDAQ's objects
@@ -78,7 +74,6 @@ instruments the Dashboard already controls. So the rule is:
      ext -> CustomExt [label="extend"]; apps -> CustomApp [label="extend"];
      DashBoard -> cm [label="creates"]; DashBoard -> ext [label="loads (entry points)"];
      ext -> cm [label="use through the\nModulesManager", style=dashed];
-     apps -> cm [label="may create", style=dashed];
      cm -> plugins [label="load"]; plugins -> hw [label="drive"];
    }
 
@@ -89,7 +84,6 @@ Text version of the diagram:
   in plugin packages.
 * The ``DashBoard`` creates the control modules and loads the extensions declared as entry points.
 * An extension uses the control modules of the Dashboard through its ``ModulesManager``; it does not create them.
-* A standalone application may create its own control modules.
 * The control modules load the instrument plugins, which drive the hardware.
 
 .. note::
@@ -323,8 +317,12 @@ Text version of the diagram:
 
 .. _custom_app_patterns:
 
-The three patterns
-------------------
+The patterns
+------------
+
+Two patterns cover almost every need: a standalone ``CustomApp`` when no instrument is involved, and a ``CustomExt``
+run by the Dashboard as soon as instruments are. A third one, embedding control modules in a ``CustomApp``, exists
+but is not advised (see its section).
 
 Standalone app without instruments
 ++++++++++++++++++++++++++++++++++
@@ -374,15 +372,21 @@ an ``ExtensionWorker``. Add ``create_dashboard_toolbar()`` in ``setup_menus_and_
 Dashboard from the extension. Implement ``_quit_fun`` rather than ``quit_fun``; the Dashboard is shown again when
 the extension quits.
 
-App embedding control modules directly
-++++++++++++++++++++++++++++++++++++++
+App embedding control modules directly (not advised)
+++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-An app can create its own ``DAQ_Move`` and ``DAQ_Viewer`` objects without any Dashboard, deriving from
-``CustomApp`` (``dashboard`` is not needed). ``create_load_daq_move`` and ``create_load_daq_viewer`` in
-``pymodaq.utils.gui_utils.loader_utils`` show how to build a control module with its docks and toolbar.
+An app *can* create its own ``DAQ_Move`` and ``DAQ_Viewer`` objects without any Dashboard, but you should not do it.
+Use a ``CustomExt`` run by the Dashboard instead: it is easier and better. The Dashboard already creates, initializes
+and saves the settings of the instruments (experiment and state managers), and the extension just gets them through
+``self.modules_manager``, with the toolbar and the file handling done for you. An app that embeds control modules has
+to redo all this by itself and loses it (no experiment or state presets, no shared ``ModulesManager``).
+
+If you still need it, ``create_load_daq_move`` and ``create_load_daq_viewer`` in
+``pymodaq.utils.gui_utils.loader_utils`` show how to build a control module with its docks and toolbar. The app then
+owns the control modules and must quit them in its ``quit_fun`` before calling ``super().quit_fun()``.
 
 .. graphviz::
-   :caption: App embedding control modules: who creates and owns what
+   :caption: App embedding control modules (not advised): who creates and owns what
 
    digraph embedding {
      node [shape=box, fontname="Helvetica", fontsize=10];
@@ -393,8 +397,5 @@ An app can create its own ``DAQ_Move`` and ``DAQ_Viewer`` objects without any Da
      app -> H5Manager [label="owns"];
    }
 
-Text version: the app creates the control modules with the docks it provides, owns them, and must quit them in its
-``quit_fun`` (``quit_fun`` of the control modules) before calling ``super().quit_fun()``. Each control module loads its
-plugin in its own thread, as in the Dashboard. Without a Dashboard there is no ``ModulesManager`` unless you create
-one yourself.
-
+Text version: the app creates and owns the control modules and its ``H5Manager``; each control module loads its
+plugin in its own thread, as in the Dashboard.
