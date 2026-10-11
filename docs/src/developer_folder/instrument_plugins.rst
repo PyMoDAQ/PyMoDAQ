@@ -57,8 +57,11 @@ Then just add a new python file in the correct location.
 
 Once you're ready with a working plugin, you can then:
 
+#. Have your repo hosted in the PyMoDAQ GitHub organization (you stay its official maintainer): a plugin owned by a
+   single person is lost when this person moves on, in the organization someone can always take over. See
+   :ref:`plugin_hosting` for the reason and the transfer procedure.
 #. Publish your repo on pypi (just by doing a release on github will trigger the creation
-   of a pypi repository
+   of a pypi repository)
 #. do a pull request on the initial repository to merge your new implementations.
 
 .. note::
