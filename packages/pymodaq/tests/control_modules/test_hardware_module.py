@@ -64,11 +64,22 @@ def registry():
     registry.close_all()
 
 
+def make_module(registry, qtbot, hardware_class=Camera, controller_id=0, initialize=False):
+    """Build a HardwareModule for *hardware_class* and register it with qtbot - the setup every
+    fixture/test below needs. With initialize=True (most fixtures), also opens the device and
+    waits for it to connect."""
+    key = HardwareKey(hardware_class=hardware_class, controller_id=controller_id)
+    widget = HardwareModule(key, hardware_class, registry=registry)
+    qtbot.addWidget(widget)
+    if initialize:
+        widget.initialize()
+        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+    return widget
+
+
 @pytest.fixture
 def module(registry, qtbot):
-    key = HardwareKey(hardware_class=Camera, controller_id=0)
-    widget = HardwareModule(key, Camera, registry=registry)
-    qtbot.addWidget(widget)
+    widget = make_module(registry, qtbot)
     yield widget
     widget.release()
 
@@ -132,23 +143,19 @@ class TestRelease:
 
     def test_release_detaches_from_the_registry(self, registry, qtbot):
         key = HardwareKey(hardware_class=Camera, controller_id=3)
-        widget = HardwareModule(key, Camera, registry=registry)
-        qtbot.addWidget(widget)
+        widget = make_module(registry, qtbot, Camera, 3)
         assert registry.is_known(key)
         widget.release()
         assert not registry.is_known(key)
 
     def test_closing_the_widget_releases_it(self, registry, qtbot):
         key = HardwareKey(hardware_class=Camera, controller_id=4)
-        widget = HardwareModule(key, Camera, registry=registry)
-        qtbot.addWidget(widget)
+        widget = make_module(registry, qtbot, Camera, 4)
         widget.close()
         assert not registry.is_known(key)
 
     def test_a_widget_edit_after_release_is_ignored(self, registry, qtbot):
-        key = HardwareKey(hardware_class=Camera, controller_id=5)
-        widget = HardwareModule(key, Camera, registry=registry)
-        qtbot.addWidget(widget)
+        widget = make_module(registry, qtbot, Camera, 5)
         spin = widget._value_widgets['exposure']
         widget.release()
         spin.setValue(20.0)
@@ -165,10 +172,7 @@ class TestViews:
             def read(self, names=None, fresh=True):
                 return _ArrayReading(names)
 
-        widget = HardwareModule(HardwareKey(hardware_class=Scope, controller_id=21), Scope, registry=registry)
-        qtbot.addWidget(widget)
-        widget.initialize()
-        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        widget = make_module(registry, qtbot, Scope, 21, initialize=True)
         yield widget
         widget.release()
 
@@ -221,10 +225,7 @@ class TestGrab:
         class Scope(Camera):
             spectrum = measurement(shape=(4,))
 
-        widget = HardwareModule(HardwareKey(hardware_class=Scope, controller_id=7), Scope, registry=registry)
-        qtbot.addWidget(widget)
-        widget.initialize()
-        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        widget = make_module(registry, qtbot, Scope, 7, initialize=True)
         yield widget
         widget.release()
 
@@ -279,8 +280,7 @@ class TestConfigDefaults:
         assert DEFAULT_GRAB_PERIOD_MS == config('pymodaq', 'hardware_module', 'grab_period_ms')
 
     def test_a_module_built_without_grab_period_ms_uses_the_config_default(self, registry, qtbot):
-        widget = HardwareModule(HardwareKey(hardware_class=Camera, controller_id=701), Camera, registry=registry)
-        qtbot.addWidget(widget)
+        widget = make_module(registry, qtbot, Camera, 701)
         assert widget._grab_period_ms == DEFAULT_GRAB_PERIOD_MS
         widget.release()
 
@@ -314,11 +314,7 @@ class TestReadActions:
         class Scope(Camera):
             spectrum = measurement(shape=(4,))
 
-        key = HardwareKey(hardware_class=Scope, controller_id=9)
-        widget = HardwareModule(key, Scope, registry=registry)
-        qtbot.addWidget(widget)
-        widget.initialize()
-        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        widget = make_module(registry, qtbot, Scope, 9, initialize=True)
         widget.get_action('spectrum_read').trigger()
         qtbot.waitUntil(lambda: widget._displays['spectrum'].text() != '-', timeout=2000)
         widget.release()
@@ -330,8 +326,7 @@ class TestCaptions:
         class Labelled(Camera):
             temperature = measurement(units='K', label='Sensor temperature')
 
-        widget = HardwareModule(HardwareKey(hardware_class=Labelled, controller_id=8), Labelled, registry=registry)
-        qtbot.addWidget(widget)
+        widget = make_module(registry, qtbot, Labelled, 8)
         assert widget.controller.capabilities.measurements[0].name == 'temperature'
         assert 'SENSOR TEMPERATURE' in [l.text() for l in widget.get_toolbar('temperature').findChildren(QtWidgets.QLabel)]
         widget.release()
@@ -353,10 +348,7 @@ class TestSettings:
             def commit_settings(self, param):
                 self.committed.append((param.name(), param.value()))
 
-        widget = HardwareModule(HardwareKey(hardware_class=Gained, controller_id=6), Gained, registry=registry)
-        qtbot.addWidget(widget)
-        widget.initialize()
-        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        widget = make_module(registry, qtbot, Gained, 6, initialize=True)
         widget.controller.settings.child('gain').setValue(3.0)
         plugin = widget.controller.thread._plugin
         qtbot.waitUntil(lambda: ('gain', 3.0) in plugin.committed, timeout=2000)
@@ -367,10 +359,7 @@ class TestSettings:
         class Gained(Camera):
             params = [{'name': 'gain', 'type': 'float', 'value': 1.0}]
 
-        widget = HardwareModule(HardwareKey(hardware_class=Gained, controller_id=7), Gained, registry=registry)
-        qtbot.addWidget(widget)
-        widget.initialize()
-        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        widget = make_module(registry, qtbot, Gained, 7, initialize=True)
         widget.controller.thread._plugin_settings.child('gain').setValue(9.0)  # as the plugin would, on its own
         qtbot.waitUntil(lambda: widget.controller.settings.child('gain').value() == 9.0, timeout=2000)
         item = next(iter(widget.controller.settings.child('gain').items))
@@ -405,10 +394,7 @@ class TestChannelLeds:
                     raise RuntimeError('link down')
                 super().write(name, value)
 
-        widget = HardwareModule(HardwareKey(hardware_class=Faulty, controller_id=10), Faulty, registry=registry)
-        qtbot.addWidget(widget)
-        widget.initialize()
-        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        widget = make_module(registry, qtbot, Faulty, 10, initialize=True)
         combo = widget._value_widgets['trigger']
         combo.setCurrentIndex(1)
         combo.activated.emit(1)  # 'external' is rejected
@@ -427,10 +413,7 @@ class TestSlider:
         class Axis(Camera):
             x = control(units='mm', lo=0, hi=50, ui_add=('slider',))
 
-        widget = HardwareModule(HardwareKey(hardware_class=Axis, controller_id=11), Axis, registry=registry)
-        qtbot.addWidget(widget)
-        widget.initialize()
-        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        widget = make_module(registry, qtbot, Axis, 11, initialize=True)
         yield widget
         widget.release()
 
@@ -458,10 +441,7 @@ class TestToggle:
         class Switch(Camera):
             powered = control(values=['off', 'on'], widget='toggle')
 
-        widget = HardwareModule(HardwareKey(hardware_class=Switch, controller_id=13), Switch, registry=registry)
-        qtbot.addWidget(widget)
-        widget.initialize()
-        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        widget = make_module(registry, qtbot, Switch, 13, initialize=True)
         yield widget
         widget.release()
 
@@ -506,11 +486,7 @@ class TestWidgetClass:
             exposure = control(units='ms', lo=1, hi=1000, widget_class=_FancySpinBox)
             powered = control(values=['off', 'on'], widget='toggle', widget_class=_FancyToggle)
 
-        widget = HardwareModule(HardwareKey(hardware_class=Instrument, controller_id=22), Instrument,
-                                registry=registry)
-        qtbot.addWidget(widget)
-        widget.initialize()
-        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        widget = make_module(registry, qtbot, Instrument, 22, initialize=True)
         yield widget
         widget.release()
 
@@ -541,8 +517,7 @@ class TestWidgetClass:
             exposure = control(units='ms', lo=1, hi=1000, widget_class=QtWidgets.QLabel)
 
         with pytest.raises(ValueError, match="has no 'value' property"):
-            HardwareModule(HardwareKey(hardware_class=Instrument, controller_id=23), Instrument,
-                           registry=registry)
+            make_module(registry, qtbot, Instrument, 23)
 
     def test_missing_the_needed_signal_raises_at_build_time(self, registry, qtbot):
         class Instrument(Camera):
@@ -550,8 +525,7 @@ class TestWidgetClass:
             exposure = control(units='ms', lo=1, hi=1000, widget_class=QtWidgets.QSlider)
 
         with pytest.raises(ValueError, match="has no 'editingFinished' signal"):
-            HardwareModule(HardwareKey(hardware_class=Instrument, controller_id=24), Instrument,
-                           registry=registry)
+            make_module(registry, qtbot, Instrument, 24)
 
 
 class TestReadbackRows:
@@ -561,10 +535,7 @@ class TestReadbackRows:
         class Axis(Camera):
             x = control(units='mm', lo=0, hi=50, readback='temperature')
 
-        widget = HardwareModule(HardwareKey(hardware_class=Axis, controller_id=12), Axis, registry=registry)
-        qtbot.addWidget(widget)
-        widget.initialize()
-        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        widget = make_module(registry, qtbot, Axis, 12, initialize=True)
         yield widget
         widget.release()
 
@@ -619,8 +590,7 @@ class TestNamedReadback:
             def write(self, name, value):
                 pass
 
-        widget = HardwareModule(HardwareKey(hardware_class=Stage, controller_id=13), Stage, registry=registry)
-        qtbot.addWidget(widget)
+        widget = make_module(registry, qtbot, Stage, 13)
         assert widget.has_action('my_z_readback_read')  # the readback is in the z row
         widget.initialize()
         qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
@@ -661,11 +631,7 @@ class TestSettle:
 
     @pytest.fixture
     def stage(self, registry, qtbot):
-        widget = HardwareModule(HardwareKey(hardware_class=SettlingStage, controller_id=14),
-                                SettlingStage, registry=registry)
-        qtbot.addWidget(widget)
-        widget.initialize()
-        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        widget = make_module(registry, qtbot, SettlingStage, 14, initialize=True)
         yield widget
         widget.release()
 
@@ -694,10 +660,7 @@ class TestSettle:
             def write(self, name, value):
                 raise RuntimeError('stalled')
 
-        widget = HardwareModule(HardwareKey(hardware_class=Faulty, controller_id=15), Faulty, registry=registry)
-        qtbot.addWidget(widget)
-        widget.initialize()
-        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        widget = make_module(registry, qtbot, Faulty, 15, initialize=True)
         spin = widget._value_widgets['z']
         spin.setValue(20.0)
         spin.editingFinished.emit()
@@ -709,11 +672,7 @@ class TestSettle:
         # Found while writing device_module_connections.md: a write/settle in flight when the device
         # drops used to stay pending/rejected forever, even after reconnecting, since nothing was left
         # to ever confirm or fail it.
-        widget = HardwareModule(HardwareKey(hardware_class=SettlingStage, controller_id=16),
-                                SettlingStage, registry=registry)
-        qtbot.addWidget(widget)
-        widget.initialize()
-        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        widget = make_module(registry, qtbot, SettlingStage, 16, initialize=True)
         spin = widget._value_widgets['z']
         spin.setValue(20.0)
         spin.editingFinished.emit()
@@ -735,10 +694,7 @@ class TestWriteTimeout:
 
     def test_a_write_with_no_response_turns_the_row_rejected(self, registry, qtbot, monkeypatch):
         monkeypatch.setattr(controller, 'WRITE_TIMEOUT_S', 0.05)
-        widget = HardwareModule(HardwareKey(hardware_class=Camera, controller_id=17), Camera, registry=registry)
-        qtbot.addWidget(widget)
-        widget.initialize()
-        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        widget = make_module(registry, qtbot, Camera, 17, initialize=True)
         # Simulate the answer never reaching the Controller at all, not the device refusing.
         # Disconnects Controller's own outgoing signal, not one owned by the hardware-thread
         # object, from the wrong thread.
@@ -792,9 +748,7 @@ class TestStopButton:
         assert not module.has_action('exposure_stop')
 
     def test_a_control_with_a_stop_callback_gets_one(self, registry, qtbot):
-        widget = HardwareModule(HardwareKey(hardware_class=StoppableAxis, controller_id=16),
-                                StoppableAxis, registry=registry)
-        qtbot.addWidget(widget)
+        widget = make_module(registry, qtbot, StoppableAxis, 16)
         assert widget.has_action('z_stop')
         widget.initialize()
         qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
@@ -827,11 +781,7 @@ class TestStopConfirmation:
     optimistically when the button is clicked - a real hardware refusal must not look like success."""
 
     def test_a_failing_stop_does_not_clear_the_pending_state(self, registry, qtbot):
-        widget = HardwareModule(HardwareKey(hardware_class=FailingStopStage, controller_id=28),
-                                FailingStopStage, registry=registry)
-        qtbot.addWidget(widget)
-        widget.initialize()
-        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        widget = make_module(registry, qtbot, FailingStopStage, 28, initialize=True)
         spin = widget._value_widgets['z']
         spin.setValue(20.0)
         spin.editingFinished.emit()
@@ -843,11 +793,7 @@ class TestStopConfirmation:
         widget.release()
 
     def test_a_successful_stop_clears_the_pending_state_once_confirmed(self, registry, qtbot):
-        widget = HardwareModule(HardwareKey(hardware_class=StoppableSettlingStage, controller_id=29),
-                                StoppableSettlingStage, registry=registry)
-        qtbot.addWidget(widget)
-        widget.initialize()
-        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        widget = make_module(registry, qtbot, StoppableSettlingStage, 29, initialize=True)
         plugin = widget.controller.thread._plugin
         spin = widget._value_widgets['z']
         spin.setValue(20.0)
@@ -859,11 +805,7 @@ class TestStopConfirmation:
         assert widget._led_color('z').name() == _colors().green.name()
 
     def test_a_successful_stop_updates_the_spinbox_to_the_frozen_position(self, registry, qtbot):
-        widget = HardwareModule(HardwareKey(hardware_class=StoppableSettlingStage, controller_id=30),
-                                StoppableSettlingStage, registry=registry)
-        qtbot.addWidget(widget)
-        widget.initialize()
-        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        widget = make_module(registry, qtbot, StoppableSettlingStage, 30, initialize=True)
         plugin = widget.controller.thread._plugin
         spin = widget._value_widgets['z']
         spin.setValue(20.0)
@@ -886,19 +828,13 @@ class TestCustomAction:
     """A control's one declared action, under its own name, not just 'stop'."""
 
     def test_the_button_is_named_and_labelled_after_the_action(self, registry, qtbot):
-        widget = HardwareModule(HardwareKey(hardware_class=HomableAxis, controller_id=17),
-                                HomableAxis, registry=registry)
-        qtbot.addWidget(widget)
+        widget = make_module(registry, qtbot, HomableAxis, 17)
         assert widget.has_action('z_home')
         assert widget.get_action('z_home').text() == 'Home'
         widget.release()
 
     def test_clicking_it_calls_the_action(self, registry, qtbot):
-        widget = HardwareModule(HardwareKey(hardware_class=HomableAxis, controller_id=18),
-                                HomableAxis, registry=registry)
-        qtbot.addWidget(widget)
-        widget.initialize()
-        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        widget = make_module(registry, qtbot, HomableAxis, 18, initialize=True)
         plugin = widget.controller.thread._plugin
         widget.get_action('z_home').trigger()
         qtbot.waitUntil(lambda: plugin.home_calls == [True], timeout=2000)
@@ -928,29 +864,19 @@ class TestActionOnAMeasurement:
     background capture), and a checkable one reports which way it flipped."""
 
     def test_a_measurement_can_have_an_action_button(self, registry, qtbot):
-        widget = HardwareModule(HardwareKey(hardware_class=MeasurementWithAction, controller_id=30),
-                                MeasurementWithAction, registry=registry)
-        qtbot.addWidget(widget)
+        widget = make_module(registry, qtbot, MeasurementWithAction, 30)
         assert widget.has_action('temperature_take_background')
         widget.release()
 
     def test_clicking_a_measurements_action_calls_it(self, registry, qtbot):
-        widget = HardwareModule(HardwareKey(hardware_class=MeasurementWithAction, controller_id=31),
-                                MeasurementWithAction, registry=registry)
-        qtbot.addWidget(widget)
-        widget.initialize()
-        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        widget = make_module(registry, qtbot, MeasurementWithAction, 31, initialize=True)
         plugin = widget.controller.thread._plugin
         widget.get_action('temperature_take_background').trigger()
         qtbot.waitUntil(lambda: plugin.bkg_calls == [True], timeout=2000)
         widget.release()
 
     def test_a_checkable_action_reports_the_new_checked_state_each_click(self, registry, qtbot):
-        widget = HardwareModule(HardwareKey(hardware_class=CheckableAction, controller_id=32),
-                                CheckableAction, registry=registry)
-        qtbot.addWidget(widget)
-        widget.initialize()
-        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        widget = make_module(registry, qtbot, CheckableAction, 32, initialize=True)
         plugin = widget.controller.thread._plugin
         button = widget.get_action('temperature_subtract_bkg')
         assert button.isCheckable()
@@ -976,11 +902,7 @@ class TestMergedAction:
 
     @pytest.fixture
     def stage(self, registry, qtbot):
-        widget = HardwareModule(HardwareKey(hardware_class=StageWithEnable, controller_id=19),
-                                StageWithEnable, registry=registry)
-        qtbot.addWidget(widget)
-        widget.initialize()
-        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        widget = make_module(registry, qtbot, StageWithEnable, 19, initialize=True)
         yield widget
         widget.release()
 
@@ -1013,11 +935,7 @@ class StageWithFailingEnable(Camera):
 class TestMergedActionFailure:
 
     def test_a_rejected_merged_write_turns_the_hosts_row_red(self, registry, qtbot):
-        widget = HardwareModule(HardwareKey(hardware_class=StageWithFailingEnable, controller_id=20),
-                                StageWithFailingEnable, registry=registry)
-        qtbot.addWidget(widget)
-        widget.initialize()
-        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        widget = make_module(registry, qtbot, StageWithFailingEnable, 20, initialize=True)
         widget.get_action('x_enable_merged').trigger()
         qtbot.waitUntil(lambda: widget._led_color('x').name() == _colors().red.name(), timeout=2000)
         widget.release()
@@ -1039,11 +957,7 @@ class TestMergedActionOnAMeasurement:
 
     @pytest.fixture
     def camera(self, registry, qtbot):
-        widget = HardwareModule(HardwareKey(hardware_class=CameraWithChannelEnable, controller_id=33),
-                                CameraWithChannelEnable, registry=registry)
-        qtbot.addWidget(widget)
-        widget.initialize()
-        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        widget = make_module(registry, qtbot, CameraWithChannelEnable, 33, initialize=True)
         yield widget
         widget.release()
 
@@ -1065,10 +979,7 @@ class TestWidgetSync:
         class Axis(Camera):
             x = control(units='mm', lo=0, hi=50, ui_add=('slider',))
 
-        widget = HardwareModule(HardwareKey(hardware_class=Axis, controller_id=22), Axis, registry=registry)
-        qtbot.addWidget(widget)
-        widget.initialize()
-        qtbot.waitUntil(lambda: widget.controller.connected, timeout=2000)
+        widget = make_module(registry, qtbot, Axis, 22, initialize=True)
         yield widget
         widget.release()
 
