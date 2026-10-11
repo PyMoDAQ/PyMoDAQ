@@ -187,8 +187,9 @@ def render(rows: List[dict], markdown: bool = False) -> str:
         widths = {c: max(len(c), *(len(str(r.get(c, ''))) for r in rows)) for c in COLUMNS}
         lines.append('  '.join(c.ljust(widths[c]) for c in COLUMNS))
         lines += ['  '.join(str(r.get(c, '')).ljust(widths[c]) for c in COLUMNS) for r in rows]
-    done = sum(1 for r in rows if r.get('compliant'))
-    lines += ['', f'{done}/{len(rows)} repositories follow the template']
+    counted = [r for r in rows if not r.get('gone')]  # a repository that does not exist cannot follow the template
+    done = sum(1 for r in counted if r.get('compliant'))
+    lines += ['', f'{done}/{len(counted)} repositories follow the template']
     return '\n'.join(lines)
 
 
@@ -226,9 +227,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         try:
             rows.append(check(name, published))
         except urllib.error.HTTPError as error:
-            rows.append({'repo': name, 'host': f'error {error.code}', 'compliant': False})
+            gone = error.code == 404  # deleted, renamed or private: the link to it (PyPI, org list) is to be fixed
+            rows.append({'repo': name, 'host': 'gone (404)' if gone else f'error {error.code}', 'compliant': False,
+                         'gone': gone})
     print(json.dumps(rows, indent=1) if args.json else render(rows, args.markdown))
-    return 0 if all(r.get('compliant') for r in rows) else 1
+    return 0 if all(r.get('compliant') for r in rows if not r.get('gone')) else 1
 
 
 if __name__ == '__main__':
