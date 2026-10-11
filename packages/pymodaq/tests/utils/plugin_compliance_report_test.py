@@ -76,3 +76,12 @@ def test_render_counts_compliant_rows():
 
 def render_last(rows):
     return cr.render(rows).splitlines()[-1]
+
+
+def test_missing_repository_is_not_counted(monkeypatch):
+    def not_found(url, raw=False):
+        raise cr.urllib.error.HTTPError(url, 404, 'Not Found', None, None)
+    monkeypatch.setattr(cr, 'request', not_found)
+    assert cr.main(['someone/pymodaq_plugins_gone']) == 0
+    rows = [{'repo': 'a', 'compliant': True}, {'repo': 'b', 'host': 'gone (404)', 'compliant': False, 'gone': True}]
+    assert cr.render(rows).endswith('1/1 repositories follow the template')
