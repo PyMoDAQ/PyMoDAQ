@@ -102,52 +102,48 @@ __ https://github.com/PyMoDAQ/pymodaq_plugins_template
 Testing your plugin
 -------------------
 
-A plugin contribution is accepted if it passes the acceptance checks shipped with PyMoDAQ. They need no hardware
-(they are static and import-level checks) and can be reused in any plugin repository, in a test module such as
-*tests/test_plugin.py*. The pytest mixin applying them is provided by ``pymodaq.utils.plugin_testing`` from PyMoDAQ
-5.3.2 on (in 5.3.1 it was ``pymodaq_utils.plugin_testing``, still importable but deprecated). The checks themselves
-stay in ``pymodaq_utils``, so that the ``check_plugin`` command remains fast and does not start the whole PyMoDAQ
-initialization. The test module should skip itself with older versions, where the mixin does not exist:
+A plugin contribution is accepted if it passes the acceptance checks shipped with PyMoDAQ. They need no hardware and are
+available at three levels, from the quickest to the deepest. Start with the first one, the others build on it:
 
-.. code-block:: python
+#. :ref:`the check_plugin command <check_plugin_command>`: a report on your plugin package, from the command line,
+   without pytest and without installing the plugin;
+#. :ref:`the same checks as tests <plugin_pytest_checks>` in your plugin repository, to run them in your CI;
+#. :ref:`tests of the behaviour <plugin_behaviour_tests>` of your plugin class against a fake of its controller.
 
-    import pytest
+.. _check_plugin_command:
 
-    pytest.importorskip('pymodaq.utils.plugin_testing', reason='The plugin acceptance checks need PyMoDAQ >= 5.3.2')
+The check_plugin command
+++++++++++++++++++++++++
 
-    from pymodaq.utils.plugin_testing import PluginPackageChecks
+``check_plugin`` analyses the source of the plugin with *static rules* (nothing is imported, so it also works when the
+instrument SDK is not installed) and checks the plugin modules that can be imported. It is the fastest way to know whether your
+package is recognised by PyMoDAQ, and the one to run first and often. From the root of your plugin repository
+(the exit code is non zero when the checks fail):
 
-    class TestMyPlugin(PluginPackageChecks):
-        package_name = 'pymodaq_plugins_xxxx'  # optional, otherwise found from the package folder
+.. code-block:: bash
 
-This file replaces any generic test file inherited from the template; keep only tests that are specific to your
-instrument next to it.
+    check_plugin [package name, folder or instrument file] [--fail-on error|warning|todo] [--strict-imports] [-v] [--color auto|always|never]
 
-Every plugin module found in the package is checked individually (``pytest -v`` lists them):
+The report is colored in a terminal (``--color auto``, the default); set the ``NO_COLOR`` environment variable or
+use ``--color never`` to disable it, or ``FORCE_COLOR`` / ``--color always`` to force it (for instance in a CI log).
+The argument can also be a single instrument module of a plugin package (``daq_move_Xxxx.py`` or
+``daq_NDviewer_Xxxx.py``): only this module is then checked, with its todos, not the package (*pyproject.toml*, entry
+points...). The argument is either the name of an installed plugin package, or a folder: the plugin repository or its package
+folder (the current folder by default). The plugin does not need to be installed, and the *pyproject.toml* can still
+have the template name, which is then reported; only the entry points cannot be checked before the installation.
 
-* the package name, its *config* and *__version__*, and the ``pymodaq.plugins`` / ``pymodaq.instruments`` entry
-  points (and the optional extension, model, scanner... ones, that must be loadable)
-* the naming convention of the modules and of the classes (see above), and that no module is wrongly named
-* the plugin modules can be imported *without the instrument vendor SDK* (guard these imports with *try/except*)
-* the plugin class derives from the right base class and overrides the mandatory methods
-  (*ini_stage*, *get_actuator_value*, *close* for an actuator, and a warning if *stop_motion* is not implemented; *ini_detector*, *grab_data*, *stop*,
-  *close* for a detector)
-* for an actuator, ``_axis_names``, ``_controller_units`` and ``_epsilons`` are consistent and the units are known
-  from `pint`
-* ``params`` is a valid list of dict producing a settings tree
 
-Beyond the tests, the source of the plugin is analysed by *static rules* (nothing is imported, so they also work when
-the instrument SDK is not installed). Every finding has a code, a severity, a location and a hint to fix it:
+Every finding has a code, a severity, a location and a hint to fix it. The severities are:
 
 * ``error``: the plugin will not work or will not be seen by PyMoDAQ
 * ``warning``: deprecated or suspicious
 * ``todo``: the plugin is not finished (leftovers of the template)
 
-By default only the errors fail the tests, the others are listed (the todos are also counted). Set the class attribute
-``fail_on = 'warning'`` or ``fail_on = 'todo'`` (everything) in your test class to be stricter, for instance before a
-release or to review a contribution. A module that cannot be imported because of a missing third party module or SDK
-is skipped; set ``strict_imports = True`` to make it fail, which is advised in the CI of your plugin as its dependencies
-are installed there.
+By default only the errors make the command fail, the others are listed (the todos are also counted). Use ``--fail-on warning`` or
+``--fail-on todo`` (everything) to be stricter, for instance before a release or to review a contribution. A module
+that cannot be imported because of a missing third party module or SDK is reported but does not fail the command;
+add ``--strict-imports`` to make it fail, which is advised in the CI of your plugin as its dependencies are installed
+there. The findings are identified by these codes:
 
 ======== =================================================================================================
 Code     Meaning
@@ -175,6 +171,59 @@ PMQ315   invalid escape sequence in a string, such as ``"C:\Program Files"`` (us
 PMQ316   settings group ``multiaxes`` / ``multi_status`` renamed ``controller`` / ``controller_status``
 PMQ317   code that only works on Windows and runs on import (``windll``, ``winreg``, drive path)
 ======== =================================================================================================
+
+The functions behind this command (*check_package_layout*, *check_move_class*, *check_viewer_class*) return the list of
+problems found and can be used from a script. To get a full report of an installed plugin package without pytest, use
+``print(check_plugin_package('pymodaq_plugins_xxxx'))`` (the returned *PluginReport* also has *ok*, *failures*, *todos* and
+*to_dict()*; use ``check_plugin_package(..., fail_on='todo')`` and ``report.format(verbose=True)`` to see every todo). Lint your code too, at least with
+``flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics`` (the gate used by the PyMoDAQ CI) or ``ruff``.
+
+
+.. _plugin_pytest_checks:
+
+The same checks as tests
+++++++++++++++++++++++++
+
+To run the same checks in your plugin repository, for instance in your CI, use a test module such as
+*tests/test_plugin.py*. The pytest mixin applying them is provided by ``pymodaq.utils.plugin_testing`` from PyMoDAQ
+5.3.2 on (in 5.3.1 it was ``pymodaq_utils.plugin_testing``, still importable but deprecated). The checks themselves
+stay in ``pymodaq_utils``, so that the ``check_plugin`` command remains fast and does not start the whole PyMoDAQ
+initialization. The test module should skip itself with older versions, where the mixin does not exist:
+
+.. code-block:: python
+
+    import pytest
+
+    pytest.importorskip('pymodaq.utils.plugin_testing', reason='The plugin acceptance checks need PyMoDAQ >= 5.3.2')
+
+    from pymodaq.utils.plugin_testing import PluginPackageChecks
+
+    class TestMyPlugin(PluginPackageChecks):
+        package_name = 'pymodaq_plugins_xxxx'  # optional, otherwise found from the package folder
+
+This file replaces any generic test file inherited from the template; keep only tests that are specific to your
+instrument next to it.
+
+Every plugin module found in the package is checked individually (``pytest -v`` lists them). The tests apply the same
+rules and codes as ``check_plugin``, and in particular:
+
+* the package name, its *config* and *__version__*, and the ``pymodaq.plugins`` / ``pymodaq.instruments`` entry
+  points (and the optional extension, model, scanner... ones, that must be loadable)
+* the naming convention of the modules and of the classes (see above), and that no module is wrongly named
+* the plugin modules can be imported *without the instrument vendor SDK* (guard these imports with *try/except*)
+* the plugin class derives from the right base class and overrides the mandatory methods
+  (*ini_stage*, *get_actuator_value*, *close* for an actuator, and a warning if *stop_motion* is not implemented; *ini_detector*, *grab_data*, *stop*,
+  *close* for a detector)
+* for an actuator, ``_axis_names``, ``_controller_units`` and ``_epsilons`` are consistent and the units are known
+  from `pint`
+* ``params`` is a valid list of dict producing a settings tree
+
+As with the command, only the errors fail the tests by default. Set the class attribute
+``fail_on = 'warning'`` or ``fail_on = 'todo'`` (everything) in your test class to be stricter, for instance before a
+release or to review a contribution. A module that cannot be imported because of a missing third party module or SDK
+is skipped; set ``strict_imports = True`` to make it fail (the ``--strict-imports`` of the command), which is advised
+in the CI of your plugin.
+
 
 .. _plugin_behaviour_tests:
 
@@ -224,28 +273,6 @@ complete fake actuators (single and multi-axes) and a fake detector to copy.
     ``close``) against a fake that encodes what you believe the driver does. They say nothing about the device itself:
     timing, error replies, real ranges and units. A passing run is not a hardware validation, say in a contribution
     what was tested on the real instrument and what only against a fake.
-
-From the root of your plugin repository you can also print this report from the command line, the exit code being
-non zero when the checks fail:
-
-.. code-block:: bash
-
-    check_plugin [package name, folder or instrument file] [--fail-on error|warning|todo] [--strict-imports] [-v] [--color auto|always|never]
-
-The report is colored in a terminal (``--color auto``, the default); set the ``NO_COLOR`` environment variable or
-use ``--color never`` to disable it, or ``FORCE_COLOR`` / ``--color always`` to force it (for instance in a CI log).
-The argument can also be a single instrument module of a plugin package (``daq_move_Xxxx.py`` or
-``daq_NDviewer_Xxxx.py``): only this module is then checked, with its todos, not the package (*pyproject.toml*, entry
-points...). The argument is either the name of an installed plugin package, or a folder: the plugin repository or its package
-folder (the current folder by default). The plugin does not need to be installed, and the *pyproject.toml* can still
-have the template name, which is then reported; only the entry points cannot be checked before the installation.
-
-The functions behind these tests (*check_package_layout*, *check_move_class*, *check_viewer_class*) return the list of
-problems found and can be used from a script. To get a full report of an installed plugin package without pytest, use
-``print(check_plugin_package('pymodaq_plugins_xxxx'))`` (the returned *PluginReport* also has *ok*, *failures*, *todos* and
-*to_dict()*; use ``check_plugin_package(..., fail_on='todo')`` and ``report.format(verbose=True)`` to see every todo). Lint your code too, at least with
-``flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics`` (the gate used by the PyMoDAQ CI) or ``ruff``.
-
 
 Adding an instrument to your plugin
 -----------------------------------
