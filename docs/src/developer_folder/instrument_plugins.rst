@@ -94,6 +94,172 @@ follow some rules and syntax. The `plugin template package`__ could be copied lo
 
 __ https://github.com/PyMoDAQ/pymodaq_plugins_template
 
+.. _plugin_acceptance_tests:
+
+Testing your plugin
+-------------------
+
+A plugin contribution is accepted if it passes the acceptance checks shipped with PyMoDAQ. They need no hardware
+(they are static and import-level checks) and can be reused in any plugin repository, in a test module such as
+*tests/test_plugin.py*. The pytest mixin applying them is provided by ``pymodaq.utils.plugin_testing`` from PyMoDAQ
+5.3.2 on (in 5.3.1 it was ``pymodaq_utils.plugin_testing``, still importable but deprecated). The checks themselves
+stay in ``pymodaq_utils``, so that the ``check_plugin`` command remains fast and does not start the whole PyMoDAQ
+initialization. The test module should skip itself with older versions, where the mixin does not exist:
+
+.. code-block:: python
+
+    import pytest
+
+    pytest.importorskip('pymodaq.utils.plugin_testing', reason='The plugin acceptance checks need PyMoDAQ >= 5.3.2')
+
+    from pymodaq.utils.plugin_testing import PluginPackageChecks
+
+    class TestMyPlugin(PluginPackageChecks):
+        package_name = 'pymodaq_plugins_xxxx'  # optional, otherwise found from the package folder
+
+This file replaces any generic test file inherited from the template; keep only tests that are specific to your
+instrument next to it.
+
+Every plugin module found in the package is checked individually (``pytest -v`` lists them):
+
+* the package name, its *config* and *__version__*, and the ``pymodaq.plugins`` / ``pymodaq.instruments`` entry
+  points (and the optional extension, model, scanner... ones, that must be loadable)
+* the naming convention of the modules and of the classes (see above), and that no module is wrongly named
+* the plugin modules can be imported *without the instrument vendor SDK* (guard these imports with *try/except*)
+* the plugin class derives from the right base class and overrides the mandatory methods
+  (*ini_stage*, *get_actuator_value*, *close* for an actuator, and a warning if *stop_motion* is not implemented; *ini_detector*, *grab_data*, *stop*,
+  *close* for a detector)
+* for an actuator, ``_axis_names``, ``_controller_units`` and ``_epsilons`` are consistent and the units are known
+  from `pint`
+* ``params`` is a valid list of dict producing a settings tree
+
+Beyond the tests, the source of the plugin is analysed by *static rules* (nothing is imported, so they also work when
+the instrument SDK is not installed). Every finding has a code, a severity, a location and a hint to fix it:
+
+* ``error``: the plugin will not work or will not be seen by PyMoDAQ
+* ``warning``: deprecated or suspicious
+* ``todo``: the plugin is not finished (leftovers of the template)
+
+By default only the errors fail the tests, the others are listed (the todos are also counted). Set the class attribute
+``fail_on = 'warning'`` or ``fail_on = 'todo'`` (everything) in your test class to be stricter, for instance before a
+release or to review a contribution. A module that cannot be imported because of a missing third party module or SDK
+is skipped; set ``strict_imports = True`` to make it fail, which is advised in the CI of your plugin as its dependencies
+are installed there.
+
+======== =================================================================================================
+Code     Meaning
+======== =================================================================================================
+PMQ101-3 project name does not follow the convention, still the template one, differs from the package folder
+PMQ104-6 template placeholders left in *pyproject.toml* (url, description, authors)
+PMQ107   no pymodaq dependency declared
+PMQ108   no entry points: PyMoDAQ will not find the plugin
+PMQ109   code found for a feature set to false in ``[features]`` (its entry points will not be generated)
+PMQ110   feature set to true but nothing found. PMQ111: README.rst or LICENSE missing
+PMQ112   python file that is not a valid module name (often a conflicted copy of a synchronisation tool): ignored
+PMQ201   TODO comment. PMQ202: ``NotImplementedError`` left. PMQ203: template placeholder name left
+PMQ204   example module of the template left. PMQ205: *config_template.toml* still has the template title
+PMQ302   deprecated or ignored class attribute (``_epsilon``, ``stage_names``, ``axis_names``)
+PMQ303   ``data_actuator_type`` is not ``DataActuatorType.DataActuator``
+PMQ304-6 (module that cannot be imported) inconsistent axes/units, unknown unit, missing mandatory method
+PMQ307   import of the removed ``pymodaq.daq_utils``
+PMQ308   no ``if __name__ == '__main__': main(__file__)`` block to run the plugin standalone
+PMQ309   ``ini_stage`` / ``ini_detector`` do not return ``(info, initialized)``
+PMQ310   the plugin class has no docstring. PMQ311: *stop_motion* not overridden, the Stop of the actuator does nothing
+PMQ312   deprecated hook of an actuator (``check_position``, ``move_Abs``, ``move_Rel``, ``move_Home``)
+PMQ313   deprecated attribute ``current_position`` / ``target_position`` (use ``*_value`` instead)
+PMQ314   ``comon_parameters`` of the actuators used as a list: it is a function, the import fails
+PMQ315   invalid escape sequence in a string, such as ``"C:\Program Files"`` (use a raw string)
+PMQ316   settings group ``multiaxes`` / ``multi_status`` renamed ``controller`` / ``controller_status``
+PMQ317   code that only works on Windows and runs on import (``windll``, ``winreg``, drive path)
+======== =================================================================================================
+
+.. _plugin_behaviour_tests:
+
+Testing the behaviour of your plugin without hardware
+-----------------------------------------------------
+
+The acceptance checks look at the structure of the plugin. To check that it also *behaves* (the initialization, the
+moves, the units of the positions, the data emitted by a grab, the release of the controller in ``close``), run the
+plugin class against a fake of its controller. Keep the communication with the instrument behind a small wrapper
+class in the *hardware* folder of the plugin package, write a fake of this wrapper with the same public methods (in
+memory, instantaneous, recording the calls it receives), and drive the plugin with the helpers of
+``pymodaq.utils.plugin_testing`` (available from PyMoDAQ 5.3.2). They run in the calling thread, with no visible
+GUI, and fail with a ``SignalTimeout`` if the plugin never emits the expected signal:
+
+.. code-block:: python
+
+    import pytest
+
+    from pymodaq.utils.plugin_testing import make_actuator, move_abs_and_wait, make_detector, grab_and_wait, assert_units
+
+    from pymodaq_plugins_xxxx.daq_move_plugins import daq_move_Xxxx
+    from pymodaq_plugins_xxxx.daq_viewer_plugins.plugins_1D import daq_1Dviewer_Xxxx
+
+    class FakeWrapper:
+        position = 0.
+        def move_at(self, value): self.position = value
+        def get_position(self): return self.position
+        def close(self): pass
+
+    def test_move_abs(monkeypatch):
+        monkeypatch.setattr(daq_move_Xxxx, 'XxxxWrapper', FakeWrapper)  # the name used in the plugin module
+        actuator = make_actuator(daq_move_Xxxx.DAQ_Move_Xxxx)
+        assert actuator.initialized
+        position = move_abs_and_wait(actuator, 2.5)  # a float is in the axis unit of the actuator
+        assert position.value() == pytest.approx(2.5, abs=actuator.epsilon)
+        actuator.close()
+
+``move_rel_and_wait``, ``move_home_and_wait`` and ``make_detector`` / ``grab_and_wait`` / ``assert_units`` work the
+same way, and a slave axis of a multi-axes controller is created with ``make_actuator(plugin_class,
+controller=master.controller)``. The helpers reproduce what the Dashboard does around the plugin: the target is
+expressed in the axis unit before reaching ``move_abs``, and the end of a move is signalled once ``poll_moving`` has
+run. The tests of the helpers themselves (*tests/utils/plugin_harness_test.py* in the PyMoDAQ repository) contain
+complete fake actuators (single and multi-axes) and a fake detector to copy.
+
+.. note::
+    These tests check the plugin's side of its contract with PyMoDAQ (return types, units, signals, shared controller,
+    ``close``) against a fake that encodes what you believe the driver does. They say nothing about the device itself:
+    timing, error replies, real ranges and units. A passing run is not a hardware validation, say in a contribution
+    what was tested on the real instrument and what only against a fake.
+
+From the root of your plugin repository you can also print this report from the command line, the exit code being
+non zero when the checks fail:
+
+.. code-block:: bash
+
+    check_plugin [package name, folder or instrument file] [--fail-on error|warning|todo] [--strict-imports] [-v] [--color auto|always|never]
+
+The report is colored in a terminal (``--color auto``, the default); set the ``NO_COLOR`` environment variable or
+use ``--color never`` to disable it, or ``FORCE_COLOR`` / ``--color always`` to force it (for instance in a CI log).
+The argument can also be a single instrument module of a plugin package (``daq_move_Xxxx.py`` or
+``daq_NDviewer_Xxxx.py``): only this module is then checked, with its todos, not the package (*pyproject.toml*, entry
+points...). The argument is either the name of an installed plugin package, or a folder: the plugin repository or its package
+folder (the current folder by default). The plugin does not need to be installed, and the *pyproject.toml* can still
+have the template name, which is then reported; only the entry points cannot be checked before the installation.
+
+The functions behind these tests (*check_package_layout*, *check_move_class*, *check_viewer_class*) return the list of
+problems found and can be used from a script. To get a full report of an installed plugin package without pytest, use
+``print(check_plugin_package('pymodaq_plugins_xxxx'))`` (the returned *PluginReport* also has *ok*, *failures*, *todos* and
+*to_dict()*; use ``check_plugin_package(..., fail_on='todo')`` and ``report.format(verbose=True)`` to see every todo). Lint your code too, at least with
+``flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics`` (the gate used by the PyMoDAQ CI) or ``ruff``.
+
+
+Adding an instrument to your plugin
+-----------------------------------
+
+To avoid naming mistakes, a helper creates a new instrument module in your plugin package, from the root of your
+plugin repository:
+
+.. code-block:: bash
+
+    python -m pymodaq_utils.plugin_scaffold move Xxxx   # daq_move_Xxxx.py with the class DAQ_Move_Xxxx
+    python -m pymodaq_utils.plugin_scaffold 1D Xxxx     # daq_1Dviewer_Xxxx.py with the class DAQ_1DViewer_Xxxx
+
+(use ``--folder`` to give the *pymodaq_plugins_xxxx* package folder). The module derives from the right base class,
+declares the mandatory attributes and methods, and its ``TODO`` comments tell where to put your instrument code.
+The static rules above list what is left to do.
+
+
 .. _hardware_settings:
 
 
