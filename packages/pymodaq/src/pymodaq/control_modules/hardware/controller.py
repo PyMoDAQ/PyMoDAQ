@@ -1,7 +1,7 @@
 """GUI-side handle to one device.
 
 A :class:`Controller` is created by the registry for each device. It talks to the device's
-:class:`~pymodaq.control_modules.hardware_thread.HardwareThread` through signals only, so the
+:class:`~pymodaq.control_modules.hardware.hardware_thread.HardwareThread` through signals only, so the
 plugin is only ever called on the hardware thread. Each declared measurement or control becomes a
 property: a control's setter queues a write, and a getter returns the latest value received.
 """

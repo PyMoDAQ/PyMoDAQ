@@ -225,6 +225,33 @@ class TestToolbarWidgets:
             control(values=['off', 'on'], ui_add=('toggle',))
 
 
+class TestWidgetClass:
+    """widget_class= substitutes the Qt class HardwareModule builds for a control's representation.
+    Only a type/compatibility check happens here - capabilities.py stays Qt-free on purpose, so the
+    real "does it expose the right property and signal" check happens in HardwareModule, where Qt is
+    actually in scope (see RepresentationRule in hardware_module.py)."""
+
+    def test_a_class_is_accepted_on_a_control(self):
+        q = control(lo=0, hi=1, widget_class=object)
+        assert q.widget_class is object
+
+    def test_none_is_the_default(self):
+        assert control(lo=0, hi=1).widget_class is None
+
+    def test_only_a_control_can_use_it(self):
+        with pytest.raises(ValueError, match='only a control'):
+            Quantity(Access.MEASUREMENT, widget_class=object)
+
+    def test_must_be_a_class_not_an_instance(self):
+        with pytest.raises(ValueError, match='must be a class'):
+            control(lo=0, hi=1, widget_class=object())
+
+    def test_not_serialized(self):
+        # a live class reference, same treatment as get=/set=/actions=
+        q = Quantity.from_dict(control(lo=0, hi=1, widget_class=object).to_dict())
+        assert q.widget_class is None
+
+
 class TestReadback:
 
     def test_true_creates_a_measurement_named_after_the_control(self):

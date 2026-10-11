@@ -1,7 +1,7 @@
 """HardwareThread owns one plugin and serialises all access to it.
 
 One ``HardwareThread`` lives in a dedicated ``QThread`` (see
-:class:`~pymodaq.control_modules.hardware_registry.HardwareRegistry`).
+:class:`~pymodaq.control_modules.hardware.hardware_registry.HardwareRegistry`).
 Requests from GUI subscribers arrive as queued slot calls, so the plugin is never
 called from two threads at once.
 

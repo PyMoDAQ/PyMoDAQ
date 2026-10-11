@@ -177,6 +177,7 @@ class Quantity:
         ui_add: tuple | list = (),
         ui_remove: tuple | list = (),
         widget: str | None = None,
+        widget_class: type | None = None,
         push: bool = False,
         readback: bool | str = False,
         setting: bool | str = False,
@@ -201,6 +202,9 @@ class Quantity:
         # None: the default representation for (access, domain). Otherwise, the one alternative
         # representation to substitute for it - see _WIDGET_OVERRIDES and toolbar_widgets.
         self.widget = widget
+        # None: the representation's own default Qt class. Otherwise, a class HardwareModule builds
+        # instead - see control()'s docstring for why this isn't checked here.
+        self.widget_class = widget_class
         self.push = bool(push)
         # True, or the name of the measurement that reports the device's actual value; resolved by Capabilities
         self.readback = readback
@@ -259,6 +263,11 @@ class Quantity:
                     f"widget={self.widget!r}: 'toggle' is the only supported override, "
                     f"replacing the default 'selector'"
                 )
+        if self.widget_class is not None:
+            if self.access is not Access.CONTROL:
+                raise ValueError('only a control has a representation widget to override with widget_class')
+            if not isinstance(self.widget_class, type):
+                raise ValueError(f'widget_class must be a class, got {self.widget_class!r}')
         if self.merge_into is not None:
             if self.access is not Access.CONTROL:
                 raise ValueError('only a control can be merged into another row')
@@ -374,6 +383,7 @@ def control(
     ui_add: tuple | list = (),
     ui_remove: tuple | list = (),
     widget: str | None = None,
+    widget_class: type | None = None,
     readback: bool | str = False,
     setting: bool | str = False,
     get: Callable[[Any], Any] | None = None,
@@ -393,6 +403,20 @@ def control(
     'enabled']``). It replaces the default outright, rather than adding alongside it - unlike
     ``ui_add``/``ui_remove`` below, which are for additive companion widgets, never the representation
     itself.
+
+    ``widget_class`` substitutes the Qt class :mod:`~pymodaq.control_modules.hardware_module` builds for
+    this control's representation (the ``value`` spinbox, or the ``selector``/``toggle`` a discrete
+    control gets) - e.g. a styled ``QDoubleSpinBox`` subclass, or a custom-painted slider-like widget
+    for a two-valued control. Not checked here: this module stays Qt-free on purpose (see
+    :mod:`~pymodaq.control_modules.hardware.controller`'s own "no GUI" boundary), and a Qt *property*'s name
+    doesn't always match its Python getter method (``QPushButton``'s ``checked`` property reads through
+    ``isChecked()``, not ``checked()``), so there's nothing reliable to check without an actual Qt
+    instance in hand. The real compatibility check - does the class actually expose the property and
+    signal the representation needs - happens where Qt is already in scope, when
+    :mod:`~pymodaq.control_modules.hardware_module` builds the widget. Not serialized (a live class
+    reference, same as ``get``/``set``/``actions``). A ``slider`` companion widget (``ui_add=('slider',)``)
+    isn't covered by this yet - it's a different slot from the representation, an easy follow-up with
+    the same mechanism once something needs it.
 
     ``get`` and ``set`` answer a read or a write of this quantity directly: ``get(plugin)`` returns the
     value, ``set(plugin, value)`` applies it, instead of ``read``/``write``. See :func:`measurement` for
@@ -427,8 +451,8 @@ def control(
     """
     return Quantity(Access.CONTROL, units=units, label=label, lo=lo, hi=hi, epsilon=epsilon,
                     values=values, docs=docs, ui_add=ui_add, ui_remove=ui_remove, widget=widget,
-                    readback=readback, setting=setting, get=get, set=set, stop=stop, actions=actions,
-                    merge_into=merge_into)
+                    widget_class=widget_class, readback=readback, setting=setting, get=get, set=set,
+                    stop=stop, actions=actions, merge_into=merge_into)
 
 
 def _readback_of(control: Quantity) -> Quantity:
