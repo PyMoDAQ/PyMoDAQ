@@ -1,0 +1,50 @@
+# Weekly report of the plugin repositories that do not follow the plugin template yet (see
+# packages/pymodaq/src/pymodaq/utils/plugin_testing/compliance_report.py). The table goes to the summary of the run
+# and to one issue kept up to date; the maintainer is mentioned in a comment when the number of compliant plugins changes.
+name: Plugins compliance report
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  report:
+    if: github.repository == 'PyMoDAQ/PyMoDAQ'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ISSUE_TITLE: Plugins compliance report
+    steps:
+      - uses: actions/checkout@v6.0.3
+      - uses: actions/setup-python@v6.2.0
+        with:
+          python-version: '3.12'
+      - name: Build the report
+        run: |
+          # run the file itself: it only needs the standard library, not an installed PyMoDAQ
+          python packages/pymodaq/src/pymodaq/utils/plugin_testing/compliance_report.py --pypi --markdown > report.md || true
+          cat report.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Update the issue
+        run: |
+          current=$(tail -n 1 report.md)
+          number=$(gh issue list --state open --search "in:title \"$ISSUE_TITLE\"" --json number --jq '.[0].number // empty')
+          {
+            echo "Updated by the workflow \`${GITHUB_WORKFLOW}\` on $(date -u +%F). Run it again from the Actions tab."
+            echo
+            cat report.md
+          } > body.md
+          if [ -z "$number" ]; then
+            gh issue create --title "$ISSUE_TITLE" --body-file body.md
+          else
+            previous=$(gh issue view "$number" --json body --jq .body | tail -n 1)
+            gh issue edit "$number" --body-file body.md
+            if [ "$previous" != "$current" ]; then
+              gh issue comment "$number" --body "@seb5g $current (was: $previous)"
+            fi
+          fi
