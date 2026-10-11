@@ -7,6 +7,7 @@ Developer's Guide
 
    /developer_folder/contributing
    /developer_folder/custom_app
+   /developer_folder/extension_workflow
    /developer_folder/plugins
    /developer_folder/sequencer_development
    /developer_folder/shared_ui
