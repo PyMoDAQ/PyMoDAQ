@@ -19,7 +19,9 @@ For your package to be considered as a PyMoDAQ's dashboard extension, you should
 
   * EXTENSION_NAME: a string used to display the extension name in the dashboard extension menu
   * CLASS_NAME: a string giving the name of the extension class
-  * a class deriving from the ``CustomApp`` base class (see :ref:`custom_app`)
+  * a class deriving from the ``CustomExt`` base class (see :ref:`custom_app`). ``CustomExt`` itself extends
+    ``CustomApp`` with what deals with instruments and the Dashboard (``dashboard``, ``modules_manager``,
+    experiment and state managers, Dashboard toolbar)
 
 The *pymodaq_plugins_template* contains already all this, so make sure to start from there when you wish to build an
 extension.
@@ -31,7 +33,8 @@ extension.
 
    The correct configuration of your package.
 
-The class itself defining the extension derives from the ``CustomApp`` base class. As such, it's ``__init__`` method
+The class itself defining the extension derives from the ``CustomExt`` base class (``pymodaq.utils.custom_ext``), which
+extends the ``CustomApp`` base class. As such, it's ``__init__`` method
 takes two attributes, a ``DockArea`` instance and a ``DashBoard`` instance (the one from which the extension will be
 loaded and that contains all the actuators/detectors needed for your extension). The ``DashBoard`` will smoothly
 initialize your class when launching it from the menu. Below you'll find a sample of an extension module with an
@@ -43,7 +46,7 @@ extension class called ``MyExtension`` (from the *pymodaq_plugins_template* pack
     EXTENSION_NAME = 'MY_EXTENSION_NAME'
     CLASS_NAME = 'MyExtension'
 
-    class MyExtension(gutils.CustomApp):
+    class MyExtension(CustomExt):
         # list of dicts enabling the settings tree on the user interface
         params = [
             {'title': 'Main settings:', 'name': 'main_settings', 'type': 'group', 'children': [
@@ -71,8 +74,8 @@ extension class called ``MyExtension`` (from the *pymodaq_plugins_template* pack
             self.setup_ui()
 
 With such a file in the extensions folder, the dashboard will be able to see it and will list it into its available
-extensions. Then you'll have to code the inners of your extension following the ``CustomApp`` class
-(see :ref:`custom_app`). The big difference between extensions and Standalone apps resides in the fact that your
+extensions. Then you'll have to code the inners of your extension following the ``CustomExt`` class, which extends
+``CustomApp`` (see :ref:`custom_app`). The big difference between extensions and Standalone apps resides in the fact that your
 dashboard instance is available here, hence all the control modules it contains. You'll be able to use all their
 functionalities only focusing on your extension layout!
 

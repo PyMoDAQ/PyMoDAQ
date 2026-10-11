@@ -20,12 +20,13 @@ interface build using only PyMoDAQ's building blocks. The corresponding script t
 
 .. note::
 
-  A generic base class `CustomApp` located in `pymodaq_gui.utils.custom_app` can be used to
-  build very quickly standalone *Application* or *Dashboard* extensions (using some more advanced
-  functionalities from the class :py:class:`pymodaq.extensions.custom_ext`. The *DAQ_Logger* extension
-  has been built using it as well as some examples in the example folder.
+  A generic base class ``CustomApp`` located in ``pymodaq_gui.utils.custom_app`` can be used to
+  build very quickly standalone *Applications*. ``CustomExt`` (``pymodaq.utils.custom_ext``) extends ``CustomApp``
+  with what deals with instruments and the Dashboard, and is the base class of any *Dashboard extension*
+  (the *DAQ_Logger* extension has been built using it, as well as some examples in the example folder).
+  See :ref:`custom_app_structure`.
 
-Below you'll find the skeleton of a *CustomApp* subclassing the base class and methods you
+Below you'll find the skeleton of a *CustomApp* (a *CustomExt* is written the same way) subclassing the base class and methods you
 have to override with your App/Extension specifics:
 
 .. code-block:: python
