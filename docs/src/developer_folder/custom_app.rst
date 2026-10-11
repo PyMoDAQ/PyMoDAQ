@@ -361,6 +361,81 @@ an ``ExtensionWorker``. Add ``create_dashboard_toolbar()`` in ``setup_menus_and_
 Dashboard from the extension. Implement ``_quit_fun`` rather than ``quit_fun``; the Dashboard is shown again when
 the extension quits.
 
+.. _customext_experiment_state:
+
+Experiment, State and the Dashboard toolbar in a CustomExt
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+The *experiment* (the set of actuators and detectors of the Dashboard, see :ref:`experiment_manager`) and its *state*
+(values of the instruments settings, see :ref:`state_manager`) belong to the Dashboard. A ``CustomExt`` does not create
+its own managers: it reaches the Dashboard's ones, and can display their controls in its own window.
+
+* ``self.experiment_manager`` and ``self.state_manager`` are the ``ExperimentManager`` and ``StateManager`` of the
+  Dashboard (``None`` if the extension runs without Dashboard). Never create others, nor your own save/load of the
+  instrument configurations.
+* ``self.modules_manager`` is created for the extension, and filled with the actuators and detectors of the
+  Dashboard. It is refreshed each time an experiment is applied, see below.
+* Applying an experiment from the extension is the same thing as applying it from the Dashboard: the control
+  modules are recreated by the Dashboard, then ``ExperimentManager.applied_entry`` (a ``Signal(str)`` carrying the
+  experiment name) is emitted. Applying a state sets values in the existing control modules, with no change of the list
+  of modules.
+
+React to a new experiment by reimplementing ``do_things_after_experiment_set(experiment_name, show_dashboard)``.
+``CustomExt.__init__`` connects it to ``applied_entry`` and also calls it once at startup if an experiment is already
+applied (``experiment_manager.entry_applied``), so the extension is set up the same way whenever it is opened. The base
+implementation updates ``self.modules_manager`` and shows or hides the Dashboard window: call it with ``super()`` when you
+override it, then rebuild what depends on the instruments (lists of modules in your settings, signal connections to the
+control modules...), as these were destroyed with the previous experiment.
+
+``create_dashboard_toolbar`` creates a toolbar named *dashboard* in the main window of the extension (call it in
+``setup_menus_and_toolbars`` or ``setup_actions``, once the actions can be added). It is the same toolbar as the one
+described in :ref:`dashboard_external_toolbar`, with three optional groups:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Argument
+     - Adds
+     - Provided by
+   * - ``add_dashboard=True``
+     - the *Show/Hide Dashboard* toggle (action ``DashBoardToolbarActions.SHOW``, handled by ``show_dashboard``)
+     - ``CustomExt``
+   * - ``add_experiment=True``
+     - a button opening the Experiment manager, a list of the experiments and a button applying the selected one
+     - ``self.experiment_manager.get_external_toolbar_menu``
+   * - ``add_state=True``
+     - the same three controls for the states of the current experiment
+     - ``self.state_manager.get_external_toolbar_menu``
+
+``add_break=True`` puts the toolbar on a new row. For instance ``self.create_dashboard_toolbar(add_state=False)`` keeps the
+experiment list but not the states, which is relevant for an extension that only needs to choose the instruments. The
+lists of experiments and states are kept in sync with the ones of the Dashboard, they all show the same current entry. A
+manager can also be used without its toolbar: ``get_external_toolbar_menu(toolbar, menu)`` fills any toolbar or menu you
+give, so you can place the controls where you want in your interface.
+
+.. graphviz::
+   :caption: Experiment and State managers shared between the Dashboard and an extension
+
+   digraph managers {
+     rankdir=LR; node [shape=box, fontname="Helvetica", fontsize=10];
+     subgraph cluster_dash { label="DashBoard"; style=dashed;
+       em [label="ExperimentManager"]; sm [label="StateManager"]; cm [label="control modules"]; dtb [label="its own toolbars"]; }
+     subgraph cluster_ext { label="Extension (CustomExt)"; style=dashed;
+       etb [label="dashboard toolbar\n(create_dashboard_toolbar)"]; hook [label="do_things_after_experiment_set"]; mm [label="modules_manager"]; }
+     em -> dtb [label="get_external_toolbar_menu"]; sm -> dtb;
+     em -> etb [label="get_external_toolbar_menu"]; sm -> etb [label="get_external_toolbar_menu"];
+     etb -> em [label="apply experiment", style=dashed]; etb -> sm [label="apply state", style=dashed];
+     em -> cm [label="creates"];
+     em -> hook [label="applied_entry(str)"]; hook -> mm [label="refresh"];
+     mm -> cm [label="references", style=dashed];
+   }
+
+Text version: the Dashboard owns one ``ExperimentManager`` and one ``StateManager``. Each manager can display its
+controls (open the manager, list of entries, apply) in any toolbar through ``get_external_toolbar_menu``: the Dashboard
+does it for its own toolbars, and ``create_dashboard_toolbar`` does it for the extension. Applying an experiment, from
+either toolbar, makes the Dashboard create the control modules, then ``applied_entry`` is emitted and the extension
+refreshes its ``modules_manager`` in ``do_things_after_experiment_set``.
+
 App embedding control modules directly (not advised)
 ++++++++++++++++++++++++++++++++++++++++++++++++++++
 
