@@ -8,9 +8,9 @@ import threading
 
 import pytest
 
-from pymodaq.control_modules import hardware_registry
-from pymodaq.control_modules.hardware_registry import HardwareKey, HardwareRegistry
-from pymodaq.control_modules.hardware_thread import HardwareThread
+from pymodaq.control_modules.hardware import hardware_registry
+from pymodaq.control_modules.hardware.hardware_registry import HardwareKey, HardwareRegistry
+from pymodaq.control_modules.hardware.hardware_thread import HardwareThread
 
 
 class FakeThread(HardwareThread):
@@ -293,7 +293,7 @@ class TestDetachDoesNotHoldRegistryLock:
         """Runs in a subprocess so that a regression fails by timeout instead of hanging the test run."""
         code = textwrap.dedent("""
             from qtpy.QtCore import QCoreApplication, QMetaObject, Qt
-            from pymodaq.control_modules.hardware_registry import HardwareRegistry, HardwareKey
+            from pymodaq.control_modules.hardware.hardware_registry import HardwareRegistry, HardwareKey
 
             app = QCoreApplication([])
 

@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from pymodaq.control_modules.capabilities import (
+from pymodaq.control_modules.hardware.capabilities import (
     Access,
     Action,
     Capabilities,

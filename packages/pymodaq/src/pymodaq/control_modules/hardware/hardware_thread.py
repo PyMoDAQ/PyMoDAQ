@@ -21,8 +21,8 @@ import threading
 import time
 from typing import Any, Callable
 
-from pymodaq.control_modules.capabilities import Capabilities
-from pymodaq.control_modules.subscription import Subscription
+from pymodaq.control_modules.hardware.capabilities import Capabilities
+from pymodaq.control_modules.hardware.subscription import Subscription
 from pymodaq_utils.logger import set_logger, get_module_name
 from qtpy.QtCore import QObject, QSignalBlocker, QTimer, Signal, Slot
 

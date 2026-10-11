@@ -12,8 +12,8 @@ import threading
 
 from qtpy.QtCore import QObject, QTimer, Qt, Signal
 
-from pymodaq.control_modules.capabilities import Access, Capabilities, Quantity
-from pymodaq.control_modules.subscription import Subscription
+from pymodaq.control_modules.hardware.capabilities import Access, Capabilities, Quantity
+from pymodaq.control_modules.hardware.subscription import Subscription
 
 __all__ = ['Controller', 'controller_class']
 

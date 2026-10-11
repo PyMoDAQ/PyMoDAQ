@@ -1,7 +1,7 @@
 import pytest
 
-from pymodaq.control_modules.capabilities import control, measurement
-from pymodaq.control_modules.controller import Controller, controller_class
+from pymodaq.control_modules.hardware.capabilities import control, measurement
+from pymodaq.control_modules.hardware.controller import Controller, controller_class
 
 
 def test_quantity_named_like_a_controller_attribute_is_rejected():
@@ -30,7 +30,7 @@ def test_controller_class_is_cached_per_device_class():
 
 
 def test_status_is_a_valid_quantity_name():
-    from pymodaq.control_modules.capabilities import measurement
+    from pymodaq.control_modules.hardware.capabilities import measurement
 
     class Device:
         status = measurement(values=['idle', 'running'])
@@ -39,8 +39,8 @@ def test_status_is_a_valid_quantity_name():
 
 
 def test_a_name_clash_leaves_no_hardware_thread_behind():
-    from pymodaq.control_modules.capabilities import measurement
-    from pymodaq.control_modules.hardware_registry import HardwareKey, HardwareRegistry
+    from pymodaq.control_modules.hardware.capabilities import measurement
+    from pymodaq.control_modules.hardware.hardware_registry import HardwareKey, HardwareRegistry
 
     class Device:
         read = measurement()  # 'read' is a Controller method

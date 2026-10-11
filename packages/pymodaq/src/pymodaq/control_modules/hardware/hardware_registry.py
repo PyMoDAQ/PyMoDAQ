@@ -12,9 +12,9 @@ import threading
 from dataclasses import dataclass
 from typing import Any, ClassVar
 
-from pymodaq.control_modules.capabilities import Capabilities
-from pymodaq.control_modules.controller import controller_class
-from pymodaq.control_modules.hardware_thread import HardwareThread, make_plugin_settings
+from pymodaq.control_modules.hardware.capabilities import Capabilities
+from pymodaq.control_modules.hardware.controller import controller_class
+from pymodaq.control_modules.hardware.hardware_thread import HardwareThread, make_plugin_settings
 from pymodaq_utils.logger import set_logger, get_module_name
 from qtpy import QtCore
 

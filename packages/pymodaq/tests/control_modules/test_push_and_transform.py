@@ -1,8 +1,8 @@
 import numpy as np
 
-from pymodaq.control_modules.capabilities import Capabilities, measurement
-from pymodaq.control_modules.hardware_thread import HardwareThread
-from pymodaq.control_modules.subscription import Subscription
+from pymodaq.control_modules.hardware.capabilities import Capabilities, measurement
+from pymodaq.control_modules.hardware.hardware_thread import HardwareThread
+from pymodaq.control_modules.hardware.subscription import Subscription
 
 
 class _DTE:

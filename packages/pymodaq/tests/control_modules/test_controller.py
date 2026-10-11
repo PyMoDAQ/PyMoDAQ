@@ -6,10 +6,10 @@ import threading
 import numpy as np
 import pytest
 
-from pymodaq.control_modules import controller as controller_module
-from pymodaq.control_modules.capabilities import Action, control, measurement
-from pymodaq.control_modules.controller import Controller, controller_class
-from pymodaq.control_modules.hardware_registry import HardwareKey, HardwareRegistry
+from pymodaq.control_modules.hardware import controller as controller_module
+from pymodaq.control_modules.hardware.capabilities import Action, control, measurement
+from pymodaq.control_modules.hardware.controller import Controller, controller_class
+from pymodaq.control_modules.hardware.hardware_registry import HardwareKey, HardwareRegistry
 
 
 class _Reading:
