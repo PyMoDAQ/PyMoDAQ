@@ -62,3 +62,9 @@ keep_duplicates = false
 duration_units = [ "s", "min",]
 ramp_setting = [ "duration", "velocity",]
 
+[hardware_module]
+# Capabilities/HardwareModule declarative device architecture (control_modules/hardware/,
+# hardware_module.py) - distinct from the legacy actuator/viewer settings above.
+write_timeout_s = 10.0  # Controller: give up waiting for write_done/write_failed after this long
+read_timeout_s = 10.0  # Controller: give up waiting for a one-shot read() reply after this long
+

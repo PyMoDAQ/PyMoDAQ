@@ -12,13 +12,19 @@ import threading
 
 from qtpy.QtCore import QObject, QTimer, Qt, Signal
 
+from pymodaq_utils.config import GlobalConfig as Config
+
 from pymodaq.control_modules.hardware.capabilities import Access, Capabilities, Quantity
 from pymodaq.control_modules.hardware.subscription import Subscription
 
 __all__ = ['Controller', 'controller_class']
 
-WRITE_TIMEOUT_S = 10.0  # give up waiting for write_done/write_failed after this long
-READ_TIMEOUT_S = 10.0  # give up waiting for a one-shot read() reply after this long
+config = Config()
+
+# Defaults come from config_template.toml's [hardware_module] section; both stay plain module
+# globals (not inlined where used) so a test can still monkeypatch them directly, as before.
+WRITE_TIMEOUT_S = config('pymodaq', 'hardware_module', 'write_timeout_s')
+READ_TIMEOUT_S = config('pymodaq', 'hardware_module', 'read_timeout_s')
 
 
 def _quantity_property(quantity: Quantity) -> property:

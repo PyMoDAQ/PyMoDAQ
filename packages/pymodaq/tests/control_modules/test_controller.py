@@ -433,3 +433,20 @@ class TestSettingBackedControl:
         qtbot.waitUntil(lambda: ctrl.settings.child('exposure').value() == 500.0, timeout=2000)
         plugin = ctrl.thread._plugin
         assert plugin.written == []  # write() was never called for it
+
+
+class TestConfigDefaults:
+    """WRITE_TIMEOUT_S/READ_TIMEOUT_S come from config_template.toml's [hardware_module] section,
+    not a hardcoded literal - but stay plain module globals (not read fresh on every call) so
+    the rest of this file can keep monkeypatching them directly, as it did before this moved to
+    config."""
+
+    def test_write_timeout_comes_from_config(self):
+        from pymodaq_utils.config import GlobalConfig as Config
+        config = Config()
+        assert controller_module.WRITE_TIMEOUT_S == config('pymodaq', 'hardware_module', 'write_timeout_s')
+
+    def test_read_timeout_comes_from_config(self):
+        from pymodaq_utils.config import GlobalConfig as Config
+        config = Config()
+        assert controller_module.READ_TIMEOUT_S == config('pymodaq', 'hardware_module', 'read_timeout_s')
