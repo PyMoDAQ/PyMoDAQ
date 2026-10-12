@@ -21,6 +21,7 @@ They are used by :mod:`pymodaq_utils.plugin_checks` but can be called directly::
 from __future__ import annotations
 
 import ast
+import functools
 import importlib.util
 import os
 import re
@@ -400,6 +401,31 @@ def check_leftovers(package: str, root: Path, project: Optional[Path] = None) ->
     return findings
 
 
+NOQA_RE = re.compile(r'#\s*noqa\s*:\s*(PMQ\d+(?:\s*,\s*PMQ\d+)*)', re.IGNORECASE)
+
+
+def _honour_noqa(rule):
+    """Drop the findings of a rule whose line carries a ``# noqa: PMQxxx`` comment (on purpose, like for flake8)"""
+    @functools.wraps(rule)
+    def wrapper(*args, **kwargs):
+        lines = {}
+        kept = []
+        for finding in rule(*args, **kwargs):
+            if finding.path is not None and finding.line is not None:
+                if finding.path not in lines:
+                    try:
+                        lines[finding.path] = Path(finding.path).read_text(errors='replace').splitlines()
+                    except OSError:
+                        lines[finding.path] = []
+                text = lines[finding.path]
+                match = NOQA_RE.search(text[finding.line - 1]) if 0 < finding.line <= len(text) else None
+                if match and finding.code in {c.strip().upper() for c in match.group(1).split(',')}:
+                    continue
+            kept.append(finding)
+        return kept
+    return wrapper
+
+
 def _is_name(node: Optional[ast.AST], name: str) -> bool:
     if isinstance(node, ast.Call):
         node = node.func
@@ -482,6 +508,7 @@ def check_plugin_source(path: Path, kind: str, class_name: str, static_fallback:
     else:
         mandatory = MANDATORY_VIEWER_METHODS
     findings.extend(_check_legacy_settings(path, tree))
+    findings.extend(_check_controller_init(path, tree))
     simple_bases = all(b in ('DAQ_Move_base', 'DAQ_Viewer_base') for b in _base_names(cls))
     if static_fallback and simple_bases:
         for meth in mandatory:
@@ -512,7 +539,8 @@ def _check_move_source(path: Path, cls: ast.ClassDef, attrs: dict, static_fallba
         findings.append(Finding('PMQ302', Severity.ERROR, "the axes are declared as 'axis_names', that is ignored",
                                 "use '_axis_names'", path, attrs['axis_names'].lineno))
     dat = attrs.get('data_actuator_type')
-    if dat is None or 'DataActuator' not in ast.dump(dat):
+    inherits = dat is None and not all(b == 'DAQ_Move_base' for b in _base_names(cls))  # may be set by a parent
+    if not inherits and (dat is None or 'DataActuator' not in ast.dump(dat)):
         findings.append(Finding('PMQ303', Severity.WARNING, 'data_actuator_type is not DataActuatorType.DataActuator',
                                 'new plugins should exchange DataActuator objects: set '
                                 'data_actuator_type = DataActuatorType.DataActuator', path,
@@ -572,9 +600,23 @@ def _check_legacy_settings(path: Path, tree: ast.Module) -> list[Finding]:
     more = f' ({len(hits)} times in this file)' if len(hits) > 1 else ''
     return [Finding('PMQ316', Severity.WARNING, f"settings group '{first.value}' was renamed "
                     f"'{LEGACY_SETTINGS[first.value]}'{more}",
-                    "PyMoDAQ only translates the old names in settings[...], not in settings.child(...): use the "
-                    "new ones", path,
+                    "PyMoDAQ still translates the old names in settings[...] (deprecated), but not in "
+                    "settings.child(...): use the new ones", path,
                     first.lineno)]
+
+
+def _check_controller_init(path: Path, tree: ast.Module) -> list[Finding]:
+    """PMQ318: deprecated call of ini_stage_init / ini_detector_init to initialize the controller"""
+    calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute) and
+             n.func.attr in ('ini_stage_init', 'ini_detector_init') and
+             isinstance(n.func.value, ast.Name) and n.func.value.id == 'self']
+    if not calls:
+        return []
+    first = min(calls, key=lambda n: n.lineno)
+    more = f' ({len(calls)} times in this file)' if len(calls) > 1 else ''
+    return [Finding('PMQ318', Severity.WARNING, f'{first.func.attr}() is deprecated{more}',
+                    "write: if self.is_master: self.controller = AWrapper() else: self.controller = controller",
+                    path, first.lineno)]
 
 
 def check_package_sources(package: str) -> list[Finding]:
@@ -593,3 +635,7 @@ def check_package_sources(package: str) -> list[Finding]:
         file = Path(importlib.util.find_spec(mod.import_path).origin)
         findings.extend(check_plugin_source(file, mod.kind, mod.class_name))
     return findings
+
+
+check_plugin_source = _honour_noqa(check_plugin_source)
+check_python_code = _honour_noqa(check_python_code)

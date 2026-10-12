@@ -170,6 +170,7 @@ PMQ314   ``comon_parameters`` of the actuators used as a list: it is a function,
 PMQ315   invalid escape sequence in a string, such as ``"C:\Program Files"`` (use a raw string)
 PMQ316   settings group ``multiaxes`` / ``multi_status`` renamed ``controller`` / ``controller_status``
 PMQ317   code that only works on Windows and runs on import (``windll``, ``winreg``, drive path)
+PMQ318   deprecated ``ini_stage_init`` / ``ini_detector_init``; write ``if self.is_master: self.controller = AWrapper()`` / ``else: self.controller = controller``
 ======== =================================================================================================
 
 The functions behind this command (*check_package_layout*, *check_move_class*, *check_viewer_class*) return the list of
@@ -177,6 +178,18 @@ problems found and can be used from a script. To get a full report of an install
 ``print(check_plugin_package('pymodaq_plugins_xxxx'))`` (the returned *PluginReport* also has *ok*, *failures*, *todos* and
 *to_dict()*; use ``check_plugin_package(..., fail_on='todo')`` and ``report.format(verbose=True)`` to see every todo). Lint your code too, at least with
 ``flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics`` (the gate used by the PyMoDAQ CI) or ``ruff``.
+
+
+Silencing a finding on purpose
+++++++++++++++++++++++++++++++
+
+A finding that is intended (a plugin written to test an error, a deprecated name kept on purpose...) can be silenced, like
+``# noqa`` for flake8, by a comment on the line the finding reports (its line is shown in the report)::
+
+    self.settings['multiaxes', 'axis']  # noqa: PMQ316
+    class DAQ_Move_Test(DAQ_Move_base):  # noqa: PMQ303, PMQ310
+
+Only the codes listed are silenced, the other findings of the line are still reported.
 
 
 .. _plugin_pytest_checks:
