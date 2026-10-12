@@ -172,6 +172,9 @@ PMQ316   settings group ``multiaxes`` / ``multi_status`` renamed ``controller`` 
 PMQ317   code that only works on Windows and runs on import (``windll``, ``winreg``, drive path)
 ======== =================================================================================================
 
+A finding that is intended (a plugin written to test an error, for instance) can be silenced like in flake8 by a comment on the
+reported line: ``# noqa: PMQ303`` or ``# noqa: PMQ303, PMQ316``. Only the codes listed are silenced.
+
 The functions behind this command (*check_package_layout*, *check_move_class*, *check_viewer_class*) return the list of
 problems found and can be used from a script. To get a full report of an installed plugin package without pytest, use
 ``print(check_plugin_package('pymodaq_plugins_xxxx'))`` (the returned *PluginReport* also has *ok*, *failures*, *todos* and
