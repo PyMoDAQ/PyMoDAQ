@@ -137,6 +137,8 @@ class HardwareThread(QObject):
         self._settings_of: dict[str, str] = {q.name: q.setting for q in caps.controls if q.setting}
         self._get_of: dict[str, Callable] = {q.name: q.get for q in caps.measurements + caps.controls if q.get}
         self._set_of: dict[str, Callable] = {q.name: q.set for q in caps.controls if q.set}
+        self._pre_set_of: dict[str, Callable] = {q.name: q.pre_set for q in caps.controls if q.pre_set}
+        self._post_set_of: dict[str, Callable] = {q.name: q.post_set for q in caps.controls if q.post_set}
         # a measurement's channel can have these too, same as a control's - see request_action
         self._actions_of: dict[str, dict[str, Any]] = {
             q.name: dict(q.actions) for q in caps.measurements + caps.controls if q.actions
@@ -230,9 +232,18 @@ class HardwareThread(QObject):
     def request_write(self, channel: str, value: object) -> None:
         """Set *channel* to *value*: its own ``set``, a setting-backed control's ``commit_settings``, or ``write``.
 
+        Whichever of those actually applies the value (or none, if the control has only
+        ``pre_set``/``post_set``, or neither), the value is then always stored as ``plugin.<channel>``
+        too - every control ends up with a live attribute mirroring its last successful write, with no
+        plugin code needed for that part. ``pre_set``, if declared, runs first (raise to reject, same
+        as ``set``/``write()`` raising); ``post_set`` runs after the value has been stored.
+
         Emits ``write_done``, or ``write_failed`` on error.
         """
         try:
+            pre_set = self._pre_set_of.get(channel)
+            if pre_set is not None:
+                pre_set(self._plugin, value)
             setter = self._set_of.get(channel)
             setting_name = self._settings_of.get(channel)
             if setter is not None:
@@ -246,7 +257,13 @@ class HardwareThread(QObject):
                 if commit is not None:
                     commit(param)
             else:
-                self._plugin.write(channel, value)
+                write = getattr(self._plugin, 'write', None)
+                if write is not None:
+                    write(channel, value)
+            setattr(self._plugin, channel, value)
+            post_set = self._post_set_of.get(channel)
+            if post_set is not None:
+                post_set(self._plugin, value)
         except Exception as exc:
             logger.exception(f'write of {channel!r} failed')
             self.write_failed.emit(channel, str(exc))

@@ -181,8 +181,10 @@ class Quantity:
         push: bool = False,
         readback: bool | str = False,
         setting: bool | str = False,
-        get: Callable[[Any], Any] | None = None,
-        set: Callable[[Any, Any], None] | None = None,
+        get: Callable[[Any], Any] | bool | str | None = None,
+        set: Callable[[Any, Any], None] | str | None = None,
+        pre_set: Callable[[Any, Any], None] | str | None = None,
+        post_set: Callable[[Any, Any], None] | str | None = None,
         stop: Callable[[Any], None] | None = None,
         actions: dict[str, Callable | Action] | None = None,
         merge_into: str | None = None,
@@ -213,6 +215,14 @@ class Quantity:
         # An explicit (self) -> value getter / (self, value) -> None setter, read()/write() otherwise
         self.get = get
         self.set = set
+        # Optional hooks around a write that otherwise needs nothing but storing the value: pre_set
+        # runs first (raise to reject, same as set=/write() raising); the value is then stored as
+        # plugin.<name> - always, for every control, regardless of set=/setting=/write()/neither, see
+        # HardwareThread.request_write; post_set runs after, so it can rely on plugin.<name> already
+        # holding the new value. Mutually exclusive with set=/setting=, which are the escape hatch for
+        # a control that needs to replace this whole shape instead of just hooking into it.
+        self.pre_set = pre_set
+        self.post_set = post_set
         # Named actions, each its own button in this control's own row (see Action).
         self.actions: dict[str, Action] = {
             name: value if isinstance(value, Action) else Action(callback=value)
@@ -245,6 +255,12 @@ class Quantity:
             raise ValueError('only a control can have a set callback')
         if self.set is not None and self.setting:
             raise ValueError('a control cannot have both a set callback and a setting: pick one')
+        if (self.pre_set is not None or self.post_set is not None) and self.access is not Access.CONTROL:
+            raise ValueError('only a control can have a pre_set/post_set hook')
+        if (self.pre_set is not None or self.post_set is not None) and self.set is not None:
+            raise ValueError('a control cannot have both pre_set=/post_set= and a set callback: pick one')
+        if (self.pre_set is not None or self.post_set is not None) and self.setting:
+            raise ValueError('a control cannot have both pre_set=/post_set= and a setting: pick one')
         if self.push and self.access is not Access.MEASUREMENT:
             raise ValueError('only a measurement can be pushed by the plugin')
         if self.access is not Access.CONTROL and any(action.interrupts for action in self.actions.values()):
@@ -278,6 +294,25 @@ class Quantity:
         if not _IDENTIFIER.match(name):
             raise ValueError(f'{owner.__name__}.{name}: quantity names must be identifiers')
         self.name = name
+
+    def __get__(self, instance: Any, owner: type | None = None) -> Any:
+        """Makes every quantity a live attribute: ``plugin.position`` reads/writes storage owned
+        here, not by the plugin. Class-level access (``Plugin.position``) still returns the
+        declaration itself, and ``Capabilities.from_device`` reads ``vars(cls)`` directly, so
+        neither is affected.
+
+        Unconditional, for every quantity: before this existed, a never-written ``plugin.<name>``
+        returned this object instead of a value - a silent footgun, since nothing forced a plugin to
+        initialize it first. For a quantity that doesn't otherwise rely on this storage, this is the
+        same storage key plain instance-attribute shadowing already used, so the behavior there is
+        unchanged.
+        """
+        if instance is None:
+            return self
+        return instance.__dict__.get(self.name)
+
+    def __set__(self, instance: Any, value: Any) -> None:
+        instance.__dict__[self.name] = value
 
     @property
     def domain(self) -> Domain:
@@ -347,7 +382,7 @@ def measurement(
     ui_add: tuple | list = (),
     ui_remove: tuple | list = (),
     push: bool = False,
-    get: Callable[[Any], Any] | None = None,
+    get: Callable[[Any], Any] | bool | str | None = None,
     actions: dict[str, Callable | Action] | None = None,
 ) -> Quantity:
     """Declare a read-only quantity: a sensor reading, a detector channel, a status.
@@ -359,6 +394,20 @@ def measurement(
     subscription) always uses it. A periodic read groups it with other channels sharing the same period
     only for channels without their own ``get``; channels with one are read individually, so declaring
     it opts a channel out of the plugin's batching.
+
+    ``get=True`` is sugar for the common case of a ``get`` that's nothing but
+    ``lambda plugin: plugin.<name>`` - answering from the quantity's own attribute (thanks to
+    ``Quantity.__get__``, that attribute is live from the moment the class is declared, no ``__init__``
+    assignment needed first). There's no equivalent keyword-free default the way a control's write has
+    (see :func:`control`'s ``pre_set``/``post_set``), since a measurement is never written, so there's
+    nothing that automatically keeps the attribute populated - the plugin still has to assign it itself
+    somewhere.
+
+    A string is sugar of a different kind: ``get='_read_temperature'`` is
+    ``lambda plugin: plugin._read_temperature()`` - a plugin method, called with no arguments, for a
+    value that's genuinely computed rather than just stored (the case ``get=True`` doesn't cover).
+    Still needs a real callback (or ``read()``) for anything needing more than one plain call - a
+    value built from several internal pieces, or one taking an argument of its own.
 
     ``actions`` adds a button per entry, same as on :func:`control` (see there for the full shape,
     including ``checkable`` and ``button=False``): a measurement can trigger a plugin-side operation
@@ -386,8 +435,10 @@ def control(
     widget_class: type | None = None,
     readback: bool | str = False,
     setting: bool | str = False,
-    get: Callable[[Any], Any] | None = None,
-    set: Callable[[Any, Any], None] | None = None,
+    get: Callable[[Any], Any] | bool | str | None = None,
+    set: Callable[[Any, Any], None] | str | None = None,
+    pre_set: Callable[[Any, Any], None] | str | None = None,
+    post_set: Callable[[Any, Any], None] | str | None = None,
     stop: Callable[[Any], None] | None = None,
     actions: dict[str, Callable | Action] | None = None,
     merge_into: str | None = None,
@@ -420,11 +471,44 @@ def control(
 
     ``get`` and ``set`` answer a read or a write of this quantity directly: ``get(plugin)`` returns the
     value, ``set(plugin, value)`` applies it, instead of ``read``/``write``. See :func:`measurement` for
-    how ``get`` interacts with periodic batching. ``set`` and ``setting`` cannot both be given.
+    how ``get`` interacts with periodic batching, and for ``get=True`` - the common case of a control
+    with no settling lag answering its read straight from ``plugin.<name>``, the same attribute the
+    write side below already stores into for free, so the two end up reading each other for nothing
+    more than ``get=True``. ``set`` and ``setting`` cannot both be given.
+
+    A write is never only ``write()``/``set()``, though: whichever of ``setting``, ``set``, or
+    ``write()`` actually applies the value (if any does - see below), the device thread then always
+    stores it as ``plugin.<name>`` too - live immediately, thanks to ``Quantity.__get__``/``__set__``,
+    no ``__init__`` assignment needed, so ``plugin.position = 15`` then ``print(plugin.position)`` just
+    works. A control declaring none of ``setting``/``set``/``pre_set``/``post_set`` and backed by no
+    ``write()`` method needs nothing else at all: the value is stored and nothing more happens, the
+    "just an attribute" case. ``write()`` itself is only called when the plugin actually defines it;
+    a plugin with nothing left for it to do can simply not define it.
+
+    ``pre_set``/``post_set`` hook into that same write, for the common case that needs a little more
+    than plain storage but not a whole ``set=``/``write()`` of its own: ``pre_set(plugin, value)`` runs
+    first - raise to reject the write (``write_failed``, same as ``set``/``write()`` raising would);
+    ``post_set(plugin, value)`` runs after the value has already been stored, for a side effect that
+    can rely on ``plugin.<name>`` already holding it (e.g. turning another setting off above some
+    threshold). Either may be given alone. Mutually exclusive with ``set``/``setting``, which replace
+    this shape entirely instead of hooking into it - needed for a control whose write does something
+    the stored value alone can't express (e.g. storing under a different name, or skipping storage
+    altogether), or one that must share a single hardware transaction with other channels.
+
+    A string on ``get``/``set``/``pre_set``/``post_set`` is sugar for calling a plugin method by name
+    instead of writing a lambda that does nothing but forward to it: ``post_set='_clamp_averaging'``
+    is ``lambda plugin, value: plugin._clamp_averaging(value)``; ``get``'s string form takes no
+    argument instead (``getattr(plugin, name)()``), same as its own string form on :func:`measurement`.
+    Still needs a real callback for anything the method call alone doesn't cover - a different
+    argument shape, or logic that belongs inline rather than behind a named method.
 
     ``readback`` declares the measurement that reports the actual value, which the GUI shows in the same row.
     ``True`` names it ``<name>_readback``; a string names it. If a measurement of that name is already
-    declared, it is used; otherwise it is created with the units, shape and values of the control.
+    declared, it is used; otherwise it is created with the units, shape and values of the control, and
+    with the control's own ``get`` as its ``get`` too, if it has one (see :func:`_readback_of`) - right
+    for a control with no real settling lag, where the control's own answer already is the readback's
+    answer. A control with no ``get`` (the laggy case) gets an empty auto-created readback instead,
+    answered through ``read()`` the same way the control's own value is.
 
     ``setting`` declares that writing this control goes through the plugin's own settings (``params``)
     instead of ``write``: the device thread sets the named parameter and calls ``commit_settings``.
@@ -452,14 +536,28 @@ def control(
     return Quantity(Access.CONTROL, units=units, label=label, lo=lo, hi=hi, epsilon=epsilon,
                     values=values, docs=docs, ui_add=ui_add, ui_remove=ui_remove, widget=widget,
                     widget_class=widget_class, readback=readback, setting=setting, get=get, set=set,
-                    stop=stop, actions=actions, merge_into=merge_into)
+                    pre_set=pre_set, post_set=post_set, stop=stop, actions=actions, merge_into=merge_into)
 
 
 def _readback_of(control: Quantity) -> Quantity:
-    """The measurement that reports *control*'s actual value: same units, shape and values, no limits."""
+    """The measurement that reports *control*'s actual value: same units, shape and values, no limits.
+
+    Only auto-created when nothing of that name was declared already (see the loop that calls this);
+    a plugin that needs the readback answered differently from the control just declares it itself,
+    which skips this entirely.
+
+    Defaults its ``get`` to the control's own ``get``, if it has one: a control answering its own read
+    directly (rather than through ``read()``) is, by that same choice, saying there's nothing for a
+    separate readback to report that it doesn't already - the common case for a quantity with no real
+    settling lag (e.g. ``exposure``). A control with no ``get`` (the laggy case - a motor's target vs.
+    its actual position, read separately through ``read()``) gets no default here either, since there
+    is no single callable to copy; the plugin answers the readback itself, through ``read()``, as the
+    stage example already does.
+    """
     readback = Quantity(Access.MEASUREMENT, units=control.units,
                         label=f'{control.label} readback' if control.label else '',
-                        dtype=control.dtype, shape=control.shape, values=control.values)
+                        dtype=control.dtype, shape=control.shape, values=control.values,
+                        get=control.get)
     readback.name = control.readback
     return readback
 
@@ -479,6 +577,22 @@ class Capabilities:
         duplicates = sorted({n for n in names if names.count(n) > 1})
         if duplicates:
             raise ValueError(f'quantity names must be unique, duplicated: {duplicates}')
+        # get=True is sugar for the common case of answering a read straight from the quantity's own
+        # attribute; a string on get/set/pre_set/post_set is sugar for calling a plugin method by
+        # name instead of writing a one-line lambda just to forward to it - both resolved here,
+        # before anything below, so _readback_of (next) sees a real callable to default a readback's
+        # own get to, same as a hand-written lambda would give it.
+        for quantity in self.measurements + self.controls:
+            if quantity.get is True:
+                quantity.get = lambda plugin, name=quantity.name: getattr(plugin, name)
+            elif isinstance(quantity.get, str):
+                quantity.get = lambda plugin, method=quantity.get: getattr(plugin, method)()
+            if isinstance(quantity.set, str):
+                quantity.set = lambda plugin, value, method=quantity.set: getattr(plugin, method)(value)
+            if isinstance(quantity.pre_set, str):
+                quantity.pre_set = lambda plugin, value, method=quantity.pre_set: getattr(plugin, method)(value)
+            if isinstance(quantity.post_set, str):
+                quantity.post_set = lambda plugin, value, method=quantity.post_set: getattr(plugin, method)(value)
         measured = {q.name for q in self.measurements}
         controlled = {q.name for q in self.controls}
         readback_owner: dict[str, str] = {}

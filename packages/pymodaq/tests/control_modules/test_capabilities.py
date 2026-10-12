@@ -264,6 +264,29 @@ class TestReadback:
         assert readback.name == 'x_readback'
         assert readback.units == 'mm' and readback.access is Access.MEASUREMENT
         assert readback.lo is None  # a readback has no limits
+        assert readback.get is None  # the control has no get= of its own to default to
+
+    def test_the_auto_created_readback_defaults_to_the_controls_own_get(self):
+        # A control answering its own read directly has nothing separate for a readback to report -
+        # exactly the exposure_readback case: no plugin code needed beyond readback=True.
+        getter = lambda plugin: plugin.exposure
+        class Stage:
+            exposure = control(units='ms', readback=True, get=getter)
+
+        caps = Capabilities.from_device(Stage)
+        readback = caps.measurements[0]
+        assert readback.name == 'exposure_readback'
+        assert readback.get is getter
+
+    def test_a_pre_declared_readback_is_not_overridden_by_the_default(self):
+        own_getter = lambda plugin: plugin.other_source
+        class Stage:
+            exposure_readback = measurement(units='ms', get=own_getter)
+            exposure = control(units='ms', readback=True, get=lambda plugin: plugin.exposure)
+
+        caps = Capabilities.from_device(Stage)
+        assert len(caps.measurements) == 1  # linked, not duplicated - same as any declared readback
+        assert caps.measurements[0].get is own_getter  # the control's get= never touches it
 
     def test_a_string_names_the_created_measurement(self):
         class Stage:
@@ -399,6 +422,182 @@ class TestGetSet:
     def test_get_and_set_are_not_serialized(self):
         q = control(units='ms', get=lambda plugin: 1.0, set=lambda plugin, value: None)
         assert 'get' not in q.to_dict() and 'set' not in q.to_dict()
+
+
+class TestGetTrueAndMethodNameSugar:
+    """get=True and the str form of get/set/pre_set/post_set: both pure sugar, resolved by
+    Capabilities.__post_init__ into a real callable, never by Quantity/control()/measurement()
+    themselves - same pattern readback=True/setting=True already use."""
+
+    def test_a_bare_quantity_does_not_resolve_get_true_itself(self):
+        q = control(get=True)
+        assert q.get is True
+
+    def test_get_true_reads_the_controls_own_attribute(self):
+        class Stage:
+            position = control(units='mm', get=True)
+
+        caps = Capabilities.from_device(Stage)
+        plugin = Stage()
+        plugin.position = 3.0
+        assert caps.controls[0].get(plugin) == 3.0
+
+    def test_get_true_reads_a_measurements_own_attribute_too(self):
+        class Sensor:
+            temperature = measurement(units='K', get=True)
+
+        caps = Capabilities.from_device(Sensor)
+        plugin = Sensor()
+        plugin.temperature = 295.0
+        assert caps.measurements[0].get(plugin) == 295.0
+
+    def test_get_string_calls_the_named_method_with_no_argument(self):
+        class Sensor:
+            temperature = measurement(units='K', get='_read_temperature')
+
+            def _read_temperature(self):
+                return 42.0
+
+        caps = Capabilities.from_device(Sensor)
+        assert caps.measurements[0].get(Sensor()) == 42.0
+
+    def test_set_string_calls_the_named_method_with_the_value(self):
+        class Stage:
+            position = control(units='mm', set='_apply')
+
+            def _apply(self, value):
+                self.applied = value
+
+        caps = Capabilities.from_device(Stage)
+        plugin = Stage()
+        caps.controls[0].set(plugin, 5.0)
+        assert plugin.applied == 5.0
+
+    def test_pre_set_and_post_set_strings_call_the_named_methods_with_the_value(self):
+        class Stage:
+            position = control(units='mm', pre_set='_validate', post_set='_after')
+
+            def _validate(self, value):
+                self.validated = value
+
+            def _after(self, value):
+                self.after = value
+
+        caps = Capabilities.from_device(Stage)
+        plugin = Stage()
+        caps.controls[0].pre_set(plugin, 5.0)
+        caps.controls[0].post_set(plugin, 5.0)
+        assert plugin.validated == 5.0 and plugin.after == 5.0
+
+    def test_the_readback_default_sees_a_resolved_get_not_the_literal_true_or_string(self):
+        class Sensor:
+            exposure = control(units='ms', readback=True, get=True)
+
+        plugin = Sensor()
+        plugin.exposure = 7.0
+        caps = Capabilities.from_device(Sensor)
+        readback = caps.measurements[0]
+        assert callable(readback.get) and readback.get(plugin) == 7.0
+
+
+class TestQuantityDescriptor:
+    """Quantity.__get__/__set__: every declared quantity is a live, directly readable/writable
+    attribute on plugin instances, storage owned here - unconditional, the same for every
+    control/measurement regardless of get=/set=/pre_set=/post_set=/read()/write()."""
+
+    def test_reading_and_writing_work_with_no_init_assignment_at_all(self):
+        # The case this whole mechanism exists for: no __init__ boilerplate, from anywhere.
+        class Stage:
+            position = control(units='mm')
+
+        plugin = Stage()
+        plugin.position = 15
+        assert plugin.position == 15
+
+    def test_a_never_written_quantity_reads_back_none_not_the_declaration(self):
+        # The footgun this fixes: before Quantity was a descriptor, a never-shadowed name read
+        # back the Quantity object itself - silently, with no error.
+        class Stage:
+            position = control(units='mm')
+
+        assert Stage().position is None
+
+    def test_class_level_access_still_returns_the_declaration(self):
+        # Stage.position (no instance) is unaffected - only instance-level access changed.
+        class Stage:
+            position = control(units='mm')
+
+        assert isinstance(Stage.position, Quantity)
+
+    def test_from_device_discovery_is_unaffected(self):
+        # Capabilities.from_device walks __mro__/vars(), which bypasses __get__/__set__ entirely -
+        # confirmed directly, not just inferred from every other passing test.
+        class Stage:
+            position = control(units='mm')
+
+        caps = Capabilities.from_device(Stage)
+        assert caps.controls[0].name == 'position'
+
+    def test_a_quantity_still_supports_plain_instance_shadowing(self):
+        # Backward compatible: a plugin that assigns self.<name> for its own bookkeeping sees the
+        # exact same result it always did - same storage key, just reached through __set__ now
+        # instead of plain attribute shadowing.
+        class Spectro:
+            spectrum = measurement(units='counts', shape=(4,))
+
+        plugin = Spectro()
+        plugin.spectrum = 'cached value'
+        assert plugin.spectrum == 'cached value'
+
+
+class TestPreSetPostSet:
+    """pre_set=/post_set= are optional hooks around a control's write; the unconditional storage
+    they wrap (plugin.<name> = value after a successful write) is HardwareThread.request_write's
+    job, not Quantity's/Capabilities' - see test_hardware_thread.py for that sequencing. This class
+    only covers declaration and validation."""
+
+    def test_neither_is_set_by_default(self):
+        q = control()
+        assert q.pre_set is None and q.post_set is None
+
+    def test_only_a_control_can_have_pre_set(self):
+        # measurement() doesn't even accept pre_set= (control-only in its signature); the
+        # underlying Quantity check is still exercised directly, same as TestGetSet does for set=.
+        with pytest.raises(ValueError, match='only a control'):
+            Quantity(Access.MEASUREMENT, pre_set=lambda plugin, value: None)
+
+    def test_only_a_control_can_have_post_set(self):
+        with pytest.raises(ValueError, match='only a control'):
+            Quantity(Access.MEASUREMENT, post_set=lambda plugin, value: None)
+
+    def test_pre_set_and_a_set_callback_are_exclusive(self):
+        with pytest.raises(ValueError, match='pick one'):
+            control(pre_set=lambda plugin, value: None, set=lambda plugin, value: None)
+
+    def test_post_set_and_a_set_callback_are_exclusive(self):
+        with pytest.raises(ValueError, match='pick one'):
+            control(post_set=lambda plugin, value: None, set=lambda plugin, value: None)
+
+    def test_pre_set_and_a_setting_are_exclusive(self):
+        with pytest.raises(ValueError, match='pick one'):
+            control(pre_set=lambda plugin, value: None, setting=True)
+
+    def test_post_set_and_a_setting_are_exclusive(self):
+        with pytest.raises(ValueError, match='pick one'):
+            control(post_set=lambda plugin, value: None, setting=True)
+
+    def test_both_may_be_given_together(self):
+        q = control(pre_set=lambda plugin, value: None, post_set=lambda plugin, value: None)
+        assert q.pre_set is not None and q.post_set is not None
+
+    def test_neither_is_serialized_same_as_get_set(self):
+        class Stage:
+            position = control(units='mm', pre_set=lambda plugin, value: None,
+                               post_set=lambda plugin, value: None)
+
+        caps = Capabilities.from_device(Stage)
+        d = caps.to_dict()
+        assert 'pre_set' not in d['controls'][0] and 'post_set' not in d['controls'][0]
 
 
 class TestStop:

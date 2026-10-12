@@ -998,3 +998,81 @@ class TestGetSet:
         assert plugin.query_calls == [['slow']]
         assert got_fast.last()[0] == 7.0
         assert got_slow.last()[0] == ('data', 'slow')
+
+
+class TestAutomaticStorage:
+    """request_write stores plugin.<name> = value after every successful write, regardless of
+    set=/setting=/write()/neither - not just for a control with pre_set=/post_set=. Resolved
+    entirely in HardwareThread.request_write itself, so these tests exercise it directly."""
+
+    def _thread_with_plain_control(self):
+        class _Plugin(MockPlugin):
+            level = control()
+
+        return make_initialised_thread(_Plugin())
+
+    def test_a_plain_write_stores_the_attribute_and_still_calls_write(self, qapp):
+        thread_obj, plugin = self._thread_with_plain_control()
+        thread_obj.request_write('level', 9.0)
+        assert plugin.level == 9.0
+        assert plugin.change_calls == [('level', 9.0)]  # write() still runs - unlike attr= before it
+
+    def test_a_never_written_control_reads_back_none(self, qapp):
+        thread_obj, plugin = self._thread_with_plain_control()
+        assert plugin.level is None
+
+    def test_write_failing_leaves_the_attribute_unset(self, qapp):
+        class _Plugin(MockPlugin):
+            level = control()
+
+        plugin = _Plugin()
+        plugin._change_raises = RuntimeError('nope')
+        thread_obj, plugin = make_initialised_thread(plugin)
+        failed = Collector()
+        thread_obj.write_failed.connect(failed)
+        thread_obj.request_write('level', 9.0)
+        assert failed.calls == [('level', 'nope')]
+        assert plugin.level is None  # write() raised before storage ran
+
+
+class TestPreSetPostSet:
+    """pre_set=/post_set= hook into the same write TestAutomaticStorage covers, wrapping the
+    storage instead of replacing it."""
+
+    def _thread_with_hooks(self, pre_set=None, post_set=None):
+        class _Plugin(MockPlugin):
+            level = control(pre_set=pre_set, post_set=post_set)
+
+        return make_initialised_thread(_Plugin())
+
+    def test_pre_set_raising_rejects_the_write_before_anything_else_runs(self, qapp):
+        def _reject(plugin, value):
+            raise RuntimeError('disabled')
+
+        thread_obj, plugin = self._thread_with_hooks(pre_set=_reject)
+        failed = Collector()
+        thread_obj.write_failed.connect(failed)
+        thread_obj.request_write('level', 9.0)
+        assert failed.calls == [('level', 'disabled')]
+        assert plugin.level is None       # storage never ran
+        assert plugin.change_calls == []  # write() never ran either - pre_set runs first
+
+    def test_post_set_sees_the_value_already_stored(self, qapp):
+        seen = []
+        thread_obj, plugin = self._thread_with_hooks(post_set=lambda plugin, value: seen.append(plugin.level))
+        thread_obj.request_write('level', 9.0)
+        assert seen == [9.0]
+
+    def test_write_is_optional_when_the_plugin_does_not_define_it(self, qapp):
+        class _NoWritePlugin:
+            level = control(post_set=lambda plugin, value: None)
+
+            def open(self, settings):
+                pass
+
+            def close(self):
+                pass
+
+        thread_obj, plugin = make_initialised_thread(_NoWritePlugin())
+        thread_obj.request_write('level', 9.0)
+        assert plugin.level == 9.0  # storage + post_set alone are enough; write() was never required
