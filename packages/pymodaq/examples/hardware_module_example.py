@@ -3,13 +3,14 @@
     python hardware_module_example.py
 
 Step 2 of 3: builds on hardware_module_minimal_example.py (a bare control and measurement) by adding
-get/set shortcuts and a plugin setting. hardware_module_stage_example.py is step 3, adding a readback,
-settling, Stop, Enable and Home.
+get= shortcuts, a post_set hook and a plugin setting. hardware_module_stage_example.py is step 3,
+adding a readback, settling, Stop, Enable and Home.
 
 What to try:
 - Ini. (instrument toolbar) opens the fake device; the status line shows "open".
-- exposure: type a value and press Enter. The device gets it and the spinbox follows the device.
-- trigger: pick a value. The device gets it.
+- exposure: type a value and press Enter. The device gets it, and Read/Snap/its own readback row all
+  show it back too.
+- trigger: pick a value. The device gets it, and Read shows it back too.
 - spectrum: Snap reads the spectrum once; Show Graph opens a live view that polls it.
 - temperature: Read, or Show Graph for a live trace of the last 200 values.
 - status: read-only, shows the device state, which changes while the device is open.
@@ -18,9 +19,17 @@ What to try:
 - Set exposure above 500 ms: the plugin turns averaging off by itself, and the settings dock follows,
   without the GUI having written anything.
 
-temperature, status and trigger declare get/set directly and never go through read()/write(): see
-FakeSpectrometer's docstring. spectrum and exposure still do, since spectrum is the channel that
-would share a batched read with others like it on a real instrument.
+temperature and status answer their read with ``get='_read_method_name'`` - a plugin method, called
+with no arguments, for a value that's genuinely computed each time. trigger and exposure both answer
+theirs with ``get=True`` instead - reading back whatever the last write stored, which happens
+automatically now for every control, no plugin code needed (see FakeSpectrometer's docstring).
+exposure also keeps a side effect (clamping averaging above 500 ms), as ``post_set='_clamp_averaging'``
+- the plugin method ``post_set`` calls instead of a hand-written ``write()`` - the "more automatic way
+to access a Controller attribute [...] or method call" Seb5g's review of PR #1289 asked for.
+exposure's ``readback=True`` is answered by that same ``get=True``, for free: a control with no
+settling lag has nothing separate for a readback to report. spectrum alone keeps a real read(): it's
+the channel that would share a batched read with others like it on a real instrument, so there's no
+single attribute or method call to point a shortcut at.
 """
 import sys
 import time
@@ -45,17 +54,34 @@ class _Reading:
 
 
 class FakeSpectrometer:
-    """A plugin with the new-style API: declarations, open/close, read and write.
+    """A plugin with the new-style API: declarations, open/close and read.
 
     ``averaging`` is a plain plugin setting, not a declared channel: it only affects how the
     spectrum is computed, through ``commit_settings``. It also shows the other direction: the
     plugin turns it off by itself for a long exposure, and the settings dock follows without a
     write from the GUI.
 
-    ``temperature``, ``status`` and ``trigger`` each answer their own read or write with a
-    ``get``/``set`` callback: a Grab of ``temperature`` never calls ``read()`` at all. ``spectrum``
-    and ``exposure`` stay in ``read()``/``write()``, since ``spectrum`` is the channel that would
-    share a batched ``read()`` call with others like it on a real multi-channel instrument.
+    ``temperature`` and ``status`` answer their own read with ``get='_read_temperature'``/
+    ``get='_read_status'`` - sugar for ``lambda plugin: plugin._read_temperature()`` etc.: a Grab of
+    ``temperature`` never calls ``read()`` at all, it calls ``_read_temperature()`` directly.
+
+    ``trigger`` and ``exposure`` both answer their read with ``get=True`` instead - reading back
+    whatever the quantity's own attribute already holds. What's new is that the attribute no longer
+    needs the plugin to maintain it by hand: every control's write is stored as ``plugin.<name>``
+    automatically, by the device thread, once it succeeds (see ``HardwareThread.request_write``).
+    ``trigger`` has nothing else to say, so that's its entire write path - no setter, no ``write()``
+    branch. ``exposure`` still has a side effect (turning ``averaging`` off above 500 ms), so it adds
+    ``post_set='_clamp_averaging'`` for just that - sugar for ``lambda plugin, value:
+    plugin._clamp_averaging(value)``, called after the value is already stored, so the method could
+    read ``self.exposure`` back if it needed to. Neither needs a ``write()`` branch any more, and the
+    plugin defines no ``write()`` at all - nothing is left that would call it. ``exposure`` also
+    declares ``readback=True``: since its own ``get=True`` already answers "what is the device doing
+    right now" exactly (no settling lag to report separately), the auto-created readback measurement
+    defaults to that same answer - no extra code for it either.
+
+    ``spectrum`` alone keeps a real ``read()``: it's the channel that would share a batched read
+    with others like it on a real multi-channel instrument, so there's no single attribute or method
+    call to answer it from.
     """
 
     params: list = [
@@ -65,16 +91,17 @@ class FakeSpectrometer:
 
     spectrum = measurement(units='counts', shape=(256,), label='Spectrum', docs='Replaced on each read')
     temperature = measurement(units='K', label='Sensor temperature', docs='Sensor temperature',
-                              get=lambda plugin: plugin._read_temperature())
+                              get='_read_temperature')
     status = measurement(values=['idle', 'running'], label='Device state', docs='Device state',
-                         get=lambda plugin: plugin._read_status())
-    exposure = control(units='ms', lo=1, hi=1000, epsilon=0.1, label='Exposure', docs='Exposure time')
+                         get='_read_status')
+    exposure = control(units='ms', lo=1, hi=1000, epsilon=0.1, label='Exposure', docs='Exposure time',
+                      get=True, readback=True, post_set='_clamp_averaging')
     trigger = control(values=['internal', 'external'], label='Trigger source', docs='Trigger source',
-                      set=lambda plugin, value: plugin._set_trigger(value))
+                      get=True)
 
     def __init__(self):
-        self._exposure = 10.0
-        self._trigger = 'internal'
+        self.exposure = 10.0  # a plain default; __init__ may still set one, it just isn't required to
+        self.trigger = 'internal'
         self._averaging = 8
         self._start = time.monotonic()
         self._settings = None
@@ -99,7 +126,7 @@ class FakeSpectrometer:
             if name == 'spectrum':
                 x = np.linspace(0, 4 * np.pi, 256)
                 shape = np.sin(x + self._elapsed()) + 1.5  # ranges 0.5 .. 2.5, exposure-independent
-                signal = shape * self._exposure / 10
+                signal = shape * self.exposure / 10
                 # Real averaging: the shape stays put, only the noise shrinks, by 1 / sqrt(N).
                 noise_std = (1.5 / 10) / np.sqrt(max(self._averaging, 1))
                 arrays[name] = signal + np.random.normal(0, noise_std, size=256)
@@ -111,17 +138,12 @@ class FakeSpectrometer:
     def _read_status(self):
         return np.array(['running' if np.sin(self._elapsed()) > 0 else 'idle'])
 
-    def _set_trigger(self, value):
-        self._trigger = value
-
-    def write(self, name, value):
-        if name == 'exposure':
-            self._exposure = value
-            if value > 500 and self._averaging != 1:
-                # the plugin's own decision, not a GUI write: update both, since setValue alone
-                # does not call commit_settings, and the settings dock must still follow it
-                self._averaging = 1
-                self._settings.child('averaging').setValue(1)
+    def _clamp_averaging(self, value):
+        if value > 500 and self._averaging != 1:
+            # the plugin's own decision, not a GUI write: update both, since setValue alone
+            # does not call commit_settings, and the settings dock must still follow it
+            self._averaging = 1
+            self._settings.child('averaging').setValue(1)
 
     def commit_settings(self, param):
         if param.name() == 'averaging':
