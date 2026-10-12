@@ -409,6 +409,17 @@ def measurement(
     Still needs a real callback (or ``read()``) for anything needing more than one plain call - a
     value built from several internal pieces, or one taking an argument of its own.
 
+    What ``get``/``read`` return is normally a plain array or scalar, which ``HardwareModule`` wraps
+    into a single-array, single-label :class:`~pymodaq_data.data.DataWithAxes` on the way to the
+    viewer. Either may instead return an already-built ``DataWithAxes``/``DataRaw`` directly - e.g.
+    ``DataRaw(name, data=[ch_a, ch_b], labels=['ch_a', 'ch_b'])`` for two channels a spectrometer
+    reports together, shown as two labeled curves sharing one plot and legend instead of one dock
+    per channel. Nothing is declared here for this: the plotted shape (how many arrays, their
+    labels, real axes if any) is exactly whatever the plugin's own return value says, the same way
+    ``read()``'s ``DataToExport`` already works - not a separate keyword that would just have to
+    repeat what the return value already carries. ``shape`` still describes the single-curve default
+    case, used to pick the right dock before the first reading ever arrives.
+
     ``actions`` adds a button per entry, same as on :func:`control` (see there for the full shape,
     including ``checkable`` and ``button=False``): a measurement can trigger a plugin-side operation
     just as a control can - e.g. a spectrum measurement's one-shot background capture, or a genuine
@@ -416,8 +427,8 @@ def measurement(
     action, it needs no value of its own to write.
     """
     return Quantity(Access.MEASUREMENT, units=units, label=label, dtype=dtype, shape=shape,
-                    values=values, docs=docs, ui_add=ui_add, ui_remove=ui_remove, push=push, get=get,
-                    actions=actions)
+                    values=values, docs=docs, ui_add=ui_add, ui_remove=ui_remove,
+                    push=push, get=get, actions=actions)
 
 
 def control(

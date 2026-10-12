@@ -77,6 +77,17 @@ class TestValidation:
     def test_none_shape_dimension_allowed(self):
         assert measurement(shape=(None,)).shape == (None,)
 
+    def test_2d_shape_is_allowed(self):
+        assert measurement(shape=(32, 32)).shape == (32, 32)
+
+    def test_a_shape_of_any_dimension_is_allowed_here(self):
+        # Quantity itself has no opinion on dimensionality - it's pure declaration, with no
+        # consumer in view. HardwareModule (a separate, Qt-aware consumer) only has
+        # Viewer0D/Viewer1D/Viewer2D wired up today and rejects anything past 2D on its own side,
+        # at its own construction time - see test_hardware_module.py - rather than this layer
+        # baking in one particular consumer's current limitation.
+        assert measurement(shape=(4, 4, 3)).shape == (4, 4, 3)
+
     def test_duplicate_names_rejected(self):
         a = measurement()
         a.name = 'x'
