@@ -62,11 +62,12 @@ a owner and a name for the repository (see :numref:`create_repo`).
 
    The creation page of the new plugin repository
 
-You can choose as a owner either yourself or an organisation that you are part of.
+You can choose yourself as the owner while you are developing the plugin. **Before releasing it on PyPI, the repository
+has to move to the PyMoDAQ organization**, see :ref:`plugin_hosting`: you stay its official maintainer.
 
 .. note::
-   If you wish to be part of the PyMoDAQ organization, send an email to the mailing list *pymodaq@services.cnrs.fr*.
-   You can host there your future package and be set as the manager.
+   To host your package in the PyMoDAQ organization, send an email to the mailing list *pymodaq@services.cnrs.fr*.
+   You will be set as the manager (official maintainer) of the repository.
 
 The name of the plugin as to follow the naming convention `pymodaq_plugins_<my_repo_name>` where you have to replace
 *<my_repo_name>*
@@ -100,6 +101,40 @@ files and folders. :numref:`template_structure` highlights the package initial s
    :width: 300
 
    The template package initial structure
+
+
+.. _plugin_hosting:
+
+Where should a plugin live?
+---------------------------
+
+A plugin released on PyPI must be hosted in the `PyMoDAQ GitHub organization <https://github.com/PyMoDAQ>`_
+(and its PyPI project must have the PyMoDAQ account among its owners), not on a personal or a lab account. The
+author of the plugin **stays its official maintainer**: nothing changes for them, except that they are not alone anymore.
+
+*Why?* When the only owner of a repository and of a PyPI project moves on (new job, retirement, lost account),
+nobody else can fix a bug, update the plugin for a new PyMoDAQ release or publish it, and the plugin slowly dies.
+In the organization, several people are able to take over, so the plugin can always be maintained, and it benefits
+from the shared tools (continuous integration, the plugin acceptance tests, the plugin manager...).
+
+To transfer a plugin you developed on your own account:
+
+#. Send an email to *pymodaq@services.cnrs.fr* saying which repository you want to move. The organization owners will
+   confirm that they can receive it.
+#. On GitHub, open your repository, then *Settings* > *General* > *Danger Zone* > *Transfer ownership* and enter
+   ``PyMoDAQ`` as the new owner (type the repository name to confirm). GitHub redirects the old address, and the
+   stars, issues and pull requests are kept.
+#. Ask the organization owners to give you the *Maintain* (or *Admin*) role on the repository: this is what makes you
+   the official maintainer. You are also invited to the PyMoDAQ organization if you are not yet a member.
+#. On PyPI, in *Manage* > *Collaborators* of the plugin project, add the PyMoDAQ account as an *Owner*. You can stay
+   *Owner* or *Maintainer* of the project.
+#. Remove the PyPI secrets that you had set on your own account (the organization provides the ones used by the
+   publication workflow) and update the ``package-url`` of the ``[urls]`` section of ``pyproject.toml`` to the new
+   address of the repository.
+#. Keep releasing as usual: creating a release on GitHub triggers the publication on PyPI (see :ref:`pypi_publish`).
+
+If you are the author of a plugin that is already on PyPI from your own account, the organization owners will contact
+you for the transfer.
 
 
 .. _pypi_publish:

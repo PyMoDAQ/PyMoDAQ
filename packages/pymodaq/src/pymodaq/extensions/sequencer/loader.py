@@ -14,8 +14,7 @@ def main():
                                                         )
     win.mainwindow.setVisible(False)
 
-    win_ext, ext = create_extension(dashboard, Sequencer)
-    win_ext.show()
+    win_ext, ext = create_extension(dashboard, Sequencer, show_extension=True)
 
     sys.exit(app.exec())
 

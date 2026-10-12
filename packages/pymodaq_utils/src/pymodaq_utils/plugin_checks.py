@@ -34,7 +34,7 @@ import toml
 from pymodaq_utils.utils import get_entrypoints
 
 from pymodaq_utils.plugin_rules import (PLACEHOLDER_NAMES_RE, Finding, Severity, check_file_names, check_leftovers,
-                                        check_plugin_source, check_pyproject, colorize, is_valid_unit, package_root,
+                                        check_plugin_source, check_python_code, check_pyproject, colorize, is_valid_unit, package_root,
                                         project_root, use_color)
 
 VIEWER_DIMS = ('0D', '1D', '2D', 'ND')
@@ -289,7 +289,19 @@ def _is_environmental(error: Exception, package: str) -> bool:
     if isinstance(error, ImportError):
         name = getattr(error, 'name', None) or ''
         return not (name == 'pymodaq' or name.startswith('pymodaq.') or name.split('.')[0] == package)
-    return isinstance(error, (OSError, KeyError))
+    if isinstance(error, (OSError, KeyError)):
+        return True
+    # a vendor module may refuse to load with another kind of error (pyvisa without backend: ValueError, PyDAQmx
+    # on Linux: NotImplementedError...): it is environmental if raised by third party code, not by the plugin
+    if isinstance(error, (ValueError, NotImplementedError, RuntimeError)):
+        tb = error.__traceback__
+        while tb is not None and tb.tb_next is not None:
+            tb = tb.tb_next
+        if tb is not None:
+            origin = tb.tb_frame.f_globals.get('__name__', '') or ''
+            top = origin.split('.')[0]
+            return bool(top) and top not in (package, 'pymodaq', 'pymodaq_utils', 'pymodaq_gui', 'pymodaq_data')
+    return False
 
 
 def load_plugin_class(plugin_module: PluginModule) -> type:
@@ -452,6 +464,7 @@ def check_package_sources(package: str, project: Optional[Path] = None) -> Check
         result.findings.extend(check_pyproject(package, project))
     result.findings.extend(check_file_names(root))
     result.findings.extend(check_leftovers(package, root, project))
+    result.findings.extend(check_python_code(root))
     return result
 
 

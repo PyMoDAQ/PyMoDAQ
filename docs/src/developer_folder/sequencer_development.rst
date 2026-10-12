@@ -132,6 +132,7 @@ The methods you may reimplement are:
 
   For a model to be "seen" by PyMoDAQ either place it in the ``pymodaq.extensions.sequencer.models`` module or in the
   ``models`` module/folder of a PyMoDAQ plugin declaring the ``pymodaq.models`` entry point.
+  The other kinds of models of the extensions are described in :ref:`plugin_models`.
 
 
 Writing a custom element

@@ -630,6 +630,7 @@ class DockLayoutMenu:
     dock: Dock
     config_path: tuple[str, ...]
         Config entry holding the choice, e.g. ('pymodaq', 'control_modules', 'settings_dock_layout').
+        Either a legacy bare string ('horizontal'/'vertical') or a [current, ...other_choices] list.
     on_change: Callable[[Qt.Orientation], None] or None
         Replaces the default reflow for docks not managed through :func:`display_in_dock`.
     """

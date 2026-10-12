@@ -1,8 +1,11 @@
+.rst-content img {
+  max-width: none !important;
+  height: auto;
+}
 .wy-table-responsive {
     overflow: visible;
 }
 
 .dataTables_wrapper {
     overflow: auto;
-    pages-
 }

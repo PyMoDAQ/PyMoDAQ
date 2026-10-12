@@ -55,6 +55,10 @@ with the extension are of the last kind. The first is the Gaussian fit model all
 The second allows you to define in a text box the mathematical expressions you
 want to perform between you raw data, see :ref:`equation_model`.
 
+A working example of a model written in a plugin package is ``DataMixerModelFit`` in
+`pymodaq_plugins_mockexamples <https://github.com/PyMoDAQ/pymodaq_plugins_mockexamples>`__; see :ref:`plugin_models` to
+make your own models visible to PyMoDAQ.
+
 
 .. _equation_model:
 

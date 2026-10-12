@@ -12,7 +12,6 @@ Tutorials
    tutorials/new_plugin
    tutorials/plugin_development
    tutorials/write_documentation
-   tutorials/plugin_update_to_v4
    tutorials/data_analysis_tutorial
    tutorials/jupyter_lab
    tutorials/pluginless_leco_communication.rst
