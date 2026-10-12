@@ -38,7 +38,7 @@ class TestSpread:
 
         pass
 
-    def test_2D_spread_1D_signal(self, init_viewernd):
+    def test_2D_spread_1D_signal(self, init_viewernd, qtbot):
         viewer = init_viewernd
 
         # Parameter
@@ -69,7 +69,10 @@ class TestSpread:
                                      distribution='spread',
                                      nav_indexes=(0,))
 
-        data_2D_1x2_spread.plot('qt')
+        # keep the viewer and close its window: a window left open around a deleted
+        # viewer crashes when repainted (e.g. by a later theme change)
+        plotted = data_2D_1x2_spread.plot('qt')
+        qtbot.addWidget(plotted.parent)
         QtWidgets.QApplication.processEvents()
         pass
 

@@ -11,7 +11,7 @@ from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 from pyqtgraph import ROI as pgROI
 
 import pymodaq_data
-from pymodaq_gui import foreground_color
+from pymodaq_gui.plotting.plot_theme import follow_plot_theme, plot_foreground
 from pymodaq_gui.plotting.items.roi_sync import roi_format
 from pymodaq_gui.plotting.utils.lineout import Lineouts
 from pymodaq_gui.plotting.utils.plot_utils import ViewBox
@@ -88,6 +88,7 @@ def histogram_factory(image_item=None, gradient='red'):
         raise KeyError(f'Possible gradient are {Gradients} not {gradient}')
 
     histo = pg.HistogramLUTWidget()
+    follow_plot_theme(histo)
     if image_item is not None:
         histo.setImageItem(image_item)
 
@@ -470,11 +471,11 @@ class View2D(ActionManager, QtCore.QObject):
 
         if data_distribution.name == 'uniform':
             self.roi_target = pgROI(pos=(0, 0), size=(20, 20), movable=False, rotatable=False,
-                                    resizable=False, pen=foreground_color)
+                                    resizable=False, pen=plot_foreground())
             self.plotitem.addItem(self.roi_target)
 
         elif data_distribution.name == 'spread':
-            self.roi_target = Crosshair(self.image_widget, pen=foreground_color)
+            self.roi_target = Crosshair(self.image_widget, pen=plot_foreground())
         self.roi_target.setVisible(False)
 
     def show_roi_target(self, show=True):

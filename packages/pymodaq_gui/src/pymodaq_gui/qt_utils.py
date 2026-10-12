@@ -126,7 +126,8 @@ def apply_theme(theme: Union[str, qt_themes.Theme], style: str = None,
 
     Widgets built from the palette repaint by themselves, and so do the icons of
     :class:`~pymodaq_gui.managers.action_manager.ActionManager` actions and menus
-    given by name (they listen to ``theme_changed``). Anything else whose colours were
+    given by name and the pymodaq plots (they listen to ``theme_changed``, see
+    :mod:`pymodaq_gui.plotting.plot_theme`). Anything else whose colours were
     computed once from the theme should listen to ``theme_signaller.theme_changed``.
 
     Parameters
@@ -162,6 +163,10 @@ def apply_theme(theme: Union[str, qt_themes.Theme], style: str = None,
     if app is not None and theme.is_dark_theme():
         # Custom rules
         app.setStyle(WhiteCheckboxStyle(app.style()))
+
+    # Before emitting: plots restyle on theme_changed from the new plot colours
+    from pymodaq_gui.plotting.plot_theme import apply_plot_theme
+    apply_plot_theme(theme)
 
     theme_signaller.theme_changed.emit(theme)
     return theme

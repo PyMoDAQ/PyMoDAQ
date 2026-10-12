@@ -3,7 +3,6 @@ from pyqtgraph.parametertree.parameterTypes import SimpleParameter
 
 from typing import Union
 
-import numpy as np
 
 from qtpy import QtCore, QtGui
 from pyqtgraph.parametertree.Parameter import registerParameterType
@@ -14,7 +13,7 @@ from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_data.plotting.utils import PlotColors
 from pymodaq_data.post_treatment.process_to_scalar import DataProcessorFactory
 
-from pymodaq_gui.plotting.items.roi import ROIDim, ROI, ROIFactory, LinearROI, mkColor, roi_format, plot_colors
+from pymodaq_gui.plotting.items.roi import ROIDim, ROI, ROIFactory, LinearROI, mkColor, roi_format
 from pymodaq_gui.utils.widget_sync import WidgetSync, SyncMode
 from pymodaq_gui.parameter.ioxml import optional_int_options, optional_str_options
 
@@ -31,7 +30,9 @@ config = Config()
 
 @dataclasses.dataclass
 class ROIParameterOptions:
-    color: Union[QtGui.QColor, tuple[int, int, int]] = plot_colors[0]
+    # the first plot colour is the foreground one, which follows the theme
+    color: Union[QtGui.QColor, tuple[int, int, int]] = dataclasses.field(
+        default_factory=lambda: PlotColors()[0])
     zlevel: int = 1
     x: float = 0.
     y: float = 0.
@@ -89,7 +90,7 @@ class RoiParameter(GroupParameter):
 
     @staticmethod
     def makeDisplayParam(index: int = 0, roi_dim=ROIDim.ROI1D):
-        color = list(np.roll(plot_colors, index)[0])
+        color = list(PlotColors()[-index])  # read now: the first colour follows the theme
         color = mkColor(color)
         if roi_dim == ROIDim.ROI1D:
             color.setAlpha(50)

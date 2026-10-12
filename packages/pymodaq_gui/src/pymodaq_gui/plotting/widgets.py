@@ -10,11 +10,13 @@ from qtpy import QtWidgets
 
 from pymodaq_gui.plotting.utils.plot_utils import ViewBox
 from pymodaq_gui.plotting.items.axis_scaled import AXIS_POSITIONS, AxisItemScaled
+from pymodaq_gui.plotting.plot_theme import follow_plot_theme
 
 class PlotWidget(pg.PlotWidget):
     def __init__(self, *args, **kwargs):
         plot_item = pg.PlotItem(viewBox=ViewBox())
         super().__init__(*args, plotItem=plot_item, **kwargs)
+        follow_plot_theme(self)
 
     @property
     def view(self) -> ViewBox:

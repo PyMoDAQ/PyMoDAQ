@@ -3,7 +3,7 @@ import collections
 import numpy as np
 import pyqtgraph as pg
 
-from pymodaq_gui import foreground_color
+from pymodaq_gui.plotting.plot_theme import plot_foreground
 from pymodaq_gui.plotting.utils.plot_utils import makeAlphaTriangles, makePolygons
 from pyqtgraph import debug as debug, Point, functions as fn
 from pyqtgraph.util.cupy_helper import getCupy
@@ -191,7 +191,7 @@ class SpreadImageItem(PymodaqImage):
         self.qimage = None
         self.triangulation = None
         self.tri_data = None
-        self.mesh_pen = foreground_color
+        self.mesh_pen = plot_foreground()
 
     def width(self):
         if self.image is None:

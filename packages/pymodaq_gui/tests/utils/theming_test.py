@@ -1,14 +1,25 @@
 """
 Tests for changing the qt_themes theme at runtime: apply_theme, theme-aware
-colour resolution and rebuilding ActionManager icons (refresh_icons).
+colour resolution, rebuilding ActionManager icons (refresh_icons) and plot colours.
 """
 from collections import Counter
 
+import numpy as np
+import pyqtgraph as pg
 import pytest
 import qt_themes
 from qtpy import QtCore, QtGui, QtWidgets
 
+import pymodaq_gui
+from pymodaq_data import data as data_mod
+from pymodaq_data.plotting.utils import PlotColors
+
 from pymodaq_gui.managers.action_manager import ActionManager
+from pymodaq_gui.plotting import plot_theme
+from pymodaq_gui.plotting.data_viewers.viewer0D import Viewer0D
+from pymodaq_gui.plotting.data_viewers.viewer1D import Viewer1D
+from pymodaq_gui.plotting.data_viewers.viewer2D import Viewer2D
+from pymodaq_gui.plotting.widgets import PlotWidget
 from pymodaq_gui.qt_utils import WhiteCheckboxStyle, apply_theme, theme_signaller
 from pymodaq_gui.utils.status_palette import StatusPalette, Status
 from pymodaq_gui.utils.styling import ThemeColor, as_theme_role, create_color, get_current_theme
@@ -28,12 +39,20 @@ def restore_theme(qtbot):
     style_name = base_style.objectName() or 'fusion'
     palette = QtGui.QPalette(app.palette())
     theme_property = app.property('theme')
+    # apply_theme also sets the plot colours (global pyqtgraph options and configuration)
+    pg_options = {key: pg.getConfigOption(key) for key in ('background', 'foreground')}
+    plot_colors = list(plot_theme.config('data', 'plotting', 'plot_colors'))
+    foreground = plot_theme.plot_foreground()
     yield
     app.setStyle(style_name)
     if was_proxy:
         app.setStyle(WhiteCheckboxStyle(app.style()))
     app.setPalette(palette)
     app.setProperty('theme', theme_property)
+    pg.setConfigOptions(**pg_options)
+    plot_theme.config['data', 'plotting', 'plot_colors'] = plot_colors
+    plot_theme._foreground = foreground
+    pymodaq_gui.foreground_color = foreground
 
 
 def dominant_color(icon: QtGui.QIcon, state=QtGui.QIcon.State.Off) -> str:
@@ -335,3 +354,136 @@ class TestFollowTheme:
         apply_theme(LIGHT)
         assert dominant_color(action.icon()) == dark.green.name()
         assert dominant_color(action.icon(), QtGui.QIcon.State.On) == dark.red.name()
+
+
+WHITE, BLACK = (255, 255, 255), (0, 0, 0)
+
+
+def rgb(color) -> tuple:
+    color = pg.mkColor(color)
+    return color.red(), color.green(), color.blue()
+
+
+def background(view: pg.GraphicsView) -> tuple:
+    return rgb(view.backgroundBrush().color())
+
+
+def data_1d(labels=('a', 'b')) -> data_mod.DataRaw:
+    x = np.linspace(0, 10, 11)
+    return data_mod.DataRaw('data', data=[x * (ind + 1) for ind in range(len(labels))],
+                            labels=list(labels), axes=[data_mod.Axis('x', 'm', data=x)])
+
+
+@pytest.fixture
+def viewer1d(qtbot):
+    widget = QtWidgets.QWidget()
+    qtbot.addWidget(widget)
+    viewer = Viewer1D(widget)
+    yield viewer
+    widget.close()
+
+
+class TestPlotTheme:
+    @pytest.mark.parametrize('name, back, fore', [(DARK, 'k', WHITE), (LIGHT, 'w', BLACK)])
+    def test_new_plots_colours(self, qtbot, restore_theme, name, back, fore):
+        apply_theme(name)
+        assert pg.getConfigOption('background') == back
+        assert plot_theme.plot_foreground() == fore
+        assert pymodaq_gui.foreground_color == fore
+        assert PlotColors()[0] == fore  # the first curve colour, read when created
+        assert background(PlotWidget()) == rgb(back)
+
+    def test_configuration_file_not_written(self, qtbot, restore_theme, monkeypatch):
+        def fail(*args, **kwargs):
+            raise AssertionError('the configuration file should not be written')
+        monkeypatch.setattr(plot_theme.config, 'save', fail)
+        apply_theme(LIGHT)
+        apply_theme(DARK)
+
+    def test_open_viewer1d_follows(self, qtbot, restore_theme, viewer1d):
+        apply_theme(DARK)
+        viewer1d.show_data(data_1d())
+        displayer = viewer1d.view.data_displayer
+        second = rgb(displayer.get_plot_item(1).opts['pen'].color())
+        assert rgb(displayer.get_plot_item(0).opts['pen'].color()) == WHITE
+
+        apply_theme(LIGHT)
+        assert rgb(displayer.get_plot_item(0).opts['pen'].color()) == BLACK
+        assert rgb(displayer.get_plot_item(1).opts['pen'].color()) == second  # not a foreground one
+        assert background(viewer1d.view.plot_widget) == WHITE
+        assert rgb(viewer1d.view.roi_target.pen.color()) == BLACK
+        bottom = viewer1d.view.plotitem.getAxis('bottom')
+        assert rgb(bottom.pen().color()) == rgb('k')
+        assert rgb(bottom.textPen().color()) == rgb('k')
+
+        viewer1d.show_data(data_1d(('c', 'd', 'e')))  # curves created after the change
+        assert rgb(displayer.get_plot_item(0).opts['pen'].color()) == BLACK
+
+    def test_line_width_and_alpha_kept(self, qtbot, restore_theme):
+        apply_theme(DARK)
+        widget = PlotWidget()
+        qtbot.addWidget(widget)
+        curve = widget.plot([0, 1], [0, 1], pen=pg.mkPen((255, 255, 255, 100), width=3))
+        apply_theme(LIGHT)
+        pen = curve.opts['pen']
+        assert (rgb(pen.color()), pen.color().alpha(), pen.width()) == (BLACK, 100, 3)
+
+    def test_open_viewer0d_follows(self, qtbot, restore_theme):
+        apply_theme(DARK)
+        widget = QtWidgets.QWidget()
+        qtbot.addWidget(widget)
+        viewer = Viewer0D(widget)
+        viewer.show_data(data_mod.DataRaw('d', data=[np.array([1.]), np.array([2.])], labels=['a', 'b']))
+        items = viewer.view.data_displayer._plot_items
+        assert rgb(items['a'].opts['pen'].color()) == WHITE
+
+        apply_theme(LIGHT)
+        assert rgb(items['a'].opts['pen'].color()) == BLACK
+        assert rgb(items['b'].opts['pen'].color()) != BLACK
+        viewer.show_data(data_mod.DataRaw('d', data=[np.array([1.])], labels=['c']))
+        assert rgb(viewer.view.data_displayer._plot_items['c'].opts['pen'].color()) == BLACK
+        widget.close()
+
+    def test_viewer0d_custom_colours_kept(self, qtbot, restore_theme):
+        apply_theme(DARK)
+        widget = QtWidgets.QWidget()
+        qtbot.addWidget(widget)
+        viewer = Viewer0D(widget)
+        displayer = viewer.view.data_displayer
+        displayer.update_colors([dict(color=(1, 2, 3))])
+        apply_theme(LIGHT)
+        assert displayer.colors[0]['color'] == (1, 2, 3)
+        viewer.show_data(data_mod.DataRaw('d', data=[np.array([1.])], labels=['a']))
+        assert rgb(displayer._plot_items['a'].opts['pen'].color()) == (1, 2, 3)
+        widget.close()
+
+    def test_custom_background_and_axis_kept(self, qtbot, restore_theme):
+        apply_theme(DARK)
+        widget = PlotWidget()
+        qtbot.addWidget(widget)
+        widget.setBackground((10, 20, 30))
+        widget.getPlotItem().getAxis('left').setPen((40, 50, 60))
+        apply_theme(LIGHT)
+        assert background(widget) == (10, 20, 30)
+        assert rgb(widget.getPlotItem().getAxis('left').pen().color()) == (40, 50, 60)
+        assert rgb(widget.getPlotItem().getAxis('bottom').pen().color()) == rgb('k')
+
+    def test_viewer2d_histograms_follow(self, qtbot, restore_theme):
+        apply_theme(DARK)
+        widget = QtWidgets.QWidget()
+        qtbot.addWidget(widget)
+        viewer = Viewer2D(widget)
+        histogram = viewer.view.histogrammer.get_histogram('red')
+        assert background(histogram) == BLACK
+        apply_theme(LIGHT)
+        assert background(histogram) == WHITE
+        assert background(viewer.view.image_widget) == WHITE
+        widget.close()
+
+    def test_deleted_plot_does_not_break_theme_change(self, qtbot, restore_theme):
+        widget = PlotWidget()
+        widget.deleteLater()
+        del widget
+        QtCore.QCoreApplication.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete)
+        apply_theme(LIGHT)  # must not raise on the deleted plot
+        apply_theme(DARK)
