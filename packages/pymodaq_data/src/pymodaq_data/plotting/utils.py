@@ -7,7 +7,11 @@ config = GlobalConfig()
 
 class PlotColors:
 
-    def __init__(self, colors=config('data', 'plotting', 'plot_colors')[:]):
+    def __init__(self, colors=None):
+        """colors: list of RGB 3-tuples, defaults to the configured plot colors (read now,
+        the first one being set by pymodaq_gui to the plot foreground colour)"""
+        if colors is None:
+            colors = config('data', 'plotting', 'plot_colors')[:]
 
         self._internal_counter = -1
 
