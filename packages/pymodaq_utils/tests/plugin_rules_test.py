@@ -287,3 +287,17 @@ def test_python_code_rules(tmp_path):
     assert not [f for f in findings if f.path.name == 'guarded.py']
     windows = next(f for f in findings if f.code == 'PMQ317')
     assert 'windll' in windows.message and '1 more' in windows.message
+
+
+def test_noqa_on_leftovers_and_without_colon(tmp_path):
+    root = tmp_path / 'pymodaq_plugins_foo'
+    root.mkdir()
+    (root / 'daq_move_Foo.py').write_text(textwrap.dedent('''
+        class DAQ_Move_Foo:
+            def get_actuator_value(self):
+                raise NotImplementedError  # noqa PMQ202
+            def other(self):
+                raise NotImplementedError
+        '''))
+    findings = [f for f in pr.check_leftovers('pymodaq_plugins_foo', root) if f.code == 'PMQ202']
+    assert [f.line for f in findings] == [6]
