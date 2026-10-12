@@ -249,6 +249,21 @@ def test_noqa_comment_silences_the_given_codes_on_that_line(tmp_path):
     assert 'PMQ316' in codes(pr.check_plugin_source(path, 'move', 'DAQ_Move_Foo'))
 
 
+def test_deprecated_controller_init(tmp_path):
+    path = tmp_path / 'daq_move_Foo.py'
+    path.write_text(textwrap.dedent('''
+        class DAQ_Move_Foo(DAQ_Move_base):
+            """doc"""
+            def ini_stage(self, controller=None):
+                self.ini_stage_init(controller, Camera())  # noqa: PMQ999
+                return '', True
+        '''))
+    findings = [f for f in pr.check_plugin_source(path, 'move', 'DAQ_Move_Foo') if f.code == 'PMQ318']
+    assert len(findings) == 1 and findings[0].line == 5
+    path.write_text(path.read_text().replace('PMQ999', 'PMQ318'))
+    assert 'PMQ318' not in codes(pr.check_plugin_source(path, 'move', 'DAQ_Move_Foo'))
+
+
 def test_python_code_rules(tmp_path):
     root = tmp_path / 'pymodaq_plugins_foo'
     (root / 'hardware').mkdir(parents=True)
