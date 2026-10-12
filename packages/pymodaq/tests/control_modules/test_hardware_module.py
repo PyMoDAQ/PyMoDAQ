@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
+from pymodaq_data.data import DataRaw
 from qtpy import QtWidgets
 
 from qtpy.QtCore import Qt
@@ -211,6 +212,39 @@ class TestViews:
         scope.get_action('spectrum_read').trigger()
         qtbot.waitUntil(lambda: scope._viewers['spectrum']._raw_data is not None, timeout=2000)
         assert scope._viewers['spectrum']._raw_data.shape == (4,)
+
+    @pytest.fixture
+    def multi_curve_scope(self, registry, qtbot):
+        class MultiCurveScope(Camera):
+            # get= returns an already-built DataRaw instead of a plain array: the two labels and
+            # the fact that there are two curves at all come entirely from this return value, not
+            # from any declaration on the measurement itself.
+            channels = measurement(shape=(4,), get=lambda plugin: DataRaw(
+                'channels', data=[np.arange(4.0), np.arange(4.0) * 2], labels=['ch_a', 'ch_b']))
+
+        widget = make_module(registry, qtbot, MultiCurveScope, 22, initialize=True)
+        yield widget
+        widget.release()
+
+    def test_a_multi_curve_measurement_still_gets_one_viewer1d(self, multi_curve_scope):
+        from pymodaq_gui.plotting.data_viewers.viewer1D import Viewer1D
+        multi_curve_scope.get_action('channels_show_graph').trigger()
+        assert isinstance(multi_curve_scope._viewers['channels'], Viewer1D)
+
+    def test_a_dataraw_returned_by_get_reaches_the_viewer_as_is(self, multi_curve_scope):
+        """get= returning a DataRaw directly is passed straight through to the viewer - the two
+        labeled curves are exactly what the plugin's own return value says, nothing declared on
+        the measurement needed to know in advance that there would be two of them."""
+        multi_curve_scope.get_action('channels_show_graph').trigger()
+        captured = []
+        multi_curve_scope._viewers['channels'].show_data = captured.append
+        multi_curve_scope._on_reading('channels', DataRaw(
+            'channels', data=[np.arange(4.0), np.arange(4.0) * 2], labels=['ch_a', 'ch_b']))
+        raw_data = captured[0]
+        assert raw_data.labels == ['ch_a', 'ch_b']
+        assert len(raw_data) == 2
+        assert np.array_equal(raw_data.data[0], np.arange(4.0))
+        assert np.array_equal(raw_data.data[1], np.arange(4.0) * 2)
 
     @pytest.fixture
     def camera_scope(self, registry, qtbot):

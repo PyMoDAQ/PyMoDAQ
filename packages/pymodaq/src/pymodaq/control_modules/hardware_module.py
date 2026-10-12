@@ -29,7 +29,7 @@ from qtpy.QtGui import QColor
 
 from pymodaq_utils.config import GlobalConfig as Config
 
-from pymodaq_data.data import DataRaw
+from pymodaq_data.data import DataRaw, DataWithAxes
 
 from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_gui.plotting.data_viewers.base import ViewerBase, ViewersEnum
@@ -125,7 +125,13 @@ def _format(data) -> str:
 
 def _viewer_type(quantity: Quantity) -> ViewersEnum:
     """Which standard data viewer a quantity's trace should use, from its declared shape -
-    the same scalar/array split :func:`toolbar_widgets` already makes for ``read``/``snap``."""
+    the same scalar/array split :func:`toolbar_widgets` already makes for ``read``/``snap``.
+
+    This only picks the dock to build before any reading has arrived - a reading that answers with
+    its own ready-made ``DataWithAxes`` (see :func:`measurement`'s ``get`` docstring) can still carry
+    more than one labeled curve; what matters here is only that it's a 1D shape, so the dock is a
+    ``Viewer1D`` either way.
+    """
     if len(quantity.shape) >= 2:
         return ViewersEnum.Viewer2D
     return ViewersEnum.Viewer0D if quantity.shape[0] == 1 else ViewersEnum.Viewer1D
@@ -752,6 +758,14 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
             self._displays[name].setText(self._display_text(name, data))
         if name not in self._viewers:
             return
+        if isinstance(data, DataWithAxes):
+            # The plugin's own get=/read() already built the full answer - how many arrays, their
+            # labels, real axes if any - exactly the way read()'s DataToExport already could; see
+            # measurement()'s get= docstring. Nothing declared here needs to know this shape in
+            # advance, so there is nothing to check against: whatever it carries is shown as-is.
+            self._viewers[name].show_data(data)
+            return
+        quantity = self._quantities[name]
         # atleast_1d, not asarray: a plain Python/numpy scalar (e.g. a control's own get=True
         # answering straight from plugin.<name>, or a readback defaulting to that same get - see
         # _readback_of) asarray()s to a 0-d array, which DataWithAxes._check_data_type rejects
@@ -763,12 +777,21 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         # Shape kept as-is otherwise (no further .ravel()): Viewer0D keeps its own scrolling
         # history for a scalar, Viewer1D/Viewer2D show the array as declared - a real 2D reading no
         # longer gets silently flattened the way the old hand-rolled curve did.
-        self._viewers[name].show_data(DataRaw(name, data=[values], units=self._quantities[name].units,
+        self._viewers[name].show_data(DataRaw(name, data=[values], units=quantity.units,
                                               labels=[name]))
 
     def _display_text(self, name: str, data: object) -> str:
-        text = _format(data)
         units = self._quantities[name].units
+        if isinstance(data, DataWithAxes):
+            if len(data.data) > 1:
+                # The toolbar's own text display has no legend to show every curve by name in -
+                # a count and the max *across all of them* (not silently just the first curve's
+                # own, which said nothing about there being more than one at all) is what fits.
+                overall_max = max(np.nanmax(arr) for arr in data.data)
+                text = f'{len(data.data)} curves {data.data[0].shape} max {overall_max:.3g}'
+                return f'{text} {units}' if units else text
+            data = data.data[0]
+        text = _format(data)
         return f'{text} {units}' if units and np.asarray(data).size == 1 else text
 
     def _on_error(self, message: str) -> None:
