@@ -293,6 +293,12 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         self.channels_dock = QtWidgets.QDockWidget('Channels', self)
         self.channels_dock.setWidget(container)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.channels_dock)
+        # Closed from construction: _write/_read/_run_action only check _attached, not whether the
+        # device has ever actually opened - _when_open on the thread side silently no-ops a click
+        # that reaches it too early, with no feedback at all that it did nothing. Disabling every
+        # channel widget here, and re-enabling/disabling with _on_status below, means a click while
+        # closed never reaches that silent no-op in the first place.
+        self.channels_dock.setEnabled(False)
 
     def _row_action_count(self, quantity: Quantity) -> int:
         """How many action buttons *quantity*'s row ends up with, to size the dock: its own, its
@@ -729,6 +735,7 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
     def _on_status(self, connected: bool, info: str) -> None:
         state = 'open' if connected else 'closed'
         self.status_label.setText(f'{state}: {info}')
+        self.channels_dock.setEnabled(connected)  # nothing in it is safe to click before this
         if not connected:  # a settle watch reads the device, which closed from under it
             for name in list(self._settle_timers):
                 self._stop_settle_watch(name)

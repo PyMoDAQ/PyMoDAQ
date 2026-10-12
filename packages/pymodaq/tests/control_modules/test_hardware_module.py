@@ -109,12 +109,25 @@ class TestLayout:
     def test_status_starts_closed(self, module):
         assert module.status_label.text() == 'not open'
 
+    def test_channels_dock_starts_disabled(self, module):
+        """_write/_read/_run_action only check _attached, not whether the device has ever actually
+        opened - a click that reaches the hardware thread too early just silently no-ops there
+        (_when_open), with no feedback that it did nothing. Disabled from construction means it
+        can never reach that in the first place."""
+        assert not module.channels_dock.isEnabled()
+
 
 class TestDevice:
 
     def test_initialize_opens_the_device(self, module, qtbot):
         module.initialize()
         qtbot.waitUntil(lambda: module.status_label.text().startswith('open'), timeout=2000)
+
+    def test_channels_dock_enables_on_connect_and_disables_on_close(self, module, qtbot):
+        module.initialize()
+        qtbot.waitUntil(lambda: module.channels_dock.isEnabled(), timeout=2000)
+        module.get_action('ini').trigger()  # unchecks it: closes the device again
+        qtbot.waitUntil(lambda: not module.channels_dock.isEnabled(), timeout=2000)
 
     def test_a_spin_edit_writes_the_device(self, module, qtbot):
         module.initialize()
