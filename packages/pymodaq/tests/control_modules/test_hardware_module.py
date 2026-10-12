@@ -152,6 +152,33 @@ class TestDevice:
         module.get_action('temperature_read').trigger()
         qtbot.waitUntil(lambda: module._displays['temperature'].text() == '2.5 K', timeout=2000)
 
+    def test_a_setting_backed_control_shows_its_real_value_on_connect(self, registry, qtbot):
+        """mode's own declared default ('manual') differs from the combo box's first-added item
+        ('auto') - without the fix, the widget would show 'auto' (its own construction default)
+        until something actually wrote to mode, which nothing here ever does."""
+        class SettingScope(Camera):
+            params: list = [{'name': 'mode', 'type': 'list', 'limits': ['auto', 'manual'], 'value': 'manual'}]
+            mode = control(values=['auto', 'manual'], setting=True)
+
+        widget = make_module(registry, qtbot, SettingScope, 24, initialize=True)
+        qtbot.waitUntil(lambda: widget._value_widgets['mode'].currentText() == 'manual', timeout=2000)
+        widget.release()
+
+    def test_a_get_backed_control_shows_its_real_value_on_connect(self, registry, qtbot):
+        """gain's plugin-side default (7.0) differs from the spinbox's own construction default
+        (0.0) - without the fix, the widget would show 0.0 until a write confirmation corrected
+        it, which nothing here ever triggers either."""
+        class GetScope(Camera):
+            gain = control(units='dB', lo=0, hi=20, get=True)
+
+            def __init__(self):
+                super().__init__()
+                self.gain = 7.0
+
+        widget = make_module(registry, qtbot, GetScope, 25, initialize=True)
+        qtbot.waitUntil(lambda: widget._value_widgets['gain'].value() == 7.0, timeout=2000)
+        widget.release()
+
 
 class TestRelease:
 

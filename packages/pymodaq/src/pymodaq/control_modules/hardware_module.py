@@ -754,6 +754,9 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         ini.blockSignals(False)
         ini.set_icon(ActionIconNames.INI, _colors().green if connected else _colors().red)
         if connected:
+            for quantity in self._quantities.values():
+                if quantity.access is Access.CONTROL:
+                    self._sync_initial_value(quantity)
             for name in self._grabbing:
                 self._start_grab(name)
 
@@ -834,3 +837,25 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         if name not in self._syncs:
             self._syncs[name] = ValueSync()
         return self._syncs[name]
+
+    def _sync_initial_value(self, quantity: Quantity) -> None:
+        """Right after connecting, push *quantity*'s real current value into its own widget,
+        instead of leaving it at whatever its construction default happened to be (a combo box's
+        first item, a spinbox at 0) until the first write confirmation finally corrects it.
+
+        A ``setting=``-backed control's value is already known locally - ``controller.settings``,
+        no device I/O at all. One with its own ``get=`` answers a cheap one-shot read the same way
+        a Read click would; unlike a plain ``Read``, the result also goes straight into this
+        control's own widget sync (a read alone never does that - only a confirmed write does, see
+        ``_on_written``), which is the whole point here. A control declaring neither has no way to
+        be known from here at all - nothing above the hardware thread can read the plugin directly
+        (see ``device_module_connections.md``) - so its widget just keeps its construction default,
+        same as always.
+        """
+        name = quantity.name
+        if quantity.setting:
+            self._sync_for(name).value = self.controller.settings.child(quantity.setting).value()
+        elif quantity.get is not None:
+            def _on_initial_value(data, name=name):
+                self._sync_for(name).value = data
+            self.controller.read(name, _on_initial_value)
