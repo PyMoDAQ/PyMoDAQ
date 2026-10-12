@@ -210,7 +210,7 @@ def test_legacy_settings_names(tmp_path):
     assert '2 times' in findings[0].message
 
 
-def test_translated_legacy_names_in_subscripts_are_fine(tmp_path):
+def test_legacy_names_in_subscripts_are_still_flagged_as_deprecated(tmp_path):
     path = tmp_path / 'daq_move_Foo.py'
     path.write_text(textwrap.dedent('''
         class DAQ_Move_Foo(DAQ_Move_base):
@@ -219,7 +219,7 @@ def test_translated_legacy_names_in_subscripts_are_fine(tmp_path):
                 a = self.settings['multiaxes', 'axis']
                 return '', True
         '''))
-    assert 'PMQ316' not in codes(pr.check_plugin_source(path, 'move', 'DAQ_Move_Foo'))
+    assert 'PMQ316' in codes(pr.check_plugin_source(path, 'move', 'DAQ_Move_Foo'))
 
 
 def test_data_actuator_type_inherited_from_a_plugin_class(tmp_path):
