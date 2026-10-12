@@ -401,7 +401,7 @@ def check_leftovers(package: str, root: Path, project: Optional[Path] = None) ->
     return findings
 
 
-NOQA_RE = re.compile(r'#\s*noqa\s*:\s*(PMQ\d+(?:\s*,\s*PMQ\d+)*)', re.IGNORECASE)
+NOQA_RE = re.compile(r'#\s*noqa\s*:?\s*(PMQ\d+(?:\s*,\s*PMQ\d+)*)', re.IGNORECASE)
 
 
 def _honour_noqa(rule):
@@ -639,3 +639,4 @@ def check_package_sources(package: str) -> list[Finding]:
 
 check_plugin_source = _honour_noqa(check_plugin_source)
 check_python_code = _honour_noqa(check_python_code)
+check_leftovers = _honour_noqa(check_leftovers)
