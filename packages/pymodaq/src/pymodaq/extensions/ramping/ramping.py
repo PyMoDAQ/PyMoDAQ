@@ -685,8 +685,7 @@ def main():
                                                         )
     win.mainwindow.setVisible(False)
 
-    win_ext, ext = create_extension(dashboard, RampExtension)
-    win_ext.show()
+    win_ext, ext = create_extension(dashboard, RampExtension, show_extension=True)
 
     sys.exit(app.exec())
 

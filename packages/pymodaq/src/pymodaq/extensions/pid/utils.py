@@ -13,7 +13,7 @@ from pymodaq_gui.utils.dock import DockArea
 
 from pymodaq_data.data import DataToExport
 
-from pymodaq.utils.daq_utils import get_plugins
+from pymodaq.utils.daq_utils import get_plugins, find_model_class
 from pymodaq.utils.data import DataActuator, DataToActuators
 
 
@@ -165,11 +165,9 @@ def get_models(model_name=None):
                 for mod in pkgutil.iter_modules([str(Path(module.__file__).parent.joinpath('models'))]):
                     try:
                         model_module = importlib.import_module(f'{module_name}.models.{mod.name}', module)
-                        classes = inspect.getmembers(model_module, inspect.isclass)
-                        for name, klass in classes:
-                            if klass.__base__ is PIDModelGeneric:
-                                models_import.append({'name': mod.name, 'module': model_module, 'class': klass})
-                                break
+                        klass = find_model_class(model_module, PIDModelGeneric)
+                        if klass is not None:
+                            models_import.append({'name': mod.name, 'module': model_module, 'class': klass})
 
                     except Exception as e:  # pragma: no cover
                         logger.warning(str(e))
