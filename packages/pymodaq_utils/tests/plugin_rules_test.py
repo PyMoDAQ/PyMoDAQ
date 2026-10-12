@@ -299,3 +299,17 @@ def test_syntax_warning_names_the_file(tmp_path):
         pr.check_plugin_source(path, 'move', 'DAQ_Move_Foo')
     escapes = [w for w in caught if 'invalid escape sequence' in str(w.message)]
     assert escapes and all(w.filename == str(path) and w.lineno == 1 for w in escapes)
+
+
+def test_noqa_on_leftovers_and_without_colon(tmp_path):
+    root = tmp_path / 'pymodaq_plugins_foo'
+    root.mkdir()
+    (root / 'daq_move_Foo.py').write_text(textwrap.dedent('''
+        class DAQ_Move_Foo:
+            def get_actuator_value(self):
+                raise NotImplementedError  # noqa PMQ202
+            def other(self):
+                raise NotImplementedError
+        '''))
+    findings = [f for f in pr.check_leftovers('pymodaq_plugins_foo', root) if f.code == 'PMQ202']
+    assert [f.line for f in findings] == [6]
