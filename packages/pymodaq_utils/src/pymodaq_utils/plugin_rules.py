@@ -592,21 +592,15 @@ def _check_deprecated_api(path: Path, tree: ast.Module, methods: dict) -> list[F
 
 def _check_legacy_settings(path: Path, tree: ast.Module) -> list[Finding]:
     """PMQ316: names of groups of settings that were renamed"""
-    translated = set()  # names used as an index, settings['multiaxes', 'axis']: PyMoDAQ translates them
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Subscript):
-            index = node.slice
-            translated.update(id(e) for e in (index.elts if isinstance(index, ast.Tuple) else [index]))
-    hits = [n for n in ast.walk(tree) if isinstance(n, ast.Constant) and n.value in LEGACY_SETTINGS and
-            id(n) not in translated]
+    hits = [n for n in ast.walk(tree) if isinstance(n, ast.Constant) and n.value in LEGACY_SETTINGS]
     if not hits:
         return []
     first = min(hits, key=lambda n: n.lineno)
     more = f' ({len(hits)} times in this file)' if len(hits) > 1 else ''
     return [Finding('PMQ316', Severity.WARNING, f"settings group '{first.value}' was renamed "
                     f"'{LEGACY_SETTINGS[first.value]}'{more}",
-                    "PyMoDAQ only translates the old names in settings[...], not in settings.child(...): use the "
-                    "new ones", path,
+                    "PyMoDAQ still translates the old names in settings[...] (deprecated), but not in "
+                    "settings.child(...): use the new ones", path,
                     first.lineno)]
 
 
