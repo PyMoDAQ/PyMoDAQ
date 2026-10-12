@@ -379,7 +379,7 @@ def check_leftovers(package: str, root: Path, project: Optional[Path] = None) ->
                                         'replace it with the wrapper and methods of your instrument', path, i))
         if path.suffix == '.py':
             try:
-                tree = ast.parse(path.read_text(errors='replace'))
+                tree = ast.parse(path.read_text(errors='replace'), filename=str(path))
             except SyntaxError as e:
                 findings.append(syntax_error_finding('PMQ200', path, e))
                 continue
@@ -450,7 +450,7 @@ def check_plugin_source(path: Path, kind: str, class_name: str, static_fallback:
     """
     findings = []
     try:
-        tree = ast.parse(path.read_text(errors='replace'))
+        tree = ast.parse(path.read_text(errors='replace'), filename=str(path))
     except SyntaxError as e:
         return [syntax_error_finding('PMQ300', path, e)]
 

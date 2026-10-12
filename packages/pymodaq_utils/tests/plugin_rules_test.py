@@ -233,3 +233,15 @@ def test_python_code_rules(tmp_path):
     assert not [f for f in findings if f.path.name == 'guarded.py']
     windows = next(f for f in findings if f.code == 'PMQ317')
     assert 'windll' in windows.message and '1 more' in windows.message
+
+
+def test_syntax_warning_names_the_file(tmp_path):
+    """An invalid escape sequence is warned about by python while the source is parsed: with the file name"""
+    import warnings
+    path = tmp_path / 'daq_move_Foo.py'
+    path.write_text('PATTERN = "\\."\n\n\nclass DAQ_Move_Foo:\n    """doc"""\n')
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always')
+        pr.check_plugin_source(path, 'move', 'DAQ_Move_Foo')
+    escapes = [w for w in caught if 'invalid escape sequence' in str(w.message)]
+    assert escapes and all(w.filename == str(path) and w.lineno == 1 for w in escapes)
