@@ -1,0 +1,61 @@
+/* Let the page content use the whole browser width instead of the
+   theme's fixed 800px column. */
+.wy-nav-content {
+    max-width: none;
+}
+
+/* Table cells wrap their text instead of pushing the table out of the page. */
+.rst-content table.docutils td,
+.rst-content table.docutils th,
+.wy-table-responsive table td,
+.wy-table-responsive table th {
+    white-space: normal;
+}
+
+/* Button showing/hiding the navigation sidebar (see sidebar_toggle.js). */
+.pmq-sidebar-toggle {
+    position: fixed;
+    top: 8px;
+    left: 308px;
+    z-index: 300;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid #c9c9c9;
+    border-radius: 4px;
+    background: #fcfcfc;
+    color: #404040;
+    font-size: 18px;
+    line-height: 30px;
+    text-align: center;
+    cursor: pointer;
+    opacity: 0.8;
+}
+.pmq-sidebar-toggle:hover {
+    opacity: 1;
+    background: #e7f2fa;
+}
+
+body.pmq-sidebar-hidden .wy-nav-side {
+    display: none;
+}
+body.pmq-sidebar-hidden .wy-nav-content-wrap {
+    margin-left: 0;
+}
+body.pmq-sidebar-hidden .pmq-sidebar-toggle {
+    left: 8px;
+}
+
+/* On small screens the theme already has its own menu button. */
+@media screen and (max-width: 768px) {
+    .pmq-sidebar-toggle {
+        display: none;
+    }
+}
+
+/* Keep the breadcrumbs clear of the toggle button. */
+@media screen and (min-width: 769px) {
+    .wy-breadcrumbs {
+        padding-left: 36px;
+    }
+}
