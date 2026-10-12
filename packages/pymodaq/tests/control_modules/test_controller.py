@@ -352,6 +352,33 @@ class TestPoll:
         ctrl.stop_poll('spectrum')
 
 
+class TestPollPolicy:
+    """policy= lets a caller ask for Subscription's 'all' (lossless - for recording) instead of
+    the default 'latest' (a slow consumer may skip a reading - for display)."""
+
+    def test_default_policy_is_latest(self, registry):
+        key, ctrl = attach(registry)
+        ctrl.thread.ini_hardware()
+        assert ctrl.poll('spectrum', 20.0).policy == 'latest'
+
+    def test_an_explicit_policy_is_honored(self, registry):
+        key, ctrl = attach(registry)
+        ctrl.thread.ini_hardware()
+        assert ctrl.poll('spectrum', 20.0, policy='all').policy == 'all'
+
+    def test_polling_again_with_the_same_policy_returns_the_same_subscription(self, registry):
+        key, ctrl = attach(registry)
+        ctrl.thread.ini_hardware()
+        assert ctrl.poll('spectrum', 20.0, policy='all') is ctrl.poll('spectrum', 20.0, policy='all')
+
+    def test_polling_again_with_a_different_policy_raises(self, registry):
+        key, ctrl = attach(registry)
+        ctrl.thread.ini_hardware()
+        ctrl.poll('spectrum', 20.0, policy='latest')
+        with pytest.raises(ValueError, match='already polled'):
+            ctrl.poll('spectrum', 20.0, policy='all')
+
+
 class TestBlockingRead:
 
     def test_script_thread_gets_the_reading(self, registry, qtbot):
@@ -381,6 +408,21 @@ class TestNewReading:
         with qtbot.waitSignal(ctrl.new_reading, timeout=2000) as blocker:
             ctrl.poll('spectrum', 20.0)
         assert blocker.args[0] == 'spectrum'
+        ctrl.stop_poll('spectrum')
+
+    def test_the_reading_carries_a_real_wall_clock_read_time(self, registry, qtbot):
+        # Not time.monotonic() - HardwareThread deliberately switched to time.time() so this
+        # value can be used directly as a DataWithAxes.timestamp (see hardware_thread.py's note).
+        import time as time_module
+
+        key, ctrl = attach(registry)
+        ctrl.thread.ini_hardware()
+        before = time_module.time()
+        with qtbot.waitSignal(ctrl.new_reading, timeout=2000) as blocker:
+            ctrl.poll('spectrum', 20.0)
+        after = time_module.time()
+        name, data, read_time = blocker.args
+        assert before <= read_time <= after
         ctrl.stop_poll('spectrum')
 
 

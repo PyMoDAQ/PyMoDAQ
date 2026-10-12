@@ -59,7 +59,7 @@ class Controller(QObject):
     action_done = Signal(str, str, object)     # ← thread.action_done: (name, action name, result or None)
     action_failed = Signal(str, str, str)      # ← thread.action_failed: (name, action name, message)
     read_failed = Signal(str, str)             # ← thread.read_failed, or a read() that timed out
-    new_reading = Signal(str, object)          # ← a poll's reading: (name, data), also stored in the property
+    new_reading = Signal(str, object, float)   # ← a poll's reading: (name, data, wall-clock read time)
 
     def __init__(self, thread, settings, capabilities: Capabilities, parent: QObject | None = None):
         super().__init__(parent)
@@ -184,11 +184,14 @@ class Controller(QObject):
         if not self._connected:
             raise RuntimeError(f'cannot access {name!r}: the device is not open')
 
-    def poll(self, name: str, period_ms: float) -> Subscription:
+    def poll(self, name: str, period_ms: float, policy: str = 'latest') -> Subscription:
         """Read *name* every *period_ms* so that its property stays up to date.
 
-        Only the newest value matters, so the subscription uses the 'latest' policy.
-        Polling a name again returns the same subscription; a different period raises.
+        *policy* is :class:`Subscription`'s own: ``'latest'`` (the default - a slow consumer
+        skips readings instead of queuing them, right for a display) or ``'all'`` (no reading is
+        ever dropped, right for lossless recording - see ``Subscription``'s own docstring).
+        Polling a name again with the same period and policy returns the same subscription;
+        a different period or policy raises, since one physical poll can only honor one policy.
         Raises RuntimeError if the device is not open.
         """
         self._require_open(name)
@@ -196,9 +199,11 @@ class Controller(QObject):
             existing = self._polled[name]
             if existing.period_ms != period_ms:
                 raise ValueError(f'{name!r} is already polled every {existing.period_ms} ms')
+            if existing.policy != policy:
+                raise ValueError(f'{name!r} is already polled with policy {existing.policy!r}')
             return existing
-        sub = Subscription(name, period_ms, policy='latest')
-        sub.data_ready.connect(lambda data, is_temp, t: self._on_reading(name, data, sub))
+        sub = Subscription(name, period_ms, policy=policy)
+        sub.data_ready.connect(lambda data, is_temp, t: self._on_reading(name, data, t, sub))
         self._polled[name] = sub
         self.subscribe_requested.emit(sub)
         return sub
@@ -265,10 +270,10 @@ class Controller(QObject):
         for kind, name in list(self._timers):
             self._stop_timeout(kind, name)
 
-    def _on_reading(self, name: str, data: object, sub: Subscription) -> None:
+    def _on_reading(self, name: str, data: object, read_time: float, sub: Subscription) -> None:
         self._last_values[name] = data
         sub.acknowledge()
-        self.new_reading.emit(name, data)
+        self.new_reading.emit(name, data, read_time)
 
 
 @functools.lru_cache(maxsize=None)

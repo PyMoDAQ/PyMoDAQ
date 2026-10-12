@@ -284,7 +284,7 @@ class HardwareThread(QObject):
 
     def _push_reading(self, channel: str, data: object) -> None:
         """Called by the plugin from any thread, e.g. an SDK callback. The reading is queued to the hardware thread."""
-        self._push_requested.emit(channel, data, time.monotonic())
+        self._push_requested.emit(channel, data, time.time())
 
     @Slot(str, object, float)
     @_when_open
@@ -326,7 +326,7 @@ class HardwareThread(QObject):
             logger.exception(f'read of {sub.channel!r} failed')
             self.read_failed.emit(sub.channel, str(exc))
             return
-        self._send(sub, data, time.monotonic())
+        self._send(sub, data, time.time())
 
     def _read_channel(self, channel: str) -> object:
         """One channel's value: its own ``get`` if declared, otherwise a single-channel ``read``."""
@@ -431,13 +431,21 @@ class HardwareThread(QObject):
     def _deliver(self, channel: str, data: object, period_ms: float) -> None:
         """Send one channel's data to its subscriptions at *period_ms* only."""
         if any(sub.period_ms == period_ms for sub in self._subscribers.get(channel, [])):
-            self._fan_out(channel, data, time.monotonic(), period_ms)
+            self._fan_out(channel, data, time.time(), period_ms)
 
     def _fan_out(self, channel: str, data: object, read_time: float, period_ms: float | None = None) -> None:
         """Send *data* to the subscriptions of *channel*, at *period_ms* when given.
 
         Subscribers without a transform share the same object, so it must be read-only for them.
         A transform receives its own copy.
+
+        *read_time* is wall-clock (``time.time()``), not ``time.monotonic()``, deliberately: it
+        ends up as a reading's ``DataWithAxes.timestamp`` (see ``Channel._emit`` in
+        ``channel.py``), which is documented repo-wide as "seconds since epoch" and already used
+        that way for H5 time-axis saving, DAQ_Logger's DB rows, and plot titles - monotonic time
+        would be silently wrong there, and nothing in this class needs the adjustment-immunity
+        monotonic time would otherwise buy, since *read_time* is never compared against another
+        reading's *within* this class, only forwarded.
         """
         for sub in list(self._subscribers.get(channel, [])):
             if period_ms is None or sub.period_ms == period_ms:

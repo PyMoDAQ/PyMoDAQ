@@ -34,7 +34,7 @@ class Subscription(QObject):
     The consumer calls :meth:`acknowledge` once it has handled a reading.
     """
 
-    data_ready = Signal(object, bool, float)  # (data of this channel, is_temp, monotonic time of the read)
+    data_ready = Signal(object, bool, float)  # (data of this channel, is_temp, wall-clock read time)
     released = Signal()                       # emitted by the hardware thread once it has dropped this subscription
 
     POLICIES = ('all', 'latest')
