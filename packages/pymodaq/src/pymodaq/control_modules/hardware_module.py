@@ -131,7 +131,19 @@ def _viewer_type(quantity: Quantity) -> ViewersEnum:
     its own ready-made ``DataWithAxes`` (see :func:`measurement`'s ``get`` docstring) can still carry
     more than one labeled curve; what matters here is only that it's a 1D shape, so the dock is a
     ``Viewer1D`` either way.
+
+    Raises for a shape with more than 2 dimensions: ``Quantity`` itself has no opinion on
+    dimensionality at all (it's pure declaration, with no consumer in view), but this module only
+    has ``Viewer0D``/``Viewer1D``/``Viewer2D`` wired up - nothing past a plain scalar, a 1D array or
+    a 2D image, so far. Called eagerly, once per measurement, while building the channel dock (see
+    :meth:`HardwareModule._fill_channel_toolbar`), so this fails at construction, before the device
+    even opens, rather than later as an uncaught ``ViewerError`` deep inside a Qt paint callback.
     """
+    if len(quantity.shape) > 2:
+        raise ValueError(
+            f'{quantity.name!r}: shape has {len(quantity.shape)} dimensions, got {quantity.shape} - '
+            f'this module only has Viewer0D/Viewer1D/Viewer2D wired up so far, so a plain scalar, a '
+            f'1D array or a 2D image - nothing higher yet')
     if len(quantity.shape) >= 2:
         return ViewersEnum.Viewer2D
     return ViewersEnum.Viewer0D if quantity.shape[0] == 1 else ViewersEnum.Viewer1D
@@ -373,6 +385,9 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         for merged in self._merged_into.get(row, []):
             self._add_merged_action(row, merged)
         if 'show_graph' in widgets:
+            _viewer_type(self._quantities[channel])  # fails now, at construction, for a shape
+            # nothing here can render - the same check _view() would otherwise only hit much
+            # later, deep inside a Qt paint callback, the first time Show Graph is clicked
             bar.addSeparator()
             self._add_show_graph_action(channel, row)
     def _add_placeholder(self, name: str, slot: str, width: int) -> None:

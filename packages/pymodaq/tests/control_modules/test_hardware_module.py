@@ -106,6 +106,25 @@ class TestLayout:
     def test_every_measurement_has_a_display(self, module):
         assert set(module._displays) == {'temperature', 'status'}
 
+    def test_a_shape_past_2d_is_rejected_at_construction(self, registry, qtbot):
+        """Quantity itself places no limit on dimensionality (see test_capabilities.py) - this
+        module is the one consumer that currently only has Viewer0D/Viewer1D/Viewer2D wired up,
+        so it's the one that has to reject it, and it does so now, building the row, rather than
+        later as an uncaught ViewerError deep inside a Qt paint callback the first time Show Graph
+        is clicked."""
+        class HyperCam:
+            params: list = []
+            cube = measurement(shape=(4, 4, 3), label='Cube')
+
+            def open(self, settings):
+                pass
+
+            def close(self):
+                pass
+
+        with pytest.raises(ValueError, match='Viewer0D/Viewer1D/Viewer2D'):
+            make_module(registry, qtbot, HyperCam, 26)
+
     def test_status_starts_closed(self, module):
         assert module.status_label.text() == 'not open'
 
