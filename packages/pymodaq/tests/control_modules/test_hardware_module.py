@@ -212,10 +212,64 @@ class TestViews:
         qtbot.waitUntil(lambda: scope._viewers['spectrum']._raw_data is not None, timeout=2000)
         assert scope._viewers['spectrum']._raw_data.shape == (4,)
 
+    @pytest.fixture
+    def camera_scope(self, registry, qtbot):
+        class CameraScope(Camera):
+            frame = measurement(shape=(4, 4), get=lambda plugin: np.arange(16.0).reshape(4, 4))
+
+        widget = make_module(registry, qtbot, CameraScope, 23, initialize=True)
+        yield widget
+        widget.release()
+
+    def test_a_2d_measurement_gets_a_viewer2d(self, camera_scope):
+        from pymodaq_gui.plotting.data_viewers.viewer2D import Viewer2D
+        camera_scope.get_action('frame_show_graph').trigger()
+        assert isinstance(camera_scope._viewers['frame'], Viewer2D)
+
+    def test_a_2d_reading_reaches_the_viewer2d_with_its_real_shape(self, camera_scope):
+        """Calls _on_reading directly with a real 2D array, instead of going through the cross-
+        thread subscribe/read round trip a real Grab/Snap/Read click would: that queued delivery
+        races against this environment's offscreen Qt platform and pyqtgraph's (outdated here)
+        Viewer2D/HistogramLUT in a way that intermittently segfaults the whole test process - same
+        plugin, same data, not reliably reproducible by anything in this change, and not worth
+        risking an unrelated contributor's whole test run chasing further. What's actually under
+        test here - that _on_reading's 2D branch builds the right DataRaw and hands it to the
+        viewer - needs none of that: it is a plain, synchronous method, exercised exactly as
+        thoroughly by calling it directly.
+        """
+        camera_scope.get_action('frame_show_graph').trigger()
+        captured = []
+        camera_scope._viewers['frame'].show_data = captured.append
+        camera_scope._on_reading('frame', np.arange(16.0).reshape(4, 4))
+        raw_data = captured[0]
+        assert raw_data.shape == (4, 4)
+        assert np.array_equal(raw_data.data[0], np.arange(16.0).reshape(4, 4))
+
     def test_closing_the_view_unchecks_show_graph(self, module, qtbot):
         module.get_action('temperature_show_graph').trigger()
         module._views['temperature'].close()
         assert not module.get_action('temperature_show_graph').isChecked()
+
+    def test_a_plain_scalar_value_reaches_the_viewer_without_crashing(self, registry, qtbot):
+        """A plain Python/numpy scalar - not pre-wrapped in an array - is exactly what a control's
+        own get=True gives a readback measurement defaulting to it (see capabilities.py's
+        _readback_of): np.asarray()-ing it alone gives a 0-d array, which DataWithAxes rejects
+        outright ("non-empty list of non-empty numpy arrays"). Regression test for that -
+        _on_reading uses np.atleast_1d instead, same as Channel._emit already does.
+        """
+        class ScalarGetScope(Camera):
+            setpoint = control(units='V', lo=-10, hi=10, get=True, readback=True)
+
+            def __init__(self):
+                super().__init__()
+                self.setpoint = 0.0  # a plain float, the same shape a GUI spin edit gives it
+
+        widget = make_module(registry, qtbot, ScalarGetScope, 24, initialize=True)
+        widget.get_action('setpoint_readback_show_graph').trigger()
+        widget.get_action('setpoint_readback_read').trigger()
+        history = widget._viewers['setpoint_readback'].view.data_displayer._data
+        qtbot.waitUntil(lambda: history.size == 1, timeout=2000)
+        widget.release()
 
 
 class TestGrab:

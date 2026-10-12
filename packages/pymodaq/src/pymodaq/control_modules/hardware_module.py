@@ -752,12 +752,17 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
             self._displays[name].setText(self._display_text(name, data))
         if name not in self._viewers:
             return
-        values = np.asarray(data)
+        # atleast_1d, not asarray: a plain Python/numpy scalar (e.g. a control's own get=True
+        # answering straight from plugin.<name>, or a readback defaulting to that same get - see
+        # _readback_of) asarray()s to a 0-d array, which DataWithAxes._check_data_type rejects
+        # outright ("non-empty list of non-empty numpy arrays"); atleast_1d is what Channel._emit
+        # already uses for exactly this reason, on the ModulesManager-facing path.
+        values = np.atleast_1d(data)
         if not np.issubdtype(values.dtype, np.number):
             return  # a label such as a discrete state has no trace
-        # Shape kept as-is (no .ravel()): Viewer0D keeps its own scrolling history for a scalar,
-        # Viewer1D/Viewer2D show the array as declared - a real 2D reading no longer gets silently
-        # flattened the way the old hand-rolled curve did.
+        # Shape kept as-is otherwise (no further .ravel()): Viewer0D keeps its own scrolling
+        # history for a scalar, Viewer1D/Viewer2D show the array as declared - a real 2D reading no
+        # longer gets silently flattened the way the old hand-rolled curve did.
         self._viewers[name].show_data(DataRaw(name, data=[values], units=self._quantities[name].units,
                                               labels=[name]))
 
