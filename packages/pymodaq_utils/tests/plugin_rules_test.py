@@ -210,6 +210,45 @@ def test_legacy_settings_names(tmp_path):
     assert '2 times' in findings[0].message
 
 
+def test_translated_legacy_names_in_subscripts_are_fine(tmp_path):
+    path = tmp_path / 'daq_move_Foo.py'
+    path.write_text(textwrap.dedent('''
+        class DAQ_Move_Foo(DAQ_Move_base):
+            """doc"""
+            def ini_stage(self, controller=None):
+                a = self.settings['multiaxes', 'axis']
+                return '', True
+        '''))
+    assert 'PMQ316' not in codes(pr.check_plugin_source(path, 'move', 'DAQ_Move_Foo'))
+
+
+def test_data_actuator_type_inherited_from_a_plugin_class(tmp_path):
+    path = tmp_path / 'daq_move_Foo.py'
+    path.write_text(textwrap.dedent('''
+        from other import DAQ_Move_Bar
+
+        class DAQ_Move_Foo(DAQ_Move_Bar):
+            """doc"""
+        '''))
+    assert 'PMQ303' not in codes(pr.check_plugin_source(path, 'move', 'DAQ_Move_Foo'))
+
+
+def test_noqa_comment_silences_the_given_codes_on_that_line(tmp_path):
+    source = '''
+        class DAQ_Move_Foo(DAQ_Move_base):
+            """doc"""
+            def ini_stage(self, controller=None):
+                if self.settings.child('multiaxes', 'a').value():  # noqa: {code}
+                    pass
+                return '', True
+        '''
+    path = tmp_path / 'daq_move_Foo.py'
+    path.write_text(textwrap.dedent(source.format(code='PMQ303, PMQ316')))
+    assert 'PMQ316' not in codes(pr.check_plugin_source(path, 'move', 'DAQ_Move_Foo'))
+    path.write_text(textwrap.dedent(source.format(code='PMQ303')))
+    assert 'PMQ316' in codes(pr.check_plugin_source(path, 'move', 'DAQ_Move_Foo'))
+
+
 def test_python_code_rules(tmp_path):
     root = tmp_path / 'pymodaq_plugins_foo'
     (root / 'hardware').mkdir(parents=True)

@@ -21,6 +21,7 @@ They are used by :mod:`pymodaq_utils.plugin_checks` but can be called directly::
 from __future__ import annotations
 
 import ast
+import functools
 import importlib.util
 import os
 import re
@@ -400,6 +401,31 @@ def check_leftovers(package: str, root: Path, project: Optional[Path] = None) ->
     return findings
 
 
+NOQA_RE = re.compile(r'#\s*noqa\s*:\s*(PMQ\d+(?:\s*,\s*PMQ\d+)*)', re.IGNORECASE)
+
+
+def _honour_noqa(rule):
+    """Drop the findings of a rule whose line carries a ``# noqa: PMQxxx`` comment (on purpose, like for flake8)"""
+    @functools.wraps(rule)
+    def wrapper(*args, **kwargs):
+        lines = {}
+        kept = []
+        for finding in rule(*args, **kwargs):
+            if finding.path is not None and finding.line is not None:
+                if finding.path not in lines:
+                    try:
+                        lines[finding.path] = Path(finding.path).read_text(errors='replace').splitlines()
+                    except OSError:
+                        lines[finding.path] = []
+                text = lines[finding.path]
+                match = NOQA_RE.search(text[finding.line - 1]) if 0 < finding.line <= len(text) else None
+                if match and finding.code in {c.strip().upper() for c in match.group(1).split(',')}:
+                    continue
+            kept.append(finding)
+        return kept
+    return wrapper
+
+
 def _is_name(node: Optional[ast.AST], name: str) -> bool:
     if isinstance(node, ast.Call):
         node = node.func
@@ -512,7 +538,8 @@ def _check_move_source(path: Path, cls: ast.ClassDef, attrs: dict, static_fallba
         findings.append(Finding('PMQ302', Severity.ERROR, "the axes are declared as 'axis_names', that is ignored",
                                 "use '_axis_names'", path, attrs['axis_names'].lineno))
     dat = attrs.get('data_actuator_type')
-    if dat is None or 'DataActuator' not in ast.dump(dat):
+    inherits = dat is None and not all(b == 'DAQ_Move_base' for b in _base_names(cls))  # may be set by a parent
+    if not inherits and (dat is None or 'DataActuator' not in ast.dump(dat)):
         findings.append(Finding('PMQ303', Severity.WARNING, 'data_actuator_type is not DataActuatorType.DataActuator',
                                 'new plugins should exchange DataActuator objects: set '
                                 'data_actuator_type = DataActuatorType.DataActuator', path,
@@ -565,7 +592,13 @@ def _check_deprecated_api(path: Path, tree: ast.Module, methods: dict) -> list[F
 
 def _check_legacy_settings(path: Path, tree: ast.Module) -> list[Finding]:
     """PMQ316: names of groups of settings that were renamed"""
-    hits = [n for n in ast.walk(tree) if isinstance(n, ast.Constant) and n.value in LEGACY_SETTINGS]
+    translated = set()  # names used as an index, settings['multiaxes', 'axis']: PyMoDAQ translates them
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Subscript):
+            index = node.slice
+            translated.update(id(e) for e in (index.elts if isinstance(index, ast.Tuple) else [index]))
+    hits = [n for n in ast.walk(tree) if isinstance(n, ast.Constant) and n.value in LEGACY_SETTINGS and
+            id(n) not in translated]
     if not hits:
         return []
     first = min(hits, key=lambda n: n.lineno)
@@ -593,3 +626,7 @@ def check_package_sources(package: str) -> list[Finding]:
         file = Path(importlib.util.find_spec(mod.import_path).origin)
         findings.extend(check_plugin_source(file, mod.kind, mod.class_name))
     return findings
+
+
+check_plugin_source = _honour_noqa(check_plugin_source)
+check_python_code = _honour_noqa(check_python_code)
