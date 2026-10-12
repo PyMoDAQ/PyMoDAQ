@@ -508,6 +508,7 @@ def check_plugin_source(path: Path, kind: str, class_name: str, static_fallback:
     else:
         mandatory = MANDATORY_VIEWER_METHODS
     findings.extend(_check_legacy_settings(path, tree))
+    findings.extend(_check_controller_init(path, tree))
     simple_bases = all(b in ('DAQ_Move_base', 'DAQ_Viewer_base') for b in _base_names(cls))
     if static_fallback and simple_bases:
         for meth in mandatory:
@@ -602,6 +603,20 @@ def _check_legacy_settings(path: Path, tree: ast.Module) -> list[Finding]:
                     "PyMoDAQ still translates the old names in settings[...] (deprecated), but not in "
                     "settings.child(...): use the new ones", path,
                     first.lineno)]
+
+
+def _check_controller_init(path: Path, tree: ast.Module) -> list[Finding]:
+    """PMQ318: deprecated call of ini_stage_init / ini_detector_init to initialize the controller"""
+    calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute) and
+             n.func.attr in ('ini_stage_init', 'ini_detector_init') and
+             isinstance(n.func.value, ast.Name) and n.func.value.id == 'self']
+    if not calls:
+        return []
+    first = min(calls, key=lambda n: n.lineno)
+    more = f' ({len(calls)} times in this file)' if len(calls) > 1 else ''
+    return [Finding('PMQ318', Severity.WARNING, f'{first.func.attr}() is deprecated{more}',
+                    "write: if self.is_master: self.controller = AWrapper() else: self.controller = controller",
+                    path, first.lineno)]
 
 
 def check_package_sources(package: str) -> list[Finding]:
