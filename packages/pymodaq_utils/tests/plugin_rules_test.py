@@ -332,3 +332,10 @@ def test_noqa_on_leftovers_and_without_colon(tmp_path):
         '''))
     findings = [f for f in pr.check_leftovers('pymodaq_plugins_foo', root) if f.code == 'PMQ202']
     assert [f.line for f in findings] == [6]
+
+
+def test_finding_location_is_relative_to_the_package(tmp_path):
+    inside = tmp_path / 'pymodaq_plugins_xxx' / 'hardware' / 'driver.py'
+    finding = pr.Finding('PMQ317', Severity.WARNING, 'message', path=inside, line=5)
+    assert finding.location == 'hardware/driver.py:5'
+    assert pr.Finding('PMQ317', Severity.WARNING, 'message', path=tmp_path / 'other.py').location == 'other.py'
