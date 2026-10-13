@@ -367,18 +367,25 @@ class DAQMoveUI(ControlModuleUI):
             self.connect_action('move_abs_green', connect=False)
         if 'move_abs_red' in self.actions_names:
             self.connect_action('move_abs_red', connect=False)
-        try:
-            self.move_abs_pb.clicked.disconnect()
-        except TypeError:
-            pass
-        try:
-            self.move_rel_plus_pb.clicked.disconnect()
-        except TypeError:
-            pass
-        try:
-            self.move_rel_minus_pb.clicked.disconnect()
-        except TypeError:
-            pass
+        signals = [
+            self.move_abs_pb.clicked,
+            self.move_rel_plus_pb.clicked,
+            self.move_rel_minus_pb.clicked,
+            self.find_home_pb.clicked,
+            self.stop_pb.clicked,
+            self.get_value_pb.clicked,
+            self.rel_value_sb.valueChanged,
+            self.abs_value_sb.shortcut["Ctrl+E"].activated,
+            self.abs_value_sb_2.shortcut["Ctrl+E"].activated,
+            self.abs_value_sb_bis.shortcut["Ctrl+E"].activated,
+            self.rel_value_sb.shortcut["Ctrl+E"].activated,
+            self.rel_value_sb.shortcut["Ctrl+Shift+E"].activated,
+        ]
+        for signal in signals:  # all are reconnected in connect_move_actions, avoid duplicate calls
+            try:
+                signal.disconnect()
+            except TypeError:
+                pass
         self.remove_absolute_spinbox_actions(self.toolbar)
         self.remove_absolute_actions(self.toolbar)
         self.remove_relative_actions(self.toolbar)

@@ -10,6 +10,7 @@ from pymodaq.control_modules import daq_move as daqmv
 from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.move_utility_classes import HW_SETTINGS_KEY as ACTUATOR_SETTINGS_KEY
 from pymodaq.control_modules.utils import ControlModule
+from pymodaq.control_modules.thread_commands import ControlToHardwareMove
 
 from pymodaq_utils.config import GlobalConfig
 
@@ -61,6 +62,28 @@ class TestMethods:
 
 
 class TestDAQMove:
+    def test_buttons_send_one_command(self, ini_daq_move_ui):
+        """Changing the actuator rebuilds the UI: buttons must not end up connected twice"""
+        daq_move, qtbot, widget = ini_daq_move_ui
+        daq_move.actuator = 'Mock'
+        with qtbot.waitSignal(daq_move.init_signal, timeout=10000):
+            daq_move.init_hardware_ui(True)
+
+        commands = []
+        daq_move.command_hardware.connect(lambda cmd: commands.append(cmd.command))
+        ui = daq_move.ui
+        ui.abs_value_sb_bis.setValue(5.)
+        for button, command in ((ui.find_home_pb, ControlToHardwareMove.MOVE_HOME),
+                                (ui.move_abs_pb, ControlToHardwareMove.MOVE_ABS),
+                                (ui.move_rel_plus_pb, ControlToHardwareMove.MOVE_REL),
+                                (ui.move_rel_minus_pb, ControlToHardwareMove.MOVE_REL),
+                                (ui.stop_pb, ControlToHardwareMove.STOP_MOTION)):
+            commands.clear()
+            button.click()
+            qtbot.wait(200)
+            assert commands.count(command) == 1
+        daq_move.quit_fun()
+
     def test_data_emit(self, ini_daq_move_ui):
         daq_move, qtbot, widget = ini_daq_move_ui
         daq_move.actuator = 'Mock'
