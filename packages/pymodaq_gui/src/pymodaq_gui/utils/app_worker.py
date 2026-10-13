@@ -19,7 +19,7 @@ from pymodaq_gui.utils.custom_app import WorkFlowActions
 from pymodaq_utils.utils import ThreadCommand
 
 
-# the savers a worker can handle (the extension savers of pymodaq are used through these)
+# the savers a SaverWorker can use
 SaverTypes = (DataToExportSaver | DataToExportExtendedSaver |
               DataToExportEnlargeableSaver | DataToExportTimedSaver)
 
