@@ -758,7 +758,7 @@ def check_extension_source(path: Path) -> list[Finding]:
                                         'without it no dock, menu or toolbar is created: call self.setup_ui() at the '
                                         'end of __init__', path, init.lineno))
         if 'CustomExt' in _root_bases(cls, classes) and 'quit_fun' in methods:
-            findings.append(Finding('PMQ339', Severity.WARNING, f'{cls.name} overrides quit_fun()',
+            findings.append(Finding('PMQ339', Severity.ERROR, f'{cls.name} overrides quit_fun()',
                                     'quit_fun of CustomExt calls _quit_fun (the guard) then closes the window and '
                                     'shows the Dashboard again: override _quit_fun instead, so that these are kept',
                                     path, methods['quit_fun'].lineno))

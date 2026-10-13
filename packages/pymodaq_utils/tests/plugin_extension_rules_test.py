@@ -163,7 +163,7 @@ def test_overriding_quit_fun_is_reported(check):
     code = GOOD.replace("    def _quit_fun(self):\n        return True\n", "    def quit_fun(self):\n        return True\n")
     findings = check(code)
     assert codes(findings) == {'PMQ339'}
-    assert findings[0].severity == Severity.WARNING
+    assert findings[0].severity == Severity.ERROR
 
 
 def test_overriding_quit_fun_next_to_the_guard(check):
