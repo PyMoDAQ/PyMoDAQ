@@ -33,6 +33,7 @@ import toml
 
 from pymodaq_utils.utils import get_entrypoints
 
+from pymodaq_utils.plugin_tools.contract import legacy_names
 from pymodaq_utils.plugin_tools.rules import (MANDATORY_MOVE_METHODS, MANDATORY_VIEWER_METHODS, PLACEHOLDER_NAMES_RE,
                                         Finding, Severity, check_file_names, check_leftovers, check_plugin_source,
                                         check_python_code, check_pyproject, colorize, is_valid_unit, package_root,
@@ -205,8 +206,10 @@ def _check_params(klass: type) -> list[str]:
     return problems
 
 
-def _check_methods(klass: type, base: type, mandatory) -> list[str]:
-    problems = [f'{klass.__name__} should override {m}()' for m in mandatory if not _is_overridden(klass, base, m)]
+def _check_methods(klass: type, base: type, mandatory, legacy: Optional[dict] = None) -> list[str]:
+    legacy = legacy or {}  # old names still called by the base class if the method is not defined (see PMQ312)
+    problems = [f'{klass.__name__} should override {m}()' for m in mandatory
+                if not _is_overridden(klass, base, m) and not (m in legacy and hasattr(klass, legacy[m]))]
     if inspect.isabstract(klass):  # in case a base ever becomes a real ABC
         problems.append(f'{klass.__name__} is abstract: {sorted(klass.__abstractmethods__)}')
     return problems
@@ -217,7 +220,7 @@ def check_move_class(klass: type) -> list[str]:
     from pymodaq.control_modules.move_utility_classes import DAQ_Move_base  # only needed when checking the classes
     if not (inspect.isclass(klass) and issubclass(klass, DAQ_Move_base)):
         return [f'{klass} should derive from DAQ_Move_base']
-    problems = _check_methods(klass, DAQ_Move_base, MANDATORY_MOVE_METHODS)
+    problems = _check_methods(klass, DAQ_Move_base, MANDATORY_MOVE_METHODS, legacy_names('move'))
     problems += _check_params(klass)
 
     axis_names = klass.get_class_axis_names()

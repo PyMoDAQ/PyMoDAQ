@@ -8,7 +8,7 @@ def test_checks_and_rules_read_the_contract():
 
 
 def test_mandatory_methods():
-    assert plugin_contract.mandatory_methods('move') == ('ini_stage', 'get_actuator_value', 'close')
+    assert plugin_contract.mandatory_methods('move') == ('ini_stage', 'get_actuator_value', 'move_abs', 'move_rel', 'close')
     assert plugin_contract.mandatory_methods('viewer') == ('ini_detector', 'grab_data', 'stop', 'close')
 
 

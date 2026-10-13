@@ -162,6 +162,8 @@ def test_deprecated_api_of_actuators(tmp_path):
                 return self.current_position
             def move_Abs(self, value):
                 self.target_position = value
+            def move_Rel(self, value):
+                self.target_position = value
             def close(self): pass
             def ini_stage(self, controller=None):
                 return '', True
@@ -169,9 +171,26 @@ def test_deprecated_api_of_actuators(tmp_path):
     findings = pr.check_plugin_source(path, 'move', 'DAQ_Move_Foo', static_fallback=True)
     assert {'PMQ312', 'PMQ313', 'PMQ314'} <= codes(findings)
     assert codes(findings, Severity.ERROR) >= {'PMQ314'}
-    assert len([f for f in findings if f.code == 'PMQ312']) == 2  # check_position and move_Abs
-    # check_position is still accepted in place of get_actuator_value
+    assert len([f for f in findings if f.code == 'PMQ312']) == 3  # check_position, move_Abs and move_Rel
+    # the old names are still accepted in place of the mandatory methods
     assert 'PMQ306' not in codes(findings)
+
+
+def test_move_abs_and_move_rel_are_mandatory(tmp_path):
+    path = tmp_path / 'daq_move_Foo.py'
+    path.write_text(textwrap.dedent('''
+        from pymodaq.control_modules.move_utility_classes import DAQ_Move_base, comon_parameters
+
+        class DAQ_Move_Foo(DAQ_Move_base):
+            """doc"""
+            params = comon_parameters
+            def ini_stage(self, controller=None): return '', True
+            def get_actuator_value(self): pass
+            def close(self): pass
+        '''))
+    findings = pr.check_plugin_source(path, 'move', 'DAQ_Move_Foo', static_fallback=True)
+    messages = [f.message for f in findings if f.code == 'PMQ306']
+    assert any('move_abs' in m for m in messages) and any('move_rel' in m for m in messages)
 
 
 def test_comon_parameters_called_or_of_a_viewer_is_fine(tmp_path):

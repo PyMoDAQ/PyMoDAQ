@@ -31,12 +31,16 @@ class PluginMethod:
         when it is called and what it has to do
     returns: str
         what it has to return ('' if nothing)
+    legacy_name: str
+        deprecated name that PyMoDAQ still calls if the method is not defined ('' if none): a plugin defining it
+        fulfils the contract (with a deprecation warning, see rule PMQ312)
     """
     name: str
     kind: Kind
     mandatory: bool
     purpose: str
     returns: str = ''
+    legacy_name: str = ''
 
 
 PLUGIN_METHODS: tuple[PluginMethod, ...] = (
@@ -48,11 +52,14 @@ PLUGIN_METHODS: tuple[PluginMethod, ...] = (
                  '``(info: str, initialized: bool)``'),
     PluginMethod('get_actuator_value', 'move', True,
                  'read the current position from the hardware, on request and after each move',
-                 'a ``DataActuator`` with units (or a float if ``data_actuator_type`` is ``float``)'),
-    PluginMethod('move_abs', 'move', False,
-                 'move to an absolute value (a ``DataActuator``, in the units of the axis)'),
-    PluginMethod('move_rel', 'move', False,
-                 'move by a relative value (a ``DataActuator``, in the units of the axis)'),
+                 'a ``DataActuator`` with units (or a float if ``data_actuator_type`` is ``float``)',
+                 legacy_name='check_position'),
+    PluginMethod('move_abs', 'move', True,
+                 'move to an absolute value (a ``DataActuator``, in the units of the axis)',
+                 legacy_name='move_Abs'),
+    PluginMethod('move_rel', 'move', True,
+                 'move by a relative value (a ``DataActuator``, in the units of the axis)',
+                 legacy_name='move_Rel'),
     PluginMethod('move_home', 'move', False, 'send the actuator to its home position'),
     PluginMethod('stop_motion', 'move', False, 'stop the motion now; the default does nothing'),
     PluginMethod('commit_settings', 'move', False,
@@ -82,6 +89,11 @@ def methods_of(kind: Kind) -> tuple[PluginMethod, ...]:
 def mandatory_methods(kind: Kind) -> tuple[str, ...]:
     """Names of the methods that a plugin has to override"""
     return tuple(m.name for m in methods_of(kind) if m.mandatory)
+
+
+def legacy_names(kind: Kind) -> dict[str, str]:
+    """Deprecated names still accepted in place of the mandatory methods: {method name: old name}"""
+    return {m.name: m.legacy_name for m in methods_of(kind) if m.mandatory and m.legacy_name}
 
 
 def recommended_methods(kind: Kind) -> tuple[str, ...]:

@@ -34,7 +34,7 @@ from typing import Optional
 
 import toml
 
-from pymodaq_utils.plugin_tools.contract import mandatory_methods
+from pymodaq_utils.plugin_tools.contract import legacy_names, mandatory_methods
 
 DOC = 'https://pymodaq.cnrs.fr/en/latest/developer_folder/instrument_plugins.html'
 TEMPLATE_NAME = 'pymodaq_plugins_template'
@@ -515,8 +515,10 @@ def check_plugin_source(path: Path, kind: str, class_name: str, static_fallback:
     simple_bases = all(b in ('DAQ_Move_base', 'DAQ_Viewer_base') for b in _base_names(cls))
     if static_fallback and simple_bases:
         for meth in mandatory:
-            # the base class still calls check_position if get_actuator_value is not defined (see PMQ312)
-            if meth not in methods and not (meth == 'get_actuator_value' and 'check_position' in methods):
+            # the base class still calls the old names (check_position, move_Abs...) if the method is not defined
+            # (see PMQ312)
+            old = legacy_names(kind).get(meth) if kind == 'move' else None
+            if meth not in methods and not (old and old in methods):
                 findings.append(Finding('PMQ306', Severity.ERROR, f'{class_name} should define {meth}()',
                                         'implement it (see the template)', path, cls.lineno))
     init = methods.get('ini_stage' if kind == 'move' else 'ini_detector')

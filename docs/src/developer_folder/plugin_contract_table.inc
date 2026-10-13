@@ -22,11 +22,11 @@ Actuator (``DAQ_Move_base``)
      - read the current position from the hardware, on request and after each move
      - a ``DataActuator`` with units (or a float if ``data_actuator_type`` is ``float``)
    * - ``move_abs``
-     - no
+     - yes
      - move to an absolute value (a ``DataActuator``, in the units of the axis)
      - 
    * - ``move_rel``
-     - no
+     - yes
      - move by a relative value (a ``DataActuator``, in the units of the axis)
      - 
    * - ``move_home``
