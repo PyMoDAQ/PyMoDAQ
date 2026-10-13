@@ -72,6 +72,7 @@ pyqt5= [
 
 
 [project.scripts]
+check_extension = "pymodaq_utils.plugin_tools.extension_checks:main"
 check_plugin = "pymodaq_utils.plugin_checks:main"
 daq_logger = "pymodaq.extensions.daq_logger:main"
 daq_move = "pymodaq.control_modules.daq_move:main"

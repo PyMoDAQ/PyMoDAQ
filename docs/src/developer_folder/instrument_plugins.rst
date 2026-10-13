@@ -169,6 +169,12 @@ PMQ317   code that only works on Windows and runs on import (``windll``, ``winre
 PMQ318   deprecated ``ini_stage_init`` / ``ini_detector_init``; write ``if self.is_master: self.controller = AWrapper()`` / ``else: self.controller = controller``
 PMQ319   unknown value in ``supported_platforms`` / ``supported_architectures`` (see :ref:`plugin_platforms`)
 PMQ320   the ``Operating System`` classifiers of the ``pyproject.toml`` do not match ``supported_platforms``; ``check_plugin --fix-classifiers`` rewrites them
+PMQ330-1 extension (``extensions`` folder): ``EXTENSION_NAME`` / ``CLASS_NAME`` missing, so the Dashboard does not list it; ``CLASS_NAME`` is not a class of the module
+PMQ332   the extension class does not derive from ``CustomExt`` (a ``CustomApp`` has no access to the Dashboard)
+PMQ333   import from a deprecated module of pymodaq (``pymodaq.utils.parameter``, ``pymodaq.utils.messenger``, ``pymodaq.utils.math_utils``...) in an extension
+PMQ334   deprecated hooks ``setup_docks`` / ``setup_menu`` of an extension (use ``setup_docks_and_widgets`` / ``setup_menus_and_toolbars``)
+PMQ335   the extension creates its own ``ExperimentManager`` or ``StateManager`` instead of using the ones of the Dashboard
+PMQ336   ``__init__`` of the extension does not take ``(parent, dashboard)``. PMQ337: it never calls ``self.setup_ui()``
 ======== =================================================================================================
 
 The functions behind this command (*check_package_layout*, *check_move_class*, *check_viewer_class*) return the list of
