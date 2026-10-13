@@ -34,6 +34,8 @@ from typing import Optional
 
 import toml
 
+from pymodaq_utils.plugin_contract import mandatory_methods
+
 DOC = 'https://pymodaq.cnrs.fr/en/latest/developer_folder/instrument_plugins.html'
 TEMPLATE_NAME = 'pymodaq_plugins_template'
 
@@ -44,8 +46,9 @@ PLACEHOLDER_AUTHORS = ('Name Surname', 'myname@test.fr')
 PLACEHOLDER_NAMES_RE = re.compile(r'python_wrapper_file_of_your_instrument|PythonWrapperObjectOfYourInstrument|'
                                   r'your_method_to_\w+|a_method_or_atttribute_to_check_if_init')
 
-MANDATORY_MOVE_METHODS = ('ini_stage', 'get_actuator_value', 'close')  # stop_motion has a default that does nothing
-MANDATORY_VIEWER_METHODS = ('ini_detector', 'grab_data', 'stop', 'close')
+# defined once in pymodaq_utils.plugin_contract
+MANDATORY_MOVE_METHODS = mandatory_methods('move')
+MANDATORY_VIEWER_METHODS = mandatory_methods('viewer')
 
 # hooks of the plugins that were renamed: PyMoDAQ still calls the old ones, with a deprecation warning
 DEPRECATED_HOOKS = {'check_position': 'get_actuator_value', 'move_Abs': 'move_abs', 'move_Rel': 'move_rel',
