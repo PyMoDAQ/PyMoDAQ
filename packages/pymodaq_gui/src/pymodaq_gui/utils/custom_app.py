@@ -337,14 +337,9 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         See Also
         --------
         """
-        if hasattr(self, 'setup_docks'):
+        if hasattr(self, 'setup_docks'):  # only defined by the apps written before the rename
             self.setup_docks()  # for backcompatibility
-            deprecation_msg('You should not call setup_docks anymore, use `setup_docks_and_widgets` instead')
-
-    def setup_docks(self):
-        """ deprecated, see setup_docks_and_widgets
-        """
-        pass
+            deprecation_msg('You should not define setup_docks anymore, use `setup_docks_and_widgets` instead')
 
     def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
         """Non-mandatory method to be subclassed in order to create menus and toolbars
@@ -362,13 +357,9 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         --------
         pymodaq.utils.managers.action_manager.ActionManager
         """
-        self.setup_menu(menubar)  # for back-compatibility
-
-    def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
-        """ Deprecated, use `setup_menus_and_toolbars`
-
-        """
-        pass
+        if hasattr(self, 'setup_menu'):  # only defined by the apps written before the rename
+            self.setup_menu(menubar)  # for back-compatibility
+            deprecation_msg('You should not define setup_menu anymore, use `setup_menus_and_toolbars` instead')
 
     def setup_actions(self):
         """Method where to create actions.
