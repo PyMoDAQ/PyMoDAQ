@@ -694,6 +694,8 @@ def check_extension_source(path: Path) -> list[Finding]:
     * PMQ335: the extension creates its own ExperimentManager or StateManager
     * PMQ336: the ``__init__`` does not take the ``parent`` and ``dashboard`` arguments given by the Dashboard
     * PMQ337: the ``__init__`` of a class deriving from ``CustomExt`` never calls ``self.setup_ui()``
+    * PMQ338: a class deriving directly from ``CustomExt`` has no ``_quit_fun`` guard, or one that never returns True
+    * PMQ339: the extension class overrides ``quit_fun`` instead of ``_quit_fun``
     """
     try:
         tree = ast.parse(path.read_text(errors='replace'), filename=str(path))
@@ -755,6 +757,26 @@ def check_extension_source(path: Path) -> list[Finding]:
                 findings.append(Finding('PMQ337', Severity.WARNING, '__init__ never calls self.setup_ui()',
                                         'without it no dock, menu or toolbar is created: call self.setup_ui() at the '
                                         'end of __init__', path, init.lineno))
+        if 'CustomExt' in _root_bases(cls, classes) and 'quit_fun' in methods:
+            findings.append(Finding('PMQ339', Severity.ERROR, f'{cls.name} overrides quit_fun()',
+                                    'quit_fun of CustomExt calls _quit_fun (the guard) then closes the window and '
+                                    'shows the Dashboard again: override _quit_fun instead, so that these are kept',
+                                    path, methods['quit_fun'].lineno))
+        if 'CustomExt' in _base_names(cls) and 'quit_fun' not in methods:
+            quit_fun = methods.get('_quit_fun')
+            if quit_fun is None:
+                findings.append(Finding('PMQ338', Severity.WARNING, f'{cls.name} does not define _quit_fun()',
+                                        'quit_fun only closes the extension when _quit_fun() returns True, and the '
+                                        'one of CustomExt returns None: define _quit_fun as the guard that checks '
+                                        'that nothing is left running (threads, workers...), return False if '
+                                        'something is, True otherwise', path, cls.lineno))
+            elif not any(isinstance(n, ast.Return) and n.value is not None
+                         and not (isinstance(n.value, ast.Constant) and not n.value.value)
+                         for n in ast.walk(quit_fun)):
+                findings.append(Finding('PMQ338', Severity.WARNING, '_quit_fun() never returns True',
+                                        'quit_fun only closes the extension when _quit_fun() returns True: it is the '
+                                        'guard that returns False while something is left running (threads, workers'
+                                        '...) and True when everything is released', path, quit_fun.lineno))
     in_main = {n for f in tree.body if isinstance(f, ast.FunctionDef) and f.name == 'main' for n in ast.walk(f)}
     for node in ast.walk(tree):
         if (isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in DASHBOARD_OWNED
