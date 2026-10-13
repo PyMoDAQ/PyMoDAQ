@@ -16,7 +16,7 @@ from pymodaq.utils.config import get_set_experiment_path
 from pymodaq_utils.config import GlobalConfig
 
 from pymodaq_gui.parameter import Parameter, ParameterTree
-from pymodaq_gui.managers.manager_base import ManagerBase
+from pymodaq.utils.managers.manager_with_dashboard import ManagerWithDashboard
 from pymodaq_gui.parameter.utils import ParameterWithPath
 from pymodaq_utils.utils import find_objects_in_list_from_attr_name_val
 
@@ -62,7 +62,7 @@ class ROIList(ParameterManager):
             sub_item.setSizeHint(0, QtCore.QSize(10, height))
 
 
-class ROIManager(ManagerBase):
+class ROIManager(ManagerWithDashboard):
     """
     Base class for Manager directly depending on the status of the experiment manager
     To be reimplemented
@@ -85,8 +85,8 @@ class ROIManager(ManagerBase):
         self.update_viewer_list_from_dashboard()
 
 
-    def do_things_after_experiment_set(self, experiment_name: str):
-        super().do_things_after_experiment_set(experiment_name, show_dashboard=True)
+    def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: bool = True):
+        super().do_things_after_experiment_set(experiment_name, show_dashboard)
         self.update_viewer_list_from_dashboard()
 
         experiment_name = self.dashboard.experiment_name

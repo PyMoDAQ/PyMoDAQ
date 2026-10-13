@@ -1,6 +1,6 @@
 import sys
 from pathlib import Path
-from typing import Any, Union, TYPE_CHECKING, Optional
+from typing import Any, Union, Optional
 
 from qtpy.QtCore import Qt, QModelIndex
 from qtpy import QtWidgets, QtCore, QtGui
@@ -9,7 +9,7 @@ from qtpy.QtGui import QKeySequence
 from pymodaq_gui.utils.styling import create_icon
 
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq.utils.custom_ext import CustomExt
+from pymodaq_gui.utils.custom_app import CustomApp
 
 from pymodaq_utils.enums import StrEnum
 
@@ -22,10 +22,6 @@ from pymodaq_gui.utils.widget_sync import WidgetSync, SyncMode
 
 
 logger = set_logger(get_module_name(__file__))
-
-
-if TYPE_CHECKING:
-    from pymodaq.dashboard import DashBoard
 
 
 class ManagerActions(StrEnum):
@@ -98,7 +94,7 @@ class ManagerSubEntriesModel(QtCore.QAbstractListModel):
 
 
 
-class ManagerBase(CustomExt):
+class ManagerBase(CustomApp):
 
     new_entry = QtCore.Signal(str)
     applied_entry = QtCore.Signal(str)
@@ -112,11 +108,9 @@ class ManagerBase(CustomExt):
     icon_name = 'build_circle'  # the default icon to represent the manager in Toolbar and Menus
     default_entry_name = 'default'
 
-    def __init__(self,
-                 dashboard: 'DashBoard' = None,
-                 **kwargs):
+    def __init__(self, **kwargs):
 
-        super().__init__(parent=QtWidgets.QMainWindow(), dashboard=dashboard, **kwargs)
+        super().__init__(parent=QtWidgets.QMainWindow(), **kwargs)
 
         self._entry_applied = False
         self._applied_entry_name: str = None
@@ -370,7 +364,8 @@ class ManagerBase(CustomExt):
 
     def quit_fun(self):
         self.entries_sync.unbind_all()
-        super().quit_fun()
+        # CustomApp.quit_fun is deliberately not called (nor a value returned): it never was
+        # (the former CustomExt.quit_fun returned before reaching it), keep that behavior.
 
     def create_entry(self, entry: str = None, bypass_dialog=False):
         if entry is not None:
@@ -490,8 +485,9 @@ class ManagerBase(CustomExt):
 
         self.update_entry(entry_path)
 
-        if self.dashboard is None:
-            logger.info(f"Cannot Load {self.entry_type.capitalize()} file: {entry_path.stem} as no Dashboard is initialized")
+        if not self.can_execute_entry():
+            logger.info(f"Cannot Load {self.entry_type.capitalize()} file: {entry_path.stem} "
+                        f"as the manager cannot execute entries (no Dashboard initialized?)")
             return
 
         res = self._execute_entry(entry_path, **kwargs)
@@ -499,6 +495,13 @@ class ManagerBase(CustomExt):
             # covers the cases where _execute_entry is async and return None, while the async
             # execution will trigger set_entry_applied method (qt slot or manual call)
             self.entry_applied = res
+
+    def can_execute_entry(self) -> bool:
+        """ Whether entries can be executed, to be reimplemented
+
+        The base manager does not know about the dashboard, see ManagerWithDashboard
+        """
+        return False
 
     def _execute_entry(self, entry_path: Path = None, **kwargs) -> bool:
         """Particular implementation of the entry execution for this manager

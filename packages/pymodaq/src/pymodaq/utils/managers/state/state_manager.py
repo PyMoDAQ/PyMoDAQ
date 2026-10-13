@@ -30,6 +30,7 @@ from pymodaq.utils.managers.state.utils import (
     )
 
 from pymodaq_gui.managers.settings.settings_manager import SettingsManager
+from pymodaq.utils.dashboard_mixin import DashboardMixin
 
 
 from pymodaq.utils.config import get_set_state_path
@@ -51,7 +52,7 @@ ser_factory = SerializableFactory()
 config = Config()
 
 
-class StateManager(SettingsManager):
+class StateManager(DashboardMixin, SettingsManager):
     """
     Main class managing the configuration of control modules from a Dashboard in terms
     of their settings and actuator's value.
