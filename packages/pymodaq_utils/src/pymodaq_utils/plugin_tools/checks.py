@@ -36,7 +36,7 @@ from pymodaq_utils.utils import get_entrypoints
 from pymodaq_utils.plugin_tools.contract import legacy_names
 from pymodaq_utils.plugin_tools import platforms
 from pymodaq_utils.plugin_tools.rules import (MANDATORY_MOVE_METHODS, MANDATORY_VIEWER_METHODS, PLACEHOLDER_NAMES_RE,
-                                              Finding, Severity, check_file_names, check_leftovers,
+                                              Finding, Severity, check_extensions, check_file_names, check_leftovers,
                                               check_os_classifiers, check_plugin_source, check_python_code,
                                               check_pyproject, colorize, is_valid_unit, package_root, project_root,
                                               use_color)
@@ -470,6 +470,7 @@ def check_package_sources(package: str, project: Optional[Path] = None) -> Check
     result.findings.extend(check_file_names(root))
     result.findings.extend(check_leftovers(package, root, project))
     result.findings.extend(check_python_code(root))
+    result.findings.extend(check_extensions(root))
     return result
 
 

@@ -38,6 +38,11 @@ For your package to be considered as a PyMoDAQ's dashboard extension, you should
 The *pymodaq_plugins_template* contains already all this, so make sure to start from there when you wish to build an
 extension.
 
+``check_plugin`` (see :ref:`instrument_plugin_doc`) also reads the modules of the *extensions* folder, without importing
+them, and reports the codes PMQ330 to PMQ337: missing ``EXTENSION_NAME`` or ``CLASS_NAME``, a class that does not derive
+from ``CustomExt``, deprecated imports and hooks, managers created by the extension instead of those of the Dashboard, an
+``__init__`` that does not take ``(parent, dashboard)`` or never calls ``self.setup_ui()``.
+
   .. _extension_entrypoint_fig:
 
 .. figure:: /image/extensions/entrypoint.png

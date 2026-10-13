@@ -62,6 +62,19 @@ LEGACY_SETTINGS = {'multiaxes': 'controller', 'multi_status': 'controller_status
 WINDOWS_ONLY_IMPORTS = {'winreg', 'msvcrt', '_winreg', 'win32api', 'win32com'}
 WINDOWS_PATH_RE = re.compile(r'^[A-Za-z]:[\\/]')
 
+# modules of pymodaq that only remain as shims importing from their new location (with a deprecation warning)
+DEPRECATED_IMPORTS = {'pymodaq.extensions.custom_ext': 'pymodaq.utils.custom_ext',
+                      'pymodaq.extensions.h5browser': 'pymodaq_gui.h5modules.h5browser',
+                      'pymodaq.utils.math_utils': 'pymodaq_utils.math_utils',
+                      'pymodaq.utils.array_manipulation': 'pymodaq_utils.array_manipulation',
+                      'pymodaq.utils.parameter': 'pymodaq_gui.parameter',
+                      'pymodaq.utils.messenger': 'pymodaq_gui.messenger',
+                      'pymodaq.scripting': 'pymodaq_scripting'}
+# hooks of the extensions that were renamed (the base class still calls the old ones)
+DEPRECATED_EXTENSION_HOOKS = {'setup_docks': 'setup_docks_and_widgets', 'setup_menu': 'setup_menus_and_toolbars'}
+# managers that an extension gets from the Dashboard: it should not create its own
+DASHBOARD_OWNED = ('ModulesManager', 'ExperimentManager', 'StateManager')
+
 # features of [features] in pyproject.toml -> folders (relative to the package) holding the corresponding code
 FEATURE_FOLDERS = {'instruments': ('daq_move_plugins', 'daq_viewer_plugins'),
                    'extensions': ('extensions',),
@@ -640,6 +653,128 @@ def _check_controller_init(path: Path, tree: ast.Module) -> list[Finding]:
                     path, first.lineno)]
 
 
+# -------------------------------------------------------------------------------------------------------------------
+# PMQ33x: extensions (``extensions`` folder of a plugin package), from the source
+# -------------------------------------------------------------------------------------------------------------------
+
+EXTENSIONS_DOC = 'https://pymodaq.cnrs.fr/en/latest/developer_folder/extension_plugins.html'
+
+
+def _module_strings(tree: ast.Module) -> dict[str, ast.Assign]:
+    """The module level variables assigned a string, with their node"""
+    found = {}
+    for node in tree.body:
+        if (isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name)
+                and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str)):
+            found[node.targets[0].id] = node
+    return found
+
+
+def _root_bases(cls: ast.ClassDef, classes: dict[str, ast.ClassDef], seen: Optional[set] = None) -> set[str]:
+    """Names of the bases of a class, following the bases defined in the same module"""
+    seen = seen or set()
+    names = set()
+    for base in _base_names(cls):
+        names.add(base)
+        if base in classes and base not in seen:
+            names |= _root_bases(classes[base], classes, seen | {cls.name})
+    return names
+
+
+def check_extension_source(path: Path) -> list[Finding]:
+    """Rules on a module of the ``extensions`` folder of a plugin package, without importing it
+
+    * PMQ330: ``EXTENSION_NAME`` or ``CLASS_NAME`` missing in a module defining an extension: the Dashboard does not
+      list it
+    * PMQ331: ``CLASS_NAME`` is not the name of a class of the module
+    * PMQ332: the class does not derive from ``CustomExt`` (``CustomApp`` has no access to the Dashboard)
+    * PMQ333: import from a module of pymodaq that only remains as a deprecated shim
+    * PMQ334: deprecated hooks ``setup_docks`` / ``setup_menu``
+    * PMQ335: the extension creates its own ModulesManager, ExperimentManager or StateManager
+    * PMQ336: the ``__init__`` does not take the ``parent`` and ``dashboard`` arguments given by the Dashboard
+    * PMQ337: the ``__init__`` of a class deriving from ``CustomExt`` never calls ``self.setup_ui()``
+    """
+    try:
+        tree = ast.parse(path.read_text(errors='replace'), filename=str(path))
+    except SyntaxError as e:
+        return [syntax_error_finding('PMQ300', path, e)]
+    findings = []
+    classes = {n.name: n for n in tree.body if isinstance(n, ast.ClassDef)}
+    strings = _module_strings(tree)
+    defines_ext = any('CustomExt' in _root_bases(c, classes) for c in classes.values())
+
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            modules = [node.module or ''] if isinstance(node, ast.ImportFrom) else [a.name for a in node.names]
+            for module in modules:
+                old = next((o for o in DEPRECATED_IMPORTS if module == o or module.startswith(o + '.')), None)
+                if old is not None:
+                    findings.append(Finding('PMQ333', Severity.WARNING, f"'{module}' is deprecated",
+                                            f"import from {DEPRECATED_IMPORTS[old]} instead", path, node.lineno))
+
+    if not (defines_ext or 'EXTENSION_NAME' in strings or 'CLASS_NAME' in strings):
+        return findings  # a helper module of the extensions folder, nothing else to check
+
+    missing = [name for name in ('EXTENSION_NAME', 'CLASS_NAME') if name not in strings]
+    if missing:
+        findings.append(Finding('PMQ330', Severity.ERROR,
+                                f"{' and '.join(missing)} not defined: the Dashboard will not list this extension",
+                                "define them at the module level as strings: EXTENSION_NAME is the name displayed in "
+                                "the Dashboard, CLASS_NAME the name of the extension class", path, 1))
+    class_name = strings['CLASS_NAME'].value.value if 'CLASS_NAME' in strings else None
+    imported = {a.asname or a.name.split('.')[0] for n in tree.body if isinstance(n, (ast.Import, ast.ImportFrom))
+                for a in n.names}
+    cls = classes.get(class_name) if class_name else None
+    if class_name and cls is None and class_name not in imported:
+        findings.append(Finding('PMQ331', Severity.ERROR, f"CLASS_NAME = '{class_name}' but there is no such class "
+                                f"in the module", 'CLASS_NAME should be the name of the extension class, the Dashboard '
+                                'gets the class from it', path, strings['CLASS_NAME'].lineno))
+    if cls is not None:
+        bases = _root_bases(cls, classes)
+        if 'CustomExt' not in bases and ('CustomApp' in bases or not bases - {'object'}):
+            findings.append(Finding('PMQ332', Severity.WARNING, f'{cls.name} does not derive from CustomExt',
+                                    "an extension is a CustomExt (from pymodaq.utils.custom_ext) to get the "
+                                    "Dashboard, not a CustomApp", path, cls.lineno))
+        methods = {n.name: n for n in cls.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))}
+        for old, new in DEPRECATED_EXTENSION_HOOKS.items():
+            if old in methods:
+                findings.append(Finding('PMQ334', Severity.WARNING, f'{old}() is deprecated',
+                                        f"rename it {new}()", path, methods[old].lineno))
+        init = methods.get('__init__')
+        if init is not None:
+            args = init.args
+            if len(args.posonlyargs) + len(args.args) < 3 and args.vararg is None:
+                findings.append(Finding('PMQ336', Severity.ERROR, '__init__ should take (self, parent, dashboard)',
+                                        'the Dashboard creates the extension with the dock area and itself: '
+                                        'def __init__(self, parent, dashboard) then super().__init__(parent, dashboard)',
+                                        path, init.lineno))
+            if 'CustomExt' in _base_names(cls) and not any(
+                    isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute) and n.func.attr == 'setup_ui'
+                    for n in ast.walk(init)):
+                findings.append(Finding('PMQ337', Severity.WARNING, '__init__ never calls self.setup_ui()',
+                                        'without it no dock, menu or toolbar is created: call self.setup_ui() at the '
+                                        'end of __init__', path, init.lineno))
+    in_main = {n for f in tree.body if isinstance(f, ast.FunctionDef) and f.name == 'main' for n in ast.walk(f)}
+    for node in ast.walk(tree):
+        if (isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in DASHBOARD_OWNED
+                and node not in in_main):
+            findings.append(Finding('PMQ335', Severity.WARNING, f'{node.func.id}() created by the extension',
+                                    'use the ones of the Dashboard: self.modules_manager, self.experiment_manager and '
+                                    'self.state_manager', path, node.lineno))
+    return findings
+
+
+def check_extensions(root: Path) -> list[Finding]:
+    """The rules on every module of the ``extensions`` folder of the package"""
+    folder = root / 'extensions'
+    findings = []
+    if folder.is_dir():
+        for path in _python_files(folder):
+            if not path.name.startswith('_'):
+                findings.extend(check_extension_source(path))
+    return findings
+
+
 def check_package_sources(package: str) -> list[Finding]:
     """All the static rules on an installed (or editable) plugin package: packaging, leftovers and plugin classes"""
     from pymodaq_utils.plugin_tools.checks import find_plugin_modules  # no import cycle at module level
@@ -652,6 +787,7 @@ def check_package_sources(package: str) -> list[Finding]:
     findings.extend(check_file_names(root))
     findings.extend(check_leftovers(package, root, project))
     findings.extend(check_python_code(root))
+    findings.extend(check_extensions(root))
     for mod in find_plugin_modules(package):
         file = Path(importlib.util.find_spec(mod.import_path).origin)
         findings.extend(check_plugin_source(file, mod.kind, mod.class_name))
@@ -684,3 +820,4 @@ def check_os_classifiers(package_folder: Path, project: Path) -> list[Finding]:
 check_plugin_source = _honour_noqa(check_plugin_source)
 check_python_code = _honour_noqa(check_python_code)
 check_leftovers = _honour_noqa(check_leftovers)
+check_extension_source = _honour_noqa(check_extension_source)
