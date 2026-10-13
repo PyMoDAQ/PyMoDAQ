@@ -1,0 +1,38 @@
+# PyMoDAQ
+
+> PyMoDAQ (Python Modular Data Acquisition) is a Python framework to acquire data and drive instruments from a graphical Dashboard (control modules, scans, extensions) or from scripts. Instruments are supported by *plugins*: Python packages named `pymodaq_plugins_<name>` created from the plugin template. This index points first to what is needed to write or fix a plugin, then to extensions and applications, the data model and remote control. The full text of the documentation is in llms-full.txt, next to this file.
+
+## Write an instrument plugin
+
+- [Your first plugin in 10 minutes](https://pymodaq.cnrs.fr/en/latest/tutorials/first_plugin.html): one complete actuator and one complete detector for a made-up instrument, each under 80 lines, and the test that runs them without hardware. Start here.
+- [Instrument plugins](https://pymodaq.cnrs.fr/en/latest/developer_folder/instrument_plugins.html): the reference: naming rules, the methods of a plugin and which are required, `check_plugin` and its rules (PMQxxx), tests, plugins working on some systems only (`supported_platforms`), emitting data.
+- [Story of an instrument plugin development](https://pymodaq.cnrs.fr/en/latest/tutorials/plugin_development.html): the long, step by step tutorial, with screenshots, on a real instrument.
+- [Plugin template and AGENTS.md](https://github.com/PyMoDAQ/pymodaq_plugins_template): repository to start a plugin from; its AGENTS.md holds the rules for AI coding assistants.
+- [Mock plugins](https://github.com/PyMoDAQ/pymodaq_plugins_mock): reference plugins that run without hardware (actuators and detectors of every dimension).
+
+## Extensions and standalone applications
+
+- [CustomApp and CustomExt](https://pymodaq.cnrs.fr/en/latest/developer_folder/custom_app.html): write a standalone application or a Dashboard extension.
+- [Extension plugins](https://pymodaq.cnrs.fr/en/latest/developer_folder/extension_plugins.html): the extensions shipped with PyMoDAQ and how to write one.
+
+## Data model
+
+- [Data objects](https://pymodaq.cnrs.fr/en/latest/data_management/data_objects.html): `DataWithAxes`, `DataToExport`, axes and their units, the classes every plugin exchanges.
+- [Saving and loading data](https://pymodaq.cnrs.fr/en/latest/data_management/saving_loading_data.html): the HDF5 saver and loader.
+
+## Use and control PyMoDAQ
+
+- [Quick start](https://pymodaq.cnrs.fr/en/latest/quick_start.html): installation and first launch.
+- [Scripting](https://pymodaq.cnrs.fr/en/latest/user_folder/scripting.html): drive a running Dashboard from Python (`pymodaq_scripting`), the safe way to prototype against a real setup.
+- [Control modules](https://pymodaq.cnrs.fr/en/latest/modules/Control_Modules.html): DAQ_Move, DAQ_Viewer and the Dashboard.
+
+## Reference
+
+- [API documentation](https://pymodaq.cnrs.fr/en/latest/api/api_doc.html): generated from the docstrings.
+- [Glossary](https://pymodaq.cnrs.fr/en/latest/glossary.html)
+
+## Optional
+
+- [Contributing](https://pymodaq.cnrs.fr/en/latest/developer_folder/contributing.html): how to contribute code to PyMoDAQ.
+- [Contributing to the documentation](https://pymodaq.cnrs.fr/en/latest/tutorials/write_documentation.html)
+- [Changelog](https://pymodaq.cnrs.fr/en/latest/changelog.html)
