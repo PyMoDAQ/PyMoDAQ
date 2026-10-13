@@ -188,13 +188,30 @@ def update_pyproject_classifiers(pyproject: Path, platforms: Optional[Iterable[s
     return changed
 
 
+#: Python versions PyMoDAQ is developed for, they give the ``Programming Language :: Python`` classifiers
+PYTHON_VERSIONS = ('3.10', '3.11', '3.12', '3.13')
+
+
+def python_classifiers(requires_python: str = '') -> list[str]:
+    """``Programming Language :: Python :: 3.x`` for each of :data:`PYTHON_VERSIONS` accepted by ``requires-python``
+    (all of them if empty or invalid)"""
+    from packaging.specifiers import InvalidSpecifier, SpecifierSet
+    try:
+        spec = SpecifierSet(requires_python or '')
+    except InvalidSpecifier:
+        spec = SpecifierSet('')
+    return [f'Programming Language :: Python :: {v}' for v in PYTHON_VERSIONS if spec.contains(f'{v}.0')]
+
+
 def dynamic_classifiers(pyproject: dict, package_folder: Path) -> list[str]:
     """The classifiers of a plugin whose ``classifiers`` field is *dynamic* in the ``pyproject.toml``: those listed in
-    ``[tool.pymodaq] classifiers`` (the ``Operating System`` ones are ignored) followed by the ones computed from the
+    ``[tool.pymodaq] classifiers`` (the ``Operating System`` and ``Programming Language :: Python :: 3.x`` ones are
+    ignored) followed by the Python versions accepted by ``requires-python`` and the systems computed from the
     ``supported_platforms`` of its instrument plugins. Used by the hatch metadata hook at build time"""
     listed = pyproject.get('tool', {}).get('pymodaq', {}).get('classifiers', [])
-    return [c for c in listed if not c.startswith('Operating System ::')] + classifiers_for(
-        package_platforms(package_folder))
+    kept = [c for c in listed if not c.startswith(('Operating System ::', 'Programming Language :: Python :: 3.'))]
+    return (kept + python_classifiers(pyproject.get('project', {}).get('requires-python', '')) +
+            classifiers_for(package_platforms(package_folder)))
 
 
 def platforms_as_rst() -> str:
