@@ -61,7 +61,8 @@ class DAQ_Move_Fake(DAQ_Move_base):
         self.move_abs(self.current_value + value)
 
     def move_home(self):
-        self.move_abs(DataActuator(data=0., units=self.axis_unit))
+        self.controller.move_at(0.)
+        self.move_done()  # PyMoDAQ does not poll the position after a move_home
 
     def stop_motion(self):
         self.controller.calls.append(('stop',))
@@ -139,6 +140,11 @@ class TestActuator:
     def test_move_home(self, actuator):
         move_abs_and_wait(actuator, 3.)
         assert move_home_and_wait(actuator).value('mm') == pytest.approx(0., abs=0.01)
+
+    def test_move_home_not_signalled_by_the_plugin_times_out(self, actuator, monkeypatch):
+        monkeypatch.setattr(DAQ_Move_Fake, 'move_home', lambda self: self.controller.move_at(0.))
+        with pytest.raises(SignalTimeout):
+            move_home_and_wait(actuator, timeout_ms=200)
 
     def test_target_is_converted_to_the_axis_unit(self, actuator):
         target = DataActuator(data=1., units='cm')
