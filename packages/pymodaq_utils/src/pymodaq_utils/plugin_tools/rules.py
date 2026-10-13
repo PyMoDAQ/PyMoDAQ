@@ -35,6 +35,7 @@ from typing import Optional
 import toml
 
 from pymodaq_utils.plugin_tools.contract import legacy_names, mandatory_methods
+from pymodaq_utils.plugin_tools import platforms as _platforms
 
 DOC = 'https://pymodaq.cnrs.fr/en/latest/developer_folder/instrument_plugins.html'
 TEMPLATE_NAME = 'pymodaq_plugins_template'
@@ -512,6 +513,11 @@ def check_plugin_source(path: Path, kind: str, class_name: str, static_fallback:
         mandatory = MANDATORY_VIEWER_METHODS
     findings.extend(_check_legacy_settings(path, tree))
     findings.extend(_check_controller_init(path, tree))
+    for problem in _platforms.invalid_values(*_platforms.declared_in_class(cls)):
+        findings.append(Finding('PMQ319', Severity.WARNING, problem,
+                                'supported_platforms: values of sys.platform (win32, linux, darwin); '
+                                'supported_architectures: values of platform.machine() (x86_64, aarch64, armv7l...)',
+                                path, cls.lineno))
     simple_bases = all(b in ('DAQ_Move_base', 'DAQ_Viewer_base') for b in _base_names(cls))
     if static_fallback and simple_bases:
         for meth in mandatory:
@@ -640,6 +646,29 @@ def check_package_sources(package: str) -> list[Finding]:
         file = Path(importlib.util.find_spec(mod.import_path).origin)
         findings.extend(check_plugin_source(file, mod.kind, mod.class_name))
     return findings
+
+
+def check_os_classifiers(package_folder: Path, project: Path) -> list[Finding]:
+    """PMQ320: the ``Operating System`` classifiers of the pyproject.toml do not match the ``supported_platforms``
+    declared by the instrument plugins"""
+    path = project / 'pyproject.toml'
+    try:
+        proj = toml.load(path).get('project', {})
+    except toml.TomlDecodeError:
+        return []
+    if 'classifiers' in proj.get('dynamic', []):
+        return []
+    declared = _platforms.package_platforms(package_folder)
+    expected = set(_platforms.classifiers_for(declared))
+    actual = set(_platforms.pyproject_os_classifiers(proj.get('classifiers', [])))
+    if actual == expected:
+        return []
+    what = (f"the plugins work on {_platforms.describe(declared)}" if declared else
+            'no instrument plugin declares supported_platforms (they work on all the systems)')
+    line = next((i for i, text in enumerate(path.read_text().splitlines(), 1) if 'classifiers' in text), None)
+    return [Finding('PMQ320', Severity.WARNING,
+                    f'the Operating System classifiers {sorted(actual) or "(none)"} do not match the code: {what}',
+                    'run check_plugin --fix-classifiers to write ' + ', '.join(sorted(expected)), path, line)]
 
 
 check_plugin_source = _honour_noqa(check_plugin_source)

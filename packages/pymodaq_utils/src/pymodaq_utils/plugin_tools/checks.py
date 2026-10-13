@@ -34,10 +34,12 @@ import toml
 from pymodaq_utils.utils import get_entrypoints
 
 from pymodaq_utils.plugin_tools.contract import legacy_names
+from pymodaq_utils.plugin_tools import platforms
 from pymodaq_utils.plugin_tools.rules import (MANDATORY_MOVE_METHODS, MANDATORY_VIEWER_METHODS, PLACEHOLDER_NAMES_RE,
-                                        Finding, Severity, check_file_names, check_leftovers, check_plugin_source,
-                                        check_python_code, check_pyproject, colorize, is_valid_unit, package_root,
-                                        project_root, use_color)
+                                              Finding, Severity, check_file_names, check_leftovers,
+                                              check_os_classifiers, check_plugin_source, check_python_code,
+                                              check_pyproject, colorize, is_valid_unit, package_root, project_root,
+                                              use_color)
 
 VIEWER_DIMS = ('0D', '1D', '2D', 'ND')
 ENTRYPOINT_GROUPS = ('pymodaq.plugins', 'pymodaq.instruments')
@@ -464,6 +466,7 @@ def check_package_sources(package: str, project: Optional[Path] = None) -> Check
     project = project or project_root(package)  # None if installed from a wheel: no pyproject.toml to check
     if project is not None:
         result.findings.extend(check_pyproject(package, project))
+        result.findings.extend(check_os_classifiers(root, project))
     result.findings.extend(check_file_names(root))
     result.findings.extend(check_leftovers(package, root, project))
     result.findings.extend(check_python_code(root))
@@ -625,6 +628,9 @@ def main(argv=None) -> int:
     parser.add_argument('--strict-imports', action='store_true',
                         help='fail on the modules that cannot be imported (missing dependency or SDK)')
     parser.add_argument('-v', '--verbose', action='store_true', help='list every todo')
+    parser.add_argument('--fix-classifiers', action='store_true',
+                        help='write the Operating System classifiers of the pyproject.toml from the '
+                             'supported_platforms declared by the instrument plugins')
     parser.add_argument('--color', choices=['auto', 'always', 'never'], default='auto',
                         help='color the report: auto (default) if the output is a terminal and NO_COLOR is not set')
     args = parser.parse_args(argv)
@@ -639,9 +645,23 @@ def main(argv=None) -> int:
         package, project = resolve_target(args.package)
     except ValueError as e:
         parser.error(str(e))
+    if args.fix_classifiers:
+        root = package_root(package)
+        if root is None or project is None:
+            parser.error('--fix-classifiers needs the folder of the plugin repository (with its pyproject.toml)')
+        try:
+            changed = platforms.update_pyproject_classifiers(project / 'pyproject.toml',
+                                                             platforms.package_platforms(root))
+        except ValueError as e:
+            parser.error(str(e))
+        print('pyproject.toml: classifiers ' + ('updated' if changed else 'already up to date'))
     report = check_plugin_package(package, args.fail_on, args.strict_imports, project,
                                   check_entry_points=is_installed(package) or project is None)
     print(report.format(verbose=args.verbose, color=use_color(args.color)))
+    root = package_root(package)
+    declared = platforms.package_platforms(root) if root is not None else None
+    if declared:
+        print(f'Works on: {platforms.describe(declared)}')
     return 0 if report.ok else 1
 
 

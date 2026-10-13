@@ -1,7 +1,7 @@
 """Moved to :mod:`pymodaq_utils.plugin_tools.checks`, this module is an alias kept for existing code.
 
 .. versionadded:: 5.3.1
-.. deprecated:: 5.3.4
+.. deprecated:: 5.3.5
     Use ``pymodaq_utils.plugin_tools.checks``.
 """
 import sys

@@ -23,6 +23,7 @@ from easydict import EasyDict as edict
 from pymodaq.control_modules.daq_move_ui.utils import UiType
 from pymodaq.control_modules.units import get_unit_to_display
 from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_utils.plugin_tools.platforms import unsupported_reason
 from pymodaq_utils.utils import find_keys_from_val
 from pymodaq_utils import utils
 from pymodaq.utils.gui_utils import get_splash_sc
@@ -918,6 +919,11 @@ class ActuatorWorker(HardwareWorkerBase):
         status = edict(initialized=False, info="")
         try:
             class_ = find_actuator_class_from_name(self.plugin_name)
+            reason = unsupported_reason(class_.supported_platforms, class_.supported_architectures)
+            if reason:
+                self.logger.error(reason)
+                status.info = reason
+                return status
 
             self.plugin = class_(self, params_state)
             assert self.plugin is not None
