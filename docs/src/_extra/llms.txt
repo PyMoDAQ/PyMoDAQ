@@ -6,6 +6,7 @@
 
 - [Your first plugin in 10 minutes](https://pymodaq.cnrs.fr/en/latest/tutorials/first_plugin.html): one complete actuator and one complete detector for a made-up instrument, each under 80 lines, and the test that runs them without hardware. Start here.
 - [Instrument plugins](https://pymodaq.cnrs.fr/en/latest/developer_folder/instrument_plugins.html): the reference: naming rules, the methods of a plugin and which are required, `check_plugin` and its rules (PMQxxx), tests, plugins working on some systems only (`supported_platforms`), emitting data.
+- [Legacy to current](https://pymodaq.cnrs.fr/en/latest/developer_folder/legacy_to_current.html): deprecated names still seen in old plugins and in training data, and what to use instead
 - [Story of an instrument plugin development](https://pymodaq.cnrs.fr/en/latest/tutorials/plugin_development.html): the long, step by step tutorial, with screenshots, on a real instrument.
 - [Plugin template and AGENTS.md](https://github.com/PyMoDAQ/pymodaq_plugins_template): repository to start a plugin from; its AGENTS.md holds the rules for AI coding assistants.
 - [Mock plugins](https://github.com/PyMoDAQ/pymodaq_plugins_mock): reference plugins that run without hardware (actuators and detectors of every dimension).
