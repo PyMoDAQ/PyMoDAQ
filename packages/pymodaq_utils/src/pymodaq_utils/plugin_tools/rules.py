@@ -73,7 +73,8 @@ DEPRECATED_IMPORTS = {'pymodaq.extensions.custom_ext': 'pymodaq.utils.custom_ext
 # hooks of the extensions that were renamed (the base class still calls the old ones)
 DEPRECATED_EXTENSION_HOOKS = {'setup_docks': 'setup_docks_and_widgets', 'setup_menu': 'setup_menus_and_toolbars'}
 # managers that an extension gets from the Dashboard: it should not create its own
-DASHBOARD_OWNED = ('ModulesManager', 'ExperimentManager', 'StateManager')
+# (its ModulesManager is the exception: the base class creates it for the extension)
+DASHBOARD_OWNED = ('ExperimentManager', 'StateManager')
 
 # features of [features] in pyproject.toml -> folders (relative to the package) holding the corresponding code
 FEATURE_FOLDERS = {'instruments': ('daq_move_plugins', 'daq_viewer_plugins'),
@@ -690,7 +691,7 @@ def check_extension_source(path: Path) -> list[Finding]:
     * PMQ332: the class does not derive from ``CustomExt`` (``CustomApp`` has no access to the Dashboard)
     * PMQ333: import from a module of pymodaq that only remains as a deprecated shim
     * PMQ334: deprecated hooks ``setup_docks`` / ``setup_menu``
-    * PMQ335: the extension creates its own ModulesManager, ExperimentManager or StateManager
+    * PMQ335: the extension creates its own ExperimentManager or StateManager
     * PMQ336: the ``__init__`` does not take the ``parent`` and ``dashboard`` arguments given by the Dashboard
     * PMQ337: the ``__init__`` of a class deriving from ``CustomExt`` never calls ``self.setup_ui()``
     """
@@ -759,8 +760,7 @@ def check_extension_source(path: Path) -> list[Finding]:
         if (isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in DASHBOARD_OWNED
                 and node not in in_main):
             findings.append(Finding('PMQ335', Severity.WARNING, f'{node.func.id}() created by the extension',
-                                    'use the ones of the Dashboard: self.modules_manager, self.experiment_manager and '
-                                    'self.state_manager', path, node.lineno))
+                                    'use the ones of the Dashboard: self.experiment_manager and self.state_manager', path, node.lineno))
     return findings
 
 

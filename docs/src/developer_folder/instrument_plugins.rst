@@ -173,7 +173,7 @@ PMQ330-1 extension (``extensions`` folder): ``EXTENSION_NAME`` / ``CLASS_NAME`` 
 PMQ332   the extension class does not derive from ``CustomExt`` (a ``CustomApp`` has no access to the Dashboard)
 PMQ333   import from a deprecated module of pymodaq (``pymodaq.utils.parameter``, ``pymodaq.utils.messenger``, ``pymodaq.utils.math_utils``...) in an extension
 PMQ334   deprecated hooks ``setup_docks`` / ``setup_menu`` of an extension (use ``setup_docks_and_widgets`` / ``setup_menus_and_toolbars``)
-PMQ335   the extension creates its own ``ModulesManager``, ``ExperimentManager`` or ``StateManager`` instead of using the ones of the Dashboard
+PMQ335   the extension creates its own ``ExperimentManager`` or ``StateManager`` instead of using the ones of the Dashboard
 PMQ336   ``__init__`` of the extension does not take ``(parent, dashboard)``. PMQ337: it never calls ``self.setup_ui()``
 ======== =================================================================================================
 

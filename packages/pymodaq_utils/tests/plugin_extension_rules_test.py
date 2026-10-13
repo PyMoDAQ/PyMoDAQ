@@ -26,8 +26,8 @@ class MyExtension(CustomExt):
 
 
 def main():
-    from pymodaq.utils.managers.modules.modules_manager import ModulesManager
-    ModulesManager([], [])
+    from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager
+    ExperimentManager()
 '''
 
 
@@ -96,8 +96,13 @@ def test_deprecated_hooks(check):
 
 
 def test_own_managers(check):
-    code = GOOD.replace('        self.setup_ui()', '        self.mm = ModulesManager([], [])\n        self.setup_ui()')
+    code = GOOD.replace('        self.setup_ui()', '        self.em = ExperimentManager()\n        self.setup_ui()')
     assert codes(check(code)) == {'PMQ335'}
+
+
+def test_own_modules_manager_is_fine(check):
+    code = GOOD.replace('        self.setup_ui()', '        self.mm = ModulesManager([], [])\n        self.setup_ui()')
+    assert codes(check(code)) == set()
 
 
 def test_init_signature_and_setup_ui(check):
