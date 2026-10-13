@@ -301,7 +301,7 @@ others have a default in the base class that does nothing or raises ``NotImpleme
 instrument can do it. The list is defined once, in ``pymodaq_utils.plugin_tools.contract``, and read by the checks, the
 tests and this table.
 
-.. include:: plugin_contract_table.inc
+.. include:: /developer_folder/plugin_contract_table.inc
 
 .. _plugin_platforms:
 
@@ -331,7 +331,7 @@ Windows*) and checks it:
   PyMoDAQ and ``check_plugin``. To avoid running it, let the build compute them (next paragraph);
 * the values have to be known (PMQ319). The accepted values and the classifier they give are:
 
-.. include:: plugin_platforms_table.inc
+.. include:: /developer_folder/plugin_platforms_table.inc
 
 The same lists are in ``pymodaq_utils.plugin_tools.platforms`` (``PLATFORMS`` and ``ARCHITECTURES``). ``sys.platform``
 and ``platform.machine()`` give the values of the computer.
