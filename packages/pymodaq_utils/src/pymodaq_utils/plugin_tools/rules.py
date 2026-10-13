@@ -237,9 +237,11 @@ def check_python_code(root: Path) -> list[Finding]:
     * PMQ315: invalid escape sequence in a string (``"C:\\Program Files"``): a warning of python since 3.6, a
       ``SyntaxWarning`` since 3.12, that will be an error
     * PMQ317: code that only works on Windows and is executed when the module is imported (``windll``, ``winreg``,
-      path with a drive letter): the plugin cannot be imported, nor listed, on the other systems
+      path with a drive letter): the plugin cannot be imported, nor listed, on the other systems. Not reported when
+      all the instruments of the package declare ``supported_platforms = ('win32',)``
     """
     findings = []
+    windows_only_package = _platforms.package_platforms(root) == {'win32'}
     for path in _python_files(root):
         source = path.read_text(errors='replace')
         with warnings.catch_warnings(record=True) as caught:
@@ -268,7 +270,7 @@ def check_python_code(root: Path) -> list[Finding]:
                 what = f'the path {node.value!r}'
             if what is not None and not _guarded(node, parents):
                 windows.append((node.lineno, what))
-        if windows:
+        if windows and not windows_only_package:
             line, what = windows[0]
             more = f' (and {len(windows) - 1} more in this file)' if len(windows) > 1 else ''
             findings.append(Finding('PMQ317', Severity.WARNING, f'only works on Windows: {what}{more}',

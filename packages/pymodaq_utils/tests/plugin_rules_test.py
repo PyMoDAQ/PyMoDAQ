@@ -339,3 +339,17 @@ def test_finding_location_is_relative_to_the_package(tmp_path):
     finding = pr.Finding('PMQ317', Severity.WARNING, 'message', path=inside, line=5)
     assert finding.location == 'hardware/driver.py:5'
     assert pr.Finding('PMQ317', Severity.WARNING, 'message', path=tmp_path / 'other.py').location == 'other.py'
+
+
+def test_windows_only_code_is_not_reported_for_a_windows_only_package(tmp_path):
+    package = tmp_path / 'pymodaq_plugins_foo'
+    (package / 'hardware').mkdir(parents=True)
+    (package / 'daq_move_plugins').mkdir()
+    (package / 'hardware' / 'sdk.py').write_text('PATH = "C:\\\\Program Files\\\\Vendor"\n')
+    plugin = package / 'daq_move_plugins' / 'daq_move_Foo.py'
+    plugin.write_text("class DAQ_Move_Foo:\n    supported_platforms = ('win32',)\n")
+    assert not [f for f in pr.check_python_code(package) if f.code == 'PMQ317']
+    plugin.write_text("class DAQ_Move_Foo:\n    supported_platforms = ('win32', 'linux')\n")
+    assert [f for f in pr.check_python_code(package) if f.code == 'PMQ317']
+    plugin.write_text("class DAQ_Move_Foo:\n    pass\n")
+    assert [f for f in pr.check_python_code(package) if f.code == 'PMQ317']
