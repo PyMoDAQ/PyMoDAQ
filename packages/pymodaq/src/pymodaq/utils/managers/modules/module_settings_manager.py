@@ -113,7 +113,7 @@ class ModulesSettingsManager:
                 if params_actuator is not None:
                     warnings.warn(
                         "'move_settings' is deprecated and will be removed in a future version. "
-                        f"Use '{ACTUATOR_SETTINGS_KEY}' instead. Please resave your preset.",
+                        f"Use '{ACTUATOR_SETTINGS_KEY}' instead. Please resave your experiment.",
                         DeprecationWarning,
                         stacklevel=2,
                     )
@@ -128,18 +128,18 @@ class ModulesSettingsManager:
         return Parameter.create(name='settings', type='group', children=params)
 
     @staticmethod
-    def get_module_class_from_experiment(preset_subentry: Parameter, module_type: ModuleType)\
+    def get_module_class_from_experiment(experiment_subentry: Parameter, module_type: ModuleType)\
             -> Type['ParameterControlModule']:
 
         if module_type == ModuleType.Actuator:
-            act_dict = find_dict_in_list_from_key_val(ACTUATOR_TYPES, 'name', preset_subentry['info', 'type'])
+            act_dict = find_dict_in_list_from_key_val(ACTUATOR_TYPES, 'name', experiment_subentry['info', 'type'])
             module_module = getattr(act_dict['module'], f"daq_move_{act_dict['name']}")
             return getattr(module_module, f"DAQ_Move_{act_dict['name']}")
 
         elif module_type == ModuleType.Detector:
 
-            det_dicts_dim = DET_TYPES[preset_subentry['info', 'dim']]
-            det_dict = find_dict_in_list_from_key_val(det_dicts_dim, 'name', preset_subentry['info', 'type'])
+            det_dicts_dim = DET_TYPES[experiment_subentry['info', 'dim']]
+            det_dict = find_dict_in_list_from_key_val(det_dicts_dim, 'name', experiment_subentry['info', 'type'])
             module_module = getattr(det_dict['module'], f"{det_dict['type']}_{det_dict['name']}")
             return getattr(module_module, f"DAQ{det_dict['type'][3:6]}Viewer_{det_dict['name']}")
 
