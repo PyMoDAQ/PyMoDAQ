@@ -360,12 +360,14 @@ Instead of keeping the ``Operating System`` classifiers up to date by hand, the 
     [tool.pymodaq]
     classifiers = [
         "Development Status :: 5 - Production/Stable",
-        "Programming Language :: Python :: 3.11",
+        "Intended Audience :: Science/Research",
     ]
 
-The metadata hook of the plugin (``hatch_build.py``, see the plugin template) then adds the ``Operating System``
-classifiers of the ``supported_platforms`` declared in the plugin (*OS Independent* if there is none), so that the
-published package is always consistent with the code. This needs ``pymodaq_utils>=5.3.6`` in the ``requires`` of the
+The metadata hook of the plugin (``hatch_build.py``, see the plugin template) then adds the Python classifiers
+(``Programming Language :: Python :: 3.11``...) of the versions supported by PyMoDAQ that ``requires-python`` accepts
+(``PYTHON_VERSIONS`` in ``pymodaq_utils.plugin_tools.platforms``), and the ``Operating System`` classifiers of the
+``supported_platforms`` declared in the plugin (*OS Independent* if there is none), so that the published package is
+always consistent with the code. This needs ``pymodaq_utils>=5.3.6`` in the ``requires`` of the
 ``[build-system]``. ``check_plugin --fix-classifiers`` has nothing to write in that case.
 
 Adding an instrument to your plugin

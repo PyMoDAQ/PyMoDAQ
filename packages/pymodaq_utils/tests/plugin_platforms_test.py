@@ -113,6 +113,7 @@ def test_docs_table_is_up_to_date():
 
 DYNAMIC_PYPROJECT = '''[project]
 name = "pymodaq_plugins_foo"
+requires-python = ">=3.10"
 dynamic = ["version", "urls", "entry-points", "classifiers"]
 
 [urls]
@@ -132,11 +133,13 @@ def test_dynamic_classifiers_are_computed_when_building(tmp_path):
     (tmp_path / 'pyproject.toml').write_text(DYNAMIC_PYPROJECT)
     metadata = {'name': 'pymodaq_plugins_foo'}
     update_metadata_from_toml(metadata, tmp_path)
-    assert metadata['classifiers'] == ['Development Status :: 5', 'Operating System :: POSIX :: Linux']
+    assert metadata['classifiers'] == ['Development Status :: 5'] + platforms.python_classifiers('>=3.10') + [
+        'Operating System :: POSIX :: Linux']
     make_package(tmp_path, 'None')
     (tmp_path / 'pyproject.toml').write_text(DYNAMIC_PYPROJECT)
     update_metadata_from_toml(metadata, tmp_path)
-    assert metadata['classifiers'] == ['Development Status :: 5', platforms.OS_INDEPENDENT]
+    assert metadata['classifiers'] == ['Development Status :: 5'] + platforms.python_classifiers('>=3.10') + [
+        platforms.OS_INDEPENDENT]
 
 
 def test_static_classifiers_are_left_alone_by_the_hook(tmp_path):
@@ -154,3 +157,10 @@ def test_cli_fix_classifiers_with_dynamic_classifiers(tmp_path, capsys):
     checks.main([str(tmp_path), '--fix-classifiers', '--color', 'never'])
     assert 'computed when the package is built' in capsys.readouterr().out
     assert (tmp_path / 'pyproject.toml').read_text() == DYNAMIC_PYPROJECT
+
+
+def test_python_classifiers():
+    assert platforms.python_classifiers('>=3.11,<3.13') == ['Programming Language :: Python :: 3.11',
+                                                           'Programming Language :: Python :: 3.12']
+    assert len(platforms.python_classifiers('')) == len(platforms.PYTHON_VERSIONS)
+    assert len(platforms.python_classifiers('not a specifier')) == len(platforms.PYTHON_VERSIONS)
