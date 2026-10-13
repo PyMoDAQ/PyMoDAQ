@@ -109,3 +109,48 @@ def test_docs_table_is_up_to_date():
     assert table.read_text() == platforms.platforms_as_rst() + '\n', \
         'regenerate with: python -c "from pymodaq_utils.plugin_tools.platforms import platforms_as_rst; ' \
         f'open(\'{table}\', \'w\').write(platforms_as_rst() + chr(10))"'
+
+
+DYNAMIC_PYPROJECT = '''[project]
+name = "pymodaq_plugins_foo"
+dynamic = ["version", "urls", "entry-points", "classifiers"]
+
+[urls]
+package-url = "https://example.org/foo"
+
+[tool.pymodaq]
+classifiers = [
+    "Development Status :: 5",
+    "Operating System :: OS Independent",
+]
+'''
+
+
+def test_dynamic_classifiers_are_computed_when_building(tmp_path):
+    from pymodaq_utils.resources.hatch_build_plugins import update_metadata_from_toml
+    make_package(tmp_path, "('linux',)", "('aarch64',)")
+    (tmp_path / 'pyproject.toml').write_text(DYNAMIC_PYPROJECT)
+    metadata = {'name': 'pymodaq_plugins_foo'}
+    update_metadata_from_toml(metadata, tmp_path)
+    assert metadata['classifiers'] == ['Development Status :: 5', 'Operating System :: POSIX :: Linux']
+    make_package(tmp_path, 'None')
+    (tmp_path / 'pyproject.toml').write_text(DYNAMIC_PYPROJECT)
+    update_metadata_from_toml(metadata, tmp_path)
+    assert metadata['classifiers'] == ['Development Status :: 5', platforms.OS_INDEPENDENT]
+
+
+def test_static_classifiers_are_left_alone_by_the_hook(tmp_path):
+    from pymodaq_utils.resources.hatch_build_plugins import update_metadata_from_toml
+    make_package(tmp_path, "('linux',)")
+    (tmp_path / 'pyproject.toml').write_text(DYNAMIC_PYPROJECT.replace(', "classifiers"', ''))
+    metadata = {'name': 'pymodaq_plugins_foo'}
+    update_metadata_from_toml(metadata, tmp_path)
+    assert 'classifiers' not in metadata
+
+
+def test_cli_fix_classifiers_with_dynamic_classifiers(tmp_path, capsys):
+    make_package(tmp_path, "('win32',)")
+    (tmp_path / 'pyproject.toml').write_text(DYNAMIC_PYPROJECT)
+    checks.main([str(tmp_path), '--fix-classifiers', '--color', 'never'])
+    assert 'computed when the package is built' in capsys.readouterr().out
+    assert (tmp_path / 'pyproject.toml').read_text() == DYNAMIC_PYPROJECT

@@ -188,6 +188,15 @@ def update_pyproject_classifiers(pyproject: Path, platforms: Optional[Iterable[s
     return changed
 
 
+def dynamic_classifiers(pyproject: dict, package_folder: Path) -> list[str]:
+    """The classifiers of a plugin whose ``classifiers`` field is *dynamic* in the ``pyproject.toml``: those listed in
+    ``[tool.pymodaq] classifiers`` (the ``Operating System`` ones are ignored) followed by the ones computed from the
+    ``supported_platforms`` of its instrument plugins. Used by the hatch metadata hook at build time"""
+    listed = pyproject.get('tool', {}).get('pymodaq', {}).get('classifiers', [])
+    return [c for c in listed if not c.startswith('Operating System ::')] + classifiers_for(
+        package_platforms(package_folder))
+
+
 def platforms_as_rst() -> str:
     """The accepted values as two reStructuredText tables, to be included in the documentation"""
     out = ['.. list-table::', '   :header-rows: 1', '   :widths: 20 20 60', '',

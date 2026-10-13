@@ -328,7 +328,7 @@ Windows*) and checks it:
 * the ``Operating System`` classifiers of the ``pyproject.toml`` have to match it (PMQ320): run
   ``check_plugin --fix-classifiers`` to write them, instead of the default *OS Independent*. When a package holds several
   instruments the classifiers are those of all of them together. The architecture has no classifier: it is only used by
-  PyMoDAQ and ``check_plugin``;
+  PyMoDAQ and ``check_plugin``. To avoid running it, let the build compute them (next paragraph);
 * the values have to be known (PMQ319). The accepted values and the classifier they give are:
 
 .. include:: plugin_platforms_table.inc
@@ -346,6 +346,26 @@ only exist for these systems with an environment marker, so that ``pip`` does no
         "RPi.GPIO; platform_machine == 'aarch64' or platform_machine == 'armv7l'",
         "pywin32; sys_platform == 'win32'",
     ]
+
+Computing the classifiers when building
++++++++++++++++++++++++++++++++++++++++
+
+Instead of keeping the ``Operating System`` classifiers up to date by hand, the build can write them. Declare the
+``classifiers`` field as dynamic and move the other classifiers to ``[tool.pymodaq]``::
+
+    [project]
+    dynamic = ["version", "urls", "entry-points", "classifiers"]
+
+    [tool.pymodaq]
+    classifiers = [
+        "Development Status :: 5 - Production/Stable",
+        "Programming Language :: Python :: 3.11",
+    ]
+
+The metadata hook of the plugin (``hatch_build.py``, see the plugin template) then adds the ``Operating System``
+classifiers of the ``supported_platforms`` declared in the plugin (*OS Independent* if there is none), so that the
+published package is always consistent with the code. This needs ``pymodaq_utils>=5.3.6`` in the ``requires`` of the
+``[build-system]``. ``check_plugin --fix-classifiers`` has nothing to write in that case.
 
 Adding an instrument to your plugin
 -----------------------------------

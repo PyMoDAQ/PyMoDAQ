@@ -127,6 +127,7 @@ detector and extension rules) and use the tools shipped here:
   checks there, not in plugin repositories.
   A plugin working on some systems only declares `supported_platforms` (values of `sys.platform`) and optionally
   `supported_architectures` (values of `platform.machine()`) in its class; PyMoDAQ refuses to initialize it elsewhere
-  and `check_plugin --fix-classifiers` writes the `Operating System` classifiers (`plugin_tools/platforms.py`).
+  and `check_plugin --fix-classifiers` writes the `Operating System` classifiers (`plugin_tools/platforms.py`). With `classifiers` in `dynamic`, the
+  hatch metadata hook (`resources/hatch_build_plugins.py`) computes them at build time from `[tool.pymodaq] classifiers`.
 - `pymodaq.utils.plugin_testing` (since 5.3.2): `PluginPackageChecks` and a harness to test a plugin class against a
   fake controller, without Qt event loop timing or real hardware.
