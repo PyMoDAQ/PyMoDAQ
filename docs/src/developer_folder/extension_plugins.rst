@@ -43,6 +43,16 @@ them, and reports the codes PMQ330 to PMQ337: missing ``EXTENSION_NAME`` or ``CL
 from ``CustomExt``, deprecated imports and hooks, managers created by the extension instead of those of the Dashboard, an
 ``__init__`` that does not take ``(parent, dashboard)`` or never calls ``self.setup_ui()``.
 
+To check an extension while you write it, without the rest of the package, or an extension of PyMoDAQ itself, use the
+``check_extension`` command on a file or a folder::
+
+    check_extension src/pymodaq_plugins_xxxx/extensions/my_extension.py
+    check_extension [--fail-on error|warning|todo] [--core] [--color auto|always|never] path [path ...]
+
+Like ``check_plugin`` it returns 1 if there are findings of the ``--fail-on`` level, and it reads the sources without
+importing them. The extensions of PyMoDAQ (``pymodaq/extensions``) are recognized from their path and need not define
+``EXTENSION_NAME`` and ``CLASS_NAME`` (PMQ330 is then not reported, ``--core`` forces it).
+
   .. _extension_entrypoint_fig:
 
 .. figure:: /image/extensions/entrypoint.png
