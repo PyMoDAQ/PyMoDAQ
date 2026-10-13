@@ -139,7 +139,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
          "limits": config("utils", "general", "debug_level")},
         {"title": "Loaded experiments", "name": "loaded_files", "type": "group",
          "children": [
-             {"title": "Preset file", "name": "preset_file", "type": "str", "value": "", "readonly": True,},
              {"title": "Overshoot file", "name": "overshoot_file", "type": "str", "value": "", "readonly": True,},
              {"title": "Layout file", "name": "layout_file", "type": "str", "value": "", "readonly": True},
              {"title": "ROI file", "name": "roi_file", "type": "str", "value": "", "readonly": True},
@@ -456,23 +455,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
     #                 self.get_action(self.get_action_from_file(file, ManagerEnums.remote))
     #             )
     #
-    # def create_remote(self):
-    #     try:
-    #         if self.preset_file is not None:
-    #             self.remote_manager.set_new_remote(self.preset_file.stem)
-    #             self.add_action(
-    #                 self.get_action_from_file(self.preset_file, ManagerEnums.remote),
-    #                 self.preset_file.stem,
-    #                 "",
-    #             )
-    #             self.setup_menu(self.menubar)
-    #             self.connect_action(
-    #                 self.get_action_from_file(self.preset_file, ManagerEnums.remote),
-    #                 self.create_menu_slot_remote(get_set_remote_path().joinpath(self.preset_file.name)),
-    #             )
-    #
-    #     except Exception as e:
-    #         logger.exception(str(e))
     #
     # def modify_remote(self):
     #     try:

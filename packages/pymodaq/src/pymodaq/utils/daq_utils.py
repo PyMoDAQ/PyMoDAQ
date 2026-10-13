@@ -26,8 +26,8 @@ logger = set_logger(get_module_name(__file__))
 
 def copy_experiment():                          # pragma: no cover
     path = get_set_experiment_path().joinpath('default.xml')
-    if not path.exists():  # copy the preset_default from pymodaq folder and create one in pymodad's local folder
-        with open(str(Path(__file__).parent.parent.joinpath('resources/preset_default.xml')), 'r') as file:
+    if not path.exists():  # copy the experiment_default from pymodaq folder and create one in pymodaq's local folder
+        with open(str(Path(__file__).parent.parent.joinpath('resources/experiment_default.xml')), 'r') as file:
             path.write_text(file.read())
 
 
