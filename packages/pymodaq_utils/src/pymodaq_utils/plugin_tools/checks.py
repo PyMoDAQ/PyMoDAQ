@@ -649,12 +649,15 @@ def main(argv=None) -> int:
         root = package_root(package)
         if root is None or project is None:
             parser.error('--fix-classifiers needs the folder of the plugin repository (with its pyproject.toml)')
-        try:
-            changed = platforms.update_pyproject_classifiers(project / 'pyproject.toml',
-                                                             platforms.package_platforms(root))
-        except ValueError as e:
-            parser.error(str(e))
-        print('pyproject.toml: classifiers ' + ('updated' if changed else 'already up to date'))
+        if 'classifiers' in toml.load(project / 'pyproject.toml').get('project', {}).get('dynamic', []):
+            print('pyproject.toml: the classifiers are computed when the package is built, nothing to write')
+        else:
+            try:
+                changed = platforms.update_pyproject_classifiers(project / 'pyproject.toml',
+                                                                 platforms.package_platforms(root))
+            except ValueError as e:
+                parser.error(str(e))
+            print('pyproject.toml: classifiers ' + ('updated' if changed else 'already up to date'))
     report = check_plugin_package(package, args.fail_on, args.strict_imports, project,
                                   check_entry_points=is_installed(package) or project is None)
     print(report.format(verbose=args.verbose, color=use_color(args.color)))
