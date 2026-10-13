@@ -1,12 +1,12 @@
 """Tools to test an instrument plugin package, to be used from the test modules of a plugin repository.
 
 * :class:`PluginPackageChecks`: pytest mixin applying the acceptance checks (package layout, entry points, naming,
-  mandatory methods, static rules) of :mod:`pymodaq_utils.plugin_checks` to a plugin package. No hardware is needed.
+  mandatory methods, static rules) of :mod:`pymodaq_utils.plugin_tools.checks` to a plugin package. No hardware is needed.
 * The helpers of :mod:`pymodaq.utils.plugin_testing.harness` (``make_actuator``, ``move_abs_and_wait``,
   ``grab_and_wait``...) exercise the *behaviour* of a plugin class, usually against a fake controller, without
   hardware and without any visible GUI.
 
-The static checks themselves (``check_plugin`` command, :mod:`pymodaq_utils.plugin_checks`) stay in ``pymodaq_utils``:
+The static checks themselves (``check_plugin`` command, :mod:`pymodaq_utils.plugin_tools.checks`) stay in ``pymodaq_utils``:
 they do not import ``pymodaq`` and are therefore fast and free of side effects. Importing this module starts the whole
 PyMoDAQ initialization, as importing a plugin does.
 

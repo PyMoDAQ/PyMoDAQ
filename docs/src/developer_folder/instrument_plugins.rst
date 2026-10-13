@@ -55,14 +55,10 @@ the command line where you *cd* within the cloned package.
 This command will install the package but any change you apply on the local folder will be applied on the package.
 Then just add a new python file in the correct location.
 
-Once you're ready with a working plugin, you can then:
-
-#. Have your repo hosted in the PyMoDAQ GitHub organization (you stay its official maintainer): a plugin owned by a
-   single person is lost when this person moves on, in the organization someone can always take over. See
-   :ref:`plugin_hosting` for the reason and the transfer procedure.
-#. Publish your repo on pypi (just by doing a release on github will trigger the creation
-   of a pypi repository)
-#. do a pull request on the initial repository to merge your new implementations.
+Once you're ready with a working plugin, have your repo hosted in the PyMoDAQ GitHub organization (you stay its
+official maintainer): a plugin owned by a single person is lost when this person moves on, in the organization someone
+can always take over. See :ref:`plugin_hosting` for the reason, the transfer procedure and how the plugin is then
+released on PyPI.
 
 .. note::
 
@@ -225,8 +221,8 @@ rules and codes as ``check_plugin``, and in particular:
 * the naming convention of the modules and of the classes (see above), and that no module is wrongly named
 * the plugin modules can be imported *without the instrument vendor SDK* (guard these imports with *try/except*)
 * the plugin class derives from the right base class and overrides the mandatory methods
-  (*ini_stage*, *get_actuator_value*, *close* for an actuator, and a warning if *stop_motion* is not implemented; *ini_detector*, *grab_data*, *stop*,
-  *close* for a detector)
+  (*ini_stage*, *get_actuator_value*, *close* for an actuator; *ini_detector*, *grab_data*, *stop*, *close* for a
+  detector), see :ref:`plugin_contract`
 * for an actuator, ``_axis_names``, ``_controller_units`` and ``_epsilons`` are consistent and the units are known
   from `pint`
 * ``params`` is a valid list of dict producing a settings tree
@@ -267,12 +263,18 @@ GUI, and fail with a ``SignalTimeout`` if the plugin never emits the expected si
         def close(self): pass
 
     def test_move_abs(monkeypatch):
-        monkeypatch.setattr(daq_move_Xxxx, 'XxxxWrapper', FakeWrapper)  # the name used in the plugin module
+        # 'XxxxWrapper' is the name of the wrapper that the plugin normally imports to control the instrument
+        # (as it appears in the plugin module): here it is replaced by the fake one
+        monkeypatch.setattr(daq_move_Xxxx, 'XxxxWrapper', FakeWrapper)
         actuator = make_actuator(daq_move_Xxxx.DAQ_Move_Xxxx)
         assert actuator.initialized
         position = move_abs_and_wait(actuator, 2.5)  # a float is in the axis unit of the actuator
         assert position.value() == pytest.approx(2.5, abs=actuator.epsilon)
         actuator.close()
+
+In this example ``XxxxWrapper`` stands for the wrapper of your instrument that ``daq_move_Xxxx`` imports and uses
+(``monkeypatch.setattr`` replaces that name in the plugin module, so use the exact name found there), and
+``FakeWrapper`` is the fake that takes its place during the test.
 
 ``move_rel_and_wait``, ``move_home_and_wait`` and ``make_detector`` / ``grab_and_wait`` / ``assert_units`` work the
 same way, and a slave axis of a multi-axes controller is created with ``make_actuator(plugin_class,
@@ -287,6 +289,18 @@ complete fake actuators (single and multi-axes) and a fake detector to copy.
     timing, error replies, real ranges and units. A passing run is not a hardware validation, say in a contribution
     what was tested on the real instrument and what only against a fake.
 
+.. _plugin_contract:
+
+The methods of a plugin
+-----------------------
+
+These are the methods a plugin overrides. *Required* ones are checked by ``check_plugin`` and by the plugin tests: the
+others have a default in the base class that does nothing or raises ``NotImplementedError``, override them when your
+instrument can do it. The list is defined once, in ``pymodaq_utils.plugin_tools.contract``, and read by the checks, the
+tests and this table.
+
+.. include:: plugin_contract_table.inc
+
 Adding an instrument to your plugin
 -----------------------------------
 
@@ -295,8 +309,8 @@ plugin repository:
 
 .. code-block:: bash
 
-    python -m pymodaq_utils.plugin_scaffold move Xxxx   # daq_move_Xxxx.py with the class DAQ_Move_Xxxx
-    python -m pymodaq_utils.plugin_scaffold 1D Xxxx     # daq_1Dviewer_Xxxx.py with the class DAQ_1DViewer_Xxxx
+    python -m pymodaq_utils.plugin_tools.scaffold move Xxxx   # daq_move_Xxxx.py with the class DAQ_Move_Xxxx
+    python -m pymodaq_utils.plugin_tools.scaffold 1D Xxxx     # daq_1Dviewer_Xxxx.py with the class DAQ_1DViewer_Xxxx
 
 (use ``--folder`` to give the *pymodaq_plugins_xxxx* package folder). The module derives from the right base class,
 declares the mandatory attributes and methods, and its ``TODO`` comments tell where to put your instrument code.

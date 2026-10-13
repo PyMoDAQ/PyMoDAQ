@@ -55,7 +55,7 @@ Lint: CI only fails on `flake8 . --count --select=E9,F63,F7,F82 --show-source --
 the root `pyproject.toml` (line length 120) but not enforced.
 
 Entry points (console scripts of `pymodaq`): `dashboard`, `daq_move`, `daq_viewer`, `daq_scan`, `daq_logger`, `pymodaq`,
-`check_plugin` (report on a plugin package, see `pymodaq_utils/plugin_checks.py`). Test tools for plugin repositories
+`check_plugin` (report on a plugin package, see `pymodaq_utils/plugin_tools/checks.py`). Test tools for plugin repositories
 (pytest mixin of the acceptance checks, harness driving a plugin against a fake controller) are in
 `pymodaq/utils/plugin_testing/`; the static checks stay in `pymodaq_utils` so that they do not start the `pymodaq`
 initialization.
@@ -123,7 +123,7 @@ This file is about changing PyMoDAQ itself. For a `pymodaq_plugins_*` package, s
 [pymodaq_plugins_template](https://github.com/PyMoDAQ/pymodaq_plugins_template) (its `AGENTS.md` holds the actuator,
 detector and extension rules) and use the tools shipped here:
 
-- `check_plugin` (`pymodaq_utils/plugin_checks.py`, rules in `plugin_rules.py`): static report on a plugin package. Add new
+- `check_plugin` (`pymodaq_utils/plugin_tools/checks.py`, rules in `plugin_tools/rules.py`, the plugin contract in `plugin_tools/contract.py`): static report on a plugin package. Add new
   checks there, not in plugin repositories.
 - `pymodaq.utils.plugin_testing` (since 5.3.2): `PluginPackageChecks` and a harness to test a plugin class against a
   fake controller, without Qt event loop timing or real hardware.
