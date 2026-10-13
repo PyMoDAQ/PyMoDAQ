@@ -225,8 +225,8 @@ rules and codes as ``check_plugin``, and in particular:
 * the naming convention of the modules and of the classes (see above), and that no module is wrongly named
 * the plugin modules can be imported *without the instrument vendor SDK* (guard these imports with *try/except*)
 * the plugin class derives from the right base class and overrides the mandatory methods
-  (*ini_stage*, *get_actuator_value*, *close* for an actuator, and a warning if *stop_motion* is not implemented; *ini_detector*, *grab_data*, *stop*,
-  *close* for a detector)
+  (*ini_stage*, *get_actuator_value*, *close* for an actuator; *ini_detector*, *grab_data*, *stop*, *close* for a
+  detector), see :ref:`plugin_contract`
 * for an actuator, ``_axis_names``, ``_controller_units`` and ``_epsilons`` are consistent and the units are known
   from `pint`
 * ``params`` is a valid list of dict producing a settings tree
@@ -286,6 +286,18 @@ complete fake actuators (single and multi-axes) and a fake detector to copy.
     ``close``) against a fake that encodes what you believe the driver does. They say nothing about the device itself:
     timing, error replies, real ranges and units. A passing run is not a hardware validation, say in a contribution
     what was tested on the real instrument and what only against a fake.
+
+.. _plugin_contract:
+
+The methods of a plugin
+-----------------------
+
+These are the methods a plugin overrides. *Required* ones are checked by ``check_plugin`` and by the plugin tests: the
+others have a default in the base class that does nothing or raises ``NotImplementedError``, override them when your
+instrument can do it. The list is defined once, in ``pymodaq_utils.plugin_contract``, and read by the checks, the
+tests and this table.
+
+.. include:: plugin_contract_table.inc
 
 Adding an instrument to your plugin
 -----------------------------------
