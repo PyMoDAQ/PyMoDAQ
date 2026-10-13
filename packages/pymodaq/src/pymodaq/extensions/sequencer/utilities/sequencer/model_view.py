@@ -26,7 +26,7 @@ from ..yaml_utils import PrettyListDumper
 
 
 if TYPE_CHECKING:
-    from pymodaq.scripting import Dashboard
+    from pymodaq_scripting.devices import Dashboard
     from pymodaq.extensions.sequencer.utilities.sequencer.sequence import Sequence
 
 seq_factory = SeqEltFactory()
