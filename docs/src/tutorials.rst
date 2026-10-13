@@ -9,6 +9,7 @@ Tutorials
 
    tutorials/git_github
    tutorials/contribute_to_pymodaq_code
+   tutorials/first_plugin
    tutorials/new_plugin
    tutorials/plugin_development
    tutorials/write_documentation
