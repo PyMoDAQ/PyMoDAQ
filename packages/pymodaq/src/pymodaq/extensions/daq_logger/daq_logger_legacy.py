@@ -193,9 +193,6 @@ class DAQ_Logger(CustomExt):
 
             settings_str = b'<All_settings>'
             settings_str += ioxml.parameter_to_xml_string(self.dashboard.settings)
-            # if self.dashboard.settings.child('loaded_files', 'roi_file').value() != '':
-            #     settings_str += ioxml.parameter_to_xml_string(
-            #         self.dashboard.roi_saver.roi_presets)
             settings_str += ioxml.parameter_to_xml_string(self.settings)
             settings_str += ioxml.parameter_to_xml_string(self.logger.settings)
             settings_str += b'</All_settings>'
@@ -317,8 +314,8 @@ class DAQ_Logger(CustomExt):
             --------
             set_ini_positions
         """
-        preset_items_det = self.modules_manager.detectors
-        for det in preset_items_det:
+        detectors = self.modules_manager.detectors
+        for det in detectors:
             det.stop()
         self.command_DAQ_signal.emit(["stop_acquisition"])
 

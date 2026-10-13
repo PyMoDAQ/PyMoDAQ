@@ -835,8 +835,6 @@ class DAQScan(CustomExt):
             settings_str = b'<All_settings title="All Settings" type="group">' + \
                            ioxml.parameter_to_xml_string(params) + \
                            ioxml.parameter_to_xml_string(self.settings)
-                           # ioxml.parameter_to_xml_string(
-                           #     self.dashboard.preset_manager.preset_params) +\
             settings_str += b'</All_settings>'
             attr['settings'] = settings_str
 

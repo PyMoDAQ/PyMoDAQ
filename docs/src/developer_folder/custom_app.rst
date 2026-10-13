@@ -443,7 +443,7 @@ An app *can* create its own ``DAQ_Move`` and ``DAQ_Viewer`` objects without any 
 Use a ``CustomExt`` run by the Dashboard instead: it is easier and better. The Dashboard already creates, initializes
 and saves the settings of the instruments (experiment and state managers), and the extension just gets them through
 ``self.modules_manager``, with the toolbar and the file handling done for you. An app that embeds control modules has
-to redo all this by itself and loses it (no experiment or state presets, no shared ``ModulesManager``).
+to redo all this by itself and loses it (no experiment or state, no shared ``ModulesManager``).
 
 If you still need it, ``create_load_daq_move`` and ``create_load_daq_viewer`` in
 ``pymodaq.utils.gui_utils.loader_utils`` show how to build a control module with its docks and toolbar. The app then

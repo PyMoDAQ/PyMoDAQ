@@ -12,7 +12,7 @@ dashboard.apply_experiment('default')
 print(dashboard.get_states().result())
 # >>> ['default', 'my_custom_config']
 
-# Same remark as dashboard.apply_preset
+# Same remark as dashboard.apply_experiment
 dashboard.apply_state('default')
 
 print(dashboard.get_devices().result())  # returns the names
