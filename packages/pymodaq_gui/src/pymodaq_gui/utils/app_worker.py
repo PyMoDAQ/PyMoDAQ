@@ -32,7 +32,14 @@ if TYPE_CHECKING:  # only for the annotations, pymodaq_gui does not depend on py
 class SaverWorker(ThreadWorker):
     """ Worker in separated thread receiving the data ad DataBundle
     and adding them into the extended or enlargeable arrays within a H5file using one of the
-    ExtensionSaver module saver """
+    ExtensionSaver module saver
+
+    Note
+    ----
+    The type of the saver is only hinted with the DataToExport savers (SaverTypes) the worker
+    relies on. It can also be an object of a higher level, such as the extension savers of pymodaq
+    (ScanSaver, LoggerSaver, OptimizerSaver...), as long as it provides the same saving interface.
+    """
 
     nav_axes_signal = Signal(list)
     worker_setting_name: str = 'saver_worker'
