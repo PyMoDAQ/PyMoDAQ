@@ -55,14 +55,10 @@ the command line where you *cd* within the cloned package.
 This command will install the package but any change you apply on the local folder will be applied on the package.
 Then just add a new python file in the correct location.
 
-Once you're ready with a working plugin, you can then:
-
-#. Have your repo hosted in the PyMoDAQ GitHub organization (you stay its official maintainer): a plugin owned by a
-   single person is lost when this person moves on, in the organization someone can always take over. See
-   :ref:`plugin_hosting` for the reason and the transfer procedure.
-#. Publish your repo on pypi (just by doing a release on github will trigger the creation
-   of a pypi repository)
-#. do a pull request on the initial repository to merge your new implementations.
+Once you're ready with a working plugin, have your repo hosted in the PyMoDAQ GitHub organization (you stay its
+official maintainer): a plugin owned by a single person is lost when this person moves on, in the organization someone
+can always take over. See :ref:`plugin_hosting` for the reason, the transfer procedure and how the plugin is then
+released on PyPI.
 
 .. note::
 
