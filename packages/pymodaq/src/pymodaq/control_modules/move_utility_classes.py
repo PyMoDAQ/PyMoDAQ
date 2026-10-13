@@ -657,6 +657,13 @@ class DAQ_Move_base(PluginBase):
             raise NotImplementedError
 
     def move_home(self, *args, **kwargs):
+        """Let the actuator look for its reference, so that this position becomes the home (zero) position
+
+        To be implemented in the plugin. PyMoDAQ does not poll the position after this call: the plugin must
+        call :meth:`move_done` (that reads :meth:`get_actuator_value` and emits the ``move_done_signal``) when the homing
+        is finished, right after a blocking homing or from the callback of an asynchronous one. See
+        https://pymodaq.cnrs.fr/en/latest/developer_folder/instrument_plugins.html#moving-to-the-home-position
+        """
         if hasattr(self, 'move_Home'):
             deprecation_msg('move_Home method in plugins is deprecated, use move_home', 3)
             self.move_Home()  # type: ignore
