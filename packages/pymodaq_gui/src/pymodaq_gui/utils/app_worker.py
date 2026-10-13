@@ -18,9 +18,13 @@ from pymodaq_gui.utils import CustomApp
 from pymodaq_gui.utils.custom_app import WorkFlowActions
 from pymodaq_utils.utils import ThreadCommand
 
+
+# the savers a worker can handle (the extension savers of pymodaq are used through these)
+SaverTypes = (DataToExportSaver | DataToExportExtendedSaver |
+              DataToExportEnlargeableSaver | DataToExportTimedSaver)
+
 if TYPE_CHECKING:  # only for the annotations, pymodaq_gui does not depend on pymodaq at run time
     from pymodaq.utils.managers.modules import ModulesManager
-    from pymodaq.utils.h5modules.module_saving import ScanSaver, LoggerSaver, OptimizerSaver
 
 
 
@@ -35,11 +39,10 @@ class SaverWorker(ThreadWorker):
     name = 'SaverWorker'
     params = get_thread_params(worker_setting_name)
 
-    def __init__(self, saver: 'ScanSaver | LoggerSaver | OptimizerSaver', parent = None):
+    def __init__(self, saver: SaverTypes, parent = None):
         super().__init__(parent)
 
-        self.saver: (ScanSaver | LoggerSaver | OptimizerSaver | DataToExportSaver | DataToExportExtendedSaver |
-                     DataToExportEnlargeableSaver | DataToExportTimedSaver) = saver
+        self.saver: SaverTypes = saver
         self.data_to_save_signal.connect(self.save_data, QtCore.Qt.ConnectionType.QueuedConnection)
         self.nav_axes_signal.connect(self.add_nav_axes, QtCore.Qt.ConnectionType.QueuedConnection)
 
@@ -144,7 +147,7 @@ class ExtensionWorker(QObject):
         return self._app.settings
 
     @property
-    def module_and_data_saver(self) -> 'ScanSaver | LoggerSaver | OptimizerSaver':
+    def module_and_data_saver(self) -> SaverTypes:
         """ Convenience property"""
         return self._app.module_and_data_saver
 
