@@ -695,6 +695,7 @@ def check_extension_source(path: Path) -> list[Finding]:
     * PMQ336: the ``__init__`` does not take the ``parent`` and ``dashboard`` arguments given by the Dashboard
     * PMQ337: the ``__init__`` of a class deriving from ``CustomExt`` never calls ``self.setup_ui()``
     * PMQ338: a class deriving directly from ``CustomExt`` has no ``_quit_fun`` guard, or one that never returns True
+    * PMQ339: the extension class overrides ``quit_fun`` instead of ``_quit_fun``
     """
     try:
         tree = ast.parse(path.read_text(errors='replace'), filename=str(path))
@@ -756,6 +757,11 @@ def check_extension_source(path: Path) -> list[Finding]:
                 findings.append(Finding('PMQ337', Severity.WARNING, '__init__ never calls self.setup_ui()',
                                         'without it no dock, menu or toolbar is created: call self.setup_ui() at the '
                                         'end of __init__', path, init.lineno))
+        if 'CustomExt' in _root_bases(cls, classes) and 'quit_fun' in methods:
+            findings.append(Finding('PMQ339', Severity.WARNING, f'{cls.name} overrides quit_fun()',
+                                    'quit_fun of CustomExt calls _quit_fun (the guard) then closes the window and '
+                                    'shows the Dashboard again: override _quit_fun instead, so that these are kept',
+                                    path, methods['quit_fun'].lineno))
         if 'CustomExt' in _base_names(cls) and 'quit_fun' not in methods:
             quit_fun = methods.get('_quit_fun')
             if quit_fun is None:

@@ -137,7 +137,7 @@ detector and extension rules) and use the tools shipped here:
 
 - `check_plugin` (`pymodaq_utils/plugin_tools/checks.py`, rules in `plugin_tools/rules.py`, the plugin contract in `plugin_tools/contract.py`): static report on a plugin package. Add new
   checks there, not in plugin repositories.
-  The modules of a plugin's `extensions/` folder are checked too (PMQ330-338, `check_extension_source`); the
+  The modules of a plugin's `extensions/` folder are checked too (PMQ330-339, `check_extension_source`); the
   `check_extension` command (`plugin_tools/extension_checks.py`) checks one extension file or folder, in a plugin or in PyMoDAQ.
   A plugin working on some systems only declares `supported_platforms` (values of `sys.platform`) and optionally
   `supported_architectures` (values of `platform.machine()`) in its class; PyMoDAQ refuses to initialize it elsewhere

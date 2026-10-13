@@ -1,6 +1,6 @@
 """Check the modules of Dashboard extensions: the ``check_extension`` command.
 
-It applies the rules PMQ330 to PMQ338 (see :func:`pymodaq_utils.plugin_tools.rules.check_extension_source`) to a python
+It applies the rules PMQ330 to PMQ339 (see :func:`pymodaq_utils.plugin_tools.rules.check_extension_source`) to a python
 file or to a folder, whether the extension belongs to a plugin package or to PyMoDAQ itself. The sources are read,
 nothing is imported. ``check_plugin`` also applies these rules to the ``extensions`` folder of a plugin package.
 

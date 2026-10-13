@@ -159,6 +159,14 @@ def test_quit_fun_that_may_refuse_is_fine(check):
     assert codes(check(code)) == set()
 
 
-def test_extension_defining_quit_fun_itself_is_not_checked(check):
+def test_overriding_quit_fun_is_reported(check):
     code = GOOD.replace("    def _quit_fun(self):\n        return True\n", "    def quit_fun(self):\n        return True\n")
-    assert codes(check(code)) == set()
+    findings = check(code)
+    assert codes(findings) == {'PMQ339'}
+    assert findings[0].severity == Severity.WARNING
+
+
+def test_overriding_quit_fun_next_to_the_guard(check):
+    code = GOOD.replace("    def _quit_fun(self):\n        return True\n",
+                        "    def _quit_fun(self):\n        return True\n\n    def quit_fun(self):\n        return True\n")
+    assert codes(check(code)) == {'PMQ339'}
