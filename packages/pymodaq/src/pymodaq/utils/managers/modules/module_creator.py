@@ -4,7 +4,6 @@ from pymodaq_utils.enums import StrEnum, enum_checker
 from typing import TYPE_CHECKING, Callable
 
 from qtpy import QtWidgets
-from qt_themes import get_theme
 
 from pymodaq_gui.utils import DockArea, Dock
 
@@ -19,6 +18,7 @@ from pymodaq.control_modules.move_utility_classes import UiType
 from pymodaq_gui.utils.menu_utils import MenuButton
 from pymodaq.control_modules.instruments import DET_TYPES, ACTUATOR_TYPES, ACTUATOR_NAMES, find_actuator_class_from_name
 from pymodaq_utils.logger import get_module_name, set_logger
+from pymodaq_gui.utils.styling import ThemeColor
 
 
 if TYPE_CHECKING:
@@ -180,7 +180,7 @@ class ModuleCreator:
         actuator.do_init_hardware_signal.connect(
             lambda do_init: self.dashboard.modules_manager.on_hardware_initialization(do_init, actuator))
 
-        actuator.ui.add_action('remove', 'RemoveActuator', 'remove', icon_color=get_theme().blue,
+        actuator.ui.add_action('remove', 'RemoveActuator', 'remove', icon_color=ThemeColor.BLUE,
                                toolbar=actuator.ui.toolbar,)
         actuator.ui.connect_action('remove', lambda: self.remove_actuators([actuator]))
 
@@ -343,7 +343,7 @@ class ModuleCreator:
         detector.do_init_hardware_signal.connect(
             lambda do_init: self.dashboard.modules_manager.on_hardware_initialization(do_init, detector))
         detector.ui.add_action('remove', 'RemoveDetector', 'remove',
-                               icon_color=get_theme().blue,
+                               icon_color=ThemeColor.BLUE,
                                toolbar=detector.ui.toolbar, )
         detector.ui.connect_action('remove', lambda: self.remove_detectors([detector]))
         return detector

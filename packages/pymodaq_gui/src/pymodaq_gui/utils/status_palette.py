@@ -97,6 +97,8 @@ from qtpy import QtGui
 
 from pymodaq_utils.enums import StrEnum
 
+from pymodaq_gui.utils.styling import ThemeColor
+
 
 class Status(StrEnum):
     """The six canonical PyMoDAQ status states (see module docstring).
@@ -117,7 +119,7 @@ class Status(StrEnum):
 # (state_name, theme_attribute, hex_fallback)
 # theme_attribute is the name of the QColor property on a qt_themes Theme object.
 _DEFINITIONS: list[tuple[Status, str, str]] = [
-    (Status.OFF,      'grey',   '#808080'),  # grey — adapts to dark/light theme
+    (Status.OFF,      'overlay0', '#808080'),  # muted grey — adapts to dark/light theme
     (Status.IDLE,     'green',  '#00b400'),  # green — initialized and ready
     (Status.RUNNING,  'blue',   '#0078d4'),  # blue  — action in flight
     (Status.WARNING,  'yellow', '#ccaa00'),  # amber — non-fatal issue
@@ -181,6 +183,20 @@ class StatusPalette:
                 f"Valid states: {list(known)}"
             )
         return [(n, _resolve(*known[n])) for n in names if n in known]
+
+    @classmethod
+    def role(cls, name: str) -> ThemeColor:
+        """Return the theme colour name of a state, e.g. ``ThemeColor.BLUE`` for 'running'.
+
+        Use it rather than :meth:`color` for icon colours, so that they follow theme
+        changes: ``add_action(..., icon_color=StatusPalette.role('running'))``.
+        """
+        for n, attr, _fb in _DEFINITIONS:
+            if n == name:
+                return ThemeColor(attr)
+        raise ValueError(
+            f"Unknown state {name!r}. Valid states: {[n for n, _, _ in _DEFINITIONS]}"
+        )
 
     @classmethod
     def color(cls, name: str) -> QtGui.QColor:

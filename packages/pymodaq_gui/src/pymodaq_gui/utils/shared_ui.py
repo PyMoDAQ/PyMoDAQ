@@ -28,6 +28,7 @@ from pymodaq_utils.utils import get_module_path
 from pymodaq_gui.utils.custom_app import CustomApp
 from pymodaq_gui.utils.menu_utils import StickyMenu
 from pymodaq_gui.utils.enums import MenuToolbarNames
+from pymodaq_gui.utils.styling import ThemeColor
 
 logger = set_logger(get_module_name(__file__))
 
@@ -186,6 +187,7 @@ class SharedUI(CustomApp):
         self.add_menu(MenuToolbarNames.TOOLBARS, MenuToolbarNames.TOOLBARS.capitalize(), parent_menu=MenuToolbarNames.VIEW,
                       menu=StickyMenu())
         self.setup_toolbar_style_menu(MenuToolbarNames.VIEW)
+        self.setup_theme_menu(MenuToolbarNames.VIEW)
 
         # Tools menu
         self.add_menu(MenuToolbarNames.TOOLS, MenuToolbarNames.TOOLS.capitalize(), parent_menu=menubar)
@@ -202,7 +204,7 @@ class SharedUI(CustomApp):
                         tip="Restart PyMoDAQ", auto_toolbar=False, menu=MenuToolbarNames.FILE)
 
         self.add_action(short_name="quit", name="Quit", icon_name="cancel",
-                        tip="Quit PyMoDAQ", icon_color=self.get_theme().red, toolbar=MenuToolbarNames.RUNTIME,
+                        tip="Quit PyMoDAQ", icon_color=ThemeColor.RED, toolbar=MenuToolbarNames.RUNTIME,
                         menu=MenuToolbarNames.FILE)
 
         # Tools menu
@@ -227,13 +229,13 @@ class SharedUI(CustomApp):
         self.add_action(short_name="app_help", name="Application help", icon_name="help",
                         tip="Show how to use this application", toolbar=MenuToolbarNames.RUNTIME,
                         menu=MenuToolbarNames.HELP, checkable=True,
-                        icon_checked_color=self.get_theme().green)
+                        icon_checked_color=ThemeColor.GREEN)
 
         self.add_action(short_name="check_updates", name="Check updates", icon_name="update",
                         auto_toolbar=False, menu=MenuToolbarNames.HELP)
 
         self.add_action(short_name="about", name="About PyMoDAQ", icon_name="info",
-                        icon_color=self.get_theme().blue, toolbar=MenuToolbarNames.HELP, menu=MenuToolbarNames.HELP)
+                        icon_color=ThemeColor.BLUE, toolbar=MenuToolbarNames.HELP, menu=MenuToolbarNames.HELP)
 
         for toolbar in self.toolbars:
             self.get_menu(MenuToolbarNames.TOOLBARS).addAction(toolbar.toggleViewAction())

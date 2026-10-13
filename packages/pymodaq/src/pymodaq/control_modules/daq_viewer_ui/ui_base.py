@@ -21,7 +21,7 @@ from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq.control_modules.instruments import DET_TYPES
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerFactory, ViewerDispatcher
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
-from pymodaq_gui.utils.styling import create_icon
+from pymodaq_gui.utils.styling import create_icon, ThemeColor
 from pymodaq.control_modules.thread_commands import UiToMainViewer
 from pymodaq.control_modules.control_module_selector import add_category_layers
 from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule, ViewerSelector
@@ -135,10 +135,10 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._data_ready = status
         if status:
             icon = create_icon(ActionIconNames.SNAP,
-                               icon_color=self.get_theme().green, )
+                               icon_color=ThemeColor.GREEN, )
         else:
             icon = create_icon(ActionIconNames.SNAP,
-                               icon_color=self.get_theme().red, )
+                               icon_color=ThemeColor.RED, )
         self.get_action('snap').set_icon(icon)
 
     # -------------------------------------------------------------------------
@@ -171,20 +171,20 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.add_action('snap', 'Snap', ActionIconNames.SNAP, "Take a snapshot from the detector")
         self.add_action('grab', 'Grab', ActionIconNames.GRAB, "Grab data from the detector", checkable=True,
                         icon_checked=ActionIconNames.GRAB_STOP,
-                        icon_checked_color=self.get_theme().green)
+                        icon_checked_color=ThemeColor.GREEN)
         self.add_action('reset_live', 'ResetLive', ActionIconNames.RESET,
                         "Reset The current live averaging",
                         visible=False)
         self.add_action('show_graphs', 'ShowGraphs', 'bid_landscape', 'Show/Hide the Graphs Area',
                         checkable=True, icon_checked='bid_landscape_disabled',
-                        icon_color=self.get_theme().green, icon_checked_color=self.get_theme().red)
+                        icon_color=ThemeColor.GREEN, icon_checked_color=ThemeColor.RED)
         self.add_action('save_current', 'Save Current Data', 'save_as', "Save Current Data")
         self.toolbar.addSeparator()
         self.add_action('background_snap', 'Snap Background', 'background_replace',
                         tip='Take a snapshot a set it as background')
         self.add_action('background_subtract', 'Subtract Background', 'texture_minus', checkable=True,
                         tip='If checked, apply background substraction',
-                        icon_checked_color=self.get_theme().green)
+                        icon_checked_color=ThemeColor.GREEN)
 
     def connect_things(self):
         self._connect_common_actions()

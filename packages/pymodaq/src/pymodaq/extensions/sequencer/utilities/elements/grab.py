@@ -16,9 +16,9 @@ from pymodaq_gui.parameter.pymodaq_ptypes.itemselect import ItemSelect
 
 from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltBase, SeqEltFactory
 from pymodaq.extensions.sequencer.utilities.widget_with_toolbar import WidgetWithToolbar
-from qt_themes import get_theme
 from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq.utils.managers.modules import ModuleType
+from pymodaq_gui.utils.styling import ThemeColor
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
@@ -114,21 +114,21 @@ class GrabElt(SeqEltBase):
         base_widget.add_action(Status.SNAP, Status.SNAP,
                                icon_name=ActionIconNames.SNAP,
                                checkable=True,
-                               icon_checked_color=get_theme().green,
+                               icon_checked_color=ThemeColor.GREEN,
                                tip='Snap',
                                toolbar=base_widget.toolbar,
                                before='execute')
         base_widget.add_action(Status.GRAB, Status.GRAB,
                                icon_name=ActionIconNames.GRAB,
                                checkable=True,
-                               icon_checked_color=get_theme().green,
+                               icon_checked_color=ThemeColor.GREEN,
                                tip='Grab',
                                toolbar=base_widget.toolbar,
                                before='execute')
         base_widget.add_action(Status.STOP, Status.STOP,
                                icon_name='stop_circle',
                                tip='Stop any current Grab on the selected detectors',
-                               icon_checked_color=get_theme().green,
+                               icon_checked_color=ThemeColor.GREEN,
                                checkable=True,
                                toolbar=base_widget.toolbar,
                                before='execute')

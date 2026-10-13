@@ -86,23 +86,15 @@ set_and_check_qt_backend_or_die(config)
 from pymodaq_gui.qt_utils import setLocale
 
 set_check_style()
-from pyqtgraph import setConfigOptions
 from qt_themes import get_theme
 from pymodaq_data.plotting.utils import PlotColors
+from pymodaq_gui.plotting.plot_theme import apply_plot_theme
 
 theme = get_theme(config('gui', 'style', 'theme')[0])
-colors = config['data', 'plotting', 'plot_colors']
-if theme.is_dark_theme():
-    setConfigOptions(foreground='d', background='k',)
-    foreground_color = (255, 255, 255)
-else:
-    setConfigOptions(foreground='k', background='w', )
-    foreground_color = (0, 0, 0)
-
-colors[0] = foreground_color
-config['data', 'plotting', 'plot_colors'] = colors
-config.save()
-
+# Plot colours for the configured theme; apply_theme updates them on theme change.
+# Prefer pymodaq_gui.plotting.plot_theme.plot_foreground(): this one is updated too,
+# but not the copies made by "from pymodaq_gui import foreground_color".
+foreground_color = apply_plot_theme(theme)
 
 pc = PlotColors()
 

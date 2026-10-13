@@ -30,6 +30,7 @@ from pymodaq_gui.utils.enums import MenuToolbarNames
 from pymodaq_gui.utils.widgets import QSpinBox_ro
 from pymodaq_gui.utils.app_worker import ExtensionWorker, SaverWorker
 from pymodaq_data.h5modules.data_saving import DataBundle
+from pymodaq_gui.utils.styling import ThemeColor
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -184,7 +185,7 @@ class DAQLogger(CustomExt):
                         "Grab/Stop all selected detectors's data and actuators's value",
                         checkable=True,
                         icon_checked=ActionIconNames.GRAB_STOP,
-                        icon_checked_color=self.get_theme().green)
+                        icon_checked_color=ThemeColor.GREEN)
         logger.debug('actions set')
 
         self.enable_workflow_actions(False)

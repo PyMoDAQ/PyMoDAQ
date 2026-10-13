@@ -1,7 +1,7 @@
 from qtpy import QtCore, QtWidgets
 from .label import LabelWithFont
 from .push import ToolButtonIcon
-from pymodaq_gui.utils.styling import create_icon, theme
+from pymodaq_gui.utils.styling import create_icon, ThemeColor
 
 
 class WidgetWithLabelTitle(QtWidgets.QWidget):
@@ -64,7 +64,7 @@ class WidgetWithLabelTitle(QtWidgets.QWidget):
         self.close_pb: QtWidgets.QToolButton = None
         if closable:
             self.close_pb = ToolButtonIcon('cancel', tip='Close this widget',
-                                           icon_color=theme.red, icon_size=icon_size)
+                                           icon_color=ThemeColor.RED, icon_size=icon_size)
             self.close_pb.clicked.connect(self.sig_close.emit)
             header_layout.addWidget(self.close_pb)
 

@@ -22,7 +22,8 @@ from pymodaq_gui.plotting.data_viewers.viewer import ViewerBase
 from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_gui.plotting.widgets import PlotWidget
 from pymodaq_gui.plotting.utils.plot_utils import Data0DWithHistory
-from pymodaq_gui import foreground_color
+from pymodaq_gui.qt_utils import theme_signaller
+from pymodaq_gui.plotting.plot_theme import plot_foreground, same_rgb
 from pymodaq_gui.utils.dock import Dock
 
 import numpy as np
@@ -45,9 +46,11 @@ class DataDisplayer(QObject):
     def __init__(self, plotitem: pyqtgraph.PlotItem, plot_colors=None):
         super().__init__()
         if plot_colors is None:
-            plot_colors = PLOT_COLORS
+            plot_colors = [dict(color=color) for color in PlotColors()]
         self._plotitem = plotitem
         self.colors = plot_colors
+        self._foreground = plot_foreground()
+        theme_signaller.theme_changed.connect(self._follow_plot_foreground)
         self._do_scatter = False
         self._do_xy = False
         self._plotitem.addLegend()
@@ -66,6 +69,16 @@ class DataDisplayer(QObject):
         axis = self._plotitem.getAxis('bottom')
         axis.setLabel(text='Samples', units='S')
 
+    @Slot(object)
+    def _follow_plot_foreground(self, _theme=None):
+        """Colours equal to the previous plot foreground colour (the first default one) take
+        the new one, for the curves created from now on: those displayed are restyled by
+        the plot."""
+        old, self._foreground = self._foreground, plot_foreground()
+        for ind, color in enumerate(self.colors):
+            if same_rgb(color['color'], old):
+                self.colors[ind] = dict(color, color=self._foreground)
+
     def _next_color_index(self) -> int:
         """Return the lowest color index not currently in use."""
         used = set(self._color_indices.values())
@@ -77,7 +90,7 @@ class DataDisplayer(QObject):
     def _add_label(self, label: str, units: str):
         color_idx = self._next_color_index()
         self._color_indices[label] = color_idx
-        color = self.colors[color_idx]
+        color = dict(self.colors[color_idx])  # copy: the colours are shared
         width = color.pop('width', self.linewidth)
         plot_item = pyqtgraph.PlotDataItem(pen=mkPen(width=width,
                                                      **color))
@@ -135,7 +148,7 @@ class DataDisplayer(QObject):
         symbol = 'o'
 
         for label, color_idx in self._color_indices.items():
-            color = self.colors[color_idx]
+            color = dict(self.colors[color_idx])  # copy: the colours are shared
             width = color.pop('width', self.linewidth)
 
             if self._do_scatter:
@@ -387,7 +400,7 @@ class View0D(ActionManager, QObject):
             state = self.is_action_checked('show_data_as_list')
         self.values_list.setVisible(state)
 
-    def add_data_displayer(self, displayer_name: str, plot_colors=PLOT_COLORS):
+    def add_data_displayer(self, displayer_name: str, plot_colors=None):
         self.other_data_displayers[displayer_name] = DataDisplayer(self.plotitem, plot_colors)
         self.connect_action('clear', self.other_data_displayers[displayer_name].clear_data)
 

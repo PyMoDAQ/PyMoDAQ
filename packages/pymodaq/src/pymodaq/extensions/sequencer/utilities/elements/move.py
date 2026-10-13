@@ -18,9 +18,9 @@ from pymodaq_gui.parameter import Parameter, ParameterTree
 from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltBase, SeqEltFactory, ElementError
 
 from pymodaq.extensions.sequencer.utilities.widget_with_toolbar import WidgetWithToolbar
-from qt_themes import get_theme
 
 from pymodaq_utils.categorizing import categorize_items, find_last_index
+from pymodaq_gui.utils.styling import ThemeColor
 
 ser_factory = SerializableFactory()
 
@@ -136,9 +136,9 @@ class MoveElt(SeqEltBase):
 
         base_widget.add_action('wait_move_done', 'WaitForMoveDone',
                                icon_name='hourglass',
-                               icon_color=get_theme().green,
+                               icon_color=ThemeColor.GREEN,
                                icon_checked='hourglass_disabled',
-                               icon_checked_color=get_theme().red,
+                               icon_checked_color=ThemeColor.RED,
                                checkable=True,
                                checked=not self._wait_move_done)
         base_widget.connect_action('wait_move_done', self.set_wait_move_done)

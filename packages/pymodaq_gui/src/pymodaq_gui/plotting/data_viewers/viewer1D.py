@@ -10,6 +10,7 @@ import pyqtgraph as pg
 import numpy as np
 
 import pymodaq_data.plotting.utils
+from pymodaq_data.plotting.utils import PlotColors
 from pymodaq_data.data import DataRaw, DataFromRoi, Axis, DataToExport, DataCalculated, DataWithAxes
 from pymodaq_gui.utils.widgets.widget_with_label_title import WidgetWithLabelTitle
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -26,7 +27,8 @@ from pymodaq_gui.managers.roi_viewer_manager import ROIViewerManager, roi_format
 from pymodaq_gui.plotting.utils.filter import Filter1DFromCrosshair, Filter1DFromRois
 from pymodaq_gui.plotting.widgets import PlotWidget
 from pymodaq_gui.plotting.data_viewers.viewer0D import Viewer0D
-from pymodaq_gui import foreground_color
+from pymodaq_gui.qt_utils import theme_signaller
+from pymodaq_gui.plotting.plot_theme import plot_foreground
 from pymodaq_gui.utils.dock import Dock
 from pymodaq_gui.plotting.utils.plot_utils import DetachablePanel
 
@@ -44,7 +46,7 @@ class DataDisplayer(QObject):
     updated_item = Signal(list)
     labels_changed = Signal(list)
 
-    def __init__(self, plotitem: pg.PlotItem, flip_axes=False, plot_colors=PLOT_COLORS):
+    def __init__(self, plotitem: pg.PlotItem, flip_axes=False, plot_colors=None):
         super().__init__()
         self._doxy = False
         self._do_sort = False
@@ -59,7 +61,16 @@ class DataDisplayer(QObject):
         self._overlay_items: List[pg.PlotDataItem] = []
         self._axis: Axis = None
         self._data: DataWithAxes = None
-        self._plot_colors = plot_colors
+        # The default colours start with the plot foreground colour, which follows the theme
+        self._default_colors = plot_colors is None
+        self._plot_colors = PlotColors() if plot_colors is None else plot_colors
+        theme_signaller.theme_changed.connect(self._update_default_colors)
+
+    @Slot(object)
+    def _update_default_colors(self, _theme=None):
+        """For the curves created from now on, those displayed are restyled by the plot"""
+        if self._default_colors:
+            self._plot_colors = PlotColors()
 
     @property
     def Ndata(self):
@@ -288,8 +299,8 @@ class View1D(ActionManager, QObject):
         self.lineout_viewers: Viewer0D = None
         self.crosshair: Crosshair = None
 
-        self.roi_target = pg.InfiniteLine(pen=foreground_color)
-        self.ROIselect = LinearROI(pen=foreground_color)
+        self.roi_target = pg.InfiniteLine(pen=plot_foreground())
+        self.ROIselect = LinearROI(pen=plot_foreground())
 
         self.setup_actions()
 
@@ -336,7 +347,7 @@ class View1D(ActionManager, QObject):
         self.roi_manager.title = value
         self.roi_widget.set_title(value)
 
-    def add_data_displayer(self, displayer_name: str, plot_colors=PLOT_COLORS):
+    def add_data_displayer(self, displayer_name: str, plot_colors=None):
         self.other_data_displayers[displayer_name] = DataDisplayer(self.plotitem,
                                                                    self.flip_axes,
                                                                    plot_colors)

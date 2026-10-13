@@ -12,9 +12,80 @@ from qtpy import QtCore, QtGui, QtWidgets
 from pymodaq_gui.resources.material_icons import MaterialIcon
 from pymodaq_gui.utils.widgets.painter_utils import draw_shape
 from pymodaq_utils.config import GlobalConfig as Config
+from pymodaq_utils.enums import StrEnum
 
 config = Config()
+# Theme configured at startup. Kept for backward compatibility: code that needs
+# the theme actually applied to the application (it can change at runtime, see
+# pymodaq_gui.qt_utils.apply_theme) should call get_current_theme().
 theme = qt_themes.get_theme(config('gui', 'style', 'theme')[0])
+
+class ThemeColor(StrEnum):
+    """The colours of a qt_themes theme, by name.
+
+    Pass these (or the equivalent plain strings, e.g. ``'green'``) wherever a colour
+    should follow the theme, e.g. ``add_action(..., icon_color=ThemeColor.GREEN)``:
+    they are resolved against the theme applied when the icon is (re)built, so they
+    follow a theme change. A QColor or a hex string is a fixed colour.
+
+    Members behave as plain ``str`` (``ThemeColor.GREEN == 'green'``).
+    """
+    # hues
+    MAGENTA = 'magenta'
+    RED = 'red'
+    ORANGE = 'orange'
+    YELLOW = 'yellow'
+    GREEN = 'green'
+    CYAN = 'cyan'
+    BLUE = 'blue'
+    # text, from strongest to most muted
+    TEXT = 'text'
+    SUBTEXT1 = 'subtext1'
+    SUBTEXT0 = 'subtext0'
+    OVERLAY2 = 'overlay2'
+    OVERLAY1 = 'overlay1'
+    OVERLAY0 = 'overlay0'
+    # backgrounds, from lightest to darkest surface
+    SURFACE2 = 'surface2'
+    SURFACE1 = 'surface1'
+    SURFACE0 = 'surface0'
+    BASE = 'base'
+    MANTLE = 'mantle'
+    CRUST = 'crust'
+    # accents
+    PRIMARY = 'primary'
+    SECONDARY = 'secondary'
+
+
+# Lookup order of as_theme_role, hues first: when a colour matches several roles
+# (a theme's primary is often also its blue), the hue is the likely intent.
+THEME_COLOR_ROLES = tuple(ThemeColor.values())
+
+
+def get_current_theme() -> Union[qt_themes.Theme, None]:
+    """Return the theme applied to the running QApplication, else the configured one."""
+    current = get_theme() if QtWidgets.QApplication.instance() is not None else None
+    return current if current is not None else theme
+
+
+def as_theme_role(color: Union[QtGui.QColor, str, None]) -> Union[QtGui.QColor, str, None]:
+    """Return the :class:`ThemeColor` of the current theme equal to *color*, else *color*.
+
+    Compatibility shim: colours that follow the theme should be given by name
+    (:class:`ThemeColor`). Code that passes a colour already resolved from the theme
+    (``get_theme().green``) gets it mapped back to its name, so that it still follows
+    the theme. Strings and colours that are not part of the theme are returned unchanged.
+    """
+    if not isinstance(color, QtGui.QColor):
+        return color
+    current = get_current_theme()
+    if current is None:
+        return color
+    for role in THEME_COLOR_ROLES:
+        role_color = getattr(current, role, None)
+        if isinstance(role_color, QtGui.QColor) and role_color == color:
+            return ThemeColor(role)
+    return color
 
 def make_shape_icon(
     shape: str = "circle",
@@ -109,10 +180,12 @@ def create_font(font_name=None, font_size=None, isbold=False, isitalic=False,
 
 
 def create_color(icon_color: Union[QtGui.QColor, str]) -> Union[QtGui.QColor, None]:
+    """Return a QColor from a QColor, a theme role name (resolved against the
+    theme currently applied, see get_current_theme) or any string QColor accepts."""
     if icon_color is not None:
         if isinstance(icon_color, str):
             try:
-                icon_color = theme.__getattribute__(icon_color)
+                icon_color = getattr(get_current_theme(), icon_color)
             except AttributeError:
                 icon_color = QtGui.QColor(icon_color)
                 if not icon_color.isValid():

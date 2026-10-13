@@ -23,6 +23,7 @@ from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_gui.parameter import ParameterTree
 from pymodaq_gui.utils.splash import get_splash_sc
+from pymodaq_gui.utils.styling import ThemeColor
 
 logger = set_logger(get_module_name(__file__))
 config = Config()
@@ -393,19 +394,19 @@ class CustomApp(QObject, ActionManager, ParameterManager):
 
         self.add_action(WorkFlowActions.START, 'Start Workflow', 'motion_play',
                         "Start the workflow",
-                        menu='actions', icon_color=self.get_theme().green)
+                        menu='actions', icon_color=ThemeColor.GREEN)
         self.add_action(WorkFlowActions.STOP, 'Stop Workflow', 'stop_circle', "Stop the workflow",
-                        menu='actions', icon_color=self.get_theme().red)
+                        menu='actions', icon_color=ThemeColor.RED)
         self.add_action(WorkFlowActions.PAUSE, 'Pause Workflow', 'pause_circle', "Pause/resume the workflow",
                         checkable=True, menu='actions',
-                        icon_checked_color=self.get_theme().orange)
+                        icon_checked_color=ThemeColor.ORANGE)
 
         self.toolbar.addSeparator()
         self.add_action(WorkFlowActions.LOG, 'Do Logging', 'home_storage',
                         tip='Log all data generated within the workflow',
                         menu='actions',
-                        icon_checked_color=self.get_theme().green,
-                        icon_color=self.get_theme().red,
+                        icon_checked_color=ThemeColor.GREEN,
+                        icon_color=ThemeColor.RED,
                         checkable=True,
                         checked=True)
         self.toolbar.addSeparator()

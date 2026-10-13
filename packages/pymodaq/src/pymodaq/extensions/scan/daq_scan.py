@@ -24,7 +24,7 @@ from pymodaq.control_modules.enums import MoveType
 from pymodaq.utils.custom_ext import CustomExt
 from pymodaq.utils.managers.modules import ModuleType
 from pymodaq_data.plotting.utils import PlotColors
-from pymodaq_gui.utils.styling import color_to_rgba
+from pymodaq_gui.utils.styling import color_to_rgba, ThemeColor
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config
@@ -464,13 +464,13 @@ class DAQScan(CustomExt):
                         "Show/hide the General settings panel (Time Flow, Scan options, Save..."
                         " - double-click its title bar to detach it into its own window)",
                         checkable=True, checked=config('pymodaq', 'scan', 'show_general_settings'),
-                        icon_checked_color=self.get_theme().green,
+                        icon_checked_color=ThemeColor.GREEN,
                         menu='actions', before=WorkFlowActions.LOG)
         self.add_action('show_live_plots', 'Show Live Plots', 'bid_landscape_disabled',
                         "Show/hide the Live Plots panel (double-click its title bar to detach "
                         "it into its own window)",
                         checkable=True, checked=True, icon_checked='bid_landscape',
-                        icon_checked_color=self.get_theme().green,
+                        icon_checked_color=ThemeColor.GREEN,
                         menu='actions', before=WorkFlowActions.LOG)
 
     def connect_things(self):

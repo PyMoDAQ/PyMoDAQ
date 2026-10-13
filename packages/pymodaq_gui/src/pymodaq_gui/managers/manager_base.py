@@ -6,7 +6,7 @@ from qtpy.QtCore import Qt, QModelIndex
 from qtpy import QtWidgets, QtCore, QtGui
 from qtpy.QtGui import QKeySequence
 
-from pymodaq_gui.utils.styling import create_icon
+from pymodaq_gui.utils.styling import create_icon, ThemeColor
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq.utils.custom_ext import CustomExt
@@ -271,35 +271,35 @@ class ManagerBase(CustomExt):
                         f'New {self.entry_type.capitalize()}', 'add_circle',
                         tip=f'Create a new {self.entry_type} file ("Ctrl+N")',
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_N),
-                        icon_color=self.get_theme().green)
+                        icon_color=ThemeColor.GREEN)
         self.add_action(ManagerActions.DELETE,
                         f'Delete {self.entry_type.capitalize()}', 'do_not_disturb_on',
-                        icon_color=self.get_theme().red,
+                        icon_color=ThemeColor.RED,
                         tip=f'Delete the current {self.entry_type.capitalize()} ("Ctrl+Delete")',
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Delete))
         self.add_action(ManagerActions.SAVE,
                         f'Save {self.entry_type.capitalize()}', 'save_as',
-                        icon_color=self.get_theme().blue,
+                        icon_color=ThemeColor.BLUE,
                         tip=f'Save/Update the current {self.entry_type.capitalize()} ("Ctrl+S")',
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_S))
         self.add_action(ManagerActions.RELOAD,
                         f'Reload {self.entry_type.capitalize()}', 'refresh',
                         tip=f'Reload the current {self.entry_type} file ("Ctrl+Shift+R")',
-                        icon_color=self.get_theme().orange,
+                        icon_color=ThemeColor.ORANGE,
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_R))
         self.add_action(ManagerActions.EXECUTE,
                         f'Execute {self.entry_type.capitalize()}', 'start',
-                        icon_color=self.get_theme().magenta,
+                        icon_color=ThemeColor.MAGENTA,
                         checkable=self.execute_action_checkable,
                         icon_checked_color=QtGui.QColor(255, 0, 201),
                         tip=f'Execute the current {self.entry_type} file ("Ctrl+Shift+E")',
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_E))
         self.add_action(ManagerActions.OPEN, f"{self.entry_type.capitalize()} Manager",
                         self.icon_name,
-                        icon_color=self.get_theme().blue,
+                        icon_color=ThemeColor.BLUE,
                         tip=f'Open the {self.entry_type.capitalize()} Manager',
                         checkable=True,
-                        icon_checked_color=self.get_theme().cyan,
+                        icon_checked_color=ThemeColor.CYAN,
                         auto_toolbar=False, auto_menu=False)
 
     def get_external_toolbar_menu(

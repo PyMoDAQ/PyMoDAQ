@@ -9,7 +9,7 @@ from pymodaq_gui.managers.action_manager import QAction
 from pymodaq_gui.utils.custom_app import CustomApp
 from pymodaq_gui.utils import Dock
 from pymodaq_gui.utils.widgets import LabelWithFont
-from pymodaq_gui.utils.styling import create_font, create_icon
+from pymodaq_gui.utils.styling import create_font, create_icon, ThemeColor
 from pymodaq_gui.plotting.utils.plot_utils import DetachablePanel
 from pymodaq_gui.utils.widgets.widget_with_label_title import WidgetWithLabelTitle
 from pymodaq_utils.utils import ThreadCommand
@@ -107,8 +107,8 @@ class ControlModuleUI(CustomApp):
         """
         self._init_action_name = action_name
         self.add_action(action_name, display_name, self.INIT_ICON, checkable=True,
-                        tip=tip, icon_color=self.get_theme().red,
-                        icon_checked_color=self.get_theme().green,
+                        tip=tip, icon_color=ThemeColor.RED,
+                        icon_checked_color=ThemeColor.GREEN,
                         toolbar=toolbar)
 
     @property
@@ -124,7 +124,7 @@ class ControlModuleUI(CustomApp):
             The toolbar to add the action to. If None, uses default toolbar.
         """
         self.add_action('show_settings', 'Show Settings', 'settings', "Show Settings",
-                        checkable=True, icon_checked_color=self.get_theme().green,
+                        checkable=True, icon_checked_color=ThemeColor.GREEN,
                         toolbar=toolbar)
 
     def update_init_icon(self, initialized: bool, action_name: str = 'init') -> None:

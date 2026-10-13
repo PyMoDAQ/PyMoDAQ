@@ -11,7 +11,7 @@ from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 from pyqtgraph import ROI as pgROI
 
 import pymodaq_data
-from pymodaq_gui import foreground_color
+from pymodaq_gui.plotting.plot_theme import follow_plot_theme, plot_foreground
 from pymodaq_gui.plotting.items.roi_sync import roi_format
 from pymodaq_gui.plotting.utils.lineout import Lineouts
 from pymodaq_gui.plotting.utils.plot_utils import ViewBox
@@ -40,6 +40,7 @@ from pymodaq_gui.plotting.utils.filter import Filter2DFromCrosshair, Filter2DFro
 from pymodaq_gui.plotting.utils.plot_utils import make_dashed_pens
 from pymodaq_gui.utils.dock import Dock
 from pymodaq_gui.plotting.utils.plot_utils import DetachablePanel
+from pymodaq_gui.utils.styling import ThemeColor
 
 logger = set_logger(get_module_name(__file__))
 
@@ -87,6 +88,7 @@ def histogram_factory(image_item=None, gradient='red'):
         raise KeyError(f'Possible gradient are {Gradients} not {gradient}')
 
     histo = pg.HistogramLUTWidget()
+    follow_plot_theme(histo)
     if image_item is not None:
         histo.setImageItem(image_item)
 
@@ -469,11 +471,11 @@ class View2D(ActionManager, QtCore.QObject):
 
         if data_distribution.name == 'uniform':
             self.roi_target = pgROI(pos=(0, 0), size=(20, 20), movable=False, rotatable=False,
-                                    resizable=False, pen=foreground_color)
+                                    resizable=False, pen=plot_foreground())
             self.plotitem.addItem(self.roi_target)
 
         elif data_distribution.name == 'spread':
-            self.roi_target = Crosshair(self.image_widget, pen=foreground_color)
+            self.roi_target = Crosshair(self.image_widget, pen=plot_foreground())
         self.roi_target.setVisible(False)
 
     def show_roi_target(self, show=True):
@@ -571,7 +573,7 @@ class View2D(ActionManager, QtCore.QObject):
 
         self.add_action('link_lineouts', 'Link Lineouts', 'link', tip='Link Lineouts',
                         checkable=True, checked=True, visible=False,
-                        icon_color=self.get_theme().red, icon_checked_color=self.get_theme().green)
+                        icon_color=ThemeColor.RED, icon_checked_color=ThemeColor.GREEN)
 
         self.add_action('isocurve', 'IsoCurve', 'altitude', tip='Show/Hide Isocurve', checkable=True)
         self.add_action('aspect_ratio', 'Aspect Ratio', 'aspect_ratio', tip='Fix Aspect Ratio', checkable=True, checked=True)

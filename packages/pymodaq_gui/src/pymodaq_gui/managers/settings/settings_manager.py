@@ -27,6 +27,7 @@ from pymodaq_gui.managers.settings.utils import (
 
 
 from pymodaq_gui.managers.manager_base import ManagerBase, ManagerActions
+from pymodaq_gui.utils.styling import ThemeColor
 
 
 if TYPE_CHECKING:
@@ -217,18 +218,18 @@ class SettingsManager(ManagerBase):
                         toolbar='actions')
 
         self.add_action(EntryActions.ADD, 'Add', 'arrow_circle_right', toolbar='move',
-                        tip='Add the current Parameter item', icon_color=self.get_theme().green,
+                        tip='Add the current Parameter item', icon_color=ThemeColor.GREEN,
                         )
         self.add_action(EntryActions.REMOVE, 'Remove', 'arrow_circle_left', toolbar='move',
                         tip='Delete the current Configuration item ("Del")',
-                        icon_color=self.get_theme().red,
+                        icon_color=ThemeColor.RED,
                         shortcut=Qt.Key.Key_Delete)
         self.add_action(EntryActions.UP, 'Move Up', 'arrow_circle_up', toolbar='move',
                         tip='Move UP the current Configuration item ("Ctrl+Up")',
-                        icon_color=self.get_theme().blue,
+                        icon_color=ThemeColor.BLUE,
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Up))
         self.add_action(EntryActions.DOWN, 'Move Down', 'arrow_circle_down', toolbar='move',
-                        icon_color=self.get_theme().orange,
+                        icon_color=ThemeColor.ORANGE,
                         tip='Move Down the current Configuration item ("Ctrl+Down")',
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Down))
         self.toolbar.addSeparator()
