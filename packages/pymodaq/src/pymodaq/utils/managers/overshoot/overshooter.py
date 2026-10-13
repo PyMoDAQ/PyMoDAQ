@@ -78,9 +78,7 @@ class Overshooter(ManagerBase):
 
         self.show_hide_module_manager_settings()
 
-        self.experiment_manager.applied_entry.connect(self.do_things_after_experiment_set)
-        if self.experiment_manager.entry_applied:
-            self.do_things_after_experiment_set(self.experiment_manager.entry)
+        # CustomExt.__init__ already connects do_things_after_experiment_set to the experiment manager
         self.state_manager.new_entry.connect(self.update_states)
         self.state_manager.deleted_entry.connect(self.update_states)
 
