@@ -10,6 +10,7 @@ from qtpy import QtWidgets
 
 from pymodaq_gui.parameter.utils import iter_children_params
 from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_utils.warnings import deprecation_msg
 from pymodaq_gui.messenger import dialog
 
 from pymodaq_gui.parameter import Parameter
@@ -114,7 +115,7 @@ class ExperimentManager(ManagerBase):
                 else:
                     return False
 
-            plugins_sorted, plugin_list_message = self.list_control_modules_from_preset()
+            plugins_sorted, plugin_list_message = self.list_control_modules_from_experiment()
 
             self.show_subentries(plugin_list_message, title=f'Loading Experiment: {self.entry}')
 
@@ -167,7 +168,7 @@ class ExperimentManager(ManagerBase):
             self.settings = entry
         else:
 
-            self.settings = Parameter.create(title='Preset', name='Preset', type='group',
+            self.settings = Parameter.create(title='Experiment', name='Preset', type='group',
                                              children=self.params)
 
     def setup_actions(self):
@@ -175,17 +176,22 @@ class ExperimentManager(ManagerBase):
         pass
 
     def connect_things(self):
-        self.new_entry.connect(self.remove_preset_related_files)
-        self.deleted_entry.connect(self.remove_preset_related_files)
+        self.new_entry.connect(self.remove_experiment_related_files)
+        self.deleted_entry.connect(self.remove_experiment_related_files)
+
+    @staticmethod
+    def remove_experiment_related_files(experiment_name: str):
+        """Remove the entries of the other managers (and the dock layout) attached to an experiment"""
+        for folder in (get_set_state_path(experiment_name), get_set_overshoot_path(experiment_name)):
+            shutil.rmtree(folder, ignore_errors=True)
+        get_set_roi_manager_path().joinpath(f'{experiment_name}.rois').unlink(missing_ok=True)
+        get_set_layout_path().joinpath(f'{experiment_name}.dock').unlink(missing_ok=True)
+        get_set_remote_path().joinpath(experiment_name).unlink(missing_ok=True)
 
     @staticmethod
     def remove_preset_related_files(preset_name: str):
-        """Remove the entries of the other managers (and the dock layout) attached to an experiment"""
-        for folder in (get_set_state_path(preset_name), get_set_overshoot_path(preset_name)):
-            shutil.rmtree(folder, ignore_errors=True)
-        get_set_roi_manager_path().joinpath(f'{preset_name}.rois').unlink(missing_ok=True)
-        get_set_layout_path().joinpath(f'{preset_name}.dock').unlink(missing_ok=True)
-        get_set_remote_path().joinpath(preset_name).unlink(missing_ok=True)
+        deprecation_msg('remove_preset_related_files is deprecated, use remove_experiment_related_files')
+        ExperimentManager.remove_experiment_related_files(preset_name)
 
 
     @staticmethod
@@ -201,6 +207,10 @@ class ExperimentManager(ManagerBase):
         return plugins_sorted
 
     def list_control_modules_from_preset(self) -> tuple[list[list[PluginInfo]], list[str]]:
+        deprecation_msg('list_control_modules_from_preset is deprecated, use list_control_modules_from_experiment')
+        return self.list_control_modules_from_experiment()
+
+    def list_control_modules_from_experiment(self) -> tuple[list[list[PluginInfo]], list[str]]:
         # ################################################################
 
         # ##### sort plugins by IDs and within the same IDs by Master and Slave status
