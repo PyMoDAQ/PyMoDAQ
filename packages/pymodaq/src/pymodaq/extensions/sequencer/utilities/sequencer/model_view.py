@@ -26,7 +26,7 @@ from ..yaml_utils import PrettyListDumper
 
 
 if TYPE_CHECKING:
-    from pymodaq_scripting.devices import Dashboard
+    from pymodaq.dashboard import DashBoard
     from pymodaq.extensions.sequencer.utilities.sequencer.sequence import Sequence
 
 seq_factory = SeqEltFactory()
@@ -148,7 +148,7 @@ class SequenceWidgetDelegate(QtWidgets.QStyledItemDelegate):
 class SequenceTreeModel(QtCore.QAbstractItemModel):
     def __init__(self, parent_sequence: 'Sequence' = None,
                  parent: QtCore.QObject = None,
-                 dashboard: 'Dashboard' = None
+                 dashboard: 'DashBoard' = None
                  ):
 
         super().__init__(parent)
@@ -159,7 +159,7 @@ class SequenceTreeModel(QtCore.QAbstractItemModel):
         self.parent_sequence = parent_sequence
 
     @property
-    def dashboard(self) -> 'Dashboard':
+    def dashboard(self) -> 'DashBoard':
         return self._dashboard
 
     def index(self, row, column, parent=QModelIndex()):
@@ -446,7 +446,7 @@ class SequenceTreeModel(QtCore.QAbstractItemModel):
 class SequenceTreeView(QtWidgets.QTreeView, ActionManager):
     """
     """
-    def __init__(self, parent_sequence: 'Sequence' = None, dashboard: 'Dashboard' = None, parent=None):
+    def __init__(self, parent_sequence: 'Sequence' = None, dashboard: 'DashBoard' = None, parent=None):
         QtWidgets.QTreeView.__init__(self, parent)
         ActionManager.__init__(self)
 
@@ -458,7 +458,7 @@ class SequenceTreeView(QtWidgets.QTreeView, ActionManager):
         self.ind_elt = 0
 
     @property
-    def dashboard(self) -> 'Dashboard':
+    def dashboard(self) -> 'DashBoard':
         return self._dashboard
 
     def model(self) -> SequenceTreeModel:
