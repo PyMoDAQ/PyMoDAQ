@@ -353,3 +353,19 @@ def test_windows_only_code_is_not_reported_for_a_windows_only_package(tmp_path):
     assert [f for f in pr.check_python_code(package) if f.code == 'PMQ317']
     plugin.write_text("class DAQ_Move_Foo:\n    pass\n")
     assert [f for f in pr.check_python_code(package) if f.code == 'PMQ317']
+
+
+def test_windows_only_code_is_fine_in_the_modules_used_by_windows_only_instruments_only(tmp_path):
+    package = tmp_path / 'pymodaq_plugins_foo'
+    (package / 'hardware').mkdir(parents=True)
+    (package / 'daq_move_plugins').mkdir()
+    for name in ('kinesis', 'shared', 'other'):
+        (package / 'hardware' / f'{name}.py').write_text('PATH = "C:\\\\\\\\Program Files\\\\\\\\Vendor"\n')
+    (package / 'daq_move_plugins' / 'daq_move_Win.py').write_text(
+        "from pymodaq_plugins_foo.hardware.kinesis import PATH\nfrom ..hardware import shared\n"
+        "class DAQ_Move_Win:\n    supported_platforms = ('win32',)\n")
+    (package / 'daq_move_plugins' / 'daq_move_Any.py').write_text(
+        "from pymodaq_plugins_foo.hardware.other import PATH\nfrom pymodaq_plugins_foo.hardware import shared\n"
+        "class DAQ_Move_Any:\n    pass\n")
+    reported = {f.path.name for f in pr.check_python_code(package) if f.code == 'PMQ317'}
+    assert reported == {'shared.py', 'other.py'}
