@@ -1,6 +1,7 @@
 """Tests of the plugin testing harness (pymodaq.utils.plugin_testing), run against small fake plugins, the mock plugin
 of PyMoDAQ and the deprecated import path of the pytest mixin"""
 import importlib
+import threading
 
 import numpy as np
 import pytest
@@ -25,6 +26,17 @@ class FakeController:
     def move_at(self, value: float):
         self.calls.append(('move_at', value))
         self.position = value
+
+    def home(self, callback=None):
+        """Blocking homing without callback; with one, it returns at once and the callback is called by a thread of
+        the driver when the reference has been found"""
+        def reached():
+            self.move_at(0.)
+            callback()
+        if callback is None:
+            self.move_at(0.)
+        else:
+            threading.Timer(0.05, reached).start()
 
     def acquire(self, npts: int = 10) -> np.ndarray:
         return np.linspace(0., 1., npts)
@@ -138,6 +150,13 @@ class TestActuator:
         assert pos.value('mm') == pytest.approx(1.5, abs=0.01)
 
     def test_move_home(self, actuator):
+        move_abs_and_wait(actuator, 3.)
+        assert move_home_and_wait(actuator).value('mm') == pytest.approx(0., abs=0.01)
+
+    def test_move_home_asynchronous(self, actuator, monkeypatch):
+        # the driver starts the homing and calls back (from its own thread) when the reference has been found
+        monkeypatch.setattr(DAQ_Move_Fake, 'move_home',
+                            lambda self: self.controller.home(callback=lambda *args: self.move_done()))
         move_abs_and_wait(actuator, 3.)
         assert move_home_and_wait(actuator).value('mm') == pytest.approx(0., abs=0.01)
 
