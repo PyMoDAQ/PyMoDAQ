@@ -135,9 +135,17 @@ class Finding:
     def location(self) -> str:
         if self.path is None:
             return ''
+        name = self._path_in_package()
         if not self.line:
-            return self.path.name
-        return f'{self.path.name}:{self.line}' + (f':{self.column}' if self.column else '')
+            return name
+        return f'{name}:{self.line}' + (f':{self.column}' if self.column else '')
+
+    def _path_in_package(self) -> str:
+        """Path of the file from the folder of the plugin package (``hardware/driver.py``), its name if outside"""
+        for parent in self.path.parents:
+            if parent.name.startswith('pymodaq_plugins_'):
+                return self.path.relative_to(parent).as_posix()
+        return self.path.name
 
     def format(self, color: bool = False) -> str:
         """Text of the finding, with colors for a terminal if ``color``"""
