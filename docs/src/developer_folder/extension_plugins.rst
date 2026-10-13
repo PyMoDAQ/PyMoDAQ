@@ -42,7 +42,8 @@ extension.
 them, and reports the codes PMQ330 to PMQ338: missing ``EXTENSION_NAME`` or ``CLASS_NAME``, a class that does not derive
 from ``CustomExt``, deprecated imports and hooks, managers created by the extension instead of those of the Dashboard, an
 ``__init__`` that does not take ``(parent, dashboard)`` or never calls ``self.setup_ui()``, a ``_quit_fun`` missing or
-never returning ``True`` (the extension is then never closed by ``quit_fun``).
+never returning ``True``. ``_quit_fun`` is the guard of ``quit_fun``: return ``False`` while something is left running
+(threads, workers...) and ``True`` when everything is released, otherwise the extension is never closed.
 
 To check an extension while you write it, without the rest of the package, or an extension of PyMoDAQ itself, use the
 ``check_extension`` command on a file or a folder::
