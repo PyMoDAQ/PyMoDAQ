@@ -139,3 +139,17 @@ def test_stop_must_be_reimplemented():
 def test_app_toolbars():
     with loaded_extension(RecordingExt) as (dashboard, extension):
         assert extension.get_app_toolbars() == [extension.toolbar]
+
+
+def test_core_extensions_keep_the_signature_of_do_things_after_experiment_set():
+    """An override that drops show_dashboard makes the base class call fail for the callers giving it"""
+    import inspect
+    from pymodaq.extensions.console import Console
+    from pymodaq.extensions.scan.daq_scan import DAQScan
+    from pymodaq.extensions.ramping.ramping import RampExtension
+    from pymodaq.extensions.daq_logger.daq_logger import DAQLogger
+    from pymodaq.extensions.sequencer.sequencer import Sequencer
+
+    for extension_class in (Console, DAQScan, RampExtension, DAQLogger, Sequencer):
+        parameters = inspect.signature(extension_class.do_things_after_experiment_set).parameters
+        assert 'show_dashboard' in parameters, extension_class.__name__

@@ -3,7 +3,7 @@
 from pymodaq_gui.utils.widgets.table import SpinBoxDelegate
 from pymodaq_gui.parameter.utils import get_widget_from_tree
 from pymodaq_gui.plotting.data_viewers.viewer2D import Viewer2D
-from pymodaq.utils import gui_utils as gutils
+from pymodaq_gui import utils as gutils
 from pymodaq_gui.utils.dock import Dock
 from pymodaq_gui.parameter import ParameterTree, Parameter
 from pymodaq_gui.parameter.pymodaq_ptypes.tableview import TableViewCustom
@@ -81,7 +81,7 @@ class ViewerPointList(QObject):
 
 
 if __name__ == '__main__':
-    from pymodaq.utils.gui_utils import DockArea
+    from pymodaq_gui.utils import DockArea
     from pymodaq.utils.data import Axis, DataFromPlugins
     import sys
     import numpy as np
@@ -96,7 +96,7 @@ if __name__ == '__main__':
     Ny = 200
     x = (np.linspace(0, Nx - 1, Nx) + 100) / 2
     y = (np.linspace(0, Ny - 1, Ny) - 10) * 2
-    from pymodaq.utils.math_utils import gauss2D
+    from pymodaq_utils.math_utils import gauss2D
 
     data_red = 3 * gauss2D(x, np.mean(x), (np.max(x)-np.min(x)) / 5, y, np.mean(y), (np.max(y)-np.min(y)) / 5, 1)
     data_red += np.random.random(data_red.shape)
