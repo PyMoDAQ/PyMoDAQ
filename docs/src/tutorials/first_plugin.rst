@@ -116,7 +116,8 @@ required (see :ref:`plugin_contract`).
            self.move_abs(self.current_value + value)
 
        def move_home(self):
-           self.move_abs(DataActuator(data=0., units=self.axis_unit))
+           self.controller.move_to(0.)  # a real stage runs its homing here
+           self.move_done()  # signal the end of the homing (see move_home)
 
        def stop_motion(self):
            pass  # call the stop command of the controller here if it has one

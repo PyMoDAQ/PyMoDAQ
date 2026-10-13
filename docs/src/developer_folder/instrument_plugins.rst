@@ -397,6 +397,8 @@ The static rules above list what is left to do.
 .. _hardware_settings:
 
 
+.. _value_reached:
+
 Value Reached?
 --------------
 
@@ -424,6 +426,44 @@ Here is a snippet of this calculation:
   where all quantities holds an information about their units, for instance `epsilon` could be expressed
   in *µm* (micron) (controller units) while _current_value (related to what is printed on the UI) could be expressed
   in *mm*. This feature is available naturally by using the PyMoDAQ DataManagement ecosystem with units compatibility.
+
+.. _move_home:
+
+Moving to the home position
+---------------------------
+
+The *Find Home* button of a :py:class:`DAQ_Move<pymodaq.control_modules.daq_move.DAQ_Move>` calls the ``move_home``
+method of the plugin. Its purpose is to let the actuator look for a reference (a physical limit, a switch, an index of
+the encoder...) so that the controller knows this position is the *home* (zero) position. Contrary to ``move_abs`` and
+``move_rel``, PyMoDAQ does not know the position to reach: there is no target, no ``epsilon`` check, no polling and no
+timeout after a ``move_home``. The plugin is therefore responsible for telling when the homing is over. Until it does,
+the UI stays in the *Moving* state and the displayed value is not refreshed.
+
+To do so, the plugin calls ``self.move_done()`` once the homing is finished. This method reads the position of the
+actuator using your ``get_actuator_value`` method, emits the ``move_done_signal`` with it (this updates the displayed
+value and the *Moving* state of the UI) and flags the move as done. The way to do it depends on the controller:
+
+* **blocking homing**: the controller method returns when the reference has been found. Call ``self.move_done()`` right
+  after it:
+
+  .. code-block:: python
+
+      def move_home(self):
+          self.controller.home()  # returns when the reference has been found
+          self.move_done()  # reads get_actuator_value() and signals the end of the move
+
+* **asynchronous homing**: the controller starts the homing and returns immediately, and notifies the end of it with a
+  callback (or an event, a status to poll...). Register a callback calling ``self.move_done()``. Note that the callback
+  may be called from a thread of the driver, make sure the controller can be queried from there:
+
+  .. code-block:: python
+
+      def move_home(self):
+          # the callback receives arguments from the driver, that must not be given to move_done
+          self.controller.home(callback=lambda *args: self.move_done())
+
+If the homing takes long, you can refresh the value displayed meanwhile with ``self.emit_value(position)``, see
+:ref:`DAQ_Move specific commands<daq_move_commands>`.
 
 Hardware Settings
 -----------------
@@ -977,6 +1017,8 @@ variables:
   * *options*: the object is a dictionary defining the options to modify
   * *childAdded*: the object is a dictionary generated using SaveState of a given Parameter
 
+
+.. _daq_move_commands:
 
 DAQ_Move specific commands
 **************************

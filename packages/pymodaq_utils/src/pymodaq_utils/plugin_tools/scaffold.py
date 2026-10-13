@@ -58,6 +58,8 @@ class $class_name(DAQ_Move_base):
       * the instrument (and models) this plugin was tested with
       * the drivers or libraries to install and where to find them
       * the specific attributes and parameters (see ``params``)
+
+    Documentation of the methods of a plugin: https://pymodaq.cnrs.fr/en/latest/developer_folder/instrument_plugins.html
     """
     is_multiaxes = False  # TODO set to True if the controller drives several axes
     _axis_names = ['Axis1']  # TODO list (or dict name -> index) of the axes of the controller
@@ -92,6 +94,9 @@ class $class_name(DAQ_Move_base):
         ----------
         param: Parameter
             A given parameter (within settings) whose value has been changed by the user
+
+        See
+        https://pymodaq.cnrs.fr/en/latest/developer_folder/instrument_plugins.html#hardware-settings
         """
         # TODO apply the changes on the controller, for instance:
         # if param.name() == 'a_parameter_you_added_in_params':
@@ -128,7 +133,11 @@ class $class_name(DAQ_Move_base):
         raise NotImplementedError  # TODO remove this line and close the communication with the controller
 
     def move_abs(self, value: DataActuator):
-        """Move the actuator to the absolute target defined by value"""
+        """Move the actuator to the absolute target defined by value
+
+        PyMoDAQ then waits for the target to be reached at ``epsilon``, see
+        https://pymodaq.cnrs.fr/en/latest/developer_folder/instrument_plugins.html#value-reached
+        """
         value = self.check_bound(value)  # if the user checked the bounds, they are applied here
         self.target_value = value
         value = self.set_position_with_scaling(value)  # apply the scaling if the user specified one
@@ -137,7 +146,11 @@ class $class_name(DAQ_Move_base):
         self.emit_status(ThreadCommand('Update_Status', ['Some info you want to log']))
 
     def move_rel(self, value: DataActuator):
-        """Move the actuator to the relative target defined by value"""
+        """Move the actuator to the relative target defined by value
+
+        PyMoDAQ then waits for the target to be reached at ``epsilon``, see
+        https://pymodaq.cnrs.fr/en/latest/developer_folder/instrument_plugins.html#value-reached
+        """
         value = self.check_bound(self.current_value + value) - self.current_value
         self.target_value = value + self.current_value
         value = self.set_position_relative_with_scaling(value)
@@ -146,10 +159,16 @@ class $class_name(DAQ_Move_base):
         self.emit_status(ThreadCommand('Update_Status', ['Some info you want to log']))
 
     def move_home(self):
-        """Call the reference method of the controller"""
+        """Call the reference method of the controller, so that the reference position becomes the home (zero)
+
+        PyMoDAQ does not poll the position after a move_home: call ``self.move_done()`` when the homing is finished,
+        see
+        https://pymodaq.cnrs.fr/en/latest/developer_folder/instrument_plugins.html#moving-to-the-home-position
+        """
         raise NotImplementedError  # TODO remove this line and call the homing of the controller below
-        self.controller.home()
+        self.controller.home()  # blocking version. For an asynchronous one, give a callback calling self.move_done()
         self.emit_status(ThreadCommand('Update_Status', ['Some info you want to log']))
+        self.move_done()  # reads get_actuator_value() and signals the end of the move
 
     def stop_motion(self):
         """Stop the actuator and emit the move_done signal"""
@@ -186,6 +205,8 @@ class $class_name(DAQ_Viewer_base):
       * the instrument (and models) this plugin was tested with
       * the drivers or libraries to install and where to find them
       * the specific attributes and parameters (see ``params``)
+
+    Documentation of the methods of a plugin: https://pymodaq.cnrs.fr/en/latest/developer_folder/instrument_plugins.html
     """
     params = comon_parameters + [
         # TODO add here, as dicts, the settings of your instrument
@@ -203,6 +224,9 @@ class $class_name(DAQ_Viewer_base):
         ----------
         param: Parameter
             A given parameter (within detector_settings) whose value has been changed by the user
+
+        See
+        https://pymodaq.cnrs.fr/en/latest/developer_folder/instrument_plugins.html#hardware-settings
         """
         # TODO apply the changes on the controller, for instance:
         # if param.name() == 'a_parameter_you_added_in_params':
@@ -245,11 +269,17 @@ class $class_name(DAQ_Viewer_base):
     def grab_data(self, Naverage=1, **kwargs):
         """Start a grab from the detector
 
+        When the data are ready, emit them with dte_signal, see
+        https://pymodaq.cnrs.fr/en/latest/developer_folder/instrument_plugins.html#emission-of-data
+        If they are not ready when this method returns, see
+        https://pymodaq.cnrs.fr/en/latest/developer_folder/instrument_plugins.html#data-ready
+
         Parameters
         ----------
         Naverage: int
             Number of hardware averaging (if the hardware can average, set hardware_averaging = True in the class
-            and implement it here)
+            and implement it here, see
+            https://pymodaq.cnrs.fr/en/latest/developer_folder/instrument_plugins.html#hardware-averaging)
         kwargs: dict
             others optionals arguments
         """
