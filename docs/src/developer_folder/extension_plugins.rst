@@ -39,9 +39,10 @@ The *pymodaq_plugins_template* contains already all this, so make sure to start 
 extension.
 
 ``check_plugin`` (see :ref:`instrument_plugin_doc`) also reads the modules of the *extensions* folder, without importing
-them, and reports the codes PMQ330 to PMQ337: missing ``EXTENSION_NAME`` or ``CLASS_NAME``, a class that does not derive
+them, and reports the codes PMQ330 to PMQ338: missing ``EXTENSION_NAME`` or ``CLASS_NAME``, a class that does not derive
 from ``CustomExt``, deprecated imports and hooks, managers created by the extension instead of those of the Dashboard, an
-``__init__`` that does not take ``(parent, dashboard)`` or never calls ``self.setup_ui()``.
+``__init__`` that does not take ``(parent, dashboard)`` or never calls ``self.setup_ui()``, a ``_quit_fun`` missing or
+never returning ``True`` (the extension is then never closed by ``quit_fun``).
 
 To check an extension while you write it, without the rest of the package, or an extension of PyMoDAQ itself, use the
 ``check_extension`` command on a file or a folder::

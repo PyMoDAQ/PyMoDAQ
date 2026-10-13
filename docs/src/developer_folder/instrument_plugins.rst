@@ -175,6 +175,7 @@ PMQ333   import from a deprecated module of pymodaq (``pymodaq.utils.parameter``
 PMQ334   deprecated hooks ``setup_docks`` / ``setup_menu`` of an extension (use ``setup_docks_and_widgets`` / ``setup_menus_and_toolbars``)
 PMQ335   the extension creates its own ``ExperimentManager`` or ``StateManager`` instead of using the ones of the Dashboard
 PMQ336   ``__init__`` of the extension does not take ``(parent, dashboard)``. PMQ337: it never calls ``self.setup_ui()``
+PMQ338   a class deriving from ``CustomExt`` has no ``_quit_fun``, or one that never returns ``True``: ``quit_fun`` then never closes the extension
 ======== =================================================================================================
 
 The functions behind this command (*check_package_layout*, *check_move_class*, *check_viewer_class*) return the list of

@@ -24,6 +24,9 @@ class MyExtension(CustomExt):
     def setup_menus_and_toolbars(self, menubar=None):
         pass
 
+    def _quit_fun(self):
+        return True
+
 
 def main():
     from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager
@@ -135,3 +138,27 @@ def test_the_template_extension_is_clean():
         pytest.skip('pymodaq_plugins_template not installed')
     from pathlib import Path
     assert pr.check_extensions(Path(list(spec.submodule_search_locations)[0])) == []
+
+
+def test_no_quit_fun(check):
+    code = GOOD.replace("    def _quit_fun(self):\n        return True\n", "")
+    findings = check(code)
+    assert codes(findings) == {'PMQ338'}
+    assert findings[0].severity == Severity.WARNING
+
+
+@pytest.mark.parametrize('body', ['pass', 'return', 'return None', 'return False'])
+def test_quit_fun_never_returning_true(check, body):
+    code = GOOD.replace('        return True\n', f'        {body}\n', 1)
+    assert codes(check(code)) == {'PMQ338'}
+
+
+def test_quit_fun_that_may_refuse_is_fine(check):
+    code = GOOD.replace('        return True\n',
+                        '        if self.running:\n            return False\n        return True\n', 1)
+    assert codes(check(code)) == set()
+
+
+def test_extension_defining_quit_fun_itself_is_not_checked(check):
+    code = GOOD.replace("    def _quit_fun(self):\n        return True\n", "    def quit_fun(self):\n        return True\n")
+    assert codes(check(code)) == set()

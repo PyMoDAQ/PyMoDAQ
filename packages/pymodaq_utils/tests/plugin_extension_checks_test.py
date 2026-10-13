@@ -13,6 +13,9 @@ class MyExtension(CustomExt):
     def __init__(self, parent, dashboard):
         super().__init__(parent, dashboard)
         self.setup_ui()
+
+    def _quit_fun(self):
+        return True
 '''
 NO_NAMES = GOOD.replace("EXTENSION_NAME = 'My extension'\n", '').replace("CLASS_NAME = 'MyExtension'\n", '')
 
