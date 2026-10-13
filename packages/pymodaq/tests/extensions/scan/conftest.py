@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Shared fixtures of the extensions tests"""
+"""Fixtures of the tests of the scan extension"""
 from pytest import fixture
 
 from pymodaq.extensions.scan.daq_scan import DAQScan
