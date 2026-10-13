@@ -6,7 +6,7 @@ import pytest
 
 DOCS = Path(__file__).parents[4] / 'docs' / 'src'
 LLMS = DOCS / '_extra' / 'llms.txt'
-BASE = 'https://pymodaq.cnrs.fr/en/stable/'
+BASE = 'https://pymodaq.cnrs.fr/en/latest/'
 
 pytestmark = pytest.mark.skipif(not LLMS.is_file(), reason='docs not available (installed package)')
 

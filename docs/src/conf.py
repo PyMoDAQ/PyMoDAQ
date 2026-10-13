@@ -15,6 +15,7 @@
 import os
 import sys
 import datetime
+from pathlib import Path
 sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('.../packages/pymodaq_utils/src'))
 sys.path.insert(0, os.path.abspath('.../packages/pymodaq_data/src'))
@@ -295,5 +296,16 @@ def _guard_process_signature_handlers(app):
         app.connect('autodoc-process-signature', guarded(listener.handler), priority=listener.priority)
 
 
+def _llms_txt_for_this_version(app, exception):
+    """The links of llms.txt are written for the ``latest`` version: point them to the version being built on Read the
+    Docs (``READTHEDOCS_VERSION``, for instance ``5.3.x``)"""
+    version = os.environ.get('READTHEDOCS_VERSION', '')
+    target = Path(app.outdir) / 'llms.txt'
+    if exception is None and version and version != 'latest' and target.is_file():
+        target.write_text(target.read_text(encoding='utf-8').replace('/en/latest/', f'/en/{version}/'),
+                          encoding='utf-8')
+
+
 def setup(app):
+    app.connect('build-finished', _llms_txt_for_this_version)
     _guard_process_signature_handlers(app)
