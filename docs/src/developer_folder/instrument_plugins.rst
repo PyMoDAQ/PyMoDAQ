@@ -109,7 +109,7 @@ available at three levels, from the quickest to the deepest. Start with the firs
 .. _check_plugin_command:
 
 The check_plugin command
-++++++++++++++++++++++++
+************************
 
 ``check_plugin`` analyses the source of the plugin with *static rules* (nothing is imported, so it also works when the
 instrument SDK is not installed) and checks the plugin modules that can be imported. It is the fastest way to know whether your
@@ -179,7 +179,7 @@ problems found and can be used from a script. To get a full report of an install
 
 
 Silencing a finding on purpose
-++++++++++++++++++++++++++++++
+******************************
 
 A finding that is intended (a plugin written to test an error, a deprecated name kept on purpose...) can be silenced, like
 ``# noqa`` for flake8, by a comment on the line the finding reports (its line is shown in the report)::
@@ -193,7 +193,7 @@ Only the codes listed are silenced, the other findings of the line are still rep
 .. _plugin_pytest_checks:
 
 The same checks as tests
-++++++++++++++++++++++++
+************************
 
 To run the same checks in your plugin repository, for instance in your CI, use a test module such as
 *tests/test_plugin.py*. The pytest mixin applying them is provided by ``pymodaq.utils.plugin_testing`` from PyMoDAQ
@@ -349,7 +349,7 @@ only exist for these systems with an environment marker, so that ``pip`` does no
     ]
 
 Computing the classifiers when building
-+++++++++++++++++++++++++++++++++++++++
+***************************************
 
 Instead of keeping the ``Operating System`` classifiers up to date by hand, the build can write them. Declare the
 ``classifiers`` field as dynamic and move the other classifiers to ``[tool.pymodaq]``::
