@@ -145,3 +145,5 @@ detector and extension rules) and use the tools shipped here:
   hatch metadata hook (`resources/hatch_build_plugins.py`) computes them at build time from `[tool.pymodaq] classifiers`.
 - `pymodaq.utils.plugin_testing` (since 5.3.2): `PluginPackageChecks` and a harness to test a plugin class against a
   fake controller, without Qt event loop timing or real hardware.
+  `loaded_extension` and `PluginExtensionChecks` (since 5.3.7, `plugin_testing/extension_testing.py`) load a Dashboard
+  extension in an empty Dashboard and close it; the tests of PyMoDAQ's own extensions use them too.
