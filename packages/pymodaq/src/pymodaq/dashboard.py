@@ -611,6 +611,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
             "Actuators",
             self.dockarea,
             orientation=Qt.Orientation.Vertical,
+            layout_config_path=('pymodaq', 'actuator', 'compact_dock_layout'),
         )
 
     def create_compact_detector_manager(self):
@@ -618,6 +619,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
             "Detectors",
             self.dockarea,
             orientation=Qt.Orientation.Vertical,
+            layout_config_path=('pymodaq', 'viewer', 'compact_dock_layout'),
         )
 
     def add_move_from_extension(
@@ -655,6 +657,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
                 "Detectors",
                 self.dockarea,
                 orientation=Qt.Orientation.Vertical,
+                layout_config_path=('pymodaq', 'viewer', 'compact_dock_layout'),
             )
             self.compact_detector_manager.show("top")
 

@@ -32,7 +32,10 @@ Help of the modules: ``help.md``
 Each module (control module, manager, extension...) can provide a short introductory help, aimed at being displayed
 in the user interface as well as being the first paragraph of the module documentation. It is a markdown file named
 ``help.md`` stored in the same folder as the python file defining the module, for instance
-``pymodaq/extensions/scan/help.md`` for the DAQ_Scan. It is made of a title (``# Module name``), a one sentence
+``pymodaq/extensions/scan/help.md`` for the DAQ_Scan. A module defined by a single file that shares its folder with
+other modules is named after that file instead: ``<name of the python file>.help.md``, for instance
+``pymodaq/dashboard.help.md`` for the Dashboard, ``pymodaq/extensions/console.help.md`` for the Console or
+``pymodaq_gui/h5modules/browsing.help.md`` for the H5Browser (the file has priority over ``help.md`` of the folder). It is made of a title (``# Module name``), a one sentence
 description, a *Typical workflow* and a *Good to know* section. Optionally, a *Full documentation* section with a link
 to the documentation website can end the file; it is preceded by the marker ``<!-- end of intro -->`` (invisible in
 the user interface) that stops the inclusion in the documentation.

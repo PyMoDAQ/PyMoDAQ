@@ -3,22 +3,13 @@
 DAQ Logger
 ==========
 
-This module is an extension of the dashboard, it will:
-
-* ask you where to log data from all selected detectors
-* save log datas in hierarchical binary files (compatible with the :ref:`H5Browser_module`)
-
-The flow of this module is as follow:
-
-* at startup you have to define/load an experiment (see :ref:`experiment_manager`) in the Dashboard
-* Select DAQ_Logger in the actions menu
-* Select the destination of the logged data: binary hdf5 file or SQL database
-
-
 Introduction
 ------------
 
-In construction
+.. include:: ../../../packages/pymodaq/src/pymodaq/extensions/daq_logger/help.md
+   :parser: myst_parser.sphinx_
+   :start-line: 2
+   :end-before: <!-- end of intro -->
 
 Main Control Window
 -------------------

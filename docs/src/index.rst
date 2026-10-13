@@ -133,6 +133,7 @@ If you would like to get updated with the evolutions of the project, please subs
    glossary
    api/api_doc
    about
+   changelogs
 
 .. toctree::
    :caption: Related projects

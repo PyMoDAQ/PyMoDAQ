@@ -173,6 +173,33 @@ def get_sub_segmented_positions(spacing: float, points: List[Point]) -> List[np.
     return positions
 
 
+def get_sub_segmented_n_positions(spacing: float, points: List[Point], limit: int = None) -> int:
+    """Number of Points returned by get_sub_segmented_positions, without building them
+
+    Parameters
+    ----------
+    spacing: float
+        Distance between two subpoints
+    points: List[Point]
+        List of Points in arbitrary dimension forming segments one want to sample with a distance equal to spacing
+    limit: int, optional
+        If the raw number of positions (total length / spacing) exceeds this limit, it is returned directly
+        instead of the exact one (the exact count is then not needed and may be huge to compute)
+
+    Returns
+    -------
+    int
+    """
+    norms = [np.linalg.norm((points[ind + 1] - points[ind]).coordinates) for ind in range(len(points) - 1)]
+    if limit is not None and sum(norms) / spacing > limit:
+        return int(sum(norms) / spacing) + 1
+    npts = 1  # the last point
+    for norm in norms:
+        # same comparison as in get_sub_segmented_positions
+        npts += int(np.count_nonzero(np.arange(int(norm / spacing) + 2) * spacing < norm))
+    return npts
+
+
 class QVector(QtCore.QLineF):
     def __init__(self, *elt):
         super().__init__(*elt)
@@ -604,15 +631,19 @@ class DockLayoutMenu:
     config_path: tuple[str, ...]
         Config entry holding the choice, e.g. ('pymodaq', 'control_modules', 'settings_dock_layout').
         Either a legacy bare string ('horizontal'/'vertical') or a [current, ...other_choices] list.
+    on_change: Callable[[Qt.Orientation], None] or None
+        Replaces the default reflow for docks not managed through :func:`display_in_dock`.
     """
     _orientations = {
         'horizontal': QtCore.Qt.Orientation.Horizontal,
         'vertical': QtCore.Qt.Orientation.Vertical,
     }
 
-    def __init__(self, dock: Dock, config_path: Tuple[str, ...]):
+    def __init__(self, dock: Dock, config_path: Tuple[str, ...],
+                on_change: Union[Callable[[QtCore.Qt.Orientation], None], None] = None):
         self.dock = dock
         self.config_path = config_path
+        self._on_change = on_change
         raw = config.get(config_path, None)
         if raw is None:
             # key missing from an older config file
@@ -652,7 +683,10 @@ class DockLayoutMenu:
         others = [name for name in self._orientations if name != chosen]
         config[self.config_path] = [chosen] + others
         config.save()
-        self._reflow()
+        if self._on_change is not None:
+            self._on_change(orientation)
+        else:
+            self._reflow()
 
     def _reflow(self):
         widgets = list(self.dock.widgets)
@@ -663,12 +697,14 @@ class DockLayoutMenu:
             display_in_dock(was_visible[widget], widget, self.dock, orientation=self.orientation)
 
 
-def get_dock_layout_menu(dock: Dock, config_path: Tuple[str, ...]) -> DockLayoutMenu:
-    """ Get the :class:`DockLayoutMenu` installed on this dock's title bar, creating it
-    (once) on first use """
+def get_dock_layout_menu(
+        dock: Dock, config_path: Tuple[str, ...],
+        on_change: Union[Callable[[QtCore.Qt.Orientation], None], None] = None,
+) -> DockLayoutMenu:
+    """ Get the :class:`DockLayoutMenu` on this dock's title bar, creating it on first use. """
     menu = getattr(dock, '_pymodaq_layout_menu', None)
     if menu is None:
-        menu = DockLayoutMenu(dock, config_path)
+        menu = DockLayoutMenu(dock, config_path, on_change=on_change)
         dock._pymodaq_layout_menu = menu
     return menu
 

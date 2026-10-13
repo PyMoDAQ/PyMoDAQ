@@ -13,6 +13,11 @@ DataMixer
 Introduction
 ++++++++++++
 
+.. include:: ../../../packages/pymodaq/src/pymodaq/extensions/data_mixer/help.md
+   :parser: myst_parser.sphinx_
+   :start-line: 2
+   :end-before: <!-- end of intro -->
+
 When dealing with PyMoDAQ you may be frustrated because you cannot easily customize the behaviour of the modules. In
 particular the DAQ_Viewer module grab raw data and except by the use of regions of interest you cannot really
 post-process those data. In fact there are solutions but they are quite complex especially if one want to do regular
@@ -49,6 +54,10 @@ you're going to often use them or if they are general enough to be used in vario
 with the extension are of the last kind. The first is the Gaussian fit model allowing to fit 1D data by Gaussians.
 The second allows you to define in a text box the mathematical expressions you
 want to perform between you raw data, see :ref:`equation_model`.
+
+A working example of a model written in a plugin package is ``DataMixerModelFit`` in
+`pymodaq_plugins_mockexamples <https://github.com/PyMoDAQ/pymodaq_plugins_mockexamples>`__; see :ref:`plugin_models` to
+make your own models visible to PyMoDAQ.
 
 
 .. _equation_model:

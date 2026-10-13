@@ -32,7 +32,7 @@ toolbar_button_style = ['icon_only', 'text_only', 'text_beside_icon', 'text_unde
 
 [viewer]
 rois_as_popup = false
-rois_dock_layout = 'horizontal'  # 'horizontal' or 'vertical', also changeable from the ROIs dock's right-click menu
+rois_dock_layout = ['horizontal', 'vertical']  # row stacking of the ROIs dock shared by a viewer's region-of-interest panels (current choice first); also changeable live from that dock's right-click menu
 
     [viewer.viewer0D]
     show_data_as_list = false  # display last values as numbers in a side panel

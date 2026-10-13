@@ -17,7 +17,7 @@ to be added to PyMoDAQ
       including several actuators or detectors,
       see :ref:`pid_model`
     * **Extensions** located in a `extensions` folder: scripts and classes allowing to build extensions on top of
-      the :ref:`Dashboard_module`
+      the :ref:`Dashboard_module`, deriving from ``CustomExt`` (see :ref:`custom_app`)
 
     Entry points python mechanism is used to let know PyMoDAQ of installed Instrument, PID models or extensions plugins
 

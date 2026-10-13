@@ -9,13 +9,14 @@ DetectorCompactDock  – detector-specific alignment/actions
 """
 
 from dataclasses import dataclass
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, Tuple, Union, TYPE_CHECKING
 from qtpy import QtWidgets, QtCore
 from qtpy.QtCore import Qt, Signal
 from pymodaq_gui.utils import Dock, DockArea
 from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_gui.utils.styling import create_icon
 from pymodaq_gui.utils.widgets.collapsible_widget import CollapsibleWidget
+from pymodaq_gui.plotting.utils.plot_utils import get_dock_layout_menu
 
 try:
     from pymodaq_utils.config import GlobalConfig as _PymConfig
@@ -122,7 +123,8 @@ class CompactDockManager(QtCore.QObject, ActionManager):
     lock_changed = Signal(bool)
 
     def __init__(self, title: str, dockarea: DockArea,
-                 orientation: Qt.Orientation = Qt.Orientation.Vertical, **kwargs):
+                 orientation: Qt.Orientation = Qt.Orientation.Vertical,
+                 layout_config_path: Union[Tuple[str, ...], None] = None, **kwargs):
         """
         Parameters
         ----------
@@ -132,11 +134,19 @@ class CompactDockManager(QtCore.QObject, ActionManager):
             Parent dock area.
         orientation:
             Vertical → top-to-bottom row stacking; Horizontal → left-to-right.
+        layout_config_path: tuple[str, ...] or None
+            If given, a title-bar menu sets and persists the orientation, overriding `orientation`.
         """
         QtCore.QObject.__init__(self)
 
         self.dock = Dock(title)
         self.dockarea = dockarea
+
+        self._layout_menu = None
+        if layout_config_path is not None:
+            self._layout_menu = get_dock_layout_menu(
+                self.dock, layout_config_path, on_change=self._on_layout_orientation_changed)
+            orientation = self._layout_menu.orientation
         self.orientation = orientation
 
         self.toolbar_area = (
@@ -229,6 +239,30 @@ class CompactDockManager(QtCore.QObject, ActionManager):
             Qt.Orientation.Horizontal if self.orientation == Qt.Orientation.Vertical
             else Qt.Orientation.Vertical,
         )
+
+    def _on_layout_orientation_changed(self, orientation: Qt.Orientation):
+        """Re-stack the row toolbars in the new orientation."""
+        if orientation == self.orientation:
+            return
+        self.orientation = orientation
+        self.toolbar_area = (
+            Qt.ToolBarArea.TopToolBarArea if orientation == Qt.Orientation.Vertical
+            else Qt.ToolBarArea.LeftToolBarArea
+        )
+
+        rows = list(self._rows.values())
+        for i, row in enumerate(rows):
+            if i > 0:
+                self.main_window.removeToolBarBreak(row.toolbar)
+            self.main_window.removeToolBar(row.toolbar)
+        for i, row in enumerate(rows):
+            self._configure_toolbar(row.toolbar)
+            if i > 0:
+                self.main_window.addToolBarBreak(self.toolbar_area)
+            self.main_window.addToolBar(self.toolbar_area, row.toolbar)
+            # QMainWindow.removeToolBar() hides the toolbar as a side effect;
+            # addToolBar() does not undo that on its own.
+            row.toolbar.show()
 
     def add_widget(self, widget: QtWidgets.QWidget,
                    create_toolbar: bool = True,
@@ -425,8 +459,9 @@ class ModuleCompactDock(CompactDockManager):
     """
 
     def __init__(self, title: str, dockarea: DockArea,
-                 orientation: Qt.Orientation = Qt.Orientation.Vertical):
-        super().__init__(title, dockarea, orientation)
+                 orientation: Qt.Orientation = Qt.Orientation.Vertical,
+                 layout_config_path: Union[Tuple[str, ...], None] = None):
+        super().__init__(title, dockarea, orientation, layout_config_path=layout_config_path)
         self.lock_changed.connect(self._apply_lock)
 
     # ── Public API ────────────────────────────────────────────────────────────

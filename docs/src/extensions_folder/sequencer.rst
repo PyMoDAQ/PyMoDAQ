@@ -15,18 +15,18 @@ Sequencer
 Introduction
 ++++++++++++
 
-The :ref:`DAQ_Scan_module` is perfect when you want to acquire data on a regular grid of actuators positions. But an
-experiment is often more of a *procedure*: move some stages to a starting point, wait for a temperature to settle,
-take a few snapshots, check a signal level and, depending on its value, go back a few steps or move on to the next
-configuration of your setup...
+.. include:: ../../../packages/pymodaq/src/pymodaq/extensions/sequencer/help.md
+   :parser: myst_parser.sphinx_
+   :start-line: 2
+   :end-before: <!-- end of intro -->
 
-The Sequencer allows you to build such procedures graphically, without writing any code. A sequence is a tree of
-**elements** (apply a Dashboard state, move actuators, grab detectors, wait, repeat, scan, choose where to go next,
-call another sequence...) executed one after the other. Some elements (Repeat, Scanner) are *containers*: they execute
-their children elements one or several times. Under the hood, each sequence is executed by a Qt state machine, so the
-GUI is never blocked and a running sequence can be paused, resumed or stopped at any time.
+The Sequencer complements the :ref:`DAQ_Scan_module`: use it when your experiment is a *procedure* (move some stages
+to a starting point, wait for a temperature to settle, take a few snapshots, check a signal level and, depending on its
+value, go back a few steps or move on to the next configuration...) rather than a regular grid of actuators positions.
 
-All the data produced while running (detectors data, actuators positions) can be logged in a h5 file, with time stamps,
+Some elements (Repeat, Scanner) are *containers*: they execute their children elements one or several times. Under the
+hood, each sequence is executed by a Qt state machine, so the GUI is never blocked and a running sequence can be
+paused, resumed or stopped at any time. The data produced while running can be logged in a h5 file, with time stamps,
 the same way as the :ref:`DAQ_Logger <DAQ_Logger_module>` does.
 
 Sequences can be saved in human readable files (``.seq``) and loaded back later. These files can also be written or
