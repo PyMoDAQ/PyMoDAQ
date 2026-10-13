@@ -214,6 +214,78 @@ def dynamic_classifiers(pyproject: dict, package_folder: Path) -> list[str]:
             classifiers_for(package_platforms(package_folder)))
 
 
+def _imported_files(path: Path, root: Path) -> set:
+    """Python files of the package imported by a module (absolute ``pymodaq_plugins_x.hardware.y`` or relative)"""
+    try:
+        tree = ast.parse(path.read_text(encoding='utf-8'))
+    except (SyntaxError, UnicodeDecodeError, OSError):
+        return set()
+    found = set()
+
+    def add(parts: list):
+        target = root.joinpath(*parts)
+        for candidate in (target.with_suffix('.py'), target / '__init__.py'):
+            if candidate.is_file():
+                found.add(candidate)
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                parts = alias.name.split('.')
+                if parts[0] == root.name:
+                    add(parts[1:])
+        elif isinstance(node, ast.ImportFrom):
+            module = (node.module or '').split('.') if node.module else []
+            if node.level:
+                base = path.parent
+                for _ in range(node.level - 1):
+                    base = base.parent
+                try:
+                    parts = list(base.relative_to(root).parts) + module
+                except ValueError:
+                    continue
+            elif module[0] == root.name:
+                parts = module[1:]
+            else:
+                continue
+            add(parts)
+            for alias in node.names:
+                add(parts + [alias.name])
+    return found
+
+
+def windows_only_files(root: Path) -> set:
+    """Python files of a plugin package that only the Windows-only instruments use (directly or through the other
+    modules): code that only works on Windows is expected there. All of them if every instrument declares
+    ``supported_platforms = ('win32',)``. Files used by an instrument working elsewhere are never in it"""
+    files = [f for f in sorted(root.rglob('*.py')) if '__pycache__' not in f.parts]
+    if package_platforms(root) == {'win32'}:
+        return set(files)
+    graph = {f: _imported_files(f, root) for f in files}
+
+    def reachable(start: Path) -> set:
+        seen, todo = {start}, [start]
+        while todo:
+            for other in graph.get(todo.pop(), ()):
+                if other not in seen:
+                    seen.add(other)
+                    todo.append(other)
+        return seen
+
+    windows, others = set(), set()
+    for f in files:
+        if not (f.name.startswith('daq_move_') or re.match(r'daq_\w*viewer_', f.name)):
+            continue
+        try:
+            tree = ast.parse(f.read_text(encoding='utf-8'))
+        except (SyntaxError, UnicodeDecodeError, OSError):
+            continue
+        declared = [declared_in_class(c)[0] for c in tree.body
+                    if isinstance(c, ast.ClassDef) and PLUGIN_CLASS_RE.match(c.name)]
+        (windows if declared and all(d and set(d) == {'win32'} for d in declared) else others).update(reachable(f))
+    return windows - others
+
+
 def platforms_as_rst() -> str:
     """The accepted values as two reStructuredText tables, to be included in the documentation"""
     out = ['.. list-table::', '   :header-rows: 1', '   :widths: 20 20 60', '',

@@ -165,7 +165,7 @@ PMQ313   deprecated attribute ``current_position`` / ``target_position`` (use ``
 PMQ314   ``comon_parameters`` of the actuators used as a list: it is a function, the import fails
 PMQ315   invalid escape sequence in a string, such as ``"C:\Program Files"`` (use a raw string)
 PMQ316   settings group ``multiaxes`` / ``multi_status`` renamed ``controller`` / ``controller_status``
-PMQ317   code that only works on Windows and runs on import (``windll``, ``winreg``, drive path); not reported when all the instruments declare ``supported_platforms = ('win32',)``
+PMQ317   code that only works on Windows and runs on import (``windll``, ``winreg``, drive path); not reported in the modules used only by instruments declaring ``supported_platforms = ('win32',)``
 PMQ318   deprecated ``ini_stage_init`` / ``ini_detector_init``; write ``if self.is_master: self.controller = AWrapper()`` / ``else: self.controller = controller``
 PMQ319   unknown value in ``supported_platforms`` / ``supported_architectures`` (see :ref:`plugin_platforms`)
 PMQ320   the ``Operating System`` classifiers of the ``pyproject.toml`` do not match ``supported_platforms``; ``check_plugin --fix-classifiers`` rewrites them
@@ -337,8 +337,8 @@ The same lists are in ``pymodaq_utils.plugin_tools.platforms`` (``PLATFORMS`` an
 and ``platform.machine()`` give the values of the computer.
 
 When a plugin works on several systems, or on all but one, its module still has to be **importable on every system**,
-as PyMoDAQ lists all the plugins at startup (PMQ317 warns about Windows-only code run on import; it is not reported when
-every instrument of the package declares ``supported_platforms = ('win32',)``). Import the vendor SDK in a ``try/except`` (or under ``sys.platform``), and let ``ini_stage`` / ``ini_detector`` return
+as PyMoDAQ lists all the plugins at startup (PMQ317 warns about Windows-only code run on import; it is not reported in the modules that
+are only used, directly or through other modules, by instruments declaring ``supported_platforms = ('win32',)``). Import the vendor SDK in a ``try/except`` (or under ``sys.platform``), and let ``ini_stage`` / ``ini_detector`` return
 ``(message, False)`` when the SDK is missing (see PMQ317). In the ``pyproject.toml``, restrict the dependencies that
 only exist for these systems with an environment marker, so that ``pip`` does not try to install them elsewhere::
 
