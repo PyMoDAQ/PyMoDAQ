@@ -109,6 +109,40 @@ extensions. Then you'll have to code the inners of your extension following the 
 dashboard instance is available here, hence all the control modules it contains. You'll be able to use all their
 functionalities only focusing on your extension layout!
 
+.. _testing_extension:
+
+Testing an extension
+--------------------
+
+The tools of ``pymodaq.utils.plugin_testing`` (see :ref:`instrument_plugin_doc` for those testing instrument plugins)
+load an extension in an empty Dashboard, without hardware and without showing any window, and close everything cleanly
+afterwards (the windows are deleted: left alive, they slow down all the tests run after them).
+
+.. versionadded:: 5.3.7
+
+``loaded_extension`` is a context manager giving the Dashboard and the extension instance, to write the test of the
+behaviour of your extension. ``PluginExtensionChecks`` is a pytest mixin that adds, for free, one test per extension of
+your package, checking that it loads and closes:
+
+.. code-block:: python
+
+    from pymodaq.utils.plugin_testing import loaded_extension, PluginExtensionChecks
+    from pymodaq_plugins_myplugin.extensions.my_extension import MyExtension
+
+
+    class TestExtensions(PluginExtensionChecks):  # package_name is found from the folder if omitted
+        pass
+
+
+    def test_do_something():
+        with loaded_extension(MyExtension) as (dashboard, extension):
+            extension.settings.child('main_settings', 'do_something').setValue(True)
+            assert extension.settings.child('other_settings', 'something_done').value()
+
+The Dashboard is empty: no instrument is loaded in it. Set ``strict_imports = True`` on the mixin in the CI of your plugin, so that an extension
+that cannot be imported fails instead of being skipped. The extensions of PyMoDAQ itself are tested with the same
+function (``packages/pymodaq/tests/extensions``).
+
 .. _plugin_models:
 
 Models of the extensions

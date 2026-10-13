@@ -1,46 +1,12 @@
 from qtpy import QtWidgets
 
-from pymodaq.utils.config import get_set_experiment_path
-from pymodaq.utils.gui_utils.loader_utils import create_extension
-from pymodaq_utils.config import GlobalConfig
-from pytest import fixture, mark
-from pymodaq.dashboard import create_load_dashboard, extensions
-
-import qt_themes
-
-experiment_path = get_set_experiment_path()
-config = GlobalConfig()
-
-@fixture
-def init_qt(qtbot):
-    qt_themes.set_theme(theme=config('gui', 'style', 'theme')[0],
-                        style=config('gui', 'style', 'style')[0])
-    return qtbot
-
-@fixture
-def dashboard(init_qt):
-    qtbot = init_qt
-    shared_ui, dashboard = create_load_dashboard()
-    qtbot.addWidget(shared_ui.parent)
-    qtbot.addWidget(dashboard.tree)
-    yield dashboard, qtbot
-    dashboard.quit_fun()
-
+from pytest import mark
+from pymodaq.dashboard import extensions
+from pymodaq.utils.plugin_testing import loaded_extension
 
 
 class TestExtensions:
-    def test_load(self, dashboard):
-        dashboard, qtbot = dashboard
-
-        for ext_name in extensions:
-            win_ext, ext = create_extension(dashboard, extensions[ext_name].klass)
-            # qtbot.addWidget(ext.parent)
-            # qtbot.addWidget(ext.tree)
-
-            ext.quit_fun()
+    @mark.parametrize('ext_name', list(extensions))
+    def test_load(self, ext_name):
+        with loaded_extension(extensions[ext_name].klass) as (dashboard, ext):
             QtWidgets.QApplication.processEvents()
-
-
-
-
-
