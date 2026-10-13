@@ -263,12 +263,18 @@ GUI, and fail with a ``SignalTimeout`` if the plugin never emits the expected si
         def close(self): pass
 
     def test_move_abs(monkeypatch):
-        monkeypatch.setattr(daq_move_Xxxx, 'XxxxWrapper', FakeWrapper)  # the name used in the plugin module
+        # 'XxxxWrapper' is the name of the wrapper that the plugin normally imports to control the instrument
+        # (as it appears in the plugin module): here it is replaced by the fake one
+        monkeypatch.setattr(daq_move_Xxxx, 'XxxxWrapper', FakeWrapper)
         actuator = make_actuator(daq_move_Xxxx.DAQ_Move_Xxxx)
         assert actuator.initialized
         position = move_abs_and_wait(actuator, 2.5)  # a float is in the axis unit of the actuator
         assert position.value() == pytest.approx(2.5, abs=actuator.epsilon)
         actuator.close()
+
+In this example ``XxxxWrapper`` stands for the wrapper of your instrument that ``daq_move_Xxxx`` imports and uses
+(``monkeypatch.setattr`` replaces that name in the plugin module, so use the exact name found there), and
+``FakeWrapper`` is the fake that takes its place during the test.
 
 ``move_rel_and_wait``, ``move_home_and_wait`` and ``make_detector`` / ``grab_and_wait`` / ``assert_units`` work the
 same way, and a slave axis of a multi-axes controller is created with ``make_actuator(plugin_class,
