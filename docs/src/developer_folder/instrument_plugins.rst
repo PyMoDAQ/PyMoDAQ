@@ -167,6 +167,8 @@ PMQ315   invalid escape sequence in a string, such as ``"C:\Program Files"`` (us
 PMQ316   settings group ``multiaxes`` / ``multi_status`` renamed ``controller`` / ``controller_status``
 PMQ317   code that only works on Windows and runs on import (``windll``, ``winreg``, drive path)
 PMQ318   deprecated ``ini_stage_init`` / ``ini_detector_init``; write ``if self.is_master: self.controller = AWrapper()`` / ``else: self.controller = controller``
+PMQ319   unknown value in ``supported_platforms`` / ``supported_architectures`` (see :ref:`plugin_platforms`)
+PMQ320   the ``Operating System`` classifiers of the ``pyproject.toml`` do not match ``supported_platforms``; ``check_plugin --fix-classifiers`` rewrites them
 ======== =================================================================================================
 
 The functions behind this command (*check_package_layout*, *check_move_class*, *check_viewer_class*) return the list of
@@ -300,6 +302,50 @@ instrument can do it. The list is defined once, in ``pymodaq_utils.plugin_tools.
 tests and this table.
 
 .. include:: plugin_contract_table.inc
+
+.. _plugin_platforms:
+
+Plugins working on some systems only
+------------------------------------
+
+A plugin for a Windows-only driver, or for the hardware of a Raspberry Pi, declares the systems it works on in the class
+of its instrument plugin, with two optional class attributes (``None``, the default of the base classes, means all the
+systems and all the architectures):
+
+.. code-block:: python
+
+    class DAQ_Move_Xxxx(DAQ_Move_base):
+        supported_platforms = ('win32',)   # a Windows driver
+
+    class DAQ_1DViewer_Yyyy(DAQ_Viewer_base):
+        supported_platforms = ('linux',)                       # a Raspberry Pi board
+        supported_architectures = ('aarch64', 'armv7l')
+
+On another system PyMoDAQ does not initialize the plugin and shows *This plugin only works on Windows (this computer:
+linux, x86_64)* in place of the usual information. ``check_plugin`` reads the declaration (it prints *Works on:
+Windows*) and checks it:
+
+* the ``Operating System`` classifiers of the ``pyproject.toml`` have to match it (PMQ320): run
+  ``check_plugin --fix-classifiers`` to write them, instead of the default *OS Independent*. When a package holds several
+  instruments the classifiers are those of all of them together. The architecture has no classifier: it is only used by
+  PyMoDAQ and ``check_plugin``;
+* the values have to be known (PMQ319). The accepted values and the classifier they give are:
+
+.. include:: plugin_platforms_table.inc
+
+The same lists are in ``pymodaq_utils.plugin_tools.platforms`` (``PLATFORMS`` and ``ARCHITECTURES``). ``sys.platform``
+and ``platform.machine()`` give the values of the computer.
+
+The module of the plugin still has to be **importable on every system**, as PyMoDAQ lists all the plugins at startup:
+import the vendor SDK in a ``try/except`` (or under ``sys.platform``), and let ``ini_stage`` / ``ini_detector`` return
+``(message, False)`` when the SDK is missing (see PMQ317). In the ``pyproject.toml``, restrict the dependencies that
+only exist for these systems with an environment marker, so that ``pip`` does not try to install them elsewhere::
+
+    dependencies = [
+        "pymodaq>=5.3.1",
+        "RPi.GPIO; platform_machine == 'aarch64' or platform_machine == 'armv7l'",
+        "pywin32; sys_platform == 'win32'",
+    ]
 
 Adding an instrument to your plugin
 -----------------------------------

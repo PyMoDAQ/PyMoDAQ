@@ -4,7 +4,7 @@ This is the single place where these lists are defined. The static rules (:mod:`
 checks (:mod:`pymodaq_utils.plugin_tools.checks`), the plugin tests and the documentation read them from here, so they
 cannot disagree.
 
-.. versionadded:: 5.3.4
+.. versionadded:: 5.3.5
 """
 from __future__ import annotations
 

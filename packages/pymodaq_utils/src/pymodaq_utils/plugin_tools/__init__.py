@@ -8,5 +8,5 @@
 They read the source files of the plugins and do not import ``pymodaq``. The previous locations
 (``pymodaq_utils.plugin_tools.checks``, ``plugin_rules`` and ``plugin_scaffold``) still work.
 
-.. versionadded:: 5.3.4
+.. versionadded:: 5.3.5
 """

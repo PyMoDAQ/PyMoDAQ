@@ -31,7 +31,7 @@ classifiers = [
     "Topic :: Software Development :: User Interfaces",
 ]
 dependencies = [
-    "pymodaq_utils>5.1",
+    "pymodaq_utils>=5.3.5.dev0",
     "pymodaq_gui>5.1",
     "pymodaq_data>5.1",
     "pymodaq_scripting>=5.3.0",
