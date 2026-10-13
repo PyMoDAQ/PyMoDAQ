@@ -1,9 +1,9 @@
 import numpy as np
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 from qtpy import QtCore
 from qtpy.QtCore import QObject, Signal
 
-from pymodaq.utils.managers.modules import ModulesManager
 from pymodaq_data import DataToExport, Axis
 from pymodaq_data.h5modules.data_saving import DataLoader, DataBundle, DataToExportSaver, DataToExportExtendedSaver, \
     DataToExportEnlargeableSaver, DataToExportTimedSaver
@@ -13,13 +13,14 @@ from pymodaq_gui.managers.h5manager import H5Manager
 from pymodaq_gui.managers.runner_thread_manager import WorkerThreadManager, ThreadWorker, DataForProcessor, \
     get_thread_params
 
-from pymodaq.utils.h5modules.module_saving import (
-    ExtensionSaver, ScanSaver, LoggerSaver, OptimizerSaver)
-from pymodaq.utils.custom_ext import CustomExt
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.utils import CustomApp
 from pymodaq_gui.utils.custom_app import WorkFlowActions
 from pymodaq_utils.utils import ThreadCommand
+
+if TYPE_CHECKING:  # only for the annotations, pymodaq_gui does not depend on pymodaq at run time
+    from pymodaq.utils.managers.modules import ModulesManager
+    from pymodaq.utils.h5modules.module_saving import ScanSaver, LoggerSaver, OptimizerSaver
 
 
 
@@ -34,7 +35,7 @@ class SaverWorker(ThreadWorker):
     name = 'SaverWorker'
     params = get_thread_params(worker_setting_name)
 
-    def __init__(self, saver: ScanSaver | LoggerSaver | OptimizerSaver, parent = None):
+    def __init__(self, saver: 'ScanSaver | LoggerSaver | OptimizerSaver', parent = None):
         super().__init__(parent)
 
         self.saver: (ScanSaver | LoggerSaver | OptimizerSaver | DataToExportSaver | DataToExportExtendedSaver |
@@ -134,7 +135,7 @@ class ExtensionWorker(QObject):
         return self._app.h5_manager
 
     @property
-    def modules_manager(self) -> ModulesManager:
+    def modules_manager(self) -> 'ModulesManager':
         """ Convenience property"""
         return self._app.modules_manager
 
@@ -143,7 +144,7 @@ class ExtensionWorker(QObject):
         return self._app.settings
 
     @property
-    def module_and_data_saver(self) -> ScanSaver | LoggerSaver | OptimizerSaver:
+    def module_and_data_saver(self) -> 'ScanSaver | LoggerSaver | OptimizerSaver':
         """ Convenience property"""
         return self._app.module_and_data_saver
 

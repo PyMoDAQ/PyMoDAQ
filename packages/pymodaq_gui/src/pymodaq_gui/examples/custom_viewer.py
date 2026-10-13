@@ -7,7 +7,7 @@ from pymodaq_gui import utils as gutils
 from pymodaq_gui.utils.dock import Dock
 from pymodaq_gui.parameter import ParameterTree, Parameter
 from pymodaq_gui.parameter.pymodaq_ptypes.tableview import TableViewCustom
-from pymodaq.utils.scanner.scanners.tabular import TableModelTabular
+from pymodaq_gui.utils.widgets.table import TableModelTabular
 from qtpy.QtCore import QObject, Qt, Slot
 from qtpy import QtWidgets
 
@@ -82,7 +82,7 @@ class ViewerPointList(QObject):
 
 if __name__ == '__main__':
     from pymodaq_gui.utils import DockArea
-    from pymodaq.utils.data import Axis, DataFromPlugins
+    from pymodaq_data.data import Axis, DataRaw
     import sys
     import numpy as np
 
@@ -100,7 +100,7 @@ if __name__ == '__main__':
 
     data_red = 3 * gauss2D(x, np.mean(x), (np.max(x)-np.min(x)) / 5, y, np.mean(y), (np.max(y)-np.min(y)) / 5, 1)
     data_red += np.random.random(data_red.shape)
-    data_to_plot = DataFromPlugins(name='mydata', distribution='uniform', data=[data_red],
+    data_to_plot = DataRaw(name='mydata', distribution='uniform', data=[data_red],
                                    axes=[Axis('xaxis', units='xpxl', data=x, index=1),
                                          Axis('yaxis', units='ypxl', data=y, index=0)])
 
