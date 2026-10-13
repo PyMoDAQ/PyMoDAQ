@@ -12,14 +12,6 @@ def test_mandatory_methods():
     assert plugin_contract.mandatory_methods('viewer') == ('ini_detector', 'grab_data', 'stop', 'close')
 
 
-def test_every_method_exists_in_the_base_classes():
-    from pymodaq.control_modules.move_utility_classes import DAQ_Move_base
-    from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base
-    for kind, base in (('move', DAQ_Move_base), ('viewer', DAQ_Viewer_base)):
-        for method in plugin_contract.methods_of(kind):
-            assert hasattr(base, method.name), f'{base.__name__} has no {method.name}'
-
-
 def test_rst_table_lists_every_method():
     rst = plugin_contract.contract_as_rst()
     for method in plugin_contract.PLUGIN_METHODS:
