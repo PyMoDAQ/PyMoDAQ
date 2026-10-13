@@ -294,7 +294,7 @@ The methods of a plugin
 
 These are the methods a plugin overrides. *Required* ones are checked by ``check_plugin`` and by the plugin tests: the
 others have a default in the base class that does nothing or raises ``NotImplementedError``, override them when your
-instrument can do it. The list is defined once, in ``pymodaq_utils.plugin_contract``, and read by the checks, the
+instrument can do it. The list is defined once, in ``pymodaq_utils.plugin_tools.contract``, and read by the checks, the
 tests and this table.
 
 .. include:: plugin_contract_table.inc
@@ -307,8 +307,8 @@ plugin repository:
 
 .. code-block:: bash
 
-    python -m pymodaq_utils.plugin_scaffold move Xxxx   # daq_move_Xxxx.py with the class DAQ_Move_Xxxx
-    python -m pymodaq_utils.plugin_scaffold 1D Xxxx     # daq_1Dviewer_Xxxx.py with the class DAQ_1DViewer_Xxxx
+    python -m pymodaq_utils.plugin_tools.scaffold move Xxxx   # daq_move_Xxxx.py with the class DAQ_Move_Xxxx
+    python -m pymodaq_utils.plugin_tools.scaffold 1D Xxxx     # daq_1Dviewer_Xxxx.py with the class DAQ_1DViewer_Xxxx
 
 (use ``--folder`` to give the *pymodaq_plugins_xxxx* package folder). The module derives from the right base class,
 declares the mandatory attributes and methods, and its ``TODO`` comments tell where to put your instrument code.

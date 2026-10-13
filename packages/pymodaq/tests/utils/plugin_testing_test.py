@@ -3,9 +3,9 @@ import textwrap
 
 import pytest
 
-from pymodaq_utils import plugin_checks as pt
-from pymodaq_utils import plugin_rules as pt_rules
-from pymodaq_utils.plugin_rules import Severity
+from pymodaq_utils.plugin_tools import checks as pt
+from pymodaq_utils.plugin_tools import rules as pt_rules
+from pymodaq_utils.plugin_tools.rules import Severity
 from pymodaq.utils.plugin_testing import PluginPackageChecks
 
 

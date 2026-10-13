@@ -1,7 +1,7 @@
 """The contract of an instrument plugin: the methods a plugin class has to (or should) override.
 
-This is the single place where these lists are defined. The static rules (:mod:`pymodaq_utils.plugin_rules`), the
-checks (:mod:`pymodaq_utils.plugin_checks`), the plugin tests and the documentation read them from here, so they
+This is the single place where these lists are defined. The static rules (:mod:`pymodaq_utils.plugin_tools.rules`), the
+checks (:mod:`pymodaq_utils.plugin_tools.checks`), the plugin tests and the documentation read them from here, so they
 cannot disagree.
 
 .. versionadded:: 5.3.4

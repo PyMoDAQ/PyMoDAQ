@@ -2,7 +2,7 @@ import sys
 
 import pytest
 
-from pymodaq_utils import plugin_checks as pc
+from pymodaq_utils.plugin_tools import checks as pc
 
 
 @pytest.fixture

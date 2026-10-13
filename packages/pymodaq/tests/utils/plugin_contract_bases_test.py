@@ -1,4 +1,4 @@
-from pymodaq_utils import plugin_contract
+from pymodaq_utils.plugin_tools import contract as plugin_contract
 
 
 def test_every_method_exists_in_the_base_classes():

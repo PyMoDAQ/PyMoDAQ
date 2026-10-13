@@ -3,8 +3,8 @@ import textwrap
 
 import pytest
 
-from pymodaq_utils import plugin_rules as pr
-from pymodaq_utils.plugin_rules import Severity
+from pymodaq_utils.plugin_tools import rules as pr
+from pymodaq_utils.plugin_tools.rules import Severity
 
 PYPROJECT = '''
 [features]
