@@ -118,6 +118,17 @@ These allow to define:
 * a Waiting time before moving to the next subentry
 * stopping control modules or extensions
 
+Two toolbar actions, next to the execute one, control how a State is executed:
+
+* *Sequential/parallel Execution*: when unchecked (green, the default), each subentry waits for the previous one to be
+  completed (for instance an actuator to reach its target) before being executed; when checked, all subentries are
+  started at once.
+* *Wait for completion* (hourglass icon): when checked (the default), executing a State, from the toolbar or from code
+  with ``state_manager.execute_entry()``, returns only once all its subentries are completed, so code running
+  afterwards can rely on the State being applied. When unchecked, the execution returns at once and its end is signalled
+  by the ``applied_entry`` signal. From code, ``execute_entry(blocking=True)`` or ``execute_entry(blocking=False)``
+  overrides this action.
+
 There are also many ways to move around and delete the subentries: either using the
 arrows in the middle of the window (look at their tooltip) or shortcuts: Ctrl+Up to move up,
 Del to delete...
