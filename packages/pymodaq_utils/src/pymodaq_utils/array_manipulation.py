@@ -379,7 +379,7 @@ def min_ind(x, axis=None):
 
 
 if __name__ == '__main__':                                          # pragma: no cover
-    from pymodaq.utils import daq_utils as utils
+    from pymodaq_utils import math_utils as utils
     import matplotlib.pyplot as plt
 
     x = random_step(00, 100, 5)

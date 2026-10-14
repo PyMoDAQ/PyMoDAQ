@@ -210,7 +210,7 @@ if __name__ == '__main__':  # pragma: no cover
     prog.show_roi_line()
     prog.roi_region_signal.connect(print_region)
     prog.roi_line_signal.connect(print_line)
-    from pymodaq.utils.daq_utils import gauss1D
+    from pymodaq_utils.math_utils import gauss1D
 
     x = np.linspace(0, 200, 201)
     y1 = gauss1D(x, 75, 25)

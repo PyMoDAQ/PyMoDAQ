@@ -15,7 +15,7 @@ from pymodaq_gui.plotting.data_viewers.viewer2D import Viewer2D
 from pymodaq_gui.utils.custom_app import CustomApp, Dock, DockArea
 
 from pymodaq_gui.parameter.pymodaq_ptypes.tableview import TableViewCustom
-from pymodaq.utils.scanner.scanners.tabular import TableModelTabular
+from pymodaq_gui.utils.widgets.table import TableModelTabular
 
 
 class DataPicker(CustomApp):
