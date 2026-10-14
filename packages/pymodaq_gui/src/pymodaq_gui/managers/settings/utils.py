@@ -179,11 +179,15 @@ class SettingsManagerModel(TableModel):
                 elif index.column() == 2:
                     dat = entry.setting.parameter.title()
                 elif index.column() == 3:
-                    suffix = ''
-                    if entry.setting.parameter.opts.get('suffix', None) is not None:
-                        suffix = f' {entry.setting.parameter.opts.get("suffix")}'
-                    val, prefix = get_si_prefix(entry.setting.parameter.value())
-                    dat = f"{val} {prefix}{suffix}"
+                    try:
+                        suffix = ''
+                        if entry.setting.parameter.opts.get('suffix', None) is not None:
+                            suffix = f' {entry.setting.parameter.opts.get("suffix")}'
+
+                        val, prefix = get_si_prefix(entry.setting.parameter.value())
+                        dat = f"{val} {prefix}{suffix}"
+                    except TypeError:
+                        dat = f'{entry.setting.parameter.value()}'
                 else:
                     dat = ''
                 return dat
