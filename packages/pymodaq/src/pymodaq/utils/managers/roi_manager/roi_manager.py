@@ -16,7 +16,8 @@ from pymodaq.utils.config import get_set_experiment_path
 from pymodaq_utils.config import GlobalConfig
 
 from pymodaq_gui.parameter import Parameter, ParameterTree
-from pymodaq.utils.managers.manager_with_dashboard import ManagerWithDashboard
+from pymodaq_gui.managers.manager_base import ManagerBase
+from pymodaq.utils.dashboard_mixin import DashboardMixin
 from pymodaq_gui.parameter.utils import ParameterWithPath
 from pymodaq_utils.utils import find_objects_in_list_from_attr_name_val
 
@@ -62,7 +63,7 @@ class ROIList(ParameterManager):
             sub_item.setSizeHint(0, QtCore.QSize(10, height))
 
 
-class ROIManager(ManagerWithDashboard):
+class ROIManager(DashboardMixin, ManagerBase):
     """
     Base class for Manager directly depending on the status of the experiment manager
     To be reimplemented

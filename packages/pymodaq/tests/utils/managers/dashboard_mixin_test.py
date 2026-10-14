@@ -6,7 +6,7 @@ from pymodaq_gui.qt_utils import mkQApp
 
 from pymodaq.utils.custom_ext import CustomExt, DashBoardToolbarActions
 from pymodaq.utils.dashboard_mixin import DashboardMixin, DashBoardToolbarActions as MixinActions
-from pymodaq.utils.managers.manager_with_dashboard import ManagerWithDashboard
+from pymodaq.extensions.scan.manager.scan_manager import ScanManager
 from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager
 from pymodaq.utils.managers.extension.extension_manager import ExtensionManager
 from pymodaq.utils.managers.overshoot.overshooter import Overshooter
@@ -16,7 +16,7 @@ from pymodaq.utils.managers.state.state_manager import StateManager
 
 @pytest.fixture
 def qapp():
-    return mkQApp('manager_with_dashboard_test')
+    return mkQApp('dashboard_mixin_test')
 
 
 def test_lower_packages_do_not_know_the_dashboard():
@@ -26,15 +26,14 @@ def test_lower_packages_do_not_know_the_dashboard():
 
 
 @pytest.mark.parametrize('manager_class', [ROIManager, ExperimentManager, ExtensionManager,
-                                           Overshooter])
+                                           Overshooter, StateManager, ScanManager])
 def test_managers_working_on_the_dashboard(manager_class):
-    assert issubclass(manager_class, ManagerWithDashboard)
+    assert issubclass(manager_class, DashboardMixin)
+    assert issubclass(manager_class, ManagerBase)
 
 
-def test_mixin_is_shared_with_extensions_and_state_manager():
+def test_mixin_is_shared_with_extensions_and_managers():
     assert issubclass(CustomExt, DashboardMixin)
-    assert issubclass(StateManager, DashboardMixin)
-    assert issubclass(ManagerWithDashboard, DashboardMixin)
     assert DashBoardToolbarActions is MixinActions  # still importable from custom_ext
 
 
@@ -52,7 +51,7 @@ def test_base_manager_does_not_execute_entries(qapp):
 @pytest.fixture
 def dashboard():
     from pymodaq.dashboard import create_load_dashboard
-    mkQApp('manager_with_dashboard_test')
+    mkQApp('dashboard_mixin_test')
     shared_ui, dashboard = create_load_dashboard(show_dashboard=False)
     yield dashboard
     dashboard.quit_fun()
@@ -67,12 +66,14 @@ def test_manager_with_dashboard(dashboard):
         assert manager.dashboard is dashboard
         assert manager.modules_manager is not None
     assert dashboard.overshooter.can_execute_entry()
+    # managers deriving from SettingsManager can execute entries too when they have a dashboard
+    assert dashboard.state_manager.can_execute_entry()
 
 
 def test_dashboard_is_available_in_setup_ui(dashboard):
     seen = []
 
-    class MyManager(ManagerWithDashboard):
+    class MyManager(DashboardMixin, ManagerBase):
         entry_type = 'mine'
         entry_extension = '.mine'
 
@@ -99,13 +100,13 @@ def test_managers_windows_are_closed_when_the_dashboard_quits(dashboard):
 def test_qt_side_is_initialized_before_the_dashboard_is_set(dashboard, monkeypatch):
     """The dashboard (and its ModulesManager) are set once CustomApp (QObject...) is initialized"""
     seen = []
-    init_dashboard = ManagerWithDashboard.init_dashboard
+    init_dashboard = DashboardMixin.init_dashboard
 
     def checking_init_dashboard(self, *args, **kwargs):
         seen.append(hasattr(self, 'mainwindow'))
         init_dashboard(self, *args, **kwargs)
 
-    monkeypatch.setattr(ManagerWithDashboard, 'init_dashboard', checking_init_dashboard)
+    monkeypatch.setattr(DashboardMixin, 'init_dashboard', checking_init_dashboard)
     ExperimentManager(dashboard=dashboard)
     assert seen == [True]
 

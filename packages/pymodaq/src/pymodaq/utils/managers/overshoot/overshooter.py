@@ -19,8 +19,8 @@ from pymodaq.utils.managers.modules.utils import ModuleType
 
 from pymodaq.utils.managers.overshoot.utils import ModulesManagerOvershoot, \
     get_set_overshooter_path, TriggerDirection  # noqa
-from pymodaq_gui.managers.manager_base import ManagerActions
-from pymodaq.utils.managers.manager_with_dashboard import ManagerWithDashboard
+from pymodaq_gui.managers.manager_base import ManagerBase, ManagerActions
+from pymodaq.utils.dashboard_mixin import DashboardMixin
 
 if TYPE_CHECKING:
     pass
@@ -40,7 +40,7 @@ class Overshoot:
         return f'Data {self.data_name} triggering {self.direction} {self.value}'
 
 
-class Overshooter(ManagerWithDashboard):
+class Overshooter(DashboardMixin, ManagerBase):
     """
     Main class managing the Overshoots of control modules from a Dashboard and triggers loading
     of a state.

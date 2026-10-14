@@ -1,7 +1,7 @@
 """Everything an object needs to work with a DashBoard.
 
 Shared by the extensions (:class:`~pymodaq.utils.custom_ext.CustomExt`) and by the managers needing
-the dashboard (:class:`~pymodaq.utils.managers.manager_with_dashboard.ManagerWithDashboard`).
+the dashboard (``ROIManager``, ``ExperimentManager``, ``StateManager``...).
 It lives in ``pymodaq`` because the lower packages (``pymodaq_gui``...) must not import it.
 """
 from typing import Union, Optional, TYPE_CHECKING
@@ -35,6 +35,10 @@ class DashboardMixin:
     """
 
     dashboard: Optional['DashBoard'] = None
+
+    def can_execute_entry(self) -> bool:
+        """ Entries of a manager can only be executed if a dashboard has been given """
+        return self.dashboard is not None
 
     def init_dashboard(self, dashboard: 'DashBoard' = None, module_manager_class=ModulesManager):
         """ Set the dashboard and create the modules manager from its control modules"""

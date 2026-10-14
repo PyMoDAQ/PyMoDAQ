@@ -7,8 +7,8 @@ from qtpy import QtWidgets
 from pymodaq.extensions import get_extensions, ExtensionEnum
 from pymodaq.utils.custom_ext import CustomExt
 from pymodaq.utils.gui_utils.loader_utils import create_extension
-from pymodaq_gui.managers.manager_base import ManagerActions
-from pymodaq.utils.managers.manager_with_dashboard import ManagerWithDashboard
+from pymodaq_gui.managers.manager_base import ManagerBase, ManagerActions
+from pymodaq.utils.dashboard_mixin import DashboardMixin
 from pymodaq_utils import set_logger
 from pymodaq_utils.logger import get_module_name
 
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 logger = set_logger(get_module_name(__file__))
 
 
-class ExtensionManager(ManagerWithDashboard):
+class ExtensionManager(DashboardMixin, ManagerBase):
     entry_type = 'extension'
     entry_extension = '.xml'
     icon_name = 'extension'
