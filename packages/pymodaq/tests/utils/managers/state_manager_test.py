@@ -6,17 +6,26 @@ Created the 07/11/2023
 """
 import pytest
 from pathlib import Path
-from qtpy import QtWidgets
+from unittest.mock import MagicMock
+from qtpy import QtWidgets, QtCore
+
+import qt_themes
+from pymodaq_utils.config import GlobalConfig
 from pymodaq.utils.managers.state.state_manager import StateManager
 from pymodaq.utils.managers.state.subentries import (
     SubEntryHandlerFactory, StateSubEntryHandlerTypes)
 
 
 factory = SubEntryHandlerFactory()
+config = GlobalConfig()
 
 
 @pytest.fixture
 def init_qt(qtbot):
+    qt_themes.set_theme(
+        theme=config('gui', 'style', 'theme')[0],
+        style=config('gui', 'style', 'style')[0],
+    )
     return qtbot
 
 
@@ -50,6 +59,57 @@ class TestStateManager:
 
         assert state_manager.entry_type == 'state'
         assert state_manager.entry_extension == '.state'
+
+
+class TestExecution:
+
+    @pytest.fixture
+    def delayed_state_manager(self, ini_state_manager, monkeypatch):
+        """ StateManager whose execution ends 200 ms after the call, as when an actuator moves """
+        state_manager, qtbot = ini_state_manager
+        monkeypatch.setattr(state_manager, 'dashboard', MagicMock())
+        monkeypatch.setattr(state_manager, 'save_new_history_entry', lambda: None)
+
+        def delayed_execute_entry(entry_path=None, **kwargs):
+            state_manager._execution_pending = True
+            QtCore.QTimer.singleShot(200, state_manager.finalize)
+            return None
+
+        monkeypatch.setattr(state_manager, '_execute_entry', delayed_execute_entry)
+        return state_manager, qtbot
+
+    def test_blocking_by_default(self, delayed_state_manager):
+        state_manager, qtbot = delayed_state_manager
+        assert state_manager.is_action_checked('blocking_execution')
+
+        state_manager.execute_entry()
+        assert state_manager.entry_applied
+        assert not state_manager._execution_pending
+
+    def test_non_blocking(self, delayed_state_manager):
+        state_manager, qtbot = delayed_state_manager
+
+        with qtbot.waitSignal(state_manager.applied_entry, timeout=2000):
+            state_manager.execute_entry(blocking=False)
+            assert not state_manager.entry_applied
+        assert state_manager.entry_applied
+
+    def test_non_blocking_from_action(self, delayed_state_manager):
+        state_manager, qtbot = delayed_state_manager
+        state_manager.set_action_checked('blocking_execution', False)
+
+        with qtbot.waitSignal(state_manager.applied_entry, timeout=2000):
+            state_manager.execute_entry()
+            assert not state_manager.entry_applied
+
+    def test_entry_applied_reset_on_new_execution(self, delayed_state_manager):
+        state_manager, qtbot = delayed_state_manager
+        state_manager.execute_entry()
+        assert state_manager.entry_applied
+
+        with qtbot.waitSignal(state_manager.applied_entry, timeout=2000):
+            state_manager.execute_entry(blocking=False)
+            assert not state_manager.entry_applied
 
 
 class TestSpecialEntryFactory:

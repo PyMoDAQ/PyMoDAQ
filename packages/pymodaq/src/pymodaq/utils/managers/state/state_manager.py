@@ -66,6 +66,7 @@ class StateManager(SettingsManager):
     icon_name = 'discover_tune'
     settings_handler = StateSubEntryHandlerTypes.SETTINGS
     actuator_moved = QtCore.Signal(DataActuator)
+    blocking_execution = True  # initial state of the 'blocking_execution' action
 
     def __init__(self,
                  dashboard: 'DashBoard' = None):
@@ -82,6 +83,7 @@ class StateManager(SettingsManager):
                          handler_id=StateSettingsEntryHandler.handler_name)
 
         self._processed_subentries = 0
+        self._execution_pending = False
 
         self.history_file_path: str = HISTORY_FILE_PATH
         self.config_model.save_path = self.get_entry_folder()
@@ -161,6 +163,40 @@ class StateManager(SettingsManager):
                  f'{entry.setting.parameter.title()} '
                  f'{entry.setting.value()}') for entry in entries]
 
+    def execute_entry(self, entry_path: str | Path = None, blocking: bool = None, **kwargs):
+        """ Apply the selected state
+
+        Parameters
+        ----------
+        entry_path: str or Path
+            The state to apply, default to the current entry
+        blocking: bool
+            If True, return only once every sub-entry has been processed: the Qt event loop keeps running in the
+            meantime, and ``entry_applied`` then reflects this execution. If False, return at once; the end of the
+            execution is signalled by ``applied_entry``. Default to the state of the 'blocking_execution' action
+            (hourglass icon, checked by default).
+            This is independent of the sequential/parallel execution of the sub-entries.
+        """
+        if blocking is None:
+            blocking = self.is_action_checked('blocking_execution')
+        if self._execution_pending:
+            logger.warning(f'The state {self.entry} is still being applied, '
+                           f'the new request is ignored')
+            return
+        self.entry_applied = False
+
+        loop = QtCore.QEventLoop()
+        self.applied_entry.connect(loop.quit)
+        try:
+            super().execute_entry(entry_path, **kwargs)
+            if blocking and self._execution_pending:
+                loop.exec()
+        except Exception:
+            self._execution_pending = False
+            raise
+        finally:
+            self.applied_entry.disconnect(loop.quit)
+
     def _execute_entry(self, entry_path: Path = None, **kwargs) -> None | bool:
         """Applies the entry from the given file in the manager.
 
@@ -187,6 +223,7 @@ class StateManager(SettingsManager):
 
         self._ind_subentry = -1
         self._processed_subentries = 0
+        self._execution_pending = True
 
         self._advance()
         return None
@@ -194,7 +231,7 @@ class StateManager(SettingsManager):
     def _advance(self):
         self._ind_subentry += 1
         if self._ind_subentry == len(self.config_subentries):
-            if not self.is_action_checked('parallel_execution'):
+            if not self.is_action_checked('parallel_execution') or len(self.config_subentries) == 0:
                 self.finalize()
             return
 
@@ -252,6 +289,7 @@ class StateManager(SettingsManager):
             self.finalize()
 
     def finalize(self):
+        self._execution_pending = False
         self.close_subentries_display(100)
         self.save_new_history_entry()
         self.set_entry_applied(True)
@@ -304,6 +342,13 @@ class StateManager(SettingsManager):
                         tip='if green (unchecked) perform a sequential execution else parallel',
                         checkable=True, icon_color=self.get_theme().green,
                         icon_checked_color=self.get_theme().red,
+                        before=self.get_action(ManagerActions.EXECUTE),)
+        self.add_action('blocking_execution', 'Wait for completion',
+                        'hourglass_disabled', icon_checked='hourglass',
+                        tip='if checked, executing a state returns only once all its sub-entries are completed',
+                        checkable=True, checked=self.blocking_execution,
+                        icon_color=self.get_theme().red,
+                        icon_checked_color=self.get_theme().green,
                         before=self.get_action(ManagerActions.EXECUTE),)
         self.create_dashboard_toolbar(add_dashboard=__name__ == '__main__',
                                       add_experiment=True, add_state=False, add_break=False)
