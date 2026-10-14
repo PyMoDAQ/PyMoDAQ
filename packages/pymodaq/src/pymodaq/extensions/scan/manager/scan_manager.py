@@ -177,6 +177,9 @@ class ScanManager(DashboardMixin, SettingsManager):
                 self.config_model.add_data(self.config_model.rowCount(), entry)
 
 
+    def can_execute_entry(self) -> bool:
+        return self.is_dashboard_available
+
     def _execute_entry(self, entry_path: Path = None, **kwargs) -> bool:
         """Applies the entry from the given file in the manager.
 

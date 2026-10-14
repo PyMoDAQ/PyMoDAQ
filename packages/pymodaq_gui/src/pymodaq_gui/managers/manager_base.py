@@ -517,7 +517,8 @@ class ManagerBase(CustomApp):
     def can_execute_entry(self) -> bool:
         """ Whether entries can be executed, to be reimplemented
 
-        The base manager does not know about the dashboard, see :class:`~pymodaq.utils.dashboard_mixin.DashboardMixin`
+        The base manager does not know about the dashboard: the managers working on it reimplement this method,
+        usually returning ``DashboardMixin.is_dashboard_available``
         """
         return False
 

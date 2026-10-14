@@ -86,6 +86,9 @@ class ROIManager(DashboardMixin, ManagerBase):
         self.update_viewer_list_from_dashboard()
 
 
+    def can_execute_entry(self) -> bool:
+        return self.is_dashboard_available
+
     def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: bool = True):
         super().do_things_after_experiment_set(experiment_name, show_dashboard)
         self.update_viewer_list_from_dashboard()

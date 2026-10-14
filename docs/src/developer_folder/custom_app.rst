@@ -234,6 +234,9 @@ hooks of ``ManagerBase`` (``init_extra`` before the user interface is set up, so
 ``setup_ui``, and ``finish_init`` once the manager is built). A new object working with the Dashboard is therefore
 written ``class MyThing(DashboardMixin, CustomApp)`` (the mixin first) and does not need anything else.
 
+A manager decides itself if its entries can be executed, by reimplementing ``can_execute_entry`` (``False`` in
+``ManagerBase``). The managers working on the Dashboard return ``self.is_dashboard_available``.
+
 .. _custom_app_lifecycle:
 
 Lifecycle

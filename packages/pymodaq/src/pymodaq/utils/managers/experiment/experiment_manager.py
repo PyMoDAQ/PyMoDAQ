@@ -96,6 +96,9 @@ class ExperimentManager(DashboardMixin, ManagerBase):
         """Get the folder path where the managed entries are stored."""
         return get_set_experiment_path()
 
+    def can_execute_entry(self) -> bool:
+        return self.is_dashboard_available
+
     def _execute_entry(self, entry: Path = None, **kwargs) -> bool:
         """ Execute the selected entry file to the dashboard and adds Control Modules specified in it
 

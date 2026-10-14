@@ -146,6 +146,9 @@ class Overshooter(DashboardMixin, ManagerBase):
         for ind, sub_entry in enumerate(overshoot_subentries):
             self.slots[sub_entry.name()] = self.create_slot(sub_entry)
 
+    def can_execute_entry(self) -> bool:
+        return self.is_dashboard_available
+
     def _execute_entry(self, entry_path: Path = None, **kwargs) -> bool:
         """Applies the entry from the given file in the manager.
 

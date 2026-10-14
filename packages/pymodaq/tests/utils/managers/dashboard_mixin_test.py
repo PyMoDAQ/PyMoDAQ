@@ -30,6 +30,8 @@ def test_lower_packages_do_not_know_the_dashboard():
 def test_managers_working_on_the_dashboard(manager_class):
     assert issubclass(manager_class, DashboardMixin)
     assert issubclass(manager_class, ManagerBase)
+    # each manager decides if its entries can be executed (the base one never can)
+    assert 'can_execute_entry' in vars(manager_class)
 
 
 def test_mixin_is_shared_with_extensions_and_managers():
@@ -67,9 +69,9 @@ def test_manager_with_dashboard(dashboard):
         assert manager.dashboard is dashboard
         assert manager.is_dashboard_available
         assert manager.modules_manager is not None
-    assert dashboard.overshooter.can_execute_entry()
-    # managers deriving from SettingsManager can execute entries too when they have a dashboard
-    assert dashboard.state_manager.can_execute_entry()
+    for manager in (dashboard.experiment_manager, dashboard.state_manager, dashboard.roi_manager,
+                    dashboard.overshooter, dashboard.extension_manager):
+        assert manager.can_execute_entry()
 
 
 def test_dashboard_is_available_in_setup_ui(dashboard):

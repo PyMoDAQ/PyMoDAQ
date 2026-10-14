@@ -54,6 +54,9 @@ class ExtensionManager(DashboardMixin, ManagerBase):
         """Extensions don't need file updates."""
         return NotImplemented
 
+    def can_execute_entry(self) -> bool:
+        return self.is_dashboard_available
+
     def _execute_entry(self, entry_path: Path = None, **kwargs) -> bool:
         """Load and display the selected extension."""
         entry_name = entry_path.stem

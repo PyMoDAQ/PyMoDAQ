@@ -162,6 +162,9 @@ class StateManager(DashboardMixin, SettingsManager):
                  f'{entry.setting.parameter.title()} '
                  f'{entry.setting.value()}') for entry in entries]
 
+    def can_execute_entry(self) -> bool:
+        return self.is_dashboard_available
+
     def _execute_entry(self, entry_path: Path = None, **kwargs) -> None | bool:
         """Applies the entry from the given file in the manager.
 
