@@ -36,9 +36,17 @@ class DashboardMixin:
 
     dashboard: Optional['DashBoard'] = None
 
-    def can_execute_entry(self) -> bool:
-        """ Entries of a manager can only be executed if a dashboard has been given """
+    @property
+    def is_dashboard_available(self) -> bool:
+        """ Whether a dashboard has been given """
         return self.dashboard is not None
+
+    def can_execute_entry(self) -> bool:
+        """ For the managers: entries can only be executed if a dashboard is available
+
+        The base manager (``pymodaq_gui``) cannot know about the dashboard.
+        """
+        return self.is_dashboard_available
 
     def init_dashboard(self, dashboard: 'DashBoard' = None, module_manager_class=ModulesManager):
         """ Set the dashboard and create the modules manager from its control modules"""

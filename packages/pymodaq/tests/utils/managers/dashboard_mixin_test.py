@@ -40,6 +40,7 @@ def test_mixin_is_shared_with_extensions_and_managers():
 def test_manager_without_dashboard(qapp):
     manager = ExperimentManager()
     assert manager.dashboard is None
+    assert not manager.is_dashboard_available
     assert manager.modules_manager is None
     assert not manager.can_execute_entry()
 
@@ -64,6 +65,7 @@ def test_manager_with_dashboard(dashboard):
     for manager in (dashboard.experiment_manager, dashboard.state_manager,
                     dashboard.roi_manager, dashboard.overshooter, dashboard.extension_manager):
         assert manager.dashboard is dashboard
+        assert manager.is_dashboard_available
         assert manager.modules_manager is not None
     assert dashboard.overshooter.can_execute_entry()
     # managers deriving from SettingsManager can execute entries too when they have a dashboard
