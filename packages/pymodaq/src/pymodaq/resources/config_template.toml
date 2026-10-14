@@ -64,3 +64,12 @@ keep_duplicates = false
 duration_units = [ "s", "min",]
 ramp_setting = [ "duration", "velocity",]
 
+[hardware_module]
+# Capabilities/HardwareModule declarative device architecture (control_modules/hardware/,
+# hardware_module.py) - distinct from the legacy actuator/viewer settings above.
+write_timeout_s = 10.0  # Controller: give up waiting for write_done/write_failed after this long
+read_timeout_s = 10.0  # Controller: give up waiting for a one-shot read() reply after this long
+grab_period_ms = 200.0  # HardwareModule: default polling period of a grabbed channel
+settle_poll_ms = 150.0  # HardwareModule: how often a settling control's readback is checked against its target
+settle_timeout_s = 10.0  # HardwareModule: give up waiting for a control to settle after this long
+
