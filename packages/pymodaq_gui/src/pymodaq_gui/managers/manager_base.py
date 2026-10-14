@@ -1,3 +1,4 @@
+import inspect
 import sys
 from pathlib import Path
 from typing import Any, Union, Optional
@@ -109,8 +110,13 @@ class ManagerBase(CustomApp):
     default_entry_name = 'default'
 
     def __init__(self, **kwargs):
+        # what CustomApp does not know about goes to init_extra, once the Qt side is initialized
+        app_params = inspect.signature(CustomApp.__init__).parameters
+        app_kwargs = {key: kwargs.pop(key) for key in list(kwargs) if key in app_params}
 
-        super().__init__(parent=QtWidgets.QMainWindow(), **kwargs)
+        super().__init__(parent=QtWidgets.QMainWindow(), **app_kwargs)
+
+        self.init_extra(**kwargs)
 
         self._entry_applied = False
         self._applied_entry_name: str = None
@@ -139,6 +145,19 @@ class ManagerBase(CustomApp):
 
         self.update_action_list()
         self.update_execute_action_tooltip(self.entry)
+
+        self.finish_init()
+
+    def init_extra(self, **kwargs):
+        """ Called right after the CustomApp initialization (and before the UI setup) with the
+        keyword arguments not used by CustomApp, to be reimplemented to make use of them
+        """
+        if kwargs:
+            raise TypeError(f'{self.__class__.__name__} got unexpected keyword arguments: {list(kwargs)}')
+
+    def finish_init(self):
+        """ Called at the end of the initialization of the manager, to be reimplemented if needed"""
+        pass
 
     def enable_actions(self, enable=True):
         self.entries_sync.update_key('enabled', enable)

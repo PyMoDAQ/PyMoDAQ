@@ -94,3 +94,22 @@ def test_managers_windows_are_closed_when_the_dashboard_quits(dashboard):
         manager.mainwindow.show()
     dashboard.quit_fun()
     assert not any(manager.mainwindow.isVisible() for manager in managers)
+
+
+def test_qt_side_is_initialized_before_the_dashboard_is_set(dashboard, monkeypatch):
+    """The dashboard (and its ModulesManager) are set once CustomApp (QObject...) is initialized"""
+    seen = []
+    init_dashboard = ManagerWithDashboard.init_dashboard
+
+    def checking_init_dashboard(self, *args, **kwargs):
+        seen.append(hasattr(self, 'mainwindow'))
+        init_dashboard(self, *args, **kwargs)
+
+    monkeypatch.setattr(ManagerWithDashboard, 'init_dashboard', checking_init_dashboard)
+    ExperimentManager(dashboard=dashboard)
+    assert seen == [True]
+
+
+def test_unknown_keyword_of_a_manager_is_refused(qapp):
+    with pytest.raises(TypeError):
+        SettingsManager(dashboard=None)

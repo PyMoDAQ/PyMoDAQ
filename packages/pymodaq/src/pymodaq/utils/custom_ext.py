@@ -28,8 +28,10 @@ class CustomExt(DashboardMixin, CustomApp):
                  dashboard: 'DashBoard',
                  module_manager_class=ModulesManager,
                  **kwargs):
-        super().__init__(parent, dashboard=dashboard,
-                         module_manager_class=module_manager_class, **kwargs)
+        super().__init__(parent, **kwargs)
+
+        self.init_dashboard(dashboard, module_manager_class)
+        self.connect_experiment_manager()
 
         self._module_and_data_saver: ModuleSaver = None  # to use only if you want to save data with
         #ordered with groups and with control modules, then call self.module_and_data_saver property

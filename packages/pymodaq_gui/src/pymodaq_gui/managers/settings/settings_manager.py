@@ -60,14 +60,15 @@ class SettingsManager(ManagerBase):
     icon_name = 'settings'
     settings_handler = SubEntryHandlerTypes.SETTINGS
 
-    def __init__(self, handler_id='settings'):
+    def __init__(self, handler_id='settings', **kwargs):
 
         self.subentry_handler: SubEntryHandler = None
         self.config_model = SettingsManagerModel(save_path=self.get_entry_folder())
 
         super().__init__(tree=SettingsManagerParameterTree(
                              manager=self,
-                             handler_id=handler_id))
+                             handler_id=handler_id),
+                         **kwargs)
 
         self.settings_to_apply: WidgetWithLabelTitle = None
 
