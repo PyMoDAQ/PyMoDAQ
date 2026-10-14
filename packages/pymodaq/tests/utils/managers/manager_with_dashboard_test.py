@@ -85,3 +85,12 @@ def test_dashboard_is_available_in_setup_ui(dashboard):
     except Exception:
         pass  # the abstract parts of a bare manager are not the point here
     assert seen and seen[0][0] is dashboard and seen[0][1] is not None
+
+
+def test_managers_windows_are_closed_when_the_dashboard_quits(dashboard):
+    managers = (dashboard.experiment_manager, dashboard.state_manager, dashboard.overshooter,
+                dashboard.roi_manager)
+    for manager in managers:
+        manager.mainwindow.show()
+    dashboard.quit_fun()
+    assert not any(manager.mainwindow.isVisible() for manager in managers)

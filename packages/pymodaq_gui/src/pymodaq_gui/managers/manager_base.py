@@ -364,8 +364,7 @@ class ManagerBase(CustomApp):
 
     def quit_fun(self):
         self.entries_sync.unbind_all()
-        # CustomApp.quit_fun is deliberately not called (nor a value returned): it never was
-        # (the former CustomExt.quit_fun returned before reaching it), keep that behavior.
+        return super().quit_fun()
 
     def create_entry(self, entry: str = None, bypass_dialog=False):
         if entry is not None:

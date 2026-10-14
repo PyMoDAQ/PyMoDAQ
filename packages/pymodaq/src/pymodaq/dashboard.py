@@ -523,6 +523,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
             self.experiment_manager.quit_fun()
             self.state_manager.quit_fun()
             self.overshooter.quit_fun()
+            self.roi_manager.quit_fun()
 
             # Removing dock areas (I don't know what this is for)
             areas = self.dockarea.tempAreas[:]

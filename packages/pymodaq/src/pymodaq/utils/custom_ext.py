@@ -58,8 +58,11 @@ class CustomExt(DashboardMixin, CustomApp):
         raise NotImplementedError
 
     def quit_fun(self) -> bool:
-        """Method to be subclassed in order to define a custom quit function
-        if returned True, one can proceed with other quit mechanisms otherwise do not quit
+        """Quit the extension, unless :meth:`_quit_fun` refuses it
+
+        This method should not be reimplemented: reimplement :meth:`_quit_fun` to define what has to be done
+        (and checked) before quitting. If it returns True, the quit proceeds (``CustomApp.quit_fun``), otherwise
+        nothing is closed and False is returned.
         """
         if self._quit_fun():
             res = super().quit_fun()
@@ -71,12 +74,12 @@ class CustomExt(DashboardMixin, CustomApp):
             return False
 
     def _quit_fun(self) -> bool:
-        """ to be reimplemented in order to properly quit your application
+        """ To be reimplemented in order to properly quit your application
 
-        Then the base class quit_fun method will be called
-
+        Return True to let the quit proceed: the base class quit_fun method will then be called. The default
+        returns False: an extension that does not reimplement it cannot be quit (see the PMQ338 rule).
         """
-        pass
+        return False
 
     def get_app_toolbars(self) -> list[QtWidgets.QToolBar]:
         """ Get the main toolbars widget to be eventually added in the main window toolbararea
