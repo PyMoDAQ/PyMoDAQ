@@ -694,6 +694,7 @@ class DAQ_Move_base(PluginBase):
         if position.name != self._title:  # make sure the emitted DataActuator has the name of the real implementation
             #of the plugin
             position.name = self._title
+        self.current_value = position  # update the value in case move_done was called from a homing step
         self.move_done_signal.emit(position)
         self.move_is_done = True
 
