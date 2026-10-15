@@ -186,7 +186,8 @@ class StateManager(DashboardMixin, SettingsManager):
             This is independent of the sequential/parallel execution of the sub-entries.
         timeout: float
             In blocking mode, stop waiting after this number of seconds (the state keeps being applied, a warning is
-            logged and ``entry_applied`` stays False until it is). Default to no timeout.
+            logged and ``entry_applied`` stays False until it is). Default to the ``execution_timeout_s`` entry of the
+            ``state`` section of the configuration (0, the default, means no timeout).
         """
         if blocking is None:
             blocking = self.is_action_checked('blocking_execution')
@@ -202,6 +203,8 @@ class StateManager(DashboardMixin, SettingsManager):
             self._execution_pending = False
             raise
         if blocking and self._execution_pending:
+            if timeout is None:
+                timeout = config('pymodaq', 'state', 'execution_timeout_s') or None
             self._wait_until_applied(timeout)
 
     def _wait_until_applied(self, timeout: float = None):

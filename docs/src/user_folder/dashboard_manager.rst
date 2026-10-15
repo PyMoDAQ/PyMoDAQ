@@ -128,7 +128,8 @@ Two toolbar actions, next to the execute one, control how a State is executed:
   afterwards can rely on the State being applied. When unchecked, the execution returns at once and its end is signalled
   by the ``applied_entry`` signal. From code, ``execute_entry(blocking=True)`` or ``execute_entry(blocking=False)``
   overrides this action. The wait runs a local Qt event loop (the interface stays responsive), so it only works from
-  the main thread, and ``execute_entry(timeout=10)`` stops waiting after 10 s (the State keeps being applied). The two
+  the main thread, and ``execute_entry(timeout=10)`` stops waiting after 10 s (the State keeps being applied); the default timeout is the
+  ``execution_timeout_s`` entry of the ``[state]`` section of *pymodaq.toml* (0, the default, waits for ever). The two
   actions are independent: the four combinations are possible.
 
 There are also many ways to move around and delete the subentries: either using the

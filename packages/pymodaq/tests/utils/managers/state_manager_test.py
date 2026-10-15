@@ -12,6 +12,7 @@ from qtpy import QtWidgets, QtCore
 
 import qt_themes
 from pymodaq_utils.config import GlobalConfig
+from pymodaq.utils.managers.state import state_manager as state_manager_module
 from pymodaq.utils.managers.state.state_manager import StateManager
 from pymodaq.utils.managers.state.subentries import (
     SubEntryHandlerFactory, StateSubEntryHandlerTypes)
@@ -124,6 +125,18 @@ class TestExecution:
         with qtbot.waitSignal(state_manager.applied_entry, timeout=2000):
             state_manager.finalize()
         assert state_manager.entry_applied
+
+    def test_blocking_timeout_from_config(self, delayed_state_manager, monkeypatch):
+        state_manager, qtbot = delayed_state_manager
+        state_manager._execute_entry = lambda *args, **kwargs: setattr(state_manager, '_execution_pending', True)
+        monkeypatch.setattr(state_manager_module, 'config',
+                            lambda *args: 0.05 if args[-1] == 'execution_timeout_s' else None)
+
+        state_manager.execute_entry()  # returns after the timeout of the configuration
+        assert state_manager._execution_pending
+
+        with qtbot.waitSignal(state_manager.applied_entry, timeout=2000):
+            state_manager.finalize()
 
     def test_blocking_from_another_thread_does_not_wait(self, delayed_state_manager):
         state_manager, qtbot = delayed_state_manager
