@@ -24,6 +24,7 @@ from pymodaq.extensions.scan.manager.subentries import (
     ControlModulesEntryHandler, ScannnerEntryHandler, StartScanEntryHandler)
 
 from pymodaq_gui.managers.settings.settings_manager import SettingsManager
+from pymodaq.utils.dashboard_mixin import DashboardMixin
 
 from pymodaq.utils.scanner.scanner import Scanner
 from pymodaq_utils.utils import read_binary_and_deserialize
@@ -39,7 +40,7 @@ config = Config()
 
 
 
-class ScanManager(SettingsManager):
+class ScanManager(DashboardMixin, SettingsManager):
     """
     Main class managing settings values to be restored in the DAQScan as well as info about
     a scan to be done.
@@ -175,6 +176,9 @@ class ScanManager(SettingsManager):
             for entry in entries:
                 self.config_model.add_data(self.config_model.rowCount(), entry)
 
+
+    def can_execute_entry(self) -> bool:
+        return self.is_dashboard_available
 
     def _execute_entry(self, entry_path: Path = None, **kwargs) -> bool:
         """Applies the entry from the given file in the manager.

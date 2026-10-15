@@ -20,6 +20,7 @@ from pymodaq.utils.config import (get_set_experiment_path, get_set_overshoot_pat
                                   get_set_remote_path, get_set_roi_manager_path)
 from pymodaq_gui.config import get_set_layout_path
 from pymodaq_gui.managers.manager_base import ManagerBase
+from pymodaq.utils.dashboard_mixin import DashboardMixin
 from pymodaq.utils.managers.modules.utils import ModuleType
 from pymodaq.utils.managers.modules.loader import PluginInfo, ModuleLoader
 
@@ -38,7 +39,7 @@ logger = set_logger(get_module_name(__file__))
 experiment_path = get_set_experiment_path()
 
 
-class ExperimentManager(ManagerBase):
+class ExperimentManager(DashboardMixin, ManagerBase):
 
     params_act = [{'title': 'Actuators:', 'name': ModuleType.Actuator.value, 'type': 'groupmove'}]
     params_det = [{'title': 'Detectors:', 'name': ModuleType.Detector.value, 'type': 'groupdet'}]
@@ -94,6 +95,9 @@ class ExperimentManager(ManagerBase):
     def get_entry_folder(self, **kwargs_to_entry_folder) -> Path:
         """Get the folder path where the managed entries are stored."""
         return get_set_experiment_path()
+
+    def can_execute_entry(self) -> bool:
+        return self.is_dashboard_available
 
     def _execute_entry(self, entry: Path = None, **kwargs) -> bool:
         """ Execute the selected entry file to the dashboard and adds Control Modules specified in it

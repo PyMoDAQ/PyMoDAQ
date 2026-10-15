@@ -33,7 +33,7 @@ For your package to be considered as a PyMoDAQ's dashboard extension, you should
   * CLASS_NAME: a string giving the name of the extension class
   * a class deriving from the ``CustomExt`` base class (see :ref:`custom_app`). ``CustomExt`` itself extends
     ``CustomApp`` with what deals with instruments and the Dashboard (``dashboard``, ``modules_manager``,
-    experiment and state managers, Dashboard toolbar)
+    experiment and state managers, Dashboard toolbar), through the ``DashboardMixin`` (see :ref:`dashboard_mixin`)
 
 The *pymodaq_plugins_template* contains already all this, so make sure to start from there when you wish to build an
 extension.

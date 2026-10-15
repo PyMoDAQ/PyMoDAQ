@@ -20,6 +20,7 @@ from pymodaq.utils.managers.modules.utils import ModuleType
 from pymodaq.utils.managers.overshoot.utils import ModulesManagerOvershoot, \
     get_set_overshooter_path, TriggerDirection  # noqa
 from pymodaq_gui.managers.manager_base import ManagerBase, ManagerActions
+from pymodaq.utils.dashboard_mixin import DashboardMixin
 
 if TYPE_CHECKING:
     pass
@@ -39,7 +40,7 @@ class Overshoot:
         return f'Data {self.data_name} triggering {self.direction} {self.value}'
 
 
-class Overshooter(ManagerBase):
+class Overshooter(DashboardMixin, ManagerBase):
     """
     Main class managing the Overshoots of control modules from a Dashboard and triggers loading
     of a state.
@@ -144,6 +145,9 @@ class Overshooter(ManagerBase):
         self.slots = {}
         for ind, sub_entry in enumerate(overshoot_subentries):
             self.slots[sub_entry.name()] = self.create_slot(sub_entry)
+
+    def can_execute_entry(self) -> bool:
+        return self.is_dashboard_available
 
     def _execute_entry(self, entry_path: Path = None, **kwargs) -> bool:
         """Applies the entry from the given file in the manager.
@@ -287,8 +291,8 @@ class Overshooter(ManagerBase):
         for child in self.settings.child('overshoots').children():
             child.remove()
 
-    def do_things_after_experiment_set(self, experiment_name: str):
-        super().do_things_after_experiment_set(experiment_name)
+    def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: bool = None):
+        super().do_things_after_experiment_set(experiment_name, show_dashboard)
 
         self.modules_manager.selected_actuators_name = self.modules_manager.actuators_name
         self.modules_manager.selected_detectors_name = self.modules_manager.detectors_name
