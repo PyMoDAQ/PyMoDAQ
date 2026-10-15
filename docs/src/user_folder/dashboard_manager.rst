@@ -127,7 +127,9 @@ Two toolbar actions, next to the execute one, control how a State is executed:
   with ``state_manager.execute_entry()``, returns only once all its subentries are completed, so code running
   afterwards can rely on the State being applied. When unchecked, the execution returns at once and its end is signalled
   by the ``applied_entry`` signal. From code, ``execute_entry(blocking=True)`` or ``execute_entry(blocking=False)``
-  overrides this action.
+  overrides this action. The wait runs a local Qt event loop (the interface stays responsive), so it only works from
+  the main thread, and ``execute_entry(timeout=10)`` stops waiting after 10 s (the State keeps being applied). The two
+  actions are independent: the four combinations are possible.
 
 There are also many ways to move around and delete the subentries: either using the
 arrows in the middle of the window (look at their tooltip) or shortcuts: Ctrl+Up to move up,

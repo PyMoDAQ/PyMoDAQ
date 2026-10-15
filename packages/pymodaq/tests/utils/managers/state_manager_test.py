@@ -1,3 +1,4 @@
+import threading
 # -*- coding: utf-8 -*-
 """
 Created the 07/11/2023
@@ -110,6 +111,33 @@ class TestExecution:
         with qtbot.waitSignal(state_manager.applied_entry, timeout=2000):
             state_manager.execute_entry(blocking=False)
             assert not state_manager.entry_applied
+
+    def test_blocking_timeout(self, delayed_state_manager):
+        """ The wait stops after the timeout, the execution goes on and ends normally """
+        state_manager, qtbot = delayed_state_manager
+        state_manager._execute_entry = lambda *args, **kwargs: setattr(state_manager, '_execution_pending', True)
+
+        state_manager.execute_entry(timeout=0.05)  # nothing ends the execution
+        assert state_manager._execution_pending
+        assert not state_manager.entry_applied
+
+        with qtbot.waitSignal(state_manager.applied_entry, timeout=2000):
+            state_manager.finalize()
+        assert state_manager.entry_applied
+
+    def test_blocking_from_another_thread_does_not_wait(self, delayed_state_manager):
+        state_manager, qtbot = delayed_state_manager
+        state_manager.dashboard = MagicMock()
+        waited = []
+
+        def run():
+            state_manager._wait_until_applied()
+            waited.append(True)
+
+        thread = threading.Thread(target=run)
+        thread.start()
+        thread.join(2)
+        assert waited and not thread.is_alive()
 
 
 class TestSpecialEntryFactory:

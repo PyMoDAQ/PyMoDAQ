@@ -167,8 +167,12 @@ class StateManager(DashboardMixin, SettingsManager):
     def can_execute_entry(self) -> bool:
         return self.is_dashboard_available
 
-    def execute_entry(self, entry_path: str | Path = None, blocking: bool = None, **kwargs):
+    def execute_entry(self, entry_path: str | Path = None, blocking: bool = None, timeout: float = None, **kwargs):
         """ Apply the selected state
+
+        The sub-entries are applied asynchronously: each one signals its end (the next one is then started if the
+        execution is sequential), and the end of the whole state is signalled by ``applied_entry``. In blocking mode
+        this method waits for that signal, see :meth:`_wait_until_applied`.
 
         Parameters
         ----------
@@ -180,6 +184,9 @@ class StateManager(DashboardMixin, SettingsManager):
             execution is signalled by ``applied_entry``. Default to the state of the 'blocking_execution' action
             (hourglass icon, checked by default).
             This is independent of the sequential/parallel execution of the sub-entries.
+        timeout: float
+            In blocking mode, stop waiting after this number of seconds (the state keeps being applied, a warning is
+            logged and ``entry_applied`` stays False until it is). Default to no timeout.
         """
         if blocking is None:
             blocking = self.is_action_checked('blocking_execution')
@@ -189,17 +196,40 @@ class StateManager(DashboardMixin, SettingsManager):
             return
         self.entry_applied = False
 
-        loop = QtCore.QEventLoop()
-        self.applied_entry.connect(loop.quit)
         try:
             super().execute_entry(entry_path, **kwargs)
-            if blocking and self._execution_pending:
-                loop.exec()
         except Exception:
             self._execution_pending = False
             raise
+        if blocking and self._execution_pending:
+            self._wait_until_applied(timeout)
+
+    def _wait_until_applied(self, timeout: float = None):
+        """ Return when ``applied_entry`` has been emitted, or after the timeout (in s)
+
+        A function returning only once an asynchronous operation is over needs something to run the events in the
+        meantime: a local ``QEventLoop`` is quit by ``applied_entry``, so the GUI (and the signals of the sub-entries
+        that make the execution progress) keeps running. This cannot be done from another thread than the one of the
+        application, there the call only logs a warning and returns: use ``applied_entry`` instead.
+        """
+        if QtCore.QThread.currentThread() != QtWidgets.QApplication.instance().thread():
+            logger.warning('Cannot wait for the end of the state execution outside of the main thread, '
+                           'connect to applied_entry instead')
+            return
+        loop = QtCore.QEventLoop()
+        self.applied_entry.connect(loop.quit)
+        timer = QtCore.QTimer()
+        timer.setSingleShot(True)
+        timer.timeout.connect(loop.quit)
+        if timeout is not None:
+            timer.start(int(timeout * 1000))
+        try:
+            loop.exec()
         finally:
+            timer.stop()
             self.applied_entry.disconnect(loop.quit)
+        if self._execution_pending:
+            logger.warning(f'The state {self.entry} is not applied yet after {timeout} s')
 
     def _execute_entry(self, entry_path: Path = None, **kwargs) -> None | bool:
         """Applies the entry from the given file in the manager.
