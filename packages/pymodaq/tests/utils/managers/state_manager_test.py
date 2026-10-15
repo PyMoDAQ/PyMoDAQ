@@ -1,3 +1,4 @@
+import threading
 # -*- coding: utf-8 -*-
 """
 Created the 07/11/2023
@@ -11,6 +12,7 @@ from qtpy import QtWidgets, QtCore
 
 import qt_themes
 from pymodaq_utils.config import GlobalConfig
+from pymodaq.utils.managers.state import state_manager as state_manager_module
 from pymodaq.utils.managers.state.state_manager import StateManager
 from pymodaq.utils.managers.state.subentries import (
     SubEntryHandlerFactory, StateSubEntryHandlerTypes)
@@ -96,11 +98,46 @@ class TestExecution:
 
     def test_non_blocking_from_action(self, delayed_state_manager):
         state_manager, qtbot = delayed_state_manager
+        state_manager.set_action_checked('parallel_execution', True)
         state_manager.set_action_checked('blocking_execution', False)
 
         with qtbot.waitSignal(state_manager.applied_entry, timeout=2000):
             state_manager.execute_entry()
             assert not state_manager.entry_applied
+
+    def test_sequential_execution_always_blocks(self, delayed_state_manager):
+        """ The blocking action is only selectable for a parallel execution """
+        state_manager, qtbot = delayed_state_manager
+        state_manager.set_action_checked('parallel_execution', True)
+        state_manager.set_action_checked('blocking_execution', False)
+        assert state_manager.is_action_enabled('blocking_execution')
+        assert not state_manager.blocking_wanted
+
+        state_manager.set_action_checked('parallel_execution', False)
+        assert not state_manager.is_action_enabled('blocking_execution')
+        assert state_manager.is_action_checked('blocking_execution')
+        assert state_manager.blocking_wanted
+        state_manager.execute_entry()
+        assert state_manager.entry_applied
+
+        state_manager.set_action_checked('parallel_execution', True)  # the choice of the user is restored
+        assert not state_manager.is_action_checked('blocking_execution')
+        assert state_manager.is_action_enabled('blocking_execution')
+
+    def test_parallel_subentries_are_identified_by_their_index(self, delayed_state_manager):
+        """ All sub-entries are started before the first one ends: the loop counter is then past the last one """
+        state_manager, qtbot = delayed_state_manager
+        entries = [MagicMock(entry_type=StateSubEntryHandlerTypes.SETTINGS) for _ in range(2)]
+        state_manager.config_subentries = entries
+        state_manager._ind_subentry = len(entries)
+        state_manager.subentries_model = MagicMock()
+        state_manager._processed_subentries = 0
+        state_manager.set_action_checked('parallel_execution', True)
+
+        state_manager._on_executed(0)
+        state_manager._on_executed(1)
+        state_manager.subentries_model.set_status.assert_any_call(1, True)
+        assert state_manager.entry_applied
 
     def test_entry_applied_reset_on_new_execution(self, delayed_state_manager):
         state_manager, qtbot = delayed_state_manager
@@ -110,6 +147,45 @@ class TestExecution:
         with qtbot.waitSignal(state_manager.applied_entry, timeout=2000):
             state_manager.execute_entry(blocking=False)
             assert not state_manager.entry_applied
+
+    def test_blocking_timeout(self, delayed_state_manager):
+        """ The wait stops after the timeout, the execution goes on and ends normally """
+        state_manager, qtbot = delayed_state_manager
+        state_manager._execute_entry = lambda *args, **kwargs: setattr(state_manager, '_execution_pending', True)
+
+        state_manager.execute_entry(timeout=0.05)  # nothing ends the execution
+        assert state_manager._execution_pending
+        assert not state_manager.entry_applied
+
+        with qtbot.waitSignal(state_manager.applied_entry, timeout=2000):
+            state_manager.finalize()
+        assert state_manager.entry_applied
+
+    def test_blocking_timeout_from_config(self, delayed_state_manager, monkeypatch):
+        state_manager, qtbot = delayed_state_manager
+        state_manager._execute_entry = lambda *args, **kwargs: setattr(state_manager, '_execution_pending', True)
+        monkeypatch.setattr(state_manager_module, 'config',
+                            lambda *args: 0.05 if args[-1] == 'execution_timeout_s' else None)
+
+        state_manager.execute_entry()  # returns after the timeout of the configuration
+        assert state_manager._execution_pending
+
+        with qtbot.waitSignal(state_manager.applied_entry, timeout=2000):
+            state_manager.finalize()
+
+    def test_blocking_from_another_thread_does_not_wait(self, delayed_state_manager):
+        state_manager, qtbot = delayed_state_manager
+        state_manager.dashboard = MagicMock()
+        waited = []
+
+        def run():
+            state_manager._wait_until_applied()
+            waited.append(True)
+
+        thread = threading.Thread(target=run)
+        thread.start()
+        thread.join(2)
+        assert waited and not thread.is_alive()
 
 
 class TestSpecialEntryFactory:

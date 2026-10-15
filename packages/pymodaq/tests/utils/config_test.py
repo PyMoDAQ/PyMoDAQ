@@ -73,6 +73,8 @@ def test_required_config_entries():
     assert 'default_value_green' in config('actuator')
     assert 'default_value_relative' in config('actuator')
 
+    assert 'execution_timeout_s' in config('state')
+
     assert 'viewer' in config
     assert 'daq_type' in config('viewer')
     assert 'viewer_in_thread' in config('viewer')
