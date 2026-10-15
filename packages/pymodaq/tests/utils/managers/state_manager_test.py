@@ -74,6 +74,7 @@ class TestExecution:
         monkeypatch.setattr(state_manager, 'save_new_history_entry', lambda: None)
 
         def delayed_execute_entry(entry_path=None, **kwargs):
+            state_manager._resolve_blocking()
             state_manager._execution_pending = True
             QtCore.QTimer.singleShot(200, state_manager.finalize)
             return None
@@ -96,6 +97,36 @@ class TestExecution:
             state_manager.execute_entry(blocking=False)
             assert not state_manager.entry_applied
         assert state_manager.entry_applied
+
+    def test_blocking_option_saved_in_the_state(self, delayed_state_manager, tmp_path):
+        """ The sequencer executes a state by name: the options stored in the file decide, not the current actions """
+        state_manager, qtbot = delayed_state_manager
+        state_manager.set_action_checked('parallel_execution', True)
+        state_manager.set_action_checked('blocking_execution', False)
+        path = tmp_path / 'nonblocking.state'
+        state_manager.save_entries(path)
+
+        state_manager.set_action_checked('parallel_execution', False)  # actions now say sequential/blocking
+        state_manager.update_entry(path)
+        assert state_manager.is_action_checked('parallel_execution')
+        assert not state_manager.is_action_checked('blocking_execution')
+
+        state_manager.set_action_checked('blocking_execution', True)
+        state_manager.set_action_checked('parallel_execution', False)
+        with qtbot.waitSignal(state_manager.applied_entry, timeout=2000):
+            state_manager.execute_entry(path, block_caller=False)
+            assert not state_manager.blocking_wanted
+            assert not state_manager._blocking_subentries
+
+    def test_state_file_without_blocking_option(self, delayed_state_manager, tmp_path):
+        """ Files written before the option existed only have the parallel flag"""
+        from pymodaq.utils.managers.state.state_manager import ser_factory
+        state_manager, qtbot = delayed_state_manager
+        path = tmp_path / 'old.state'
+        path.write_bytes(ser_factory.get_apply_serializer(True))
+        state_manager.update_entry(path)
+        assert state_manager.is_action_checked('parallel_execution')
+        assert state_manager.is_action_checked('blocking_execution')
 
     def test_non_blocking_from_action(self, delayed_state_manager):
         state_manager, qtbot = delayed_state_manager

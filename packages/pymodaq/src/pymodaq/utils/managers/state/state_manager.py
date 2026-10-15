@@ -69,6 +69,7 @@ class StateManager(DashboardMixin, SettingsManager):
     actuator_moved = QtCore.Signal(DataActuator)
     blocking_execution = True  # initial state of the 'blocking_execution' action
     _blocking_subentries = True  # whether the sub-entries wait for their modules, see execute_entry
+    _requested_blocking: bool | None = None
     _blocking_in_parallel = True  # value of the 'blocking_execution' action to restore in parallel mode
 
     def __init__(self,
@@ -197,22 +198,20 @@ class StateManager(DashboardMixin, SettingsManager):
             warning is logged and ``entry_applied`` stays False until it is). Default to the ``execution_timeout_s``
             entry of the ``state`` section of the configuration (0, the default, means no timeout).
         """
-        if blocking is None:
-            blocking = self.blocking_wanted
-        if block_caller is None:
-            block_caller = blocking
-        self._blocking_subentries = blocking
         if self._execution_pending:
             logger.warning(f'The state {self.entry} is still being applied, '
                            f'the new request is ignored')
             return
         self.entry_applied = False
+        self._requested_blocking = blocking  # None: resolved once the entry is loaded, see _execute_entry
 
         try:
             super().execute_entry(entry_path, **kwargs)
         except Exception:
             self._execution_pending = False
             raise
+        if block_caller is None:
+            block_caller = self._blocking_subentries
         if block_caller and self._execution_pending:
             if timeout is None:
                 timeout = config('pymodaq', 'state', 'execution_timeout_s') or None
@@ -226,6 +225,11 @@ class StateManager(DashboardMixin, SettingsManager):
         'blocking_execution' action only decides it for a parallel execution.
         """
         return not self.is_action_checked('parallel_execution') or self.is_action_checked('blocking_execution')
+
+    def _resolve_blocking(self):
+        """ Fix the blocking option of this execution: the requested one, else the one of the loaded entry"""
+        self._blocking_subentries = (self.blocking_wanted if self._requested_blocking is None
+                                     else self._requested_blocking)
 
     def _update_blocking_action(self, parallel: bool):
         """ The 'blocking_execution' action is only selectable for a parallel execution, checked (and disabled) otherwise"""
@@ -274,8 +278,9 @@ class StateManager(DashboardMixin, SettingsManager):
         if entry_path is None:
             entry_path = self.entry_filepath
 
-        self.config_subentries = read_binary_and_deserialize(entry_path)[1:]
-        # first element is the parallel/sequential boolean
+        # the entry has just been loaded: the actions reflect the options stored in it
+        self._resolve_blocking()
+        self.config_subentries = self._subentries_from_data(read_binary_and_deserialize(entry_path))
 
         self.subentry_handlers: list[StateSubEntryHandler] = []
 
@@ -293,6 +298,14 @@ class StateManager(DashboardMixin, SettingsManager):
 
         self._advance()
         return None
+
+    @staticmethod
+    def _subentries_from_data(data: list) -> list:
+        """ Drop the header of an entry file: parallel flag, then the blocking flag (absent in older files)"""
+        data = data[1:]
+        if data and isinstance(data[0], bool):
+            data = data[1:]
+        return data
 
     def _advance(self):
         self._ind_subentry += 1
@@ -490,6 +503,12 @@ class StateManager(DashboardMixin, SettingsManager):
         except IndexError:
             checked = False
         self.set_action_checked('parallel_execution', checked)
+        if checked:  # the waiting option is only stored for (and relevant to) a parallel execution
+            blocking = data.pop(0) if data and isinstance(data[0], bool) else True  # files written before had none
+            self._blocking_in_parallel = blocking
+            self.set_action_checked('blocking_execution', blocking)
+        elif data and isinstance(data[0], bool):
+            data.pop(0)
 
         #populate the Settings Table
         self.config_model.load(data)
@@ -502,9 +521,12 @@ class StateManager(DashboardMixin, SettingsManager):
             parallel_execution = self.is_action_checked('parallel_execution')
         except KeyError:
             parallel_execution = False
+        blocking = (self.is_action_checked('blocking_execution') if parallel_execution
+                    else self._blocking_in_parallel)
 
         with open(entry_path, mode='wb') as file:
             file.write(ser_factory.get_apply_serializer(parallel_execution))
+            file.write(ser_factory.get_apply_serializer(blocking))
 
         # then save the various settings about the states
         self.config_model.save(entry_path, mode='ab')

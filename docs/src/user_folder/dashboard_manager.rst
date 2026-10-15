@@ -130,10 +130,13 @@ Two toolbar actions, next to the execute one, control how a State is executed:
   keep moving after that. The action is only selectable for a parallel execution: a sequential execution always waits,
   as each subentry waits for the previous one.
 
+Both options are saved in the State file, so a State is always executed as it was saved (also when executed by name
+from the sequencer). States saved before the *Wait for completion* option existed wait for completion.
+
 From code, ``execute_entry(blocking=True)`` or ``execute_entry(blocking=False)`` overrides this action. By default the
 call itself returns only once the State is applied, running a local Qt event loop meanwhile (the interface stays
 responsive, so this only works from the main thread). ``execute_entry(block_caller=False)`` returns at once instead, the
-end of the execution being signalled by ``applied_entry`` (this is what the sequencer does).
+end of the execution being signalled by ``applied_entry`` (this is what the sequencer does, with the options saved in the State).
 ``execute_entry(timeout=10)`` stops waiting after 10 s (the State keeps being applied); the default timeout is the
 ``execution_timeout_s`` entry of the ``[state]`` section of *pymodaq.toml* (0, the default, waits for ever).
 
