@@ -183,8 +183,10 @@ class SettingsManagerModel(TableModel):
                     value = entry.setting.parameter.value()
                     if isinstance(value, Number):
                         suffix = entry.setting.parameter.opts.get('suffix', '')
+                        if suffix is None:
+                            suffix = ''
                         if isinstance(value, float):
-                            value, prefix = get_si_prefix(entry.setting.parameter.value())
+                            value, prefix = get_si_prefix(value)
                             dat = f"{value} {prefix}{suffix}"
                         else:
                             dat = f"{value} {suffix}"
