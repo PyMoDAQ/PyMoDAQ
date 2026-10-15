@@ -119,7 +119,8 @@ class StateElt(SeqEltBase):
 
     def _execute(self, dte: DataToExport = None):
         self.state_manager.entry = self.state
-        self.state_manager.execute_entry(blocking=False)  # done_signal is emitted from the applied_entry signal
+        # wait for the modules, but not in this call: done_signal is emitted from the applied_entry signal
+        self.state_manager.execute_entry(blocking=True, block_caller=False)
 
     def _on_state_executed(self):
 

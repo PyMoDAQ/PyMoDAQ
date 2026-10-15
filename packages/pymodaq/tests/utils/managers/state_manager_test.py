@@ -1,3 +1,4 @@
+import time
 import threading
 # -*- coding: utf-8 -*-
 """
@@ -15,7 +16,7 @@ from pymodaq_utils.config import GlobalConfig
 from pymodaq.utils.managers.state import state_manager as state_manager_module
 from pymodaq.utils.managers.state.state_manager import StateManager
 from pymodaq.utils.managers.state.subentries import (
-    SubEntryHandlerFactory, StateSubEntryHandlerTypes)
+    SubEntryHandlerFactory, StateSubEntryHandlerTypes, ActuatorValueSubEntryHandler)
 
 
 factory = SubEntryHandlerFactory()
@@ -186,6 +187,97 @@ class TestExecution:
         thread.start()
         thread.join(2)
         assert waited and not thread.is_alive()
+
+
+class FakeSubEntryHandler(QtCore.QObject):
+    """ Sub-entry whose module needs 300 ms to do what is asked (an actuator moving) """
+    executed_signal = QtCore.Signal(int)
+    execution_failed = QtCore.Signal(Exception)
+
+    def __init__(self, *args, ind_subentry=None, blocking=True, **kwargs):
+        super().__init__()
+        self._ind_subentry = ind_subentry
+        self.blocking = blocking
+
+    def execute_subentry(self, entry, dashboard=None):
+        if self.blocking:
+            QtCore.QTimer.singleShot(300, lambda: self.executed_signal.emit(self._ind_subentry))
+        else:
+            self.executed_signal.emit(self._ind_subentry)
+
+
+class TestWithSubEntries:
+    """ The whole chain: sub-entries ending asynchronously, in sequential and in parallel mode """
+
+    @pytest.fixture
+    def state_with_subentries(self, ini_state_manager, monkeypatch):
+        state_manager, qtbot = ini_state_manager
+        monkeypatch.setattr(state_manager, 'dashboard', MagicMock())
+        monkeypatch.setattr(state_manager, 'save_new_history_entry', lambda: None)
+        experiment_manager = MagicMock(applied_entry_name='default')
+        monkeypatch.setattr(StateManager, 'experiment_manager', property(lambda self: experiment_manager))
+        monkeypatch.setattr(StateManager, 'experiment_filename', property(lambda self: 'default'))
+        subentries = [MagicMock(entry_type=StateSubEntryHandlerTypes.WAIT) for _ in range(3)]
+        monkeypatch.setattr(state_manager_module, 'read_binary_and_deserialize',
+                            lambda path: [False] + subentries)
+        monkeypatch.setattr(state_manager_module.handler_factory, 'get_subentry_handler',
+                            lambda entry_type: FakeSubEntryHandler)
+        return state_manager, qtbot
+
+    @pytest.mark.parametrize('parallel, min_duration', [(True, 0.25), (False, 0.85)])
+    def test_blocking(self, state_with_subentries, parallel, min_duration):
+        """ The caller waits for the modules (in parallel they are all waited for together)"""
+        state_manager, qtbot = state_with_subentries
+        state_manager.set_action_checked('parallel_execution', parallel)
+
+        t0 = time.perf_counter()
+        state_manager.execute_entry(blocking=True)
+        assert time.perf_counter() - t0 > min_duration
+        assert state_manager.entry_applied
+
+    @pytest.mark.parametrize('parallel', [True, False])
+    def test_blocking_without_blocking_the_caller(self, state_with_subentries, parallel):
+        """ Wait for the modules but not in the call: used by the sequencer """
+        state_manager, qtbot = state_with_subentries
+        state_manager.set_action_checked('parallel_execution', parallel)
+
+        with qtbot.waitSignal(state_manager.applied_entry, timeout=5000):
+            t0 = time.perf_counter()
+            state_manager.execute_entry(blocking=True, block_caller=False)
+            assert time.perf_counter() - t0 < 0.2  # returned at once
+            assert not state_manager.entry_applied
+        assert state_manager.entry_applied
+
+    def test_non_blocking(self, state_with_subentries):
+        """ In parallel, the modules are only started: everything is over at once, whatever the time they need """
+        state_manager, qtbot = state_with_subentries
+        state_manager.set_action_checked('parallel_execution', True)
+
+        t0 = time.perf_counter()
+        state_manager.execute_entry(blocking=False)
+        assert time.perf_counter() - t0 < 0.2
+        assert state_manager.entry_applied
+
+
+class TestActuatorHandlerBlocking:
+
+    @pytest.mark.parametrize('blocking', [True, False])
+    def test_executed_when_started_or_when_moved(self, init_qt, blocking):
+        handler = ActuatorValueSubEntryHandler(MagicMock(), MagicMock(), ind_subentry=3, blocking=blocking)
+        module = MagicMock(initialized_state=True, units='mm')
+        dashboard = MagicMock()
+        dashboard.modules_manager.get_mod_from_name.return_value = module
+        entry = MagicMock(module_name='act', setting=MagicMock())
+        entry.setting.parameter.opts = {'suffix': 'mm'}
+        entry.setting.parameter.value.return_value = 1.
+        executed = []
+        handler.executed_signal.connect(executed.append)
+        handler.get_module = lambda entry, dashboard: module
+
+        handler.execute_subentry(entry, dashboard)
+        module.move_abs.assert_called_once()
+        assert executed == ([] if blocking else [3])  # blocking: waits for move_done_signal
+        assert module.move_done_signal.connect.called == blocking
 
 
 class TestSpecialEntryFactory:

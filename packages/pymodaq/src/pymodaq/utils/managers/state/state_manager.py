@@ -68,6 +68,7 @@ class StateManager(DashboardMixin, SettingsManager):
     settings_handler = StateSubEntryHandlerTypes.SETTINGS
     actuator_moved = QtCore.Signal(DataActuator)
     blocking_execution = True  # initial state of the 'blocking_execution' action
+    _blocking_subentries = True  # whether the sub-entries wait for their modules, see execute_entry
     _blocking_in_parallel = True  # value of the 'blocking_execution' action to restore in parallel mode
 
     def __init__(self,
@@ -168,30 +169,39 @@ class StateManager(DashboardMixin, SettingsManager):
     def can_execute_entry(self) -> bool:
         return self.is_dashboard_available
 
-    def execute_entry(self, entry_path: str | Path = None, blocking: bool = None, timeout: float = None, **kwargs):
+    def execute_entry(self, entry_path: str | Path = None, blocking: bool = None, block_caller: bool = None,
+                      timeout: float = None, **kwargs):
         """ Apply the selected state
 
         The sub-entries are applied asynchronously: each one signals its end (the next one is then started if the
-        execution is sequential), and the end of the whole state is signalled by ``applied_entry``. In blocking mode
-        this method waits for that signal, see :meth:`_wait_until_applied`.
+        execution is sequential), and the end of the whole state is signalled by ``applied_entry``. The caller can
+        wait for that signal, see :meth:`_wait_until_applied`.
 
         Parameters
         ----------
         entry_path: str or Path
             The state to apply, default to the current entry
         blocking: bool
-            If True, return only once every sub-entry has been processed: the Qt event loop keeps running in the
-            meantime, and ``entry_applied`` then reflects this execution. If False, return at once; the end of the
-            execution is signalled by ``applied_entry``. Default to True for a sequential execution, and to the state of the
-            'blocking_execution' action (hourglass icon, checked by default) for a parallel one.
+            If True, each sub-entry is over once its module has done what is asked (an actuator reached its target, a
+            module is initialized): ``applied_entry`` is then emitted when everything is done. If False, the modules
+            are only started, and ``applied_entry`` is emitted right after the last one has been started.
+            Default to True for a sequential execution, and to the state of the 'blocking_execution' action
+            (hourglass icon, checked by default) for a parallel one.
             This is independent of the sequential/parallel execution of the sub-entries.
+        block_caller: bool
+            If True, return only once the execution is over (``applied_entry`` emitted): the Qt event loop keeps
+            running in the meantime and ``entry_applied`` then reflects this execution. If False, return at once and
+            use ``applied_entry``. Default to the value of ``blocking``.
         timeout: float
-            In blocking mode, stop waiting after this number of seconds (the state keeps being applied, a warning is
-            logged and ``entry_applied`` stays False until it is). Default to the ``execution_timeout_s`` entry of the
-            ``state`` section of the configuration (0, the default, means no timeout).
+            When blocking the caller, stop waiting after this number of seconds (the state keeps being applied, a
+            warning is logged and ``entry_applied`` stays False until it is). Default to the ``execution_timeout_s``
+            entry of the ``state`` section of the configuration (0, the default, means no timeout).
         """
         if blocking is None:
             blocking = self.blocking_wanted
+        if block_caller is None:
+            block_caller = blocking
+        self._blocking_subentries = blocking
         if self._execution_pending:
             logger.warning(f'The state {self.entry} is still being applied, '
                            f'the new request is ignored')
@@ -203,7 +213,7 @@ class StateManager(DashboardMixin, SettingsManager):
         except Exception:
             self._execution_pending = False
             raise
-        if blocking and self._execution_pending:
+        if block_caller and self._execution_pending:
             if timeout is None:
                 timeout = config('pymodaq', 'state', 'execution_timeout_s') or None
             self._wait_until_applied(timeout)
@@ -297,7 +307,7 @@ class StateManager(DashboardMixin, SettingsManager):
             self.settings,
             actuators=self.actuators,
             detectors=self.detectors,
-            ind_subentry=self._ind_subentry))
+            ind_subentry=self._ind_subentry, blocking=self._blocking_subentries))
         try:
             self.subentry_handlers[-1].executed_signal.connect(self._on_executed)
             self.subentry_handlers[-1].execution_failed.connect(self._on_execution_failed)
