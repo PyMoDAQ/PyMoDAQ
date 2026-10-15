@@ -72,6 +72,9 @@ class Controller(QObject):
         self._syncing_from_device = False  # True while applying a setting the plugin changed itself
         self._last_values: dict[str, object] = {}
         self._polled: dict[str, Subscription] = {}
+        # One-shot read()/read_blocking() subscriptions, kept alive here until released - see
+        # _track_until_released.
+        self._pending_reads: set[Subscription] = set()
         # Outstanding requests, one QTimer per (kind, name): started when sent, stopped by whichever
         # answer arrives first. Lives here, not in a GUI, so a script gets the same guarantee a widget
         # does - on timeout, write_failed/read_failed fire same as a real rejection would.
@@ -225,7 +228,7 @@ class Controller(QObject):
                 raise ValueError(f'{name!r} is already polled with policy {existing.policy!r}')
             return existing
         sub = Subscription(name, period_ms, policy=policy)
-        sub.data_ready.connect(lambda data, is_temp, t: self._on_reading(name, data, t, sub))
+        sub.on_data = lambda data, read_time: self._on_reading(name, data, read_time, sub)
         self._polled[name] = sub
         self.subscribe_requested.emit(sub)
         return sub
@@ -249,17 +252,30 @@ class Controller(QObject):
         """Call *name*'s declared ``stop`` action. A no-op if it has none. Raises if the device is closed."""
         self.run_action(name, 'stop')
 
+    def _track_until_released(self, sub: Subscription) -> None:
+        """Keep a strong reference to a one-shot *sub* until the hardware thread releases it.
+
+        Nothing else holds one once the ``read``/``read_blocking`` call that creates it returns,
+        and a bound-method connection (``sub.data_ready`` -> ``sub._deliver``, see
+        ``Subscription.__init__``) only weakly tracks its own receiver - exactly the protection
+        ``_on_timeout``'s own comment describes, which here would silently drop the one reading
+        this object exists for, before it ever arrives, instead of protecting anything.
+        """
+        self._pending_reads.add(sub)
+        sub.released.connect(functools.partial(self._pending_reads.discard, sub))
+
     def read(self, name: str, on_value) -> Subscription:
         """Read *name* once, asynchronously: *on_value(data)* is called when the reading arrives."""
         self._require_open(name)
         self._start_read_timeout(name)
         sub = Subscription(name, None)
 
-        def _on_value(data):
+        def _on_value(data, _read_time):
             self._stop_read_timeout(name)
             on_value(data)
 
-        sub.data_ready.connect(lambda data, is_temp, t: (sub.acknowledge(), _on_value(data)))
+        sub.on_data = _on_value
+        self._track_until_released(sub)
         self.subscribe_requested.emit(sub)
         return sub
 
@@ -271,30 +287,38 @@ class Controller(QObject):
         done = threading.Event()
         result: dict[str, object] = {}
 
-        def on_value(data):
+        def on_value(data, _read_time):
             result['value'] = data
             done.set()
 
         # auto_delete=False: a script thread has no event loop to run a queued deletion.
-        sub = Subscription(name, None, auto_delete=False)
         # Direct: the hardware thread calls on_value itself, so the script thread needs no event loop.
-        sub.data_ready.connect(lambda data, is_temp, t: (sub.acknowledge(), on_value(data)), Qt.DirectConnection)
+        sub = Subscription(name, None, auto_delete=False, connection_type=Qt.ConnectionType.DirectConnection)
+        sub.on_data = on_value
+        self._track_until_released(sub)
         self.subscribe_requested.emit(sub)
         if not done.wait(timeout):
             raise TimeoutError(f'no reading of {name!r} within {timeout} s')
         return result['value']
 
     def close(self) -> None:
-        """Stop every poll and any outstanding write/read-timeout wait."""
+        """Stop every poll, fail any read still in flight, and stop any outstanding write/read-timeout wait.
+
+        A read()/read_blocking() already queued on the hardware thread when this runs may still be
+        answered - closing does not reach back to cancel it - but nothing here waits for that: a
+        pending one-shot read is dropped and reported failed immediately, same as a real timeout.
+        """
         for sub in self._polled.values():
             self.unsubscribe_requested.emit(sub)
         self._polled.clear()
+        for sub in list(self._pending_reads):
+            self.read_failed.emit(sub.channel, 'the device was closed')
+        self._pending_reads.clear()
         for kind, name in list(self._timers):
             self._stop_timeout(kind, name)
 
     def _on_reading(self, name: str, data: object, read_time: float, sub: Subscription) -> None:
         self._last_values[name] = data
-        sub.acknowledge()
         self.new_reading.emit(name, data, read_time)
 
 

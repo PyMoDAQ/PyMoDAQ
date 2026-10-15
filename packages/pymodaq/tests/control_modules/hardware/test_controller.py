@@ -379,6 +379,32 @@ class TestPollPolicy:
             ctrl.poll('spectrum', 20.0, policy='all')
 
 
+class TestClose:
+    """Controller.close() - called right before the hardware thread itself closes, see
+    HardwareRegistry._stop_thread."""
+
+    def test_pending_reads_are_failed_and_cleared(self, registry, qtbot):
+        key, ctrl = attach(registry)
+        ctrl.thread.ini_hardware()
+        ctrl.subscribe_requested.disconnect(ctrl.thread.subscribe)  # the request never reaches the thread
+        received = []
+        ctrl.read('exposure', received.append)
+        assert len(ctrl._pending_reads) == 1
+        with qtbot.waitSignal(ctrl.read_failed, timeout=2000) as blocker:
+            ctrl.close()
+        assert blocker.args == ['exposure', 'the device was closed']
+        assert ctrl._pending_reads == set()
+        assert received == []
+
+    def test_polled_subscriptions_are_unsubscribed_and_cleared(self, registry, qtbot):
+        key, ctrl = attach(registry)
+        ctrl.thread.ini_hardware()
+        ctrl.poll('spectrum', 20.0)
+        qtbot.waitUntil(lambda: ctrl.spectrum is not None, timeout=2000)
+        ctrl.close()
+        assert ctrl._polled == {}
+
+
 class TestBlockingRead:
 
     def test_script_thread_gets_the_reading(self, registry, qtbot):
