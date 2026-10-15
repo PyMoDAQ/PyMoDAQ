@@ -68,6 +68,7 @@ class StateManager(DashboardMixin, SettingsManager):
     settings_handler = StateSubEntryHandlerTypes.SETTINGS
     actuator_moved = QtCore.Signal(DataActuator)
     blocking_execution = True  # initial state of the 'blocking_execution' action
+    _blocking_in_parallel = True  # value of the 'blocking_execution' action to restore in parallel mode
 
     def __init__(self,
                  dashboard: 'DashBoard' = None):
@@ -181,8 +182,8 @@ class StateManager(DashboardMixin, SettingsManager):
         blocking: bool
             If True, return only once every sub-entry has been processed: the Qt event loop keeps running in the
             meantime, and ``entry_applied`` then reflects this execution. If False, return at once; the end of the
-            execution is signalled by ``applied_entry``. Default to the state of the 'blocking_execution' action
-            (hourglass icon, checked by default).
+            execution is signalled by ``applied_entry``. Default to True for a sequential execution, and to the state of the
+            'blocking_execution' action (hourglass icon, checked by default) for a parallel one.
             This is independent of the sequential/parallel execution of the sub-entries.
         timeout: float
             In blocking mode, stop waiting after this number of seconds (the state keeps being applied, a warning is
@@ -190,7 +191,7 @@ class StateManager(DashboardMixin, SettingsManager):
             ``state`` section of the configuration (0, the default, means no timeout).
         """
         if blocking is None:
-            blocking = self.is_action_checked('blocking_execution')
+            blocking = self.blocking_wanted
         if self._execution_pending:
             logger.warning(f'The state {self.entry} is still being applied, '
                            f'the new request is ignored')
@@ -206,6 +207,24 @@ class StateManager(DashboardMixin, SettingsManager):
             if timeout is None:
                 timeout = config('pymodaq', 'state', 'execution_timeout_s') or None
             self._wait_until_applied(timeout)
+
+    @property
+    def blocking_wanted(self) -> bool:
+        """ Whether :meth:`execute_entry` waits for the end of the execution when ``blocking`` is not specified
+
+        A sequential execution always waits (each sub-entry waits for the previous one, so does the whole state), the
+        'blocking_execution' action only decides it for a parallel execution.
+        """
+        return not self.is_action_checked('parallel_execution') or self.is_action_checked('blocking_execution')
+
+    def _update_blocking_action(self, parallel: bool):
+        """ The 'blocking_execution' action is only selectable for a parallel execution, checked (and disabled) otherwise"""
+        if parallel:
+            self.set_action_checked('blocking_execution', self._blocking_in_parallel)
+        else:
+            self._blocking_in_parallel = self.is_action_checked('blocking_execution')
+            self.set_action_checked('blocking_execution', True)
+        self.set_action_enabled('blocking_execution', parallel)
 
     def _wait_until_applied(self, timeout: float = None):
         """ Return when ``applied_entry`` has been emitted, or after the timeout (in s)
@@ -309,7 +328,7 @@ class StateManager(DashboardMixin, SettingsManager):
             self.finalize()
 
     def _on_executed(self, ind_subentry):
-        entry: SubEntry = self.config_subentries[self._ind_subentry]
+        entry: SubEntry = self.config_subentries[ind_subentry]  # not the loop counter: all started in parallel mode
         if entry.entry_type == StateSubEntryHandlerTypes.ACTUATOR_VALUE:
             module = self.modules_manager.get_mod_from_name(entry.module_name,
                                                             mod=ModuleType.Actuator)
@@ -382,7 +401,8 @@ class StateManager(DashboardMixin, SettingsManager):
                         before=self.get_action(ManagerActions.EXECUTE),)
         self.add_action('blocking_execution', 'Wait for completion',
                         'hourglass_disabled', icon_checked='hourglass',
-                        tip='if checked, executing a state returns only once all its sub-entries are completed',
+                        tip='if checked, executing a state returns only once all its sub-entries are completed '
+                            '(always the case for a sequential execution)',
                         checkable=True, checked=self.blocking_execution,
                         icon_color=self.get_theme().red,
                         icon_checked_color=self.get_theme().green,
@@ -394,6 +414,9 @@ class StateManager(DashboardMixin, SettingsManager):
 
     def connect_things(self):
         super().connect_things()
+
+        self.get_action('parallel_execution').toggled.connect(self._update_blocking_action)
+        self._update_blocking_action(self.is_action_checked('parallel_execution'))
 
         if self.dashboard is None:
             self.experiment_manager.enable_actions(True)

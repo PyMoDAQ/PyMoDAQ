@@ -98,11 +98,46 @@ class TestExecution:
 
     def test_non_blocking_from_action(self, delayed_state_manager):
         state_manager, qtbot = delayed_state_manager
+        state_manager.set_action_checked('parallel_execution', True)
         state_manager.set_action_checked('blocking_execution', False)
 
         with qtbot.waitSignal(state_manager.applied_entry, timeout=2000):
             state_manager.execute_entry()
             assert not state_manager.entry_applied
+
+    def test_sequential_execution_always_blocks(self, delayed_state_manager):
+        """ The blocking action is only selectable for a parallel execution """
+        state_manager, qtbot = delayed_state_manager
+        state_manager.set_action_checked('parallel_execution', True)
+        state_manager.set_action_checked('blocking_execution', False)
+        assert state_manager.is_action_enabled('blocking_execution')
+        assert not state_manager.blocking_wanted
+
+        state_manager.set_action_checked('parallel_execution', False)
+        assert not state_manager.is_action_enabled('blocking_execution')
+        assert state_manager.is_action_checked('blocking_execution')
+        assert state_manager.blocking_wanted
+        state_manager.execute_entry()
+        assert state_manager.entry_applied
+
+        state_manager.set_action_checked('parallel_execution', True)  # the choice of the user is restored
+        assert not state_manager.is_action_checked('blocking_execution')
+        assert state_manager.is_action_enabled('blocking_execution')
+
+    def test_parallel_subentries_are_identified_by_their_index(self, delayed_state_manager):
+        """ All sub-entries are started before the first one ends: the loop counter is then past the last one """
+        state_manager, qtbot = delayed_state_manager
+        entries = [MagicMock(entry_type=StateSubEntryHandlerTypes.SETTINGS) for _ in range(2)]
+        state_manager.config_subentries = entries
+        state_manager._ind_subentry = len(entries)
+        state_manager.subentries_model = MagicMock()
+        state_manager._processed_subentries = 0
+        state_manager.set_action_checked('parallel_execution', True)
+
+        state_manager._on_executed(0)
+        state_manager._on_executed(1)
+        state_manager.subentries_model.set_status.assert_any_call(1, True)
+        assert state_manager.entry_applied
 
     def test_entry_applied_reset_on_new_execution(self, delayed_state_manager):
         state_manager, qtbot = delayed_state_manager
