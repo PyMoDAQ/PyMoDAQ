@@ -49,8 +49,13 @@ def ini_state_manager(init_qt):
 
     yield state_manager, qtbot
 
+    splash = getattr(state_manager, 'splash_subentries', None)  # shown when a state is executed
+    if splash is not None:
+        splash.close()
+        splash.deleteLater()
     state_manager.mainwindow.close()
     external_ui.close()
+    qtbot.wait(10)  # let the deferred closings and deletions run before the next test
 
 
 class TestStateManager:
