@@ -14,6 +14,7 @@ logger = set_logger(get_module_name(__file__))
 
 
 def get_si_prefix(number) -> tuple[Number, str]:
+    """ Get the Scaled SI prefix of a Number """
     if number == 0:
         return 0, ""
 
@@ -33,7 +34,8 @@ def get_si_prefix(number) -> tuple[Number, str]:
     # Calculate the scaled number component
     scaled_value = number / (10 ** exponent)
     prefix_symbol = prefixes[exponent]
-
+    if prefix_symbol == '':
+        scaled_value = number
     return scaled_value, prefix_symbol
 
 
