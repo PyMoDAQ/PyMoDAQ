@@ -107,6 +107,7 @@ class ManagerBase(CustomApp):
     entry_extension: str
 
     execute_action_checkable = False
+    ask_before_executing_unsaved = False  # ask what to do when executing settings that differ from the saved entry
     icon_name = 'build_circle'  # the default icon to represent the manager in Toolbar and Menus
     default_entry_name = 'default'
 
@@ -515,8 +516,37 @@ class ManagerBase(CustomApp):
         self._execute_from_path(entry_path, reload, **kwargs)
 
     def execute_current_entry(self):
-        """ Execute the entry as currently set in the manager (also if not saved), its file is left untouched """
+        """ Execute the entry as currently set in the manager (also if not saved)
+
+        The entry file is left untouched, except if ``ask_before_executing_unsaved`` is True and the user chooses to
+        save the changes before executing (a popup is shown when the current settings differ from the saved entry).
+        """
+        if self.ask_before_executing_unsaved and self.has_unsaved_changes():
+            answer = self._ask_unsaved_changes()
+            if answer == QtWidgets.QMessageBox.StandardButton.Cancel:
+                return
+            if answer == QtWidgets.QMessageBox.StandardButton.Save:
+                self.save_check(self.entry, bypass_dialog=True)
         self.execute_entry()
+
+    def has_unsaved_changes(self) -> bool:
+        """ Whether the settings currently set in the manager differ from the saved entry """
+        entry_path = self.entry_filepath
+        if not entry_path.is_file():
+            return False
+        with tempfile.TemporaryDirectory() as folder:
+            snapshot = Path(folder).joinpath(entry_path.name)
+            self.save_entries(snapshot)
+            return not snapshot.is_file() or snapshot.read_bytes() != entry_path.read_bytes()
+
+    def _ask_unsaved_changes(self) -> QtWidgets.QMessageBox.StandardButton:
+        """ Ask whether to save, to execute without saving or to cancel the execution"""
+        buttons = QtWidgets.QMessageBox.StandardButton
+        return QtWidgets.QMessageBox.question(
+            None, f'Unsaved {self.entry_type}',
+            f'The current settings differ from the saved {self.entry_type} "{self.entry}".\n'
+            f'Save them before executing? (Discard: execute without saving)',
+            buttons.Save | buttons.Discard | buttons.Cancel, buttons.Save)
 
     def _execute_from_path(self, entry_path: Path, reload: bool, **kwargs):
         if reload:

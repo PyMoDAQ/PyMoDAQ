@@ -243,6 +243,10 @@ manager gives a snapshot of its settings to ``_execute_entry`` and the entry fil
 first loads that entry in the manager, replacing its current settings, then executes it: this is what external callers
 (the Dashboard, the sequencer menus...) use to run a stored entry. A manager implementing ``_execute_entry`` therefore
 only has to read the file it is given, and ``save_entries`` has to be able to write what the manager holds.
+``execute_current_entry`` (the *Execute* action) can first ask whether to save the entry when the manager content
+differs from the file (``has_unsaved_changes``): this is driven by the ``ask_before_executing_unsaved`` attribute,
+``False`` in ``ManagerBase`` and set from the ``[manager]`` section of the configuration for the managers using the
+``DashboardMixin``.
 
 .. _custom_app_lifecycle:
 

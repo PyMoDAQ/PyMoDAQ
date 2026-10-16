@@ -65,3 +65,6 @@ ramp_setting = [ "duration", "velocity",]
 
 [state]
 execution_timeout_s = 0 # when a state is executed in blocking mode, stop waiting after this time (0: wait for ever)
+
+[manager]
+ask_before_executing_unsaved = false  # when executing from a manager (State, Scan...) settings that differ from the saved entry, ask whether to save them first (true) or just execute them (false)

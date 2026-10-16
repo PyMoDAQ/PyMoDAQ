@@ -7,6 +7,7 @@ It lives in ``pymodaq`` because the lower packages (``pymodaq_gui``...) must not
 from typing import Union, Optional, TYPE_CHECKING
 
 from pymodaq_utils.enums import StrEnum
+from pymodaq_utils.config import GlobalConfig as Config
 
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 
@@ -14,6 +15,9 @@ if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
     from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager
     from pymodaq.utils.managers.state.state_manager import StateManager
+
+
+config = Config()
 
 
 class DashBoardToolbarActions(StrEnum):
@@ -35,6 +39,14 @@ class DashboardMixin:
     """
 
     dashboard: Optional['DashBoard'] = None
+
+    @property
+    def ask_before_executing_unsaved(self) -> bool:
+        """ Whether a manager asks what to do when executing settings that differ from the saved entry
+
+        Set by ``ask_before_executing_unsaved`` in the ``[manager]`` section of the configuration
+        """
+        return bool(config('pymodaq', 'manager', 'ask_before_executing_unsaved'))
 
     @property
     def is_dashboard_available(self) -> bool:
