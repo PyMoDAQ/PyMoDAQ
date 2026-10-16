@@ -133,6 +133,11 @@ Two toolbar actions, next to the execute one, control how a State is executed:
 Both options are saved in the State file, so a State is always executed as it was saved (also when executed by name
 from the sequencer). States saved before the *Wait for completion* option existed wait for completion.
 
+The *Execute* action of a manager (also from the toolbar of the Dashboard) runs what is currently set in the manager,
+also if it has not been saved: options or subentries changed in the table are used, and the State file is not modified
+(use the save action to keep them). Executing a State by its name from code, ``execute_entry('my_state')``, loads the
+saved State first.
+
 From code, ``execute_entry(blocking=True)`` or ``execute_entry(blocking=False)`` overrides this action. By default the
 call itself returns only once the State is applied, running a local Qt event loop meanwhile (the interface stays
 responsive, so this only works from the main thread). ``execute_entry(block_caller=False)`` returns at once instead, the

@@ -133,6 +133,37 @@ class TestExecution:
         assert state_manager.is_action_checked('parallel_execution')
         assert state_manager.is_action_checked('blocking_execution')
 
+    def test_execute_uses_the_current_settings_not_the_file(self, delayed_state_manager, tmp_path, monkeypatch):
+        """ Options changed in the manager and not saved are the ones executed, the file is not modified """
+        state_manager, qtbot = delayed_state_manager
+        monkeypatch.setattr(state_manager, 'get_entry_folder', lambda **kwargs: tmp_path)
+        state_manager.set_action_checked('parallel_execution', True)
+        state_manager.set_action_checked('blocking_execution', True)
+        state_manager.save_entries(state_manager.entry_filepath)
+        saved = state_manager.entry_filepath.read_bytes()
+
+        state_manager.set_action_checked('blocking_execution', False)  # not saved
+        with qtbot.waitSignal(state_manager.applied_entry, timeout=2000):
+            state_manager.execute_current_entry()
+            assert not state_manager._blocking_subentries
+        assert state_manager.is_action_checked('parallel_execution')
+        assert not state_manager.is_action_checked('blocking_execution')
+        assert state_manager.entry_filepath.read_bytes() == saved
+
+    def test_execute_a_named_entry_loads_it(self, delayed_state_manager, tmp_path, monkeypatch):
+        """ From the outside (a name or a path), the selected entry is loaded then executed """
+        state_manager, qtbot = delayed_state_manager
+        monkeypatch.setattr(state_manager, 'get_entry_folder', lambda **kwargs: tmp_path)
+        state_manager.set_action_checked('parallel_execution', True)
+        state_manager.set_action_checked('blocking_execution', False)
+        state_manager.save_entries(state_manager.entry_filepath)
+
+        state_manager.set_action_checked('blocking_execution', True)  # not saved: replaced by the file
+        with qtbot.waitSignal(state_manager.applied_entry, timeout=2000):
+            state_manager.execute_entry(state_manager.entry)
+            assert not state_manager._blocking_subentries
+        assert not state_manager.is_action_checked('blocking_execution')
+
     def test_non_blocking_from_action(self, delayed_state_manager):
         state_manager, qtbot = delayed_state_manager
         state_manager.set_action_checked('parallel_execution', True)
