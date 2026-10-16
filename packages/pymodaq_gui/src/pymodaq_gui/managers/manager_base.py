@@ -1,5 +1,6 @@
 import inspect
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any, Union, Optional
 
@@ -106,6 +107,7 @@ class ManagerBase(CustomApp):
     entry_extension: str
 
     execute_action_checkable = False
+    ask_before_executing_unsaved = False  # ask what to do when executing settings that differ from the saved entry
     icon_name = 'build_circle'  # the default icon to represent the manager in Toolbar and Menus
     default_entry_name = 'default'
 
@@ -353,9 +355,6 @@ class ManagerBase(CustomApp):
         self.entries_sync.value_changed.connect(lambda value: self.update_entry(value['current']))
         self.sync_entries_with(self.get_action_list())
 
-    def execute_current_entry(self):
-        self.execute_entry(self.entry)
-
     def sync_entries_with(self, combo: ComboBox):
         self.entries_sync.bind_properties(
             combo,
@@ -492,16 +491,66 @@ class ManagerBase(CustomApp):
         """ Get the name of the last entry that has been successfully applied/executed """
         return self._applied_entry_name
 
-    def execute_entry(self, entry_path: str | Path = None, **kwargs):
-        """ To be called to execute the selected entry """
+    def execute_entry(self, entry_path: str | Path = None, reload: bool = True, **kwargs):
+        """ To be called to execute an entry
+
+        Parameters
+        ----------
+        entry_path: str or Path
+            The entry to execute. If None, the entry is executed as it is currently set in the manager, unsaved changes
+            included, and its file is left untouched (see :meth:`execute_current_entry`). Otherwise the entry (a name
+            or a file path) is first loaded in the manager, replacing its current settings, then executed.
+        reload: bool
+            Whether to load the entry in the manager before executing it, only relevant with an ``entry_path``.
+        """
         if entry_path is None:
-            self.save_check(self.entry, bypass_dialog=True)
-            entry_path = self.entry_filepath
+            # the managers execute from a file: give them a snapshot of what is currently set
+            with tempfile.TemporaryDirectory() as folder:
+                snapshot = Path(folder).joinpath(f'{self.entry}{self.entry_extension}')
+                self.save_entries(snapshot)
+                self._execute_from_path(snapshot, False, **kwargs)
+            return
 
         if isinstance(entry_path, str):
             entry_path = self.entry_path_from_name(entry_path)
+        self._execute_from_path(entry_path, reload, **kwargs)
 
-        self.update_entry(entry_path)
+    def execute_current_entry(self):
+        """ Execute the entry as currently set in the manager (also if not saved)
+
+        The entry file is left untouched, except if ``ask_before_executing_unsaved`` is True and the user chooses to
+        save the changes before executing (a popup is shown when the current settings differ from the saved entry).
+        """
+        if self.ask_before_executing_unsaved and self.has_unsaved_changes():
+            answer = self._ask_unsaved_changes()
+            if answer == QtWidgets.QMessageBox.StandardButton.Cancel:
+                return
+            if answer == QtWidgets.QMessageBox.StandardButton.Save:
+                self.save_check(self.entry, bypass_dialog=True)
+        self.execute_entry()
+
+    def has_unsaved_changes(self) -> bool:
+        """ Whether the settings currently set in the manager differ from the saved entry """
+        entry_path = self.entry_filepath
+        if not entry_path.is_file():
+            return False
+        with tempfile.TemporaryDirectory() as folder:
+            snapshot = Path(folder).joinpath(entry_path.name)
+            self.save_entries(snapshot)
+            return not snapshot.is_file() or snapshot.read_bytes() != entry_path.read_bytes()
+
+    def _ask_unsaved_changes(self) -> QtWidgets.QMessageBox.StandardButton:
+        """ Ask whether to save, to execute without saving or to cancel the execution"""
+        buttons = QtWidgets.QMessageBox.StandardButton
+        return QtWidgets.QMessageBox.question(
+            None, f'Unsaved {self.entry_type}',
+            f'The current settings differ from the saved {self.entry_type} "{self.entry}".\n'
+            f'Save them before executing? (Discard: execute without saving)',
+            buttons.Save | buttons.Discard | buttons.Cancel, buttons.Save)
+
+    def _execute_from_path(self, entry_path: Path, reload: bool, **kwargs):
+        if reload:
+            self.update_entry(entry_path)
 
         if not self.can_execute_entry():
             logger.info(f"Cannot Load {self.entry_type.capitalize()} file: {entry_path.stem} "
