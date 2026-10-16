@@ -48,7 +48,20 @@ class ChoiceModelBase(ParameterManager):
         return self.modules_manager.selected_detectors_name
 
     def execute(self, dte: DataToExport):
-        pass
+        """ Evaluate this model's condition and emit the result on the parent elt's go_to_signal
+
+        Subclasses should implement `evaluate` rather than overriding this method, so that the
+        boolean result can also be obtained directly (e.g. by a composite condition combining
+        several models) without triggering the parent elt's transition.
+        """
+        self.parent_elt.go_to_signal.emit(self.evaluate(dte))
+
+    def evaluate(self, dte: DataToExport) -> bool:
+        """ Compute and return this model's boolean condition, without emitting go_to_signal
+
+        To be reimplemented
+        """
+        return False
 
     def check_set_is_valid(self):
         """ Check if the current settings of this model are valid
