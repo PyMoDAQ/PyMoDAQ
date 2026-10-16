@@ -119,7 +119,9 @@ class StateElt(SeqEltBase):
 
     def _execute(self, dte: DataToExport = None):
         self.state_manager.entry = self.state
-        self.state_manager.execute_entry()
+        # the state is executed with the options saved in it (sequential/parallel, waiting for the modules or not),
+        # but never blocking this call: done_signal is emitted from the applied_entry signal
+        self.state_manager.execute_entry(block_caller=False)
 
     def _on_state_executed(self):
 

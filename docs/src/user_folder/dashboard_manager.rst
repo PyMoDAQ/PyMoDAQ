@@ -118,6 +118,28 @@ These allow to define:
 * a Waiting time before moving to the next subentry
 * stopping control modules or extensions
 
+Two toolbar actions, next to the execute one, control how a State is executed:
+
+* *Sequential/parallel Execution*: when unchecked (green, the default), each subentry waits for the previous one to be
+  completed (for instance an actuator to reach its target) before being executed; when checked, all subentries are
+  started at once.
+* *Wait for completion* (hourglass icon): when checked (the default), each subentry is over only once its module has
+  done what is asked (an actuator reached its target, a module is initialized), so the State is applied when all of
+  them are done and code running afterwards, after ``state_manager.execute_entry()``, can rely on it. When unchecked
+  (parallel execution only), the modules are just started and the State is considered applied at once: the actuators
+  keep moving after that. The action is only selectable for a parallel execution: a sequential execution always waits,
+  as each subentry waits for the previous one.
+
+Both options are saved in the State file, so a State is always executed as it was saved (also when executed by name
+from the sequencer). States saved before the *Wait for completion* option existed wait for completion.
+
+From code, ``execute_entry(blocking=True)`` or ``execute_entry(blocking=False)`` overrides this action. By default the
+call itself returns only once the State is applied, running a local Qt event loop meanwhile (the interface stays
+responsive, so this only works from the main thread). ``execute_entry(block_caller=False)`` returns at once instead, the
+end of the execution being signalled by ``applied_entry`` (this is what the sequencer does, with the options saved in the State).
+``execute_entry(timeout=10)`` stops waiting after 10 s (the State keeps being applied); the default timeout is the
+``execution_timeout_s`` entry of the ``[state]`` section of *pymodaq.toml* (0, the default, waits for ever).
+
 There are also many ways to move around and delete the subentries: either using the
 arrows in the middle of the window (look at their tooltip) or shortcuts: Ctrl+Up to move up,
 Del to delete...

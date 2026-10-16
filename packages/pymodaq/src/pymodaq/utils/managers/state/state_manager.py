@@ -67,6 +67,10 @@ class StateManager(DashboardMixin, SettingsManager):
     icon_name = 'discover_tune'
     settings_handler = StateSubEntryHandlerTypes.SETTINGS
     actuator_moved = QtCore.Signal(DataActuator)
+    blocking_execution = True  # initial state of the 'blocking_execution' action
+    _blocking_subentries = True  # whether the sub-entries wait for their modules, see execute_entry
+    _requested_blocking: bool | None = None
+    _blocking_in_parallel = True  # value of the 'blocking_execution' action to restore in parallel mode
 
     def __init__(self,
                  dashboard: 'DashBoard' = None):
@@ -83,6 +87,7 @@ class StateManager(DashboardMixin, SettingsManager):
                          handler_id=StateSettingsEntryHandler.handler_name)
 
         self._processed_subentries = 0
+        self._execution_pending = False
 
         self.history_file_path: str = HISTORY_FILE_PATH
         self.config_model.save_path = self.get_entry_folder()
@@ -165,6 +170,103 @@ class StateManager(DashboardMixin, SettingsManager):
     def can_execute_entry(self) -> bool:
         return self.is_dashboard_available
 
+    def execute_entry(self, entry_path: str | Path = None, blocking: bool = None, block_caller: bool = None,
+                      timeout: float = None, **kwargs):
+        """ Apply the selected state
+
+        The sub-entries are applied asynchronously: each one signals its end (the next one is then started if the
+        execution is sequential), and the end of the whole state is signalled by ``applied_entry``. The caller can
+        wait for that signal, see :meth:`_wait_until_applied`.
+
+        Parameters
+        ----------
+        entry_path: str or Path
+            The state to apply, default to the current entry
+        blocking: bool
+            If True, each sub-entry is over once its module has done what is asked (an actuator reached its target, a
+            module is initialized): ``applied_entry`` is then emitted when everything is done. If False, the modules
+            are only started, and ``applied_entry`` is emitted right after the last one has been started.
+            Default to True for a sequential execution, and to the state of the 'blocking_execution' action
+            (hourglass icon, checked by default) for a parallel one.
+            This is independent of the sequential/parallel execution of the sub-entries.
+        block_caller: bool
+            If True, return only once the execution is over (``applied_entry`` emitted): the Qt event loop keeps
+            running in the meantime and ``entry_applied`` then reflects this execution. If False, return at once and
+            use ``applied_entry``. Default to the value of ``blocking``.
+        timeout: float
+            When blocking the caller, stop waiting after this number of seconds (the state keeps being applied, a
+            warning is logged and ``entry_applied`` stays False until it is). Default to the ``execution_timeout_s``
+            entry of the ``state`` section of the configuration (0, the default, means no timeout).
+        """
+        if self._execution_pending:
+            logger.warning(f'The state {self.entry} is still being applied, '
+                           f'the new request is ignored')
+            return
+        self.entry_applied = False
+        self._requested_blocking = blocking  # None: resolved once the entry is loaded, see _execute_entry
+
+        try:
+            super().execute_entry(entry_path, **kwargs)
+        except Exception:
+            self._execution_pending = False
+            raise
+        if block_caller is None:
+            block_caller = self._blocking_subentries
+        if block_caller and self._execution_pending:
+            if timeout is None:
+                timeout = config('pymodaq', 'state', 'execution_timeout_s') or None
+            self._wait_until_applied(timeout)
+
+    @property
+    def blocking_wanted(self) -> bool:
+        """ Whether :meth:`execute_entry` waits for the end of the execution when ``blocking`` is not specified
+
+        A sequential execution always waits (each sub-entry waits for the previous one, so does the whole state), the
+        'blocking_execution' action only decides it for a parallel execution.
+        """
+        return not self.is_action_checked('parallel_execution') or self.is_action_checked('blocking_execution')
+
+    def _resolve_blocking(self):
+        """ Fix the blocking option of this execution: the requested one, else the one of the loaded entry"""
+        self._blocking_subentries = (self.blocking_wanted if self._requested_blocking is None
+                                     else self._requested_blocking)
+
+    def _update_blocking_action(self, parallel: bool):
+        """ The 'blocking_execution' action is only selectable for a parallel execution, checked (and disabled) otherwise"""
+        if parallel:
+            self.set_action_checked('blocking_execution', self._blocking_in_parallel)
+        else:
+            self._blocking_in_parallel = self.is_action_checked('blocking_execution')
+            self.set_action_checked('blocking_execution', True)
+        self.set_action_enabled('blocking_execution', parallel)
+
+    def _wait_until_applied(self, timeout: float = None):
+        """ Return when ``applied_entry`` has been emitted, or after the timeout (in s)
+
+        A function returning only once an asynchronous operation is over needs something to run the events in the
+        meantime: a local ``QEventLoop`` is quit by ``applied_entry``, so the GUI (and the signals of the sub-entries
+        that make the execution progress) keeps running. This cannot be done from another thread than the one of the
+        application, there the call only logs a warning and returns: use ``applied_entry`` instead.
+        """
+        if QtCore.QThread.currentThread() != QtWidgets.QApplication.instance().thread():
+            logger.warning('Cannot wait for the end of the state execution outside of the main thread, '
+                           'connect to applied_entry instead')
+            return
+        loop = QtCore.QEventLoop()
+        self.applied_entry.connect(loop.quit)
+        timer = QtCore.QTimer()
+        timer.setSingleShot(True)
+        timer.timeout.connect(loop.quit)
+        if timeout is not None:
+            timer.start(int(timeout * 1000))
+        try:
+            loop.exec()
+        finally:
+            timer.stop()
+            self.applied_entry.disconnect(loop.quit)
+        if self._execution_pending:
+            logger.warning(f'The state {self.entry} is not applied yet after {timeout} s')
+
     def _execute_entry(self, entry_path: Path = None, **kwargs) -> None | bool:
         """Applies the entry from the given file in the manager.
 
@@ -176,8 +278,9 @@ class StateManager(DashboardMixin, SettingsManager):
         if entry_path is None:
             entry_path = self.entry_filepath
 
-        self.config_subentries = read_binary_and_deserialize(entry_path)[1:]
-        # first element is the parallel/sequential boolean
+        # the entry has just been loaded: the actions reflect the options stored in it
+        self._resolve_blocking()
+        self.config_subentries = self._subentries_from_data(read_binary_and_deserialize(entry_path))
 
         self.subentry_handlers: list[StateSubEntryHandler] = []
 
@@ -191,14 +294,23 @@ class StateManager(DashboardMixin, SettingsManager):
 
         self._ind_subentry = -1
         self._processed_subentries = 0
+        self._execution_pending = True
 
         self._advance()
         return None
 
+    @staticmethod
+    def _subentries_from_data(data: list) -> list:
+        """ Drop the header of an entry file: parallel flag, then the blocking flag (absent in older files)"""
+        data = data[1:]
+        if data and isinstance(data[0], bool):
+            data = data[1:]
+        return data
+
     def _advance(self):
         self._ind_subentry += 1
         if self._ind_subentry == len(self.config_subentries):
-            if not self.is_action_checked('parallel_execution'):
+            if not self.is_action_checked('parallel_execution') or len(self.config_subentries) == 0:
                 self.finalize()
             return
 
@@ -208,7 +320,7 @@ class StateManager(DashboardMixin, SettingsManager):
             self.settings,
             actuators=self.actuators,
             detectors=self.detectors,
-            ind_subentry=self._ind_subentry))
+            ind_subentry=self._ind_subentry, blocking=self._blocking_subentries))
         try:
             self.subentry_handlers[-1].executed_signal.connect(self._on_executed)
             self.subentry_handlers[-1].execution_failed.connect(self._on_execution_failed)
@@ -239,7 +351,7 @@ class StateManager(DashboardMixin, SettingsManager):
             self.finalize()
 
     def _on_executed(self, ind_subentry):
-        entry: SubEntry = self.config_subentries[self._ind_subentry]
+        entry: SubEntry = self.config_subentries[ind_subentry]  # not the loop counter: all started in parallel mode
         if entry.entry_type == StateSubEntryHandlerTypes.ACTUATOR_VALUE:
             module = self.modules_manager.get_mod_from_name(entry.module_name,
                                                             mod=ModuleType.Actuator)
@@ -256,6 +368,7 @@ class StateManager(DashboardMixin, SettingsManager):
             self.finalize()
 
     def finalize(self):
+        self._execution_pending = False
         self.close_subentries_display(100)
         self.save_new_history_entry()
         self.set_entry_applied(True)
@@ -309,6 +422,14 @@ class StateManager(DashboardMixin, SettingsManager):
                         checkable=True, icon_color=self.get_theme().green,
                         icon_checked_color=self.get_theme().red,
                         before=self.get_action(ManagerActions.EXECUTE),)
+        self.add_action('blocking_execution', 'Wait for completion',
+                        'hourglass_disabled', icon_checked='hourglass',
+                        tip='if checked, executing a state returns only once all its sub-entries are completed '
+                            '(always the case for a sequential execution)',
+                        checkable=True, checked=self.blocking_execution,
+                        icon_color=self.get_theme().red,
+                        icon_checked_color=self.get_theme().green,
+                        before=self.get_action(ManagerActions.EXECUTE),)
         self.create_dashboard_toolbar(add_dashboard=__name__ == '__main__',
                                       add_experiment=True, add_state=False, add_break=False)
         self.experiment_manager.enable_actions(True)
@@ -316,6 +437,9 @@ class StateManager(DashboardMixin, SettingsManager):
 
     def connect_things(self):
         super().connect_things()
+
+        self.get_action('parallel_execution').toggled.connect(self._update_blocking_action)
+        self._update_blocking_action(self.is_action_checked('parallel_execution'))
 
         if self.dashboard is None:
             self.experiment_manager.enable_actions(True)
@@ -379,6 +503,12 @@ class StateManager(DashboardMixin, SettingsManager):
         except IndexError:
             checked = False
         self.set_action_checked('parallel_execution', checked)
+        if checked:  # the waiting option is only stored for (and relevant to) a parallel execution
+            blocking = data.pop(0) if data and isinstance(data[0], bool) else True  # files written before had none
+            self._blocking_in_parallel = blocking
+            self.set_action_checked('blocking_execution', blocking)
+        elif data and isinstance(data[0], bool):
+            data.pop(0)
 
         #populate the Settings Table
         self.config_model.load(data)
@@ -391,9 +521,12 @@ class StateManager(DashboardMixin, SettingsManager):
             parallel_execution = self.is_action_checked('parallel_execution')
         except KeyError:
             parallel_execution = False
+        blocking = (self.is_action_checked('blocking_execution') if parallel_execution
+                    else self._blocking_in_parallel)
 
         with open(entry_path, mode='wb') as file:
             file.write(ser_factory.get_apply_serializer(parallel_execution))
+            file.write(ser_factory.get_apply_serializer(blocking))
 
         # then save the various settings about the states
         self.config_model.save(entry_path, mode='ab')
