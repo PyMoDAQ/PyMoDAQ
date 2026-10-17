@@ -6,6 +6,7 @@ from pymodaq_data import DataToExport, DataDim
 from pymodaq.extensions.sequencer.utilities.choice_models.factory import ChoiceModelFactory
 from pymodaq.extensions.sequencer.utilities.choice_models.model import ChoiceModelBase
 from pymodaq.extensions.sequencer.utilities.element_factory import ElementError
+from pymodaq.extensions.sequencer.utilities.holders.modules_manager_binding import ModulesManagerBinding
 
 
 ser_factory = SerializableFactory()
@@ -30,14 +31,9 @@ class ThresholdChoiceModel(ChoiceModelBase):
                                           selected=self.modules_manager.detectors_name)
 
     def updated_module_manager(self):
-        """ called whenever the parent modules manager is updated
-
-        Preserve the user's previously selected detectors, filtered down to whichever are
-        still present in the refreshed catalog - same pattern as GrabElt.filter_selected_wrt_
-        manager - rather than resetting the selection to "all" on every dashboard refresh.
-        """
+        """ called whenever the parent modules manager is updated """
         available = self.modules_manager.detectors_name
-        selected = [name for name in self.settings['detectors']['selected'] if name in available]
+        selected = ModulesManagerBinding.filter_selected(self.settings['detectors']['selected'], available)
         self.settings['detectors'] = dict(all_items=available, selected=selected)
 
     def probe_data(self):

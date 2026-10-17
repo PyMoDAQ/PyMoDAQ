@@ -6,6 +6,7 @@ from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltFactory
 from pymodaq.extensions.sequencer.utilities.elements.choice import ChoiceElt
 from pymodaq.extensions.sequencer.utilities.elements.root import RootElt
 from pymodaq.extensions.sequencer.utilities.elements.wait import WaitElt
+from pymodaq.extensions.sequencer.utilities.holders.modules_manager_binding import ModulesManagerBinding
 from pymodaq.extensions.sequencer.models.composite_choice_model import CompositeChoiceModel
 
 seq_factory = SeqEltFactory()
@@ -16,6 +17,21 @@ class TestElements:
     def test_registered_elements(self, ):
         for elt in ('button', 'choice', 'grab', 'move', 'repeat', 'root', 'scanner', 'sequence', 'state', 'wait'):
             assert elt in seq_factory.elements
+
+
+class TestModulesManagerBinding:
+    """ filter_selected: the "preserve selection across a catalog refresh" logic shared by
+    GrabElt, ThresholdChoiceModel, and BandsSwitchModel - factored out after it was
+    independently hand-rolled (and once got it wrong: force-selecting everything instead of
+    preserving the user's choice) by more than one of them."""
+
+    def test_keeps_order_and_drops_unavailable(self):
+        result = ModulesManagerBinding.filter_selected(['det1', 'det2', 'det3'], ['det3', 'det1'])
+        assert result == ['det1', 'det3']
+
+    def test_nothing_dropped_when_all_available(self):
+        result = ModulesManagerBinding.filter_selected(['det1', 'det2'], ['det1', 'det2', 'det3'])
+        assert result == ['det1', 'det2']
 
 
 class TestChoiceElt:
