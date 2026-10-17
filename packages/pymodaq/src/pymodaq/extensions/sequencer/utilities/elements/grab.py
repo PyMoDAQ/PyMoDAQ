@@ -8,15 +8,15 @@ from qtpy import QtCore, QtGui
 from pymodaq.control_modules.enums import ActionIconNames
 
 from pymodaq_utils.enums import StrEnum
-from pymodaq_utils.logger import set_logger, get_module_name
 
 from pymodaq_data import DataToExport
 from pymodaq_gui.parameter.pymodaq_ptypes.itemselect import ItemSelect
 
 
 from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltBase, SeqEltFactory
+from pymodaq.extensions.sequencer.utilities.holders.modules_manager_binding import ModulesManagerBinding
 from pymodaq.extensions.sequencer.utilities.widget_with_toolbar import WidgetWithToolbar
-from pymodaq.utils.managers.modules_manager import ModulesManager, ModulesManagerParam
+from pymodaq.utils.managers.modules_manager import ModulesManagerParam
 from pymodaq.utils.managers.modules import ModuleType
 from pymodaq_gui.utils.styling import ThemeColor
 
@@ -24,7 +24,6 @@ if TYPE_CHECKING:
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 
 ser_factory = SerializableFactory()
-logger = set_logger(get_module_name(__file__))
 
 
 class Status(StrEnum):
@@ -42,7 +41,8 @@ class GrabElt(SeqEltBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.modules_manager = ModulesManager()
+        self.modules = ModulesManagerBinding(self, on_refresh=self._on_modules_refreshed)
+        self.modules_manager = self.modules.modules_manager
         self._detectors: list[str] = []
         self._selected: list[str] = []
 
@@ -86,24 +86,15 @@ class GrabElt(SeqEltBase):
         self.status = status
 
     def do_things_with_dashboard(self):
-        self.dashboard.experiment_manager.applied_entry.connect(self.update_modules)
-        self.update_modules()
+        self.modules.bind()
 
-    def update_modules(self):
-        self.modules_manager.detectors_all = self.dashboard.modules_manager.detectors_all
+    def _on_modules_refreshed(self):
         self.detectors = self.modules_manager.detectors_name
         self.filter_selected_wrt_manager()
 
     def filter_selected_wrt_manager(self):
         """  Filter selected given the presence of the detector in the manager """
-        selected = []
-        for sel in self.selected:
-            if sel in self.modules_manager.detectors_name:
-                selected.append(sel)
-            else:
-                logger.warning(f'Could not select the detector: {sel} as not declared in '
-                               f'the ModulesManager instance/ DashBoard')
-        self.selected = selected
+        self.selected = ModulesManagerBinding.filter_selected(self.selected, self.modules_manager.detectors_name)
 
     def _create_widget(self, base_widget: WidgetWithToolbar) -> WidgetWithToolbar:
         item_select = ItemSelect(hasCheckbox=True, parent=base_widget)
