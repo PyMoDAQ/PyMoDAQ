@@ -15,6 +15,15 @@ class TestElements:
         for elt in ('button', 'choice', 'grab', 'move', 'repeat', 'root', 'scanner', 'sequence', 'state', 'wait'):
             assert elt in seq_factory.elements
 
+    def test_choice_elt_default_model_is_trivial(self, qtbot):
+        """ Regression: ChoiceElt's default used to resolve to choice_factory.models[0] -
+        whichever choice_models/*.py file pkgutil happens to import first, alphabetically.
+        Harmless while that was always 'false', but adding composite_choice_model.py here makes
+        'composite' sort first, which would otherwise silently flip every new ChoiceElt's
+        default from the trivial 'false' model to the much heavier composite one. """
+        elt = ChoiceElt(1)
+        assert elt.choice_model.model_name == 'false'
+
 
 class TestCompositeChoiceModel:
     """ AND/OR/XOR composite choice model: sub-conditions are TrueChoiceModel/FalseChoiceModel
