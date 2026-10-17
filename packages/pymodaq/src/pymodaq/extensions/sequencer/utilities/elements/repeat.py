@@ -2,37 +2,29 @@ from typing import Any
 
 from serializall import SerializableFactory
 
-from qtpy import QtCore
-
-from pymodaq.utils.managers.modules import ModuleType
 from pymodaq_data import DataToExport
-from pymodaq_gui.parameter.pymodaq_ptypes.itemselect import ItemSelect
 from pymodaq_gui.utils.widgets import SpinBox
-from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltBase, SeqEltFactory, ElementError
+from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltFactory, ElementError
+from pymodaq.extensions.sequencer.utilities.elements.group import GroupElt
 from pymodaq.extensions.sequencer.utilities.widget_with_toolbar import WidgetWithToolbar
-from qt_themes import get_theme
-from pymodaq.utils.managers.modules_manager import ModulesManager
 
 ser_factory = SerializableFactory()
 
+
 @SerializableFactory.register_decorator()
 @SeqEltFactory.register_elt()
-class RepeatElt(SeqEltBase):
+class RepeatElt(GroupElt):
+    """ Loops its children a fixed number of times, then finishes.
+
+    A GroupElt that counts: GroupElt's "run once" _execute becomes "run n_repeat times" here,
+    reusing its re-entry counter (_ind_execute) and composite-state contract unchanged.
+    """
 
     elt_name = 'repeat'
-    children_allowed = True
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
         self._n_repeat: int = 3
-        self._ind_execute = 0
-
-    def initialize_element(self):
-        self._ind_execute = 0
-
-    def do_things_with_dashboard(self):
-        pass
 
     @property
     def n_repeat(self) -> int:
@@ -42,7 +34,8 @@ class RepeatElt(SeqEltBase):
     def n_repeat(self, value: int):
         self._n_repeat = value
 
-    def _create_widget(self, base_widget:WidgetWithToolbar) -> WidgetWithToolbar:
+    def _create_widget(self, base_widget: WidgetWithToolbar) -> WidgetWithToolbar:
+        base_widget = super()._create_widget(base_widget)
         spinbox = SpinBox(parent=base_widget, int=True, value=self.n_repeat)
         base_widget.add_widget_top(spinbox)
         spinbox.sigValueChanged.connect(self.set_repeat_from_spinbox)
@@ -67,17 +60,20 @@ class RepeatElt(SeqEltBase):
 
         to be reimplemented
         """
-        return {'n_repeat': self.n_repeat}
+        dict_config = super().to_dict_custom()
+        dict_config['n_repeat'] = self.n_repeat
+        return dict_config
 
     def from_dict_custom(self, dict_config: dict[str, Any]):
         """ Create/set the custom part of the element to finish initialization
         using setters, attribute assignment or methods
         """
+        super().from_dict_custom(dict_config)
         self.n_repeat = dict_config.pop('n_repeat')
 
     def _eq(self, other: 'RepeatElt'):
         """ Custom method to reimplement to assert two elements are equals"""
-        return self.n_repeat == other.n_repeat
+        return super()._eq(other) and self.n_repeat == other.n_repeat
 
     def __repr__(self):
         return f'{super().__repr__()} - {self.n_repeat}'
@@ -88,5 +84,6 @@ class RepeatElt(SeqEltBase):
         Will be called before executing the element. Try to make sure the element is valid or return None
         if the user may do something!
         """
+        super().check_set_is_valid()
         if not (self.n_repeat >= 1):
             raise ElementError(f'Element {self}: at least one repetition required')
