@@ -43,7 +43,7 @@ class ThresholdChoiceModel(ChoiceModelBase):
         if len(data0D_names) > 0:
             self.settings['data_name'] = data0D_names[0]
 
-    def execute(self, dte: DataToExport):
+    def evaluate(self, dte: DataToExport) -> bool:
         if len(self.settings['detectors']['selected']) > 0:
             self.modules_manager.selected_detectors_name = self.settings['detectors']['selected']
             self.modules_manager.connect_detectors()
@@ -52,9 +52,7 @@ class ThresholdChoiceModel(ChoiceModelBase):
         else:
             dte = DataToExport('Grab')
 
-        boolean_result = self.process_dte(dte)
-        self.parent_elt.go_to_signal.emit(boolean_result)
-        pass
+        return self.process_dte(dte)
 
     def process_dte(self, dte: DataToExport) -> bool:
         dwa = dte.get_data_from_full_name(self.settings['data_name'])
