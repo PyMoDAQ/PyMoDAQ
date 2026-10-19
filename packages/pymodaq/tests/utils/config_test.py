@@ -74,7 +74,6 @@ def test_required_config_entries():
     assert 'default_value_relative' in config('actuator')
 
     assert 'execution_timeout_s' in config('state')
-    assert 'ask_before_executing_unsaved' in config('manager')
 
     assert 'viewer' in config
     assert 'daq_type' in config('viewer')

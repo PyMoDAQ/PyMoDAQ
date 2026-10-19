@@ -136,7 +136,7 @@ from the sequencer). States saved before the *Wait for completion* option existe
 The *Execute* action of a manager (also from the toolbar of the Dashboard) runs what is currently set in the manager,
 also if it has not been saved: options or subentries changed in the table are used, and the State file is not modified
 (use the save action to keep them). Setting ``ask_before_executing_unsaved = true`` in the ``[manager]`` section of
-*pymodaq.toml* makes the managers (State, Scan, Experiment...) ask, when their settings differ from the saved entry,
+the gui configuration (*gui.toml*) makes the managers (State, Scan, Experiment...) ask, when their settings differ from the saved entry,
 whether to save them before executing, to execute without saving or to cancel. Executing a State by its name from code, ``execute_entry('my_state')``, loads the
 saved State first.
 

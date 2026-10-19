@@ -244,9 +244,9 @@ first loads that entry in the manager, replacing its current settings, then exec
 (the Dashboard, the sequencer menus...) use to run a stored entry. A manager implementing ``_execute_entry`` therefore
 only has to read the file it is given, and ``save_entries`` has to be able to write what the manager holds.
 ``execute_current_entry`` (the *Execute* action) can first ask whether to save the entry when the manager content
-differs from the file (``has_unsaved_changes``): this is driven by the ``ask_before_executing_unsaved`` attribute,
-``False`` in ``ManagerBase`` and set from the ``[manager]`` section of the configuration for the managers using the
-``DashboardMixin``.
+differs from the file (``has_unsaved_changes``): this is driven by the ``ask_before_executing_unsaved`` property of
+``ManagerBase``, read from the ``[manager]`` section of the gui configuration (*gui.toml*), so it applies to every
+manager.
 
 .. _custom_app_lifecycle:
 

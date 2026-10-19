@@ -14,6 +14,7 @@ from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_gui.utils.custom_app import CustomApp
 
 from pymodaq_utils.enums import StrEnum
+from pymodaq_utils.config import GlobalConfig as Config
 
 from pymodaq_gui.messenger import dialog
 from pymodaq_gui.qt_utils import center_widget_on_screen_and_show, mkQApp
@@ -96,6 +97,9 @@ class ManagerSubEntriesModel(QtCore.QAbstractListModel):
 
 
 
+config = Config()
+
+
 class ManagerBase(CustomApp):
 
     new_entry = QtCore.Signal(str)
@@ -107,7 +111,6 @@ class ManagerBase(CustomApp):
     entry_extension: str
 
     execute_action_checkable = False
-    ask_before_executing_unsaved = False  # ask what to do when executing settings that differ from the saved entry
     icon_name = 'build_circle'  # the default icon to represent the manager in Toolbar and Menus
     default_entry_name = 'default'
 
@@ -514,6 +517,14 @@ class ManagerBase(CustomApp):
         if isinstance(entry_path, str):
             entry_path = self.entry_path_from_name(entry_path)
         self._execute_from_path(entry_path, reload, **kwargs)
+
+    @property
+    def ask_before_executing_unsaved(self) -> bool:
+        """ Whether to ask what to do when executing settings that differ from the saved entry
+
+        Set by ``ask_before_executing_unsaved`` in the ``[manager]`` section of the gui configuration
+        """
+        return bool(config('gui', 'manager', 'ask_before_executing_unsaved'))
 
     def execute_current_entry(self):
         """ Execute the entry as currently set in the manager (also if not saved)

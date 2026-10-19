@@ -69,3 +69,5 @@ rois_dock_layout = 'horizontal'  # 'horizontal' or 'vertical', also changeable f
     setaxes = false       # open the navigation/signal axes configuration panel
     integrate_nav = false # integrate over the navigation axes
 
+[manager]
+ask_before_executing_unsaved = false  # when executing from a manager (State, Scan...) settings that differ from the saved entry, ask whether to save them first (true) or just execute them (false)
