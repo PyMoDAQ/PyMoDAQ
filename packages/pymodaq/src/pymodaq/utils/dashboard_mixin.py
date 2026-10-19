@@ -35,6 +35,7 @@ class DashboardMixin:
     """
 
     dashboard: Optional['DashBoard'] = None
+    own_modules_manager = True  # False: use the modules manager of the dashboard instead of a copy of its modules
 
     @property
     def is_dashboard_available(self) -> bool:
@@ -45,7 +46,7 @@ class DashboardMixin:
         """ Set the dashboard and create the modules manager from its control modules"""
         self.dashboard = dashboard
 
-        if dashboard is not None:
+        if dashboard is not None and self.own_modules_manager:
             self._modules_manager = module_manager_class(
                 detectors=dashboard.detector_modules,
                 actuators=dashboard.actuators_modules,
@@ -82,8 +83,9 @@ class DashboardMixin:
         """
         # update modules manager
         if self.dashboard is not None:
-            self.modules_manager.actuators_all = self.dashboard.modules_manager.actuators_all
-            self.modules_manager.detectors_all = self.dashboard.modules_manager.detectors_all
+            if self.own_modules_manager:
+                self.modules_manager.actuators_all = self.dashboard.modules_manager.actuators_all
+                self.modules_manager.detectors_all = self.dashboard.modules_manager.detectors_all
 
             # show/hide dashboard
             self.show_dashboard(show_dashboard)
@@ -102,12 +104,16 @@ class DashboardMixin:
     def modules_manager(self) -> ModulesManager:
         """useful tool to interact with DAQ_Moves and DAQ_Viewers
 
-        Will be available if a DashBoard has been set
+        Will be available if a DashBoard has been set. It is either a ModulesManager of its own, filled with the
+        control modules of the dashboard when an experiment is applied (its selection of modules is then independent
+        of the others), or the one of the dashboard itself if ``own_modules_manager`` is False, always up to date.
 
         Returns
         -------
         ModulesManager
         """
+        if not self.own_modules_manager:
+            return self.dashboard.modules_manager if self.dashboard is not None else None
         return self._modules_manager
 
     def create_dashboard_toolbar(self,

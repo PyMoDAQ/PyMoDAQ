@@ -67,6 +67,7 @@ class StateManager(DashboardMixin, SettingsManager):
     icon_name = 'discover_tune'
     settings_handler = StateSubEntryHandlerTypes.SETTINGS
     actuator_moved = QtCore.Signal(DataActuator)
+    own_modules_manager = False  # only looks modules up: the ones of the dashboard
     blocking_execution = True  # initial state of the 'blocking_execution' action
     _blocking_subentries = True  # whether the sub-entries wait for their modules, see execute_entry
     _requested_blocking: bool | None = None
