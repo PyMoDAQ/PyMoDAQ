@@ -170,10 +170,10 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.database_module = None
         self.extensions: dict[str, CustomExt] = dict([])
         self.extension_windows = []
-        self.experiment_manager: ExperimentManager = None  # instanciation in do_things_after_ui_setup
-        self.state_manager: StateManager = None  # instanciation in do_things_after_ui_setup
-        self.overshooter: Overshooter = None  # instanciation in do_things_after_ui_setup
-        self.roi_manager: ROIManager = None  # instanciation in do_things_after_ui_setup
+        self.experiment_manager: ExperimentManager = None  # instantiation in do_things_after_ui_setup
+        self.state_manager: StateManager = None  # instantiation in do_things_after_ui_setup
+        self.overshooter: Overshooter = None  # instantiation in do_things_after_ui_setup
+        self.roi_manager: ROIManager = None  # instantiation in do_things_after_ui_setup
         self.dockarea.dock_signal.connect(self.save_layout_state_auto)
 
         self.title = ""
