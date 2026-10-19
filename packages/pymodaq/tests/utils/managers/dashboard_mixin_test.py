@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock
+
 import pytest
 
 from pymodaq_gui.managers.manager_base import ManagerBase
@@ -11,6 +13,7 @@ from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManag
 from pymodaq.utils.managers.extension.extension_manager import ExtensionManager
 from pymodaq.utils.managers.overshoot.overshooter import Overshooter
 from pymodaq.utils.managers.roi_manager.roi_manager import ROIManager
+from pymodaq.utils.managers.modules.modules_manager import ModuleType
 from pymodaq.utils.managers.state.state_manager import StateManager
 
 
@@ -72,6 +75,24 @@ def test_manager_with_dashboard(dashboard):
     for manager in (dashboard.experiment_manager, dashboard.state_manager, dashboard.roi_manager,
                     dashboard.overshooter, dashboard.extension_manager):
         assert manager.can_execute_entry()
+
+
+def test_managers_only_looking_modules_up_use_the_one_of_the_dashboard(dashboard):
+    """Their own copy would stay empty until an experiment is applied: executing a state before then failed"""
+    assert dashboard.state_manager.modules_manager is dashboard.modules_manager
+    assert dashboard.roi_manager.modules_manager is dashboard.modules_manager
+    # the ones selecting their own modules keep an instance of their own
+    assert dashboard.overshooter.modules_manager is not dashboard.modules_manager
+    assert dashboard.experiment_manager.modules_manager is not dashboard.modules_manager
+
+    module = MagicMock()
+    module.title = 'act'
+    dashboard.modules_manager.actuators_all = [module]  # as when modules are added, no experiment applied
+    assert dashboard.state_manager.modules_manager.get_mod_from_name('act', ModuleType.Actuator) is module
+
+
+def test_state_manager_without_dashboard_has_no_modules_manager(qapp):
+    assert StateManager().modules_manager is None
 
 
 def test_dashboard_is_available_in_setup_ui(dashboard):

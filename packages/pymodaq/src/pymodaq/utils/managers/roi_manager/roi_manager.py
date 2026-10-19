@@ -69,6 +69,7 @@ class ROIManager(DashboardMixin, ManagerBase):
     To be reimplemented
 
     """
+    own_modules_manager = False  # only looks modules up: the ones of the dashboard
 
     entry_type = 'roi'
     entry_extension ='.rois'

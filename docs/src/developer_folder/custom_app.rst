@@ -221,7 +221,10 @@ know nothing about the Dashboard.
 
 * ``dashboard``: the ``DashBoard``, or ``None`` if the object runs without it. ``is_dashboard_available`` tells which.
 * ``modules_manager``: a ``ModulesManager`` created for the object from the detectors and actuators of the Dashboard
-  (``None`` without Dashboard). Its class can be changed with the ``module_manager_class`` argument.
+  (``None`` without Dashboard). Its class can be changed with the ``module_manager_class`` argument. It has its own
+  selection of modules, and is filled when an experiment is applied. An object that only looks modules up, without
+  selecting any (the State and ROI managers), sets the class attribute ``own_modules_manager = False`` and gets the
+  ``ModulesManager`` of the Dashboard instead, always up to date.
 * ``experiment_manager``, ``state_manager``: the managers of the Dashboard (``None`` without Dashboard).
 * ``do_things_after_experiment_set(experiment_name, show_dashboard=None)``: called each time an experiment is applied,
   see below. The base implementation refreshes ``modules_manager``.
