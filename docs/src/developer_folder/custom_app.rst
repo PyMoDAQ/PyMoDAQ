@@ -237,6 +237,17 @@ written ``class MyThing(DashboardMixin, CustomApp)`` (the mixin first) and does 
 A manager decides itself if its entries can be executed, by reimplementing ``can_execute_entry`` (``False`` in
 ``ManagerBase``). The managers working on the Dashboard return ``self.is_dashboard_available``.
 
+What is executed depends on how ``execute_entry`` is called. ``execute_entry()`` (and ``execute_current_entry()``, what
+the *Execute* action calls) executes the entry as it is currently set in the manager, unsaved changes included: the
+manager gives a snapshot of its settings to ``_execute_entry`` and the entry file is left untouched. ``execute_entry(name_or_path)``
+first loads that entry in the manager, replacing its current settings, then executes it: this is what external callers
+(the Dashboard, the sequencer menus...) use to run a stored entry. A manager implementing ``_execute_entry`` therefore
+only has to read the file it is given, and ``save_entries`` has to be able to write what the manager holds.
+``execute_current_entry`` (the *Execute* action) can first ask whether to save the entry when the manager content
+differs from the file (``has_unsaved_changes``): this is driven by the ``ask_before_executing_unsaved`` property of
+``ManagerBase``, read from the ``[manager]`` section of the gui configuration (*gui.toml*), so it applies to every
+manager.
+
 .. _custom_app_lifecycle:
 
 Lifecycle
