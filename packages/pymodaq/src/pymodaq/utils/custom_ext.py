@@ -76,7 +76,7 @@ class CustomExt(DashboardMixin, CustomApp):
         """
 
         if not external_call and config('pymodaq', 'extensions', 'extension_close_all') and self.dashboard is not None:
-            return self.dashboard.quit_fun() is not False  # the Dashboard returns False if it was not closed, else None
+            return self.dashboard.quit_fun()
         else:
             if self._quit_fun():
                 res = super().quit_fun()
