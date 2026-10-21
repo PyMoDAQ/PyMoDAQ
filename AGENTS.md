@@ -16,16 +16,21 @@ Branches and PR targets:
 ## Repository layout
 
 Monorepo of five independently published packages under `packages/<name>/` (each with `src/<name>/`,
-`tests/`, its own `pyproject.toml` built with hatchling + hatch-vcs). Dependency order (lower depends on nothing above):
+`tests/`, its own `pyproject.toml` built with hatchling + hatch-vcs). Dependency order, which is also the install
+order of `install-packages.py`: a package never imports the ones listed after it.
 
 1. `pymodaq_utils` – config (TOML, template in `resources/config_template.toml`), logger, enums, serialization,
    factories, entry-point discovery (`packages.py`, `utils.py`)
 2. `pymodaq_data` – the data model (`data.py`: `Axis`, `DataWithAxes`/`DataRaw`/`DataCalculated`,
    `DataToExport`, pint units via `Q_`/`Unit`), HDF5 backends (`h5modules`), slicing
-3. `pymodaq_scripting` – client to drive a running Dashboard from another process
-4. `pymodaq_gui` – Qt toolkit: pyqtgraph-based `Parameter` trees and custom ptypes, data viewers, managers
+3. `pymodaq_gui` – Qt toolkit: pyqtgraph-based `Parameter` trees and custom ptypes, data viewers, managers
    (ROI, action, parameter managers), h5 browser
+4. `pymodaq_scripting` – client to drive a running Dashboard from another process; only `pymodaq` imports it
 5. `pymodaq` – control modules, Dashboard, extensions, LECO remote control, scanners
+
+The few upward imports that remain (typing-only or done lazily inside a function) are listed with their reason in
+`packages/pymodaq/tests/layering_test.py`, which fails on any other one. Prefer moving the code down to the lower
+package, or passing the object in, over adding an entry.
 
 When changing an API in a lower package, check usages in the packages above it. `README.rst` files are
 **generated from `README.rst.tpl`** by CI – edit the `.tpl`, never the `.rst`.
