@@ -479,10 +479,9 @@ class DashBoard(CustomApp, LECOComponentMixin):
         quit_fun
         """
         try:
-            for ext in self.extensions:
-                if hasattr(self.extensions[ext], "quit_fun"):
-                    result = self.extensions[ext].quit_fun(external_call=True)
-                    if not result:
+            for extension in list(self.extensions.values()):  # a list as quitting unregisters the extension
+                if hasattr(extension, "quit_fun"):
+                    if not extension.quit_fun(external_call=True):
                         return False
 
             self.connect_leco(connect=False)
@@ -1121,7 +1120,7 @@ def load_dashboard_with_experiment(experiment_name: str,
         dashboard.experiment_manager.execute_entry(experiment_path)
 
         if extension_name in ExtensionEnum.names():
-            extension = dashboard.load_extension(ExtensionEnum[extension_name])
+            extension = dashboard.extension_manager.load_extension(ExtensionEnum[extension_name])
         else:
             extension = None
 

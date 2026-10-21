@@ -82,6 +82,7 @@ class CustomExt(DashboardMixin, CustomApp):
                 res = super().quit_fun()
 
                 if self.dashboard is not None:
+                    self.dashboard.extension_manager.unregister_extension(self)
                     self.show_dashboard(True)  #make sure to show it if it was hidden
                 return res
             else:

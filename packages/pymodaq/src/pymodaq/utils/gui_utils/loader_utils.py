@@ -102,6 +102,10 @@ def create_extension(dashboard: 'DashBoard',
 
     shared_ui.affect_application(extension)
 
+    extension_manager = getattr(dashboard, 'extension_manager', None)
+    if extension_manager is not None:
+        extension_manager.register_extension(extension)  # so that the Dashboard knows (and quits) it
+
     if add_toolbarbreak:
         shared_ui.mainwindow.addToolBarBreak()
     toolbars = extension.get_app_toolbars()

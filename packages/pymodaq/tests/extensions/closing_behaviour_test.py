@@ -50,9 +50,8 @@ def close_all(monkeypatch):
 
 @pytest.fixture
 def loaded():
-    """An extension in a Dashboard, known by the extension manager of the Dashboard (as when it is loaded from it)"""
+    """An extension started as in a script (``create_extension``) in a Dashboard"""
     with loaded_extension(Ext) as (dashboard, extension):
-        dashboard.extension_manager.loaded_extensions[ExtensionEnum.CONSOLE] = extension
         yield dashboard, extension
         dashboard.extension_manager.loaded_extensions.clear()
 
@@ -71,7 +70,38 @@ def test_extension_close_all_is_false_by_default():
 def test_dashboard_extensions_are_the_ones_of_the_extension_manager(loaded):
     dashboard, extension = loaded
     assert dashboard.extensions is dashboard.extension_manager.loaded_extensions
-    assert dashboard.extensions[ExtensionEnum.CONSOLE] is extension
+
+
+def test_an_extension_started_from_a_script_is_known_by_the_dashboard(loaded):
+    dashboard, extension = loaded
+    assert extension in dashboard.extensions.values()
+
+
+def test_a_quit_extension_is_forgotten_by_the_dashboard(loaded):
+    dashboard, extension = loaded
+    extension.quit_fun()
+    assert extension not in dashboard.extensions.values()
+
+
+def test_a_refusing_extension_is_kept_by_the_dashboard(loaded):
+    dashboard, extension = loaded
+    extension.can_quit = False
+    extension.quit_fun()
+    assert extension in dashboard.extensions.values()
+
+
+def test_dashboard_with_experiment_loads_the_extension_through_the_extension_manager(monkeypatch):
+    """``dashboard -x EXPERIMENT -e EXTENSION``"""
+    from pymodaq import dashboard as dashboard_module
+    fake = MagicMock()
+    fake.experiment_manager.entries = ['exp']
+    fake.extension_manager.load_extension.return_value = 'the extension'
+    monkeypatch.setattr(dashboard_module, 'create_load_dashboard', lambda show_dashboard=True: ('ui', fake))
+
+    dashboard, extension, shared_ui = dashboard_module.load_dashboard_with_experiment('exp', 'CONSOLE')
+
+    fake.extension_manager.load_extension.assert_called_once_with(ExtensionEnum.CONSOLE)
+    assert extension == 'the extension'
 
 
 def test_closing_an_extension_closes_only_the_extension(loaded):
