@@ -31,7 +31,7 @@ classifiers = [
     "Topic :: Software Development :: User Interfaces",
 ]
 dependencies = [
-    "pymodaq_utils>5.1",
+    "pymodaq_utils>=5.3.5.dev0",
     "pymodaq_gui>5.1",
     "pymodaq_data>5.1",
     "pymodaq_scripting>=5.3.0",
@@ -59,7 +59,7 @@ dev = [
 ]
 
 pyside6 = [
-    "pyside6<6.12",
+    "pyside6!=6.12.0",  # 6.12.0 aborts on Signal(bool).emit(True) (bool_dealloc)
 ]
 
 pyqt6 = [
@@ -72,6 +72,7 @@ pyqt5= [
 
 
 [project.scripts]
+check_extension = "pymodaq_utils.plugin_tools.extension_checks:main"
 check_plugin = "pymodaq_utils.plugin_checks:main"
 daq_logger = "pymodaq.extensions.daq_logger:main"
 daq_move = "pymodaq.control_modules.daq_move:main"

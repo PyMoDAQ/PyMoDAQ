@@ -183,9 +183,12 @@ inside a Dashboard. :numref:`custom_app_classes` shows who brings what.
      ActionManager [label="ActionManager\n(pymodaq_gui.managers)\nadd_action, add_menu, add_toolbar,\nconnect_action, set_action_enabled"];
      ParameterManager [label="ParameterManager\n(pymodaq_gui.managers)\nparams, settings, settings_tree,\nvalue_changed, child_added, param_deleted"];
      CustomApp [label="CustomApp\n(pymodaq_gui.utils)\ndockarea, mainwindow, docks, menubar,\nstatusbar, thread_manager, h5_manager,\nsetup_ui, quit_fun"];
-     CustomExt [label="CustomExt\n(pymodaq.utils.custom_ext)\ndashboard, modules_manager,\nexperiment_manager, state_manager,\ncreate_dashboard_toolbar, show_dashboard"];
+     DashboardMixin [label="DashboardMixin\n(pymodaq.utils.dashboard_mixin)\ndashboard, is_dashboard_available, modules_manager,\nexperiment_manager, state_manager,\ncreate_dashboard_toolbar, show_dashboard"];
+     CustomExt [label="CustomExt\n(pymodaq.utils.custom_ext)"];
+     Managers [label="Managers working on the Dashboard\n(ExperimentManager, StateManager, ROIManager...)"];
      CustomApp -> QObject; CustomApp -> ActionManager; CustomApp -> ParameterManager;
-     CustomExt -> CustomApp;
+     CustomExt -> CustomApp; CustomExt -> DashboardMixin;
+     Managers -> CustomApp; Managers -> DashboardMixin;
    }
 
 Text version of the diagram:
@@ -197,13 +200,56 @@ Text version of the diagram:
   ``settings_tree`` widget and the callbacks ``value_changed``, ``child_added`` and ``param_deleted``.
 * ``CustomApp`` itself brings the dock area (``dockarea``, ``docks``), the optional ``mainwindow``, the menu and
   status bars, the ``h5_manager`` and the ``thread_manager``, and the ``setup_ui`` sequence.
-* ``CustomExt(CustomApp)`` lives in ``pymodaq.utils.custom_ext``. It takes the ``dashboard`` as second argument,
-  creates a ``ModulesManager`` from the Dashboard's detectors and actuators (``modules_manager``), exposes the
-  ``experiment_manager`` and ``state_manager`` of the Dashboard, and provides ``create_dashboard_toolbar`` and
-  ``show_dashboard``.
+* ``DashboardMixin`` lives in ``pymodaq.utils.dashboard_mixin`` and holds everything dealing with the Dashboard, see
+  :ref:`dashboard_mixin`.
+* ``CustomExt(DashboardMixin, CustomApp)`` lives in ``pymodaq.utils.custom_ext``. It takes the ``dashboard`` as second
+  argument and sets it up with the mixin.
 
 The ``parent`` given to the constructor can be a ``DockArea``, a ``QMainWindow`` or a ``QWidget``: this decides
 whether ``dockarea`` and ``mainwindow`` are created by the app or reused from the parent.
+
+.. _dashboard_mixin:
+
+DashboardMixin
+++++++++++++++
+
+``DashboardMixin`` (``pymodaq.utils.dashboard_mixin``) gathers what an object needs to work with a ``DashBoard``. It is
+shared by the extensions (``CustomExt``) and by the managers that act on the Dashboard (``ExperimentManager``,
+``StateManager``, ``ROIManager``, ``ExtensionManager``, ``Overshooter``, ``ScanManager``). It lives in ``pymodaq``
+because the lower packages (``pymodaq_gui``, with ``CustomApp`` and ``ManagerBase``) cannot import ``pymodaq``: they
+know nothing about the Dashboard.
+
+* ``dashboard``: the ``DashBoard``, or ``None`` if the object runs without it. ``is_dashboard_available`` tells which.
+* ``modules_manager``: a ``ModulesManager`` created for the object from the detectors and actuators of the Dashboard
+  (``None`` without Dashboard). Its class can be changed with the ``module_manager_class`` argument. It has its own
+  selection of modules, and is filled when an experiment is applied. An object that only looks modules up, without
+  selecting any (the State and ROI managers), sets the class attribute ``own_modules_manager = False`` and gets the
+  ``ModulesManager`` of the Dashboard instead, always up to date.
+* ``experiment_manager``, ``state_manager``: the managers of the Dashboard (``None`` without Dashboard).
+* ``do_things_after_experiment_set(experiment_name, show_dashboard=None)``: called each time an experiment is applied,
+  see below. The base implementation refreshes ``modules_manager``.
+* ``create_dashboard_toolbar`` and ``show_dashboard``, see below.
+
+The mixin has no ``__init__`` on purpose: the Qt side of the object (``QObject.__init__``...) has to be initialized
+first, and the class using the mixin then calls ``init_dashboard(dashboard, module_manager_class)`` and
+``connect_experiment_manager()``. ``CustomExt`` does so right after ``CustomApp.__init__``, and the managers through two
+hooks of ``ManagerBase`` (``init_extra`` before the user interface is set up, so ``dashboard`` is available in
+``setup_ui``, and ``finish_init`` once the manager is built). A new object working with the Dashboard is therefore
+written ``class MyThing(DashboardMixin, CustomApp)`` (the mixin first) and does not need anything else.
+
+A manager decides itself if its entries can be executed, by reimplementing ``can_execute_entry`` (``False`` in
+``ManagerBase``). The managers working on the Dashboard return ``self.is_dashboard_available``.
+
+What is executed depends on how ``execute_entry`` is called. ``execute_entry()`` (and ``execute_current_entry()``, what
+the *Execute* action calls) executes the entry as it is currently set in the manager, unsaved changes included: the
+manager gives a snapshot of its settings to ``_execute_entry`` and the entry file is left untouched. ``execute_entry(name_or_path)``
+first loads that entry in the manager, replacing its current settings, then executes it: this is what external callers
+(the Dashboard, the sequencer menus...) use to run a stored entry. A manager implementing ``_execute_entry`` therefore
+only has to read the file it is given, and ``save_entries`` has to be able to write what the manager holds.
+``execute_current_entry`` (the *Execute* action) can first ask whether to save the entry when the manager content
+differs from the file (``has_unsaved_changes``): this is driven by the ``ask_before_executing_unsaved`` property of
+``ManagerBase``, read from the ``[manager]`` section of the gui configuration (*gui.toml*), so it applies to every
+manager.
 
 .. _custom_app_lifecycle:
 
@@ -443,7 +489,7 @@ An app *can* create its own ``DAQ_Move`` and ``DAQ_Viewer`` objects without any 
 Use a ``CustomExt`` run by the Dashboard instead: it is easier and better. The Dashboard already creates, initializes
 and saves the settings of the instruments (experiment and state managers), and the extension just gets them through
 ``self.modules_manager``, with the toolbar and the file handling done for you. An app that embeds control modules has
-to redo all this by itself and loses it (no experiment or state presets, no shared ``ModulesManager``).
+to redo all this by itself and loses it (no experiment or state, no shared ``ModulesManager``).
 
 If you still need it, ``create_load_daq_move`` and ``create_load_daq_viewer`` in
 ``pymodaq.utils.gui_utils.loader_utils`` show how to build a control module with its docks and toolbar. The app then

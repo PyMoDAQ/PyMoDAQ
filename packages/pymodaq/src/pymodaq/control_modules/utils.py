@@ -696,7 +696,7 @@ class ParameterControlModule(ParameterManager, LECOComponentMixin, ControlModule
 
         Calls quit() on the thread (from the main thread) then wait(), making
         quit_fun() synchronous with respect to hardware-thread teardown and
-        eliminating the race condition where a new preset was loaded before the
+        eliminating the race condition where a new experiment was loaded before the
         old thread had fully stopped.  
         """
         self._pre_close_hardware()

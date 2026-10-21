@@ -13,6 +13,7 @@ from qtpy import QtCore, QtWidgets
 from pymodaq_data.data import Axis, DataDistribution
 from pymodaq_data import Q_
 from pymodaq_gui.utils import SpinBoxDelegate
+from pymodaq_gui.utils.widgets.table import TableModelTabular, TableModelTabularReadOnly  # moved to pymodaq_gui, kept importable from here
 from pymodaq_utils.logger import set_logger, get_module_name
 
 from pymodaq_gui import utils as gutils
@@ -32,74 +33,6 @@ if TYPE_CHECKING:
 logger = set_logger(get_module_name(__file__))
 
 
-class TableModelTabular(gutils.TableModel):
-    """Table Model for the Model/View Qt framework dedicated to the Tabular scan mode"""
-    def __init__(self, data, axes_name=None, **kwargs):
-        if axes_name is None:
-            if 'header' in kwargs:  # when saved as XML the header will be saved and restored here
-                axes_name = [h for h in kwargs['header']]
-                kwargs.pop('header')
-            else:
-                raise Exception('Invalid header')
-        if kwargs.pop('display_units', False):
-            self.units = [str(parse_quantity(dat).units) for dat in data[0]]
-        else:
-            self.units = ['' for _ in axes_name]
-        header = [name for name in axes_name]
-        editable = [True for _ in axes_name]
-        super().__init__(data, header, editable=editable, cast=str, **kwargs)
-
-    def __len__(self):
-        return len(self._data)
-
-    def add_data(self, row, data=None):
-        if data is not None:
-            self.insert_data(row, [f'{d}' for d in data])
-        else:
-            self.insert_data(row, [f'0. {unit}' if unit != '' else f'0.' for unit in self.units])
-
-    def remove_data(self, row):
-        self.remove_row(row)
-
-    def load_txt(self):
-        fname = gutils.select_file(start_path=None, save=False, ext='*')
-        if fname is not None and fname != '':
-            while self.rowCount(self.index(-1, -1)) > 0:
-                self.remove_row(0)
-
-            data = np.loadtxt(fname, dtype=str, delimiter='\t')
-            if len(data.shape) == 1:
-                data = data.reshape((data.size, 1))
-            self.set_data_all(data)
-
-    def save_txt(self):
-        fname = gutils.select_file(start_path=None, save=True, ext='dat')
-        if fname is not None and fname != '':
-            np.savetxt(fname, self.get_data_all(), delimiter='\t',  fmt='%s')
-
-    def __repr__(self):
-        return f'{self.__class__.__name__} from module {self.__class__.__module__}'
-
-    def validate_data(self, row, col, value):
-        """
-        make sure the values and signs of the start, stop and step values are "correct"
-        Parameters
-        ----------
-        row: (int) row within the table that is to be changed
-        col: (int) col within the table that is to be changed
-        value: (float) new value for the value defined by row and col
-
-        Returns
-        -------
-        bool: True is the new value is fine (change some other values if needed) otherwise False
-        """
-
-        return True
-
-
-class TableModelTabularReadOnly(TableModelTabular):
-    def setData(self, index, value, role):
-        return False
 
 
 @ScannerFactory.register()

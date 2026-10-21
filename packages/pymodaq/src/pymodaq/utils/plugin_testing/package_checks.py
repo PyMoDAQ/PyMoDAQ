@@ -1,4 +1,4 @@
-"""Pytest mixin applying the acceptance checks of :mod:`pymodaq_utils.plugin_checks` to a plugin package.
+"""Pytest mixin applying the acceptance checks of :mod:`pymodaq_utils.plugin_tools.checks` to a plugin package.
 
 Use it in a test module of a plugin repository::
 
@@ -14,7 +14,7 @@ from typing import Optional
 
 import pytest
 
-from pymodaq_utils.plugin_checks import (VIEWER_DIMS, PluginModule, check_package_layout, check_package_sources,
+from pymodaq_utils.plugin_tools.checks import (VIEWER_DIMS, PluginModule, check_package_layout, check_package_sources,
                                          check_plugin_module, find_plugin_modules, guess_package_name)
 
 

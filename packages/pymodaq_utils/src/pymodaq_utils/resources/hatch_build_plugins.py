@@ -1,6 +1,7 @@
 from pathlib import Path
 import toml
 
+from pymodaq_utils.plugin_tools.platforms import dynamic_classifiers
 from pymodaq_utils.logger import set_logger, get_module_name
 
 logger = set_logger(get_module_name(__file__))
@@ -43,3 +44,8 @@ def update_metadata_from_toml(metadata: dict, here: Path) -> None:
     metadata['entry-points'] = entrypoints
 
     logger.debug(f'created entry-points: {entrypoints}')
+
+    if 'classifiers' in src_dict.get('project', {}).get('dynamic', []):
+        folder = here / 'src' / PLUGIN_NAME
+        metadata['classifiers'] = dynamic_classifiers(src_dict, folder if folder.is_dir() else here / PLUGIN_NAME)
+        logger.debug(f"created classifiers: {metadata['classifiers']}")

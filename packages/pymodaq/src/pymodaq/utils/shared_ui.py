@@ -75,9 +75,6 @@ class SharedUI(SharedUI):
         self.plugin_manager.restart_signal.connect(self.restart_fun)
         self.win_plug_manager.show()
 
-    def setup_docks(self):
-       super().setup_docks()
-
 
 def main():
     from pymodaq_gui.qt_utils import mkQApp

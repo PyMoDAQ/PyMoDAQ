@@ -60,10 +60,14 @@ class StateSubEntryHandler(SubEntryHandler):
                  detectors: list[str] = None,
                  extensions: list[str] = None,
                  dashboard: 'DashBoard' = None,
+                 blocking: bool = True,
                  **kwargs,
                  ):
 
         super().__init__(model, settings, ind_subentry=ind_subentry, **kwargs)
+        # if True, ``executed_signal`` is emitted once the module has done what is asked (an actuator reached its
+        # target, a module is initialized), otherwise right after having started it
+        self.blocking = blocking
         self.actuators: list[str] = actuators if actuators is not None else []
         self.detectors: list[str] = detectors if detectors is not None else []
         self.extensions: list[str] = extensions if extensions is not None else []
@@ -170,12 +174,15 @@ class ActuatorValueSubEntryHandler(StateSubEntryHandler):
 
             self.module = dashboard.modules_manager.get_mod_from_name(entry.module_name, ModuleType.Actuator)
 
-            self.module.move_done_signal.connect(self._on_move_done)
-            self.actuator_timeout_timer.timeout.connect(self._on_timeout)
+            if self.blocking:
+                self.module.move_done_signal.connect(self._on_move_done)
+                self.actuator_timeout_timer.timeout.connect(self._on_timeout)
 
-            self.actuator_timeout_timer.setInterval(config('pymodaq', 'actuator', 'polling_timeout_s') * 1000)
-            self.actuator_timeout_timer.start()
+                self.actuator_timeout_timer.setInterval(config('pymodaq', 'actuator', 'polling_timeout_s') * 1000)
+                self.actuator_timeout_timer.start()
             self.module.move_abs(dwa)
+            if not self.blocking:
+                self.executed_signal.emit(self._ind_subentry)
 
         except Exception as e:
             self.execution_failed.emit(SubEntryError(str(e),
@@ -232,8 +239,11 @@ class InitSubEntryHandler(StateSubEntryHandler):
                 f'The {entry.module_name} module is already '
                 f'{"initialized" if module.initialized_state else "uninitialized"}')
         try:
-            module.init_signal.connect(self._on_module_initialization)
+            if self.blocking:
+                module.init_signal.connect(self._on_module_initialization)
             module.init_hardware_ui(entry.setting.value())
+            if not self.blocking:
+                self.executed_signal.emit(self._ind_subentry)
         except Exception as e:
             self.execution_failed.emit(SubEntryError(str(e),
                               self._ind_subentry))

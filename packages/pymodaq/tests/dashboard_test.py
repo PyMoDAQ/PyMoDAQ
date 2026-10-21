@@ -9,7 +9,7 @@ from pymodaq.dashboard import create_load_dashboard
 
 import qt_themes
 
-preset_path = get_set_experiment_path()
+experiment_path = get_set_experiment_path()
 config = GlobalConfig()
 
 

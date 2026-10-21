@@ -557,7 +557,7 @@ if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     prog = FourierFilterer()
 
-    from pymodaq.utils.daq_utils import gauss1D
+    from pymodaq_utils.math_utils import gauss1D
 
     xdata = np.linspace(0, 400, 401)
     x0 = 50

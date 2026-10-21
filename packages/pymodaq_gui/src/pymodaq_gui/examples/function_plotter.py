@@ -9,7 +9,7 @@ import numpy as np
 from qtpy import QtWidgets
 from qtpy.QtCore import QDate, QTimer
 
-from pymodaq.utils.logger import set_logger, get_module_name
+from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config
 
 from pymodaq_data.data import DataRaw, Axis
