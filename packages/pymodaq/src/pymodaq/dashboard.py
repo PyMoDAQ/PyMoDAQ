@@ -468,6 +468,12 @@ class DashBoard(CustomApp, LECOComponentMixin):
         """
         Quit the current instance of DashBoard and close on cascade move and detector modules.
 
+        Returns
+        -------
+        bool
+            True if the DashBoard (and its extensions) has been closed, False if an extension refused to quit or if
+            an error occurred.
+
         See Also
         --------
         quit_fun
@@ -509,9 +515,11 @@ class DashBoard(CustomApp, LECOComponentMixin):
                 area.win.close()
 
             super().quit_fun()
+            return True
 
         except Exception as e:
             logger.exception(str(e))
+            return False
         finally:
             QtWidgets.QApplication.processEvents()
 

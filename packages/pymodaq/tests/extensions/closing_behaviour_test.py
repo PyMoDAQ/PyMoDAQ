@@ -126,7 +126,7 @@ def test_closing_the_dashboard_closes_the_extensions(loaded):
     dashboard, extension = loaded
     extension.mainwindow.show()
 
-    dashboard.quit_fun()
+    assert dashboard.quit_fun() is True
 
     assert not extension.mainwindow.isVisible()
 
@@ -155,7 +155,7 @@ def test_the_dashboard_quits_if_all_the_extensions_agree(loaded):
     other.quit_fun.return_value = True
     dashboard.extension_manager.loaded_extensions[ExtensionEnum.SCANNER] = other
 
-    dashboard.quit_fun()
+    assert dashboard.quit_fun() is True
 
     other.quit_fun.assert_called_once_with(external_call=True)
     assert not extension.mainwindow.isVisible()
