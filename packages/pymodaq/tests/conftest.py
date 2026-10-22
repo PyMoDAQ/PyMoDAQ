@@ -2,6 +2,22 @@
 import os
 import gc
 import pytest
+import sys
+import time
+
+_gc_start = {}
+
+
+def _gc_timing(phase, info):  # TEMPORARY diagnostic: long garbage collections (PySide6 CI stalls)
+    if phase == 'start':
+        _gc_start['t'] = time.perf_counter()
+    else:
+        dt = time.perf_counter() - _gc_start.get('t', time.perf_counter())
+        if dt > 2:
+            print(f'\nGC-STALL generation {info.get("generation")}: {dt:.1f} s', file=sys.__stderr__, flush=True)
+
+
+gc.callbacks.append(_gc_timing)
 
 
 #
