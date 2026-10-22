@@ -15,6 +15,11 @@ def _gc_timing(phase, info):  # TEMPORARY diagnostic: long garbage collections (
         dt = time.perf_counter() - _gc_start.get('t', time.perf_counter())
         if dt > 2:
             print(f'\nGC-STALL generation {info.get("generation")}: {dt:.1f} s', file=sys.__stderr__, flush=True)
+            if dt > 20:
+                import collections
+                objs = gc.get_objects()
+                top = collections.Counter(type(o).__name__ for o in objs).most_common(12)
+                print(f'GC-STALL objects: {len(objs)}, top types: {top}', file=sys.__stderr__, flush=True)
 
 
 gc.callbacks.append(_gc_timing)
