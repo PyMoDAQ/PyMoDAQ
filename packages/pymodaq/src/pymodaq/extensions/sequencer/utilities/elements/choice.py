@@ -69,7 +69,8 @@ class ChoiceElt(SeqEltBase):
     @property
     def choice_model(self) -> ChoiceModelBase:
         if self._choice_model is None:
-            self.choice_model = choice_factory.models[0]
+            # Explicit: factory discovery order would make 'composite' (added here) the default.
+            self.choice_model = 'false'
         return self._choice_model
 
     @choice_model.setter
