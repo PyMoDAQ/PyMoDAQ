@@ -31,7 +31,9 @@ class CustomExt(DashboardMixin, CustomApp):
         super().__init__(parent, **kwargs)
 
         self.init_dashboard(dashboard, module_manager_class)
-        self.connect_experiment_manager()
+        # an experiment already applied (extension opened from the Dashboard) is handled at the end of setup_ui:
+        # do_things_after_experiment_set may use the actions and widgets, which do not exist yet
+        self.connect_experiment_manager(apply_now=False)
 
         self._module_and_data_saver: ModuleSaver = None  # to use only if you want to save data with
         #ordered with groups and with control modules, then call self.module_and_data_saver property
@@ -51,6 +53,14 @@ class CustomExt(DashboardMixin, CustomApp):
         self._module_and_data_saver = mod
         if self.h5saver is not None:
             self._module_and_data_saver.h5saver = self.h5saver
+
+    def setup_ui(self):
+        """ Set up the UI (see CustomApp), then call do_things_after_experiment_set if an experiment is already
+        applied in the dashboard"""
+        super().setup_ui()
+        if self.dashboard is not None:
+            # opening the extension does not change the visibility of the dashboard
+            self.apply_current_experiment(show_dashboard=self.dashboard.mainwindow.isVisible())
 
     def stop(self):
         """ Programmatic method to stop any action in the extension

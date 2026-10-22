@@ -161,7 +161,6 @@ class RampExtension(CustomExt):
         self.update_n_steps()
         self.update_velocity()
 
-        self.enable_workflow_actions(False)
         self.h5_manager.connect_action(FileAction.LOAD,
                                        self.h5_manager.load_file,
                                        connect=False)
@@ -169,9 +168,6 @@ class RampExtension(CustomExt):
                                        lambda: self.h5_manager.load_file(mode='r'))
 
         self.h5_manager.file_loaded_signal.connect(lambda: self.set_action_enabled('update_histogram', True))
-
-        if self.experiment_manager.entry_applied:
-            self.enable_workflow_actions(True, other_actions='ini_positions')
 
     @property
     def _size_hint(self) -> QtCore.QSize:
@@ -218,10 +214,7 @@ class RampExtension(CustomExt):
         self.display_control_modules()
         self._module_and_data_saver = RampSaver(self)
 
-        try:
-            self.enable_workflow_actions(True, other_actions='ini_positions')
-        except KeyError: #actions may not yet be activated
-            pass
+        self.enable_workflow_actions(True, other_actions='ini_positions')
 
     def display_control_modules(self):
         selected = self.settings['detectors']['selected']
@@ -244,6 +237,7 @@ class RampExtension(CustomExt):
 
     def do_things_after_ui_setup(self):
         self.create_dashboard_toolbar(add_break=False)
+        self.enable_workflow_actions(False)  # enabled once an experiment is applied
 
     def setup_actions(self):
         """Method where to create actions to be subclassed. Mandatory
