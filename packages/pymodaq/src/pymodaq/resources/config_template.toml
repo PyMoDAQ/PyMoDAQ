@@ -64,3 +64,5 @@ keep_duplicates = false
 duration_units = [ "s", "min",]
 ramp_setting = [ "duration", "velocity",]
 
+[state]
+execution_timeout_s = 0 # when a state is executed in blocking mode, stop waiting after this time (0: wait for ever)

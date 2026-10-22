@@ -260,6 +260,10 @@ class DAQ_Move_base(PluginBase):
     data_actuator_type = DataActuatorType.float  # for backcompatibility, but new plugins should have DataActuatorType.DataActuator
     ui_type = UiType.NONE  # should precise (force if possible) what should be the ui type to be used with this
     # actuator. If NONE, PyMoDAQ will use the default ui type (see preferences).
+    supported_platforms: Optional[tuple] = None  # systems the plugin works on, values of sys.platform ('win32', 'linux',
+    # 'darwin'). None: all of them. PyMoDAQ refuses to initialize the plugin on another system.
+    supported_architectures: Optional[tuple] = None  # processor architectures the plugin works on, values of
+    # platform.machine() (for instance ('aarch64', 'armv7l') for a Raspberry Pi). None: all of them.
     has_encoder = True  # tell PyMoDAQ if this actuator is able to set an absolute position and read the controller
     # value. If False, you should consider having ui_type = UiType.RELATIVE
 
@@ -653,6 +657,13 @@ class DAQ_Move_base(PluginBase):
             raise NotImplementedError
 
     def move_home(self, *args, **kwargs):
+        """Let the actuator look for its reference, so that this position becomes the home (zero) position
+
+        To be implemented in the plugin. PyMoDAQ does not poll the position after this call: the plugin must
+        call :meth:`move_done` (that reads :meth:`get_actuator_value` and emits the ``move_done_signal``) when the homing
+        is finished, right after a blocking homing or from the callback of an asynchronous one. See
+        https://pymodaq.cnrs.fr/en/latest/developer_folder/instrument_plugins.html#moving-to-the-home-position
+        """
         if hasattr(self, 'move_Home'):
             deprecation_msg('move_Home method in plugins is deprecated, use move_home', 3)
             self.move_Home()  # type: ignore
@@ -683,6 +694,7 @@ class DAQ_Move_base(PluginBase):
         if position.name != self._title:  # make sure the emitted DataActuator has the name of the real implementation
             #of the plugin
             position.name = self._title
+        self.current_value = position  # update the value in case move_done was called from a homing step
         self.move_done_signal.emit(position)
         self.move_is_done = True
 

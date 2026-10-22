@@ -139,7 +139,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
          "limits": config("utils", "general", "debug_level")},
         {"title": "Loaded experiments", "name": "loaded_files", "type": "group",
          "children": [
-             {"title": "Preset file", "name": "preset_file", "type": "str", "value": "", "readonly": True,},
              {"title": "Overshoot file", "name": "overshoot_file", "type": "str", "value": "", "readonly": True,},
              {"title": "Layout file", "name": "layout_file", "type": "str", "value": "", "readonly": True},
              {"title": "ROI file", "name": "roi_file", "type": "str", "value": "", "readonly": True},
@@ -171,10 +170,10 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.database_module = None
         self.extensions: dict[str, CustomExt] = dict([])
         self.extension_windows = []
-        self.experiment_manager: ExperimentManager = None  # instanciation in do_things_after_ui_setup
-        self.state_manager: StateManager = None  # instanciation in do_things_after_ui_setup
-        self.overshooter: Overshooter = None  # instanciation in do_things_after_ui_setup
-        self.roi_manager: ROIManager = None  # instanciation in do_things_after_ui_setup
+        self.experiment_manager: ExperimentManager = None  # instantiation in do_things_after_ui_setup
+        self.state_manager: StateManager = None  # instantiation in do_things_after_ui_setup
+        self.overshooter: Overshooter = None  # instantiation in do_things_after_ui_setup
+        self.roi_manager: ROIManager = None  # instantiation in do_things_after_ui_setup
         self.dockarea.dock_signal.connect(self.save_layout_state_auto)
 
         self.title = ""
@@ -456,23 +455,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
     #                 self.get_action(self.get_action_from_file(file, ManagerEnums.remote))
     #             )
     #
-    # def create_remote(self):
-    #     try:
-    #         if self.preset_file is not None:
-    #             self.remote_manager.set_new_remote(self.preset_file.stem)
-    #             self.add_action(
-    #                 self.get_action_from_file(self.preset_file, ManagerEnums.remote),
-    #                 self.preset_file.stem,
-    #                 "",
-    #             )
-    #             self.setup_menu(self.menubar)
-    #             self.connect_action(
-    #                 self.get_action_from_file(self.preset_file, ManagerEnums.remote),
-    #                 self.create_menu_slot_remote(get_set_remote_path().joinpath(self.preset_file.name)),
-    #             )
-    #
-    #     except Exception as e:
-    #         logger.exception(str(e))
     #
     # def modify_remote(self):
     #     try:
@@ -541,6 +523,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
             self.experiment_manager.quit_fun()
             self.state_manager.quit_fun()
             self.overshooter.quit_fun()
+            self.roi_manager.quit_fun()
 
             # Removing dock areas (I don't know what this is for)
             areas = self.dockarea.tempAreas[:]

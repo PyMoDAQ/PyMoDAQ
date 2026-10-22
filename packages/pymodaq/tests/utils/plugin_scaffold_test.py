@@ -2,9 +2,9 @@ import sys
 
 import pytest
 
-from pymodaq_utils import plugin_scaffold as sc
-from pymodaq_utils import plugin_checks as pt
-from pymodaq_utils.plugin_rules import Severity
+from pymodaq_utils.plugin_tools import scaffold as sc
+from pymodaq_utils.plugin_tools import checks as pt
+from pymodaq_utils.plugin_tools.rules import Severity
 
 
 @pytest.fixture

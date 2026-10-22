@@ -1,12 +1,10 @@
 from dataclasses import dataclass
-from pymodaq.control_modules.move_utility_classes import HW_SETTINGS_KEY as ACTUATOR_SETTINGS_KEY
 import time
 from typing import Callable, TYPE_CHECKING, Union, Tuple
 
 from qtpy import QtWidgets, QtCore
 from serializall import SerializableFactory
 
-from pymodaq.utils.managers.modules import ModuleType
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.abstract import abstract_attribute
@@ -24,7 +22,6 @@ ser_factory = SerializableFactory()
 if TYPE_CHECKING:
     from pymodaq_gui.managers.settings.utils import SettingsManagerModel
     from pymodaq_gui.managers.settings.settings_manager import SettingsManager
-    from pymodaq.dashboard import DashBoard
 
 
 class SubEntryError(Exception):

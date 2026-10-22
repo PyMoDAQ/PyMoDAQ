@@ -282,6 +282,11 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     def get_theme(name: str = None) -> Theme:
         return qt_themes.get_theme(name)
 
+    def _overrides(self, name: str) -> bool:
+        """True if the class of this instance (or one of its parents below CustomApp) redefines the method ``name``
+        of CustomApp, used to call the deprecated hooks only for the apps that still define them"""
+        return getattr(type(self), name) is not getattr(CustomApp, name)
+
     def setup_ui(self):
         self.setup_docks_and_widgets()
 
@@ -338,9 +343,9 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         See Also
         --------
         """
-        if hasattr(self, 'setup_docks'):
+        if self._overrides('setup_docks'):
             self.setup_docks()  # for backcompatibility
-            deprecation_msg('You should not call setup_docks anymore, use `setup_docks_and_widgets` instead')
+            deprecation_msg('You should not define setup_docks anymore, use `setup_docks_and_widgets` instead')
 
     def setup_docks(self):
         """ deprecated, see setup_docks_and_widgets
@@ -363,7 +368,9 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         --------
         pymodaq.utils.managers.action_manager.ActionManager
         """
-        self.setup_menu(menubar)  # for back-compatibility
+        if self._overrides('setup_menu'):
+            self.setup_menu(menubar)  # for back-compatibility
+            deprecation_msg('You should not define setup_menu anymore, use `setup_menus_and_toolbars` instead')
 
     def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
         """ Deprecated, use `setup_menus_and_toolbars`

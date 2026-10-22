@@ -8,6 +8,7 @@ from pymodaq.extensions import get_extensions, ExtensionEnum
 from pymodaq.utils.custom_ext import CustomExt
 from pymodaq.utils.gui_utils.loader_utils import create_extension
 from pymodaq_gui.managers.manager_base import ManagerBase, ManagerActions
+from pymodaq.utils.dashboard_mixin import DashboardMixin
 from pymodaq_utils import set_logger
 from pymodaq_utils.logger import get_module_name
 
@@ -17,7 +18,7 @@ if TYPE_CHECKING:
 logger = set_logger(get_module_name(__file__))
 
 
-class ExtensionManager(ManagerBase):
+class ExtensionManager(DashboardMixin, ManagerBase):
     entry_type = 'extension'
     entry_extension = '.xml'
     icon_name = 'extension'
@@ -52,6 +53,9 @@ class ExtensionManager(ManagerBase):
     def _update_entry(self, entry_path: Path) -> None:
         """Extensions don't need file updates."""
         return NotImplemented
+
+    def can_execute_entry(self) -> bool:
+        return self.is_dashboard_available
 
     def _execute_entry(self, entry_path: Path = None, **kwargs) -> bool:
         """Load and display the selected extension."""

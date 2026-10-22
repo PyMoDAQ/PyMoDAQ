@@ -17,6 +17,7 @@ from pymodaq_utils.config import GlobalConfig
 
 from pymodaq_gui.parameter import Parameter, ParameterTree
 from pymodaq_gui.managers.manager_base import ManagerBase
+from pymodaq.utils.dashboard_mixin import DashboardMixin
 from pymodaq_gui.parameter.utils import ParameterWithPath
 from pymodaq_utils.utils import find_objects_in_list_from_attr_name_val
 
@@ -62,12 +63,13 @@ class ROIList(ParameterManager):
             sub_item.setSizeHint(0, QtCore.QSize(10, height))
 
 
-class ROIManager(ManagerBase):
+class ROIManager(DashboardMixin, ManagerBase):
     """
     Base class for Manager directly depending on the status of the experiment manager
     To be reimplemented
 
     """
+    own_modules_manager = False  # only looks modules up: the ones of the dashboard
 
     entry_type = 'roi'
     entry_extension ='.rois'
@@ -85,8 +87,11 @@ class ROIManager(ManagerBase):
         self.update_viewer_list_from_dashboard()
 
 
-    def do_things_after_experiment_set(self, experiment_name: str):
-        super().do_things_after_experiment_set(experiment_name, show_dashboard=True)
+    def can_execute_entry(self) -> bool:
+        return self.is_dashboard_available
+
+    def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: bool = True):
+        super().do_things_after_experiment_set(experiment_name, show_dashboard)
         self.update_viewer_list_from_dashboard()
 
         experiment_name = self.dashboard.experiment_name

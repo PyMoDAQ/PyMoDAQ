@@ -24,6 +24,7 @@ from pymodaq_data.data import DataToExport, Averaging
 from pymodaq.utils.data import DataFromPlugins
 
 from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_utils.plugin_tools.platforms import unsupported_reason
 from pymodaq.control_modules.utils import ParameterControlModule, HardwareWorkerBase
 
 from pymodaq_gui.utils.file_io import select_file
@@ -1078,6 +1079,11 @@ class DetectorWorker(HardwareWorkerBase):
         try:
             status = edict(initialized=False, info="", x_axis=None, y_axis=None)
             det_params, class_ = get_viewer_plugins(self.daq_type.name, self.plugin_name)
+            reason = unsupported_reason(class_.supported_platforms, class_.supported_architectures)
+            if reason:
+                self.logger.error(reason)
+                status.info = reason
+                return status
             self.plugin: DAQ_Viewer_base = class_(self, params_state)
 
             try:

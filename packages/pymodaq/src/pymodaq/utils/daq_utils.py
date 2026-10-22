@@ -26,9 +26,65 @@ logger = set_logger(get_module_name(__file__))
 
 def copy_experiment():                          # pragma: no cover
     path = get_set_experiment_path().joinpath('default.xml')
-    if not path.exists():  # copy the preset_default from pymodaq folder and create one in pymodad's local folder
-        with open(str(Path(__file__).parent.parent.joinpath('resources/preset_default.xml')), 'r') as file:
+    if not path.exists():  # copy the experiment_default from pymodaq folder and create one in pymodaq's local folder
+        with open(str(Path(__file__).parent.parent.joinpath('resources/experiment_default.xml')), 'r') as file:
             path.write_text(file.read())
+
+
+# entry point groups declared by plugin packages (see pymodaq_utils.resources.hatch_build_plugins)
+PLUGIN_ENTRYPOINT_GROUPS = ('pymodaq.plugins', 'pymodaq.instruments', 'pymodaq.extensions', 'pymodaq.models',
+                            'pymodaq.pid_models', 'pymodaq.h5exporters', 'pymodaq.scanners')
+
+
+def get_plugin_packages() -> list[str]:
+    """ Get the names of the installed plugin packages, from their entry points (any PyMoDAQ group)"""
+    packages = []
+    for group in PLUGIN_ENTRYPOINT_GROUPS:
+        for entrypoint in get_entrypoints(group=group):
+            package = entrypoint.value.split(':')[0]
+            if package not in packages:
+                packages.append(package)
+    return packages
+
+
+@cache
+def register_plugin_configs() -> list[str]:
+    """ Register in GlobalConfig the ``Config`` class of the ``utils`` module of each installed plugin package
+
+    Called when PyMoDAQ is imported, whatever the plugin contains (instruments, extensions, models...), so that
+    ``GlobalConfig()(short_name, ...)`` works everywhere. A package whose ``utils`` module cannot be imported or
+    defines no ``Config`` is skipped with a warning. Called once (cached).
+
+    Returns
+    -------
+    list of str: the names under which the configs have been registered by this call
+    """
+    config = GlobalConfig()
+    registered = []
+    for package in get_plugin_packages():
+        try:
+            plugin_utils = importlib.import_module(f'{package}.utils')
+        except Exception as e:
+            logger.warning(f'Impossible to import {package}.utils, its configuration is not registered: {str(e)}')
+            continue
+        config_class = getattr(plugin_utils, 'Config', None)
+        if config_class is None:
+            logger.warning(f'{package}.utils defines no Config class, no configuration registered')
+            continue
+        name = config_class.config_name
+        if isinstance(name, str) and 'config_' in name:  # same naming as GlobalConfig.register
+            name = name.split('config_')[-1]
+        if name in config:
+            if not isinstance(config[name], config_class):  # else registered already by its decorator
+                logger.warning(f'The configuration of {package} is not registered: another one is registered '
+                               f'under the same name: {name}')
+            continue
+        try:
+            GlobalConfig.register()(config_class)
+            registered.append(name)
+        except Exception as e:
+            logger.warning(f'Impossible to register the configuration of {package}: {str(e)}')
+    return registered
 
 
 @cache
@@ -44,6 +100,7 @@ def get_instrument_plugins():  # pragma: no cover
     -------
 
     """
+    register_plugin_configs()  # already done when importing pymodaq, plugin modules may need their config
     plugins_import = []
     discovered_plugins = []
     discovered_plugins_all = list(get_entrypoints(group='pymodaq.plugins'))  # old naming of the instrument plugins
@@ -58,8 +115,6 @@ def get_instrument_plugins():  # pragma: no cover
     for entrypoint in discovered_plugins:
         #print(f'Looking for valid instrument plugins in package: {module.value}')
         try:
-            plugin_utils = importlib.import_module(f'{entrypoint.value}.utils', entrypoint.value)
-            GlobalConfig.register()(plugin_utils.Config)
             try:
                 movemodule = importlib.import_module(f'{entrypoint.value}.daq_move_plugins', entrypoint.value)
                 plugin_list.extend([{'name': mod[len('daq_move') + 1:],

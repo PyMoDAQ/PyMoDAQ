@@ -79,7 +79,15 @@ extensions = [
     "sphinxcontrib.jquery",
     "sphinx_datatables",
     "sphinx.ext.graphviz",
+    "sphinx_llms_txt",
 ]
+
+# llms.txt: the curated index is _extra/llms.txt (copied to the root of the site, keep its links up to date, a test
+# checks them); the extension writes llms-full.txt, the text of the pages, without the generated API pages.
+html_extra_path = ["_extra"]
+llms_txt_file = False
+llms_txt_full_file = True
+llms_txt_exclude = ["api/*", "changelogs*", "about", "lab_story*", "genindex", "py-modindex"]
 
 graphviz_output_format = "svg"
 

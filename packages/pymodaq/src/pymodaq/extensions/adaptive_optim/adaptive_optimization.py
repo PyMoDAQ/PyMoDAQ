@@ -19,7 +19,7 @@ config = Config()
 
 
 EXTENSION_NAME = 'AdaptiveScan'
-CLASS_NAME = 'AdaptiveOptimization'
+CLASS_NAME = 'AdaptiveOptimisation'
 
 STARTING_LOSS_DIM = LossDim.LOSS_1D
 

@@ -86,8 +86,8 @@ class Console(CustomExt):
     def _quit_fun(self) -> bool:
         return True
 
-    def do_things_after_experiment_set(self, experiment: str):
-        super().do_things_after_experiment_set(experiment)
+    def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: bool = None):
+        super().do_things_after_experiment_set(experiment_name, show_dashboard)
 
         self.console.push_variables(
             {'dashboard': self.dashboard,

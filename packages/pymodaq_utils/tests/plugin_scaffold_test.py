@@ -2,7 +2,7 @@ import sys
 
 import pytest
 
-from pymodaq_utils import plugin_scaffold as sc
+from pymodaq_utils.plugin_tools import scaffold as sc
 
 
 @pytest.fixture
