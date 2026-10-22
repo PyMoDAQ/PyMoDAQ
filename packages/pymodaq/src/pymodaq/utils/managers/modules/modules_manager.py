@@ -469,7 +469,29 @@ class ModulesManager(QObject, ParameterManager):
                                 callback: Callable[[DataToExport], Any] = None,
                                 do_connect_modules=True,
                                 **kwargs):
+        """Do a single grab of the selected detectors and return immediately
 
+        The callback is called with a DataToExport holding the data of all the selected detectors when the last one
+        has answered. If a detector does not answer in time (config viewer/timeout), the callback is not called and
+        the timeout_signal is emitted.
+
+        Parameters
+        ----------
+        check_do_override: bool
+            See grab_data
+        Naverage: int, optional
+            If provided, overrides each detector's own Naverage setting
+        callback: callable, optional
+            Connected to det_done_signal, it stays connected: call forget_callback when it has been called
+            (or on a timeout)
+        do_connect_modules: bool
+            If True the selected detectors are connected to the manager (see connect_detectors), forget_callback
+            disconnects them
+
+        See Also
+        --------
+        forget_callback, grab_data
+        """
         if callback is not None:
             self.detectors_timeout_timer.setInterval(int(self.detector_timeout))
             self.detectors_timeout_timer.start()
@@ -545,6 +567,8 @@ class ModulesManager(QObject, ParameterManager):
         Parameters
         ----------
         connect: bool
+            if True, connect the selected actuators, if False disconnect the selected actuators (the ones that are
+            not selected anymore are not touched: disconnect before changing the selection)
         slot: builtin_function_or_method
             method or function the chosen signal will be connected to
             if None, then the default move_done slot is used
@@ -583,10 +607,10 @@ class ModulesManager(QObject, ParameterManager):
         Parameters
         ----------
         connect: bool
-            if True, connect to the given slot (or default slot)
-            if False, disconnect all detectors (not only the currently selected ones.
-            This is made because when selected detectors changed if you only disconnect those one,
-            the previously connected ones will stay connected)
+            if True, connect the selected detectors to the given slot (or default slot)
+            if False, disconnect the selected detectors from it. The detectors that are not selected
+            anymore are not touched: if the selection changed since they were connected, they stay connected.
+            Disconnect before changing the selection.
         slot: method
             A method that should be connected, if None self.det_done is connected by default
         """
@@ -681,13 +705,32 @@ class ModulesManager(QObject, ParameterManager):
         return dte
 
     def move_actuators_with_callback(self, dte_act: DataToExport | DataToActuators,
-                                     mode: MoveType = MoveType.REL,
+                                     mode: MoveType = MoveType.ABS,
                                      callback: Callable[[DataToExport], Any] = None,
                                      do_connect_modules=True):
         """ Move actuators defined within a DataToExport to the value included in the DatActuators within
 
-        This method will emit a signal to a given callback with a DataToExport containing
-        DataActuators when the moves are done"""
+        The actuators named in dte_act become the selected ones. This method returns immediately and the callback is
+        called with a DataToExport containing DataActuators when all the moves are done. If an actuator does not answer
+        in time (config actuator/polling_timeout_s), the callback is not called and the timeout_signal is emitted.
+
+        Parameters
+        ----------
+        dte_act: DataToExport or DataToActuators
+            One DataActuator per actuator, named like the actuator. For a DataToActuators, its own mode is used.
+        mode: MoveType
+            Absolute (default) or relative positioning
+        callback: callable, optional
+            Connected to move_done_signal, it stays connected: call forget_callback when it has been called
+            (or on a timeout)
+        do_connect_modules: bool
+            If True the selected actuators are connected to the manager (see connect_actuators), forget_callback
+            disconnects them
+
+        See Also
+        --------
+        forget_callback, move_actuators
+        """
 
         if isinstance(dte_act, DataToActuators):
             mode = dte_act.mode
