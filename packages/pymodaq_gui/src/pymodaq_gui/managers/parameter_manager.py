@@ -347,14 +347,19 @@ class ParameterManager:
         already = self._building_tree
         self._building_tree = True
         tree.setUpdatesEnabled(False)
+        # items added to a visible tree trigger layout computations for each of them. A tree that is not visible
+        # (not shown yet) is left alone: setVisible(False) would hide it explicitly, and it would then stay hidden
+        # when its window is shown
         was_visible = tree.isVisible()
-        tree.setVisible(False)  # items added to a visible tree trigger layout computations for each of them
+        if was_visible:
+            tree.setVisible(False)
         try:
             yield
         finally:
             self._building_tree = already
             if not already:
-                tree.setVisible(was_visible)
+                if was_visible:
+                    tree.setVisible(True)
                 tree.setUpdatesEnabled(True)
                 tree.resizeColumnToContents(0)
 
