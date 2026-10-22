@@ -25,6 +25,19 @@ def _gc_timing(phase, info):  # TEMPORARY diagnostic: long garbage collections (
 gc.callbacks.append(_gc_timing)
 
 
+@pytest.fixture(scope='module', autouse=True)
+def freeze_survivors_of_each_module():
+    """ Leave the objects still alive after a test module out of the later garbage collections
+
+    The Qt widgets that tests leave behind (the Python wrappers of the widgets of closed windows, tens of
+    thousands over the whole session) are not freed. The full collections would go through all of them again and
+    again, which took minutes on the CI runners (PySide6), where it ended up failing the tests with a time limit.
+    """
+    yield
+    gc.collect()
+    gc.freeze()
+
+
 #
 # def _cleanup_qt_core():
 #     """
