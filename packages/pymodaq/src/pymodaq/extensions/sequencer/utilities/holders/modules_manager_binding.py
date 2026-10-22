@@ -14,9 +14,9 @@ class ModulesManagerBinding:
 
     Plain composition, not a mixin: an element that needs live detector/actuator info
     (GrabElt; a condition model that probes detectors) constructs one explicitly -
-    `self.modules = ModulesManagerBinding(self)` - rather than inheriting the behavior.
-    Elements that don't need it (WaitElt, RepeatElt...) simply never create one; there's
-    nothing to opt out of.
+    `self.modules_binding = ModulesManagerBinding.attach(self)` - rather than inheriting the
+    behavior. Elements that don't need it (WaitElt, RepeatElt...) simply never create one;
+    there's nothing to opt out of.
 
     `on_refresh` is the one optional extra: most owners only need the raw catalog kept current
     (`self.modules_manager.detectors_all`/`.actuators_all`), but some also need to react every
@@ -28,6 +28,16 @@ class ModulesManagerBinding:
         self.elt = elt
         self.modules_manager = ModulesManager()
         self.on_refresh = on_refresh
+
+    @classmethod
+    def attach(cls, elt: 'SeqEltBase',
+               on_refresh: Optional[Callable[[], None]] = None) -> 'ModulesManagerBinding':
+        """ Construct and also publish `elt.modules_manager` - the pre-refactor public
+        attribute name external code (and this binding's own owner) still reaches the
+        catalog through - so an owner never has to repeat that hoist itself. """
+        binding = cls(elt, on_refresh=on_refresh)
+        elt.modules_manager = binding.modules_manager
+        return binding
 
     def bind(self):
         """ Call from the owning element's do_things_with_dashboard """
@@ -46,8 +56,8 @@ class ModulesManagerBinding:
 
         The "preserve the user's choice across a catalog refresh" half of reacting to
         on_refresh - every owner that tracks a detector/actuator selection (GrabElt,
-        ThresholdChoiceModel, BandsSwitchModel) needs exactly this. Hand-rolling it per owner
-        is what let one of them silently regress to "force-select everything" instead.
+        ThresholdChoiceModel today) needs exactly this. Hand-rolling it per owner is what let
+        one of them silently regress to "force-select everything" instead.
         """
         for name in selected:
             if name not in available:

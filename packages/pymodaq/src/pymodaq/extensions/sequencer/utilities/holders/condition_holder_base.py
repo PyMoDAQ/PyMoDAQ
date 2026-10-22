@@ -15,17 +15,15 @@ if TYPE_CHECKING:
 
 class ConditionHolderBase:
     """ Shared machinery for "holds one pluggable model, picked via a combo + nested settings
-    tree, with detector/actuator refresh delegated to ModulesManagerBinding" - used by
-    ConditionHolder (ChoiceModelBase/ChoiceModelFactory) and SwitchConditionHolder
-    (SwitchModelBase/SwitchModelFactory).
+    tree, with detector/actuator refresh delegated to ModulesManagerBinding" - used today by
+    ConditionHolder (ChoiceModelBase/ChoiceModelFactory), and designed to be shared by a
+    planned SwitchConditionHolder (SwitchModelBase/SwitchModelFactory) once that lands.
 
-    Plain single inheritance, not a mixin: both concrete subclasses just specialize `factory`
-    and `dict_key`, and SwitchConditionHolder additionally overrides the `model` setter to also
-    wire up `outcomes_changed`. This is safe precisely because it's ordinary inheritance - one
-    base, one subclass, no cooperative super() across siblings - not the kind of multiple
-    inheritance that caused the ordering bugs the mixin version of this code had (see git
-    history); it's here because the two concrete classes are genuinely the same shape, not to
-    share construction-order tricks.
+    Plain single inheritance, not a mixin, on purpose: a concrete subclass only needs to
+    specialize `factory` and `dict_key` (SwitchConditionHolder's planned shape additionally
+    overrides the `model` setter to wire up `outcomes_changed`) - ordinary inheritance, no
+    cooperative super() across siblings, not the kind of multiple inheritance that caused the
+    ordering bugs the mixin version of this code had (see git history).
     """
 
     #: the ChoiceModelFactory/SwitchModelFactory instance to pick registered models from
@@ -41,12 +39,11 @@ class ConditionHolderBase:
     def __init__(self, elt: 'SeqEltBase', combo_tooltip: Optional[str] = None):
         self.elt = elt
         self.combo_tooltip = combo_tooltip
-        self.modules = ModulesManagerBinding(elt, on_refresh=self._on_modules_refreshed)
-        elt.modules_manager = self.modules.modules_manager
+        self.modules_binding = ModulesManagerBinding.attach(elt, on_refresh=self._on_modules_refreshed)
         self._model = None
 
     def bind_to_dashboard(self):
-        self.modules.bind()
+        self.modules_binding.bind()
 
     def _on_modules_refreshed(self):
         if self._model is not None:

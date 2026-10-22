@@ -7,8 +7,8 @@ choice_factory = ChoiceModelFactory()
 
 class ConditionHolder(ConditionHolderBase):
     """ Holds one pluggable ChoiceModel (true/false/threshold/user_input/composite) - the
-    ChoiceModelBase/ChoiceModelFactory specialization of ConditionHolderBase. Shared by
-    ChoiceElt and WhileElt: `self.condition = ConditionHolder(self, combo_tooltip=...)`.
+    ChoiceModelBase/ChoiceModelFactory specialization of ConditionHolderBase. Used by
+    ChoiceElt: `self.condition = ConditionHolder(self, combo_tooltip=...)`.
     """
     factory = choice_factory
     dict_key = 'choice_model'

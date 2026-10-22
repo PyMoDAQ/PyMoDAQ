@@ -21,10 +21,9 @@ class BranchHolder:
     Plain composition - `self.branches = BranchHolder(elt, branch_labels)` - not a mixin:
     construct it explicitly, whenever the owning element chooses to (there's no __init__-order
     puzzle to get right, unlike the mixin version this replaced). `branch_labels` (outcome
-    value -> display label) is fixed for a binary choice (ChoiceElt:
-    {True: 'True', False: 'False'}), or rebuilt dynamically from a pluggable model's own
-    declared outcomes (SwitchElt, whose outcome set can itself change shape - call `rebuild()`
-    again, with the new labels, whenever it does).
+    value -> display label) is fixed for ChoiceElt's binary choice ({True: 'True',
+    False: 'False'}) today; `rebuild()` lets it be resynced whenever an owner's outcome set
+    can itself change shape.
     """
 
     def __init__(self, elt: 'SeqEltBase', branch_labels: dict):
@@ -32,6 +31,11 @@ class BranchHolder:
         self.branch_labels: dict = {}
         self._go_to: dict = {}
         self.value_transitions: dict = {}
+        # Register on elt before rebuild() can touch elt.mstate: its first-ever access lazily
+        # builds a CompositeState that stringifies elt via __repr__, which reads elt.branches -
+        # so elt.branches must already exist by then, regardless of whether the caller
+        # constructs this one-step (`elt.branches = BranchHolder(elt, labels)`) or in two steps.
+        elt.branches = self
         self.rebuild(branch_labels)
 
     def rebuild(self, branch_labels: dict):
@@ -54,7 +58,7 @@ class BranchHolder:
 
         # Populate _go_to for every new branch *before* constructing any ValueTransition: the
         # first-ever access to elt.mstate (right below) lazily builds a CompositeState, whose
-        # setup stringifies the element via __repr__ - which for ChoiceElt/SwitchElt reads
+        # setup stringifies the element via __repr__ - which for ChoiceElt reads
         # _go_to - so _go_to must already have an entry (even a None placeholder) for every
         # branch before that first .mstate touch, not filled in partway through this same loop.
         for branch in new_branches:
@@ -84,6 +88,10 @@ class BranchHolder:
             target_id = self._go_to.get(branch)
             if target_id is not None:
                 combo.setCurrentText(str(self.elt.get_elt_from_id(target_id)))
+            else:
+                # Leave genuinely unset rather than showing Qt's default index-0 selection,
+                # which would misleadingly look like a target is already configured.
+                combo.setCurrentIndex(-1)
             combo.currentIndexChanged.connect(
                 lambda index, b=branch: self.set_go_to(b, self._index_to_id(index)))
             combo.setToolTip(f'Go to this elt if {self.branch_labels[branch]}')

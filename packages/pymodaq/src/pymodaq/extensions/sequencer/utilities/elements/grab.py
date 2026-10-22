@@ -41,8 +41,7 @@ class GrabElt(SeqEltBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.modules = ModulesManagerBinding(self, on_refresh=self._on_modules_refreshed)
-        self.modules_manager = self.modules.modules_manager
+        self.modules_binding = ModulesManagerBinding.attach(self, on_refresh=self._on_modules_refreshed)
         self._detectors: list[str] = []
         self._selected: list[str] = []
 
@@ -86,7 +85,7 @@ class GrabElt(SeqEltBase):
         self.status = status
 
     def do_things_with_dashboard(self):
-        self.modules.bind()
+        self.modules_binding.bind()
 
     def _on_modules_refreshed(self):
         self.detectors = self.modules_manager.detectors_name
