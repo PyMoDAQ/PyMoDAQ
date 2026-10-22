@@ -79,6 +79,33 @@ class TestChoiceElt:
         assert reloaded.to_dict_custom() == saved
         assert reloaded == elt
 
+    def test_branch_transitions_survive_sequence_restart(self, qtbot):
+        """ Regression: Sequence.start_sequence() clears every transition on an element's
+        mstate that isn't in CompositeState.transitions_to_keep before each run
+        (recursive_disconnect_elts, so a stale pass's wiring doesn't leak into the next one) -
+        the same mechanism that protects CompositeState's own children_signal/done_signal
+        transitions. BranchHolder's True/False ValueTransitions weren't added to that list, so
+        they were wiped on the very first Start and never recreated: the element could evaluate
+        its condition and emit go_to_signal, but nothing was left to catch it - it would just
+        sit stuck forever. Pre-existing in the mixin-based ChoiceElt too, not a regression from
+        this composition refactor (verified against dev before this PR).
+        """
+        root = RootElt()
+        elt = ChoiceElt(1, parent=root)
+        wait_t = WaitElt(2, parent=root)
+        wait_f = WaitElt(3, parent=root)
+        root._children = [elt, wait_t, wait_f]
+        elt.go_to_true = wait_t.id
+        elt.go_to_false = wait_f.id
+
+        elt.mstate.clear_state_and_transitions()  # what recursive_disconnect_elts() does
+
+        transitions = elt.mstate.transitions()
+        assert elt.branches.value_transitions[True] in transitions
+        assert elt.branches.value_transitions[False] in transitions
+        assert elt.branches.value_transitions[True].targetState() is wait_t.mstate
+        assert elt.branches.value_transitions[False].targetState() is wait_f.mstate
+
     def test_check_set_is_valid_names_the_actual_missing_branch(self, qtbot):
         """ Regression: both branches' error messages used to say 'False', even when True's
         own target was the one that was broken. """
