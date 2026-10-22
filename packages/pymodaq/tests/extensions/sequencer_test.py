@@ -1,5 +1,7 @@
 import pytest
 
+from qtpy import QtCore
+
 from pymodaq_data import DataToExport
 
 from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltFactory, ElementError
@@ -8,6 +10,7 @@ from pymodaq.extensions.sequencer.utilities.elements.root import RootElt
 from pymodaq.extensions.sequencer.utilities.elements.wait import WaitElt
 from pymodaq.extensions.sequencer.utilities.holders.modules_manager_binding import ModulesManagerBinding
 from pymodaq.extensions.sequencer.utilities.elements.grab import GrabElt
+from pymodaq.extensions.sequencer.utilities.states import TrackedTransition
 from pymodaq.utils.managers.modules_manager import ModulesManagerParam
 from pymodaq.extensions.sequencer.models.composite_choice_model import CompositeChoiceModel
 
@@ -57,6 +60,57 @@ class TestModulesManagerBinding:
         assert result == ['det1', 'det2']
 
 
+class FakeAction(QtCore.QObject):
+    triggered = QtCore.Signal(bool)
+
+
+class TestCompositeStateTransitions:
+    """ CompositeState.clear_transitions() - called by Sequence.recursive_disconnect_elts()
+    before every run, even the first, since the tree may have been edited since the last one -
+    only tears down transitions explicitly registered as ephemeral via
+    track_transition()/add_external_transition(); anything added directly via addTransition()
+    (an element's own permanent behavior, e.g. BranchHolder's go_to transitions) survives by
+    construction, with no opt-in needed. This replaces an earlier, inverted design
+    (transitions_to_keep, an opt-in allowlist for permanent transitions) that caused the
+    stuck-ChoiceElt bug: a permanent transition not added to that allowlist was wiped the same
+    as the genuinely ephemeral ones around it.
+
+    Regression coverage for a second bug found while fixing that one: addTransition() returns
+    None (not the transition) when passed an already-built transition object rather than a
+    (signal, target) pair, so track_transition()/add_external_transition() were appending None
+    to the ephemeral list - meaning clear_transitions() never actually removed anything through
+    that path, and the (now-deleted) blunt "clear everything not kept" sweep was silently doing
+    all the real work.
+    """
+
+    def test_tracked_transitions_dont_leak_across_repeated_clears(self, qtbot):
+        root = RootElt()
+        elt = WaitElt(1, parent=root)
+        target = WaitElt(2, parent=root)
+        action = FakeAction()
+
+        counts = []
+        for _ in range(4):
+            elt.mstate.clear_state_and_transitions()
+            elt.mstate.add_external_transition(action.triggered, target.mstate)
+            counts.append(len(elt.mstate.transitions()))
+
+        assert counts == [counts[0]] * len(counts)
+
+    def test_untracked_transition_survives_the_clear(self, qtbot):
+        root = RootElt()
+        elt = WaitElt(1, parent=root)
+        target = WaitElt(2, parent=root)
+        action = FakeAction()
+
+        permanent = TrackedTransition(action.triggered, elt.mstate, target.mstate)
+        elt.mstate.addTransition(permanent)
+
+        elt.mstate.clear_state_and_transitions()
+
+        assert permanent in elt.mstate.transitions()
+
+
 class TestChoiceElt:
     """ ChoiceElt's True/False branching: BranchHolder holds the two targets/transitions,
     ConditionHolder holds the pluggable ChoiceModel. Regression coverage for three bugs the
@@ -80,15 +134,17 @@ class TestChoiceElt:
         assert reloaded == elt
 
     def test_branch_transitions_survive_sequence_restart(self, qtbot):
-        """ Regression: Sequence.start_sequence() clears every transition on an element's
-        mstate that isn't in CompositeState.transitions_to_keep before each run
-        (recursive_disconnect_elts, so a stale pass's wiring doesn't leak into the next one) -
-        the same mechanism that protects CompositeState's own children_signal/done_signal
-        transitions. BranchHolder's True/False ValueTransitions weren't added to that list, so
-        they were wiped on the very first Start and never recreated: the element could evaluate
-        its condition and emit go_to_signal, but nothing was left to catch it - it would just
-        sit stuck forever. Pre-existing in the mixin-based ChoiceElt too, not a regression from
-        this composition refactor (verified against dev before this PR).
+        """ Regression: Sequence.start_sequence() clears per-run tree wiring on every element's
+        mstate before each run (recursive_disconnect_elts, so a stale pass's wiring doesn't leak
+        into the next one) - CompositeState.clear_transitions() only tears down transitions
+        explicitly registered as ephemeral (track_transition()/add_external_transition()).
+        BranchHolder's True/False ValueTransitions are added with a plain addTransition(), so
+        they're permanent by construction and were never at risk from this clear - but that
+        wasn't always true: this test used to catch the inverse bug, where they *were* wiped
+        (via an opt-in transitions_to_keep allowlist they weren't registered in) and never
+        recreated, leaving the element stuck forever after the first Start. Pre-existing in the
+        mixin-based ChoiceElt too, not a regression from the composition refactor (verified
+        against dev before this PR).
         """
         root = RootElt()
         elt = ChoiceElt(1, parent=root)

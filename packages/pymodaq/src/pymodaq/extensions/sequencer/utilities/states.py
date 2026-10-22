@@ -59,18 +59,14 @@ class CompositeState(MyState):
         self.children_state: MyState | None = None
         self._external_transitions = []
 
-        self.transitions_to_keep = []
-
         self._elt = elt
 
         self.setup_states()
 
         self.execute_state.entered.connect(elt.execute)
-        self.transitions_to_keep.append(
-            self.execute_state.addTransition(elt.children_signal, self.children_state))
+        self.execute_state.addTransition(elt.children_signal, self.children_state)
 
-        self.transitions_to_keep.append(
-            self.addTransition(elt.done_signal, self.done_state))  # apply to all substates)
+        self.addTransition(elt.done_signal, self.done_state)  # apply to all substates
 
     def set_do_init(self, value: bool) -> None:
         if value and hasattr(self._elt, 'initialize_element'):
@@ -87,21 +83,35 @@ class CompositeState(MyState):
         self.children_state.setObjectName(f'ChildrenState of the elt: {self._elt}')
         self.setInitialState(self.execute_state)
 
+    def track_transition(self, transition: QAbstractTransition) -> QAbstractTransition:
+        """ Add an already-built transition and track it as ephemeral/per-run: anything
+        registered here is torn down by clear_transitions() (Sequence.recursive_disconnect_elts,
+        before every run - tree order may have changed since the last one) and must be rebuilt
+        by whoever set it up in the first place (Sequence.recursive_connect_elts).
+
+        Everything *not* routed through here - any transition an element or a composed holder
+        (BranchHolder...) adds directly via addTransition() - is permanent by construction: it
+        survives clear_transitions() with no extra bookkeeping needed, because clear_transitions()
+        only ever touches what was registered here.
+        """
+        # addTransition() returns None (not the transition) when passed an already-built
+        # transition object rather than a (signal, target) pair - track `transition` itself.
+        self.addTransition(transition)
+        self._external_transitions.append(transition)
+        return transition
+
     def add_external_transition(self, signal: QtCore.Signal,
                                 target: Union['CompositeState', MyState, MyQFinalState]):
-        self._external_transitions.append(
-            self.addTransition(TrackedTransition(signal, self, target)))
+        self.track_transition(TrackedTransition(signal, self, target))
 
     @property
     def external_transitions(self) -> list[QAbstractTransition]:
         return self._external_transitions
 
     def clear_transitions(self):
-        for trans in list(self.external_transitions):
+        for trans in self._external_transitions:
             self.removeTransition(trans)
-        for trans in self.transitions():
-            if trans not in self.transitions_to_keep:
-                self.removeTransition(trans)
+        self._external_transitions = []
 
     def clear_state_and_transitions(self):
         self.clear_transitions()

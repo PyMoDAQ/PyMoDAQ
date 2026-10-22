@@ -200,12 +200,12 @@ class Sequence(CustomExt):
                 child.data_to_log_signal.connect(self.log_callback)
             child.mstate.setParent(elt.mstate.children_state)
             child.mstate.entered.connect(self.selected_index_from_entered_state(child))
-            child.mstate.addTransition(
+            child.mstate.track_transition(
                 ValueTransition(self.get_action('pause').triggered,
                                 True,
                                 child.mstate,
                                 self.interrupt_state, ))
-            child.mstate.addTransition(self.get_action('stop').triggered, self.done_state)
+            child.mstate.add_external_transition(self.get_action('stop').triggered, self.done_state)
             if ind_child == 0:
                 elt.mstate.children_state.setInitialState(child.mstate)
             if ind_child == len(elt.children_without_add) - 1:

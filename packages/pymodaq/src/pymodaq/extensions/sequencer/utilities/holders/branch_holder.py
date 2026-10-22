@@ -53,7 +53,6 @@ class BranchHolder:
 
         for branch in existing - current:
             transition = self.value_transitions.pop(branch)
-            self.elt.mstate.transitions_to_keep.remove(transition)
             self.elt.mstate.removeTransition(transition)
             self._go_to.pop(branch, None)
 
@@ -67,13 +66,11 @@ class BranchHolder:
 
         for branch in new_branches:
             transition = ValueTransition(self.elt.go_to_signal, branch, source_state=self.elt.mstate)
+            # Plain addTransition(), not track_transition(): this is the element's own
+            # permanent behavior, not per-run tree wiring, so it must survive
+            # Sequence.recursive_disconnect_elts()'s per-run clear - which is exactly what
+            # a transition added outside track_transition()/add_external_transition() does.
             self.elt.mstate.addTransition(transition)
-            # Sequence.recursive_disconnect_elts() clears every transition on an element's
-            # mstate that isn't in transitions_to_keep before each run (the same mechanism
-            # that protects the done_signal transition CompositeState sets up for itself) -
-            # without this, a branch transition added here survives only until the first
-            # Start, then the element can never again transition out on go_to_signal.
-            self.elt.mstate.transitions_to_keep.append(transition)
             self.value_transitions[branch] = transition
 
     def set_go_to(self, branch, value: int):
