@@ -15,6 +15,8 @@ from qtpy.QtCore import QObject, QTimer, Qt, Signal
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.logger import set_logger, get_module_name
 
+from pymodaq_gui.parameter.utils import apply_param_change, serialize_child_added
+
 from pymodaq.control_modules.hardware.capabilities import Access, Capabilities, Quantity
 from pymodaq.control_modules.hardware.subscription import Subscription
 
@@ -37,6 +39,7 @@ def _quantity_property(quantity: Quantity) -> property:
 
     if quantity.access is Access.CONTROL:
         def setter(self: Controller, value):
+            self._require_open(name)
             self.write_requested.emit(name, value)
 
         return property(getter, setter, doc=quantity.docs)
@@ -54,6 +57,7 @@ class Controller(QObject):
     action_requested = Signal(str, str, object)  # → thread.request_action: (channel, action name, checked)
     subscribe_requested = Signal(object)       # → thread.subscribe
     unsubscribe_requested = Signal(object)     # → thread.unsubscribe
+    settings_update_requested = Signal(list, object, str)  # → thread.update_settings: (path, data, change)
     device_status = Signal(bool, str)          # ← thread.hardware_status
     device_error = Signal(str)                 # ← thread.error: an operation failed, the device is still open
     written = Signal(str, object)              # ← thread.write_done: (name, value) after a write succeeded
@@ -84,9 +88,12 @@ class Controller(QObject):
         self.action_requested.connect(thread.request_action)
         self.subscribe_requested.connect(thread.subscribe)
         self.unsubscribe_requested.connect(thread.unsubscribe)
+        self.settings_update_requested.connect(thread.update_settings)
+        self.settings.sigTreeStateChanged.connect(self._relay_settings_change)
         thread.hardware_status.connect(self._on_status)
         thread.error.connect(self.device_error)
         thread.write_done.connect(self.written)
+        self.written.connect(self._remember_written_value)
         thread.write_done.connect(self._stop_write_timeout)
         thread.write_failed.connect(self.write_failed)
         thread.write_failed.connect(self._stop_write_timeout)
@@ -119,20 +126,41 @@ class Controller(QObject):
         self._syncing_from_device = True
         try:
             param = self.settings.child(*path)
-            if change == 'value':
-                param.setValue(data)
-            elif change == 'limits':
-                param.setLimits(data)
-            elif change == 'options':
-                param.setOpts(**data)
-            elif change == 'childAdded':
-                state, pos = data
-                param.insertChild(pos, state, existOk=True)
+            apply_param_change(param, data, change)
         except Exception as exc:
             logger.exception(f'applying a device-driven settings change failed: {change!r}')
             self.device_error.emit(str(exc))
         finally:
             self._syncing_from_device = False
+
+    def _relay_settings_change(self, _, changes) -> None:
+        """A dock edit on the shared settings tree, forwarded to the hardware thread.
+        ``'childAdded'``'s own data is ``(child, pos)`` with *child* a live ``Parameter`` of this
+        GUI-thread tree - unsafe to hand across the thread boundary as-is, so it's serialized
+        first, the same way the opposite direction (``HardwareThread._on_plugin_settings_changed``)
+        already does.
+
+        Connected once here, on the one :class:`Controller` every :class:`HardwareModule` window
+        sharing this device attaches to - never per window: they all edit the same settings tree,
+        so a per-window connection would fire once per open window for a single edit (duplicating
+        any real side effect ``commit_settings`` has), and would vanish entirely the moment
+        whichever window happened to register it was closed (Qt auto-disconnects a bound-method
+        slot once its receiving ``QObject`` is destroyed).
+        """
+        if self._syncing_from_device:
+            return  # a change coming from the device, not the user: do not write it back
+        for param, change, data in changes:
+            if change == 'childAdded':
+                data = serialize_child_added(data)
+            path = self.settings.childPath(param)
+            if path is not None:
+                self.settings_update_requested.emit(path, data, change)
+
+    def _remember_written_value(self, name: str, value: object) -> None:
+        """Keep a confirmed write in ``_last_values`` too, so the property getter - documented as
+        returning the latest value *received* - doesn't keep answering with a stale pre-write
+        value until the next poll/one-shot read happens to land."""
+        self._last_values[name] = value
 
     def _on_status(self, connected: bool, info: str) -> None:
         self._connected = connected

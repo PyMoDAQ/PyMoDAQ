@@ -181,9 +181,12 @@ it out exactly like a periodic reading would.
 
 Two paths land in the same tree, deliberately asymmetric so neither loops back into the other:
 
-- **A GUI edit** fires `controller.settings`' own `sigTreeStateChanged` -> `_relay_settings_change`
-  -> `update_settings` on the hardware thread, applied under a `QSignalBlocker` before
-  `commit_settings` runs.
+- **A GUI edit** fires `controller.settings`' own `sigTreeStateChanged` -> `Controller._relay_settings_change`
+  -> `update_settings` on the hardware thread (via `settings_update_requested`), applied under a
+  `QSignalBlocker` before `commit_settings` runs. Wired once on `Controller` itself, not per
+  `HardwareModule` window: every window sharing a device edits the same tree, so a per-window
+  connection would double-apply a single edit (and vanish entirely the moment whichever window
+  happened to register it was closed).
 - **The plugin changing its own settings** (inside `commit_settings` itself, or anywhere else)
   fires the thread's own tree's real `sigTreeStateChanged` (not blocked) -> forwarded as
   `settings_changed` ('value'/'limits'/'options'/'childAdded', see the other README) ->

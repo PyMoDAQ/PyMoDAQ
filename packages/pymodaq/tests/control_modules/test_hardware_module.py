@@ -6,7 +6,7 @@ import pytest
 from pymodaq_data.data import DataRaw
 from qtpy import QtWidgets
 
-from qtpy.QtCore import Qt
+from qtpy.QtCore import Property, Qt, Signal
 
 from pymodaq.control_modules.hardware import controller
 from pymodaq.control_modules.hardware.capabilities import Action, control, measurement
@@ -568,6 +568,18 @@ class TestSlider:
     def test_a_slider_has_a_channel_row_with_the_same_columns(self, stage):
         assert stage._sliders['x'].width() == SLIDER_WIDTH
 
+    def test_a_degenerate_range_does_not_divide_by_zero(self, registry, qtbot):
+        """lo == hi passes Quantity._validate() (only lo > hi is rejected) - set_slider used to
+        divide by (hi - lo) unconditionally, raising ZeroDivisionError the first time a confirmed
+        value reached the slider."""
+        class Fixed(Camera):
+            x = control(units='mm', lo=5.0, hi=5.0, ui_add=('slider',))
+
+        widget = make_module(registry, qtbot, Fixed, 12, initialize=True)
+        widget.controller.x = 5.0  # must not raise
+        qtbot.waitUntil(lambda: widget._sliders['x'].value() == 0, timeout=2000)
+        widget.release()
+
 
 class TestToggle:
 
@@ -608,6 +620,42 @@ class _FancySpinBox(QtWidgets.QDoubleSpinBox):
 
 class _FancyToggle(QtWidgets.QPushButton):
     """Same idea as _FancySpinBox, for the 'toggle' representation."""
+
+
+class _BareSelector(QtWidgets.QWidget):
+    """Has the 'selector' representation's property/signal ('currentIndex'/'activated') but not
+    addItems - a widget_class that passes the generic property/signal check and would otherwise
+    only fail later, inside _add_representation's own unconditional addItems() call."""
+    activated = Signal(int)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._current_index = 0
+
+    def _get_current_index(self):
+        return self._current_index
+
+    def _set_current_index(self, value):
+        self._current_index = value
+
+    currentIndex = Property(int, _get_current_index, _set_current_index)
+
+
+class _BareToggle(QtWidgets.QWidget):
+    """Same idea as _BareSelector, for 'toggle': has 'checked'/'toggled' but not setCheckable."""
+    toggled = Signal(bool)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._checked = False
+
+    def _get_checked(self):
+        return self._checked
+
+    def _set_checked(self, value):
+        self._checked = value
+
+    checked = Property(bool, _get_checked, _set_checked)
 
 
 class TestWidgetClass:
@@ -661,6 +709,26 @@ class TestWidgetClass:
 
         with pytest.raises(ValueError, match="has no 'editingFinished' signal"):
             make_module(registry, qtbot, Instrument, 24)
+
+    def test_missing_addItems_raises_for_a_selector(self, registry, qtbot):
+        """_BareSelector has the generic property/signal the old check alone verified
+        ('currentIndex'/'activated') but not addItems, which _add_representation calls
+        unconditionally right after for a 'selector' - the old check passed this, then
+        AttributeError'd a moment later with no mention of quantity.name or the real gap."""
+        class Instrument(Camera):
+            trigger = control(values=['internal', 'external'], widget_class=_BareSelector)
+
+        with pytest.raises(ValueError, match='has no addItems method'):
+            make_module(registry, qtbot, Instrument, 25)
+
+    def test_missing_setCheckable_raises_for_a_toggle(self, registry, qtbot):
+        """Same idea as above, for 'toggle': _BareToggle has 'checked'/'toggled' but not
+        setCheckable."""
+        class Instrument(Camera):
+            powered = control(values=['off', 'on'], widget='toggle', widget_class=_BareToggle)
+
+        with pytest.raises(ValueError, match='has no setCheckable method'):
+            make_module(registry, qtbot, Instrument, 26)
 
 
 class TestReadbackRows:

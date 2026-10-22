@@ -100,6 +100,24 @@ class TestWrite:
             ctrl.exposure = 20.0
         assert blocker.args == ['exposure', 20.0]
 
+    def test_the_getter_reflects_a_confirmed_write_without_a_separate_read(self, registry, qtbot):
+        """The getter is documented as returning the latest value received - previously only
+        _on_reading (a poll/one-shot read) ever updated _last_values, so a write's own confirmed
+        value was never reflected until some later, unrelated read happened to land."""
+        key, ctrl = attach(registry)
+        ctrl.thread.ini_hardware()
+        with qtbot.waitSignal(ctrl.written, timeout=2000):
+            ctrl.exposure = 20.0
+        assert ctrl.exposure == 20.0
+
+    def test_writing_while_closed_raises_immediately(self, registry):
+        """Every other access path (poll/read/read_blocking/run_action) raises right away via
+        _require_open when the device isn't open - the property setter used to skip that check
+        and silently queue a write doomed to time out instead."""
+        key, ctrl = attach(registry)
+        with pytest.raises(RuntimeError, match='not open'):
+            ctrl.exposure = 20.0
+
 
 class TestWriteTimeout:
     """written/write_failed never reaching this Controller at all must not leave a write
@@ -521,6 +539,56 @@ class TestDeviceSettingsChanged:
         ctrl._on_device_settings_changed(['group'], ('not a valid state', 0), 'childAdded')
         assert len(errors) == 1
         assert ctrl._syncing_from_device is False  # the flag is still released on failure
+
+
+class TestGuiSettingsRelay:
+    """The opposite direction from TestDeviceSettingsChanged above: a dock edit, relayed by
+    Controller._relay_settings_change - connected once on Controller itself, not per
+    HardwareModule window (see that method's own docstring)."""
+
+    def test_a_dock_edit_reaches_the_device(self, registry, qtbot):
+        key, ctrl = attach(registry, hardware_class=Gained, controller_id=40)
+        ctrl.thread.ini_hardware()
+        ctrl.settings.child('gain').setValue(3.0)
+        qtbot.waitUntil(lambda: ctrl.thread._plugin_settings.child('gain').value() == 3.0, timeout=2000)
+
+    def test_a_dock_edit_fires_commit_settings_exactly_once_across_shared_attaches(self, registry, qtbot):
+        """attach() is ref-counted: a second attach for the same key returns the same Controller,
+        so this relay is only ever connected once no matter how many windows share the device - a
+        per-window connection would instead fire once per open window for a single edit, double
+        (or N-tuple) applying any real side effect commit_settings has."""
+        class Tracked(Gained):
+            def __init__(self):
+                super().__init__()
+                self.commit_calls = []
+
+            def commit_settings(self, param):
+                self.commit_calls.append((param.name(), param.value()))
+
+        key = HardwareKey(hardware_class=Tracked, controller_id=41)
+        first = registry.attach(key, Tracked)
+        second = registry.attach(key, Tracked)
+        assert first is second
+        first.thread.ini_hardware()
+        first.settings.child('gain').setValue(3.0)
+        plugin = first.thread._plugin
+        qtbot.waitUntil(lambda: bool(plugin.commit_calls), timeout=2000)
+        qtbot.wait(100)  # give a would-be duplicate relay a chance to also fire
+        assert plugin.commit_calls == [('gain', 3.0)]
+
+    def test_a_dock_added_child_serializes_before_crossing_threads(self, registry, qtbot):
+        """The opposite direction of TestDeviceSettingsChanged's own child-added test: a child
+        added from the dock must not hand a live GUI-thread Parameter across the thread boundary
+        - it's serialized to (state, pos) first, the same way the device->GUI direction already
+        does, and rebuilt fresh on the device side."""
+        key, ctrl = attach(registry, hardware_class=Grouped, controller_id=42)
+        ctrl.thread.ini_hardware()
+        ctrl.settings.child('group').addChild({'name': 'new_child', 'type': 'float', 'value': 2.5})
+        qtbot.waitUntil(lambda: 'new_child' in ctrl.thread._plugin_settings.child('group').names, timeout=2000)
+        device_child = ctrl.thread._plugin_settings.child('group', 'new_child')
+        assert device_child.value() == 2.5
+        gui_child = ctrl.settings.child('group', 'new_child')
+        assert gui_child is not device_child  # rebuilt on the device side, not the same object
 
 
 class TestConfigDefaults:

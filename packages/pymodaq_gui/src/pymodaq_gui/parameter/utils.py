@@ -276,6 +276,57 @@ def iter_children_params(param, childlist: list = [], output_type=None,
     return childlist
 
 
+def serialize_child_added(data: Tuple[Parameter, int]) -> Tuple[dict, int]:
+    """Pack a ``sigTreeStateChanged`` ``'childAdded'`` payload - ``(child, pos)``, with *child* a
+    live ``Parameter`` of whichever tree owns it - into something safe to cross a thread boundary
+    or a queued Qt signal: ``(child.saveState(), pos)``. See :func:`apply_param_change` for the
+    receiving side.
+
+    Parameters
+    ----------
+    data: tuple
+        A ``'childAdded'`` change's own data, exactly as ``sigTreeStateChanged`` delivers it.
+
+    Returns
+    -------
+    tuple
+        ``(state, pos)``, safe to send as-is.
+    """
+    child, pos = data
+    return child.saveState(), pos
+
+
+def apply_param_change(param: Parameter, data, change: str) -> None:
+    """Apply one ``sigTreeStateChanged``-shaped change to *param*, the receiving side's own copy
+    of the ``Parameter`` that changed.
+
+    ``'childAdded'``'s own *data* is ``(state, pos)`` - see :func:`serialize_child_added` - built
+    into a fresh child on this tree with ``insertChild``, never the live ``Parameter`` object
+    that crossed the boundary serialized. ``existOk=True`` makes this idempotent: a change
+    delivered twice (e.g. replayed, or already applied locally) inserts the same child only once.
+
+    Parameters
+    ----------
+    param: Parameter
+        The parameter to apply *data* to - the group itself for ``'childAdded'``, the changed
+        leaf for ``'value'``/``'limits'``/``'options'``.
+    data: object
+        The change's own data, shaped as *change* dictates.
+    change: str
+        One of ``'value'``, ``'limits'``, ``'options'``, ``'childAdded'``. Anything else is a
+        no-op - callers filter beforehand if they need to know which changes were skipped.
+    """
+    if change == 'value':
+        param.setValue(data)
+    elif change == 'limits':
+        param.setLimits(data)
+    elif change == 'options':
+        param.setOpts(**data)
+    elif change == 'childAdded':
+        state, pos = data
+        param.insertChild(pos, state, existOk=True)
+
+
 def get_param_from_name(parent: Parameter, name) -> Parameter:
     """Get Parameter under parent whose name is name
 

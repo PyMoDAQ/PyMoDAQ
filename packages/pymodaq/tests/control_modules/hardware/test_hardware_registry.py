@@ -148,10 +148,16 @@ class TestAttachDetach:
         assert second is not first
 
     def test_params_state_is_used_by_the_first_attach_only(self, monkeypatch):
+        from pymodaq_gui.parameter import Parameter
+
         registry = FakeRegistry()
         seen = []
-        monkeypatch.setattr(hardware_registry, 'make_plugin_settings',
-                            lambda plugin_class, params_state: seen.append(params_state) or object())
+
+        def fake_make_plugin_settings(plugin_class, params_state):
+            seen.append(params_state)
+            return Parameter.create(name='Settings', type='group', children=[])
+
+        monkeypatch.setattr(hardware_registry, 'make_plugin_settings', fake_make_plugin_settings)
         registry.attach(key_for(), PluginA, params_state={'first': True})
         registry.attach(key_for(), PluginA, params_state={'second': True})
         assert seen == [{'first': True}]

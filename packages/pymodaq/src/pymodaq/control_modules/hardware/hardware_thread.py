@@ -23,6 +23,7 @@ from typing import Any, Callable
 
 from pymodaq.control_modules.hardware.capabilities import Capabilities
 from pymodaq.control_modules.hardware.subscription import Subscription
+from pymodaq_gui.parameter.utils import apply_param_change, serialize_child_added
 from pymodaq_utils.logger import set_logger, get_module_name
 from qtpy.QtCore import QObject, QSignalBlocker, QTimer, Signal, Slot
 
@@ -200,10 +201,15 @@ class HardwareThread(QObject):
     @Slot(list, object, str)
     @_when_open
     def update_settings(self, path: list, data: object, change: str) -> None:
-        """Apply a GUI settings edit to the plugin's tree, then call ``commit_settings``."""
+        """Apply a GUI settings edit to the plugin's tree, then call ``commit_settings``.
+
+        Dispatches on *change* the same way ``_on_plugin_settings_changed``/``settings_changed``
+        forwards it - ``'childAdded'``'s own *data* is ``(state, pos)``, a fresh ``Parameter``
+        built from *state* here, never the live GUI-thread object it was serialized from.
+        """
         with QSignalBlocker(self._plugin_settings):
             param = self._plugin_settings.child(*path) if path else self._plugin_settings
-            param.setValue(data)
+            apply_param_change(param, data, change)
         commit = getattr(self._plugin, 'commit_settings', None)
         if commit is not None:
             commit(param)
@@ -216,14 +222,13 @@ class HardwareThread(QObject):
         legacy ``send_param_status`` (``control_modules/plugin_base.py``): the first three cross as
         plain data, but ``'childAdded'``'s own data is ``(child, pos)`` with *child* a live
         ``Parameter`` of this thread's own tree - unsafe to hand across the thread boundary as-is,
-        so it's serialized first (``child.saveState()``), the same way the legacy path does.
+        so it's serialized first, the same way the legacy path does.
         """
         for param, change, data in changes:
             if change not in ('value', 'limits', 'options', 'childAdded'):
                 continue
             if change == 'childAdded':
-                child, pos = data
-                data = (child.saveState(), pos)
+                data = serialize_child_added(data)
             path = self._plugin_settings.childPath(param)
             if path is not None:
                 self.settings_changed.emit(path, data, change)

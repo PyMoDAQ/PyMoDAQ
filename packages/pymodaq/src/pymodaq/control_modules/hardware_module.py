@@ -167,9 +167,6 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         ``[hardware_module] grab_period_ms``.
     """
 
-    # Settings edited in the settings dock, sent to the hardware thread: (path, value, change).
-    _settings_update = Signal(list, object, str)
-
     def __init__(self, key: HardwareKey, plugin_class: type, params_state: dict | None = None,
                  registry: HardwareRegistry | None = None, parent: QtWidgets.QWidget | None = None,
                  grab_period_ms: float = DEFAULT_GRAB_PERIOD_MS):
@@ -209,7 +206,6 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         self.setup_actions()
         self._build_channels(self.controller.capabilities)
         self._build_settings()
-        self._settings_update.connect(self.controller.thread.update_settings)
 
         self.controller.device_status.connect(self._on_status)
         self.controller.device_error.connect(self._on_error)
@@ -255,24 +251,21 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         self.add_widget('status', self.status_label, toolbar=INSTRUMENT_TOOLBAR)
 
     def _build_settings(self) -> None:
-        """The plugin's settings in a dock. Edits go to the hardware thread."""
+        """The plugin's settings in a dock. Edits go to the hardware thread.
+
+        The dock-edit relay itself (``controller.settings.sigTreeStateChanged`` ->
+        ``Controller._relay_settings_change``) is wired once on the shared :class:`Controller`,
+        not here - every :class:`HardwareModule` window sharing a device edits the same settings
+        tree, so a per-window connection would double up (or N-tuple up) a single edit.
+        """
         tree = ParameterTree(showHeader=False)
         tree.setParameters(self.controller.settings, showTop=False)
-        self.controller.settings.sigTreeStateChanged.connect(self._relay_settings_change)
         self.settings_dock = QtWidgets.QDockWidget('Settings', self)
         self.settings_dock.setWidget(tree)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.settings_dock)
         self.settings_dock.hide()
         self.settings_dock.visibilityChanged.connect(
             lambda visible: self.get_action('show_settings').setChecked(visible))
-
-    def _relay_settings_change(self, _, changes) -> None:
-        if not self._attached or self.controller.thread is None or self.controller._syncing_from_device:
-            return  # a change coming from the device, not the user: do not write it back
-        for param, change, data in changes:
-            path = self.controller.settings.childPath(param)
-            if path is not None:
-                self._settings_update.emit(path, data, change)
 
     def _build_channels(self, caps) -> None:
         """One toolbar per row, stacked in a dock on the left. A readback is shown in its control's row."""
@@ -479,7 +472,7 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         rule = RepresentationFactory.create(kind)
         widget = (quantity.widget_class or rule.default_class)()
         if quantity.widget_class is not None:
-            self._check_representation_compatible(widget, rule, quantity)
+            self._check_representation_compatible(widget, rule, quantity, kind)
         widget.setFixedWidth(VALUE_WIDTH)
         if kind == 'value':
             widget.setRange(-1e12 if quantity.lo is None else quantity.lo,
@@ -514,9 +507,16 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
 
     @staticmethod
     def _check_representation_compatible(widget: QtWidgets.QWidget, rule: RepresentationRule,
-                                         quantity: Quantity) -> None:
+                                         quantity: Quantity, kind: str) -> None:
         """The real ``widget_class=`` compatibility check, done here with a real instance in hand -
-        not in ``capabilities.py``, which stays Qt-free (see :class:`RepresentationRule`)."""
+        not in ``capabilities.py``, which stays Qt-free (see :class:`RepresentationRule`).
+
+        Also checks the one method :meth:`_add_representation` calls unconditionally right after
+        this, past the generic property/commit-signal check above: ``addItems`` for a
+        ``'selector'``, ``setCheckable`` for a ``'toggle'`` - otherwise a mismatched
+        ``widget_class`` passes this check but still raises moments later, an ``AttributeError``
+        that points at neither ``quantity.name`` nor the actual missing capability.
+        """
         meta = widget.metaObject()
         if meta.indexOfProperty(rule.property_name) == -1:
             raise ValueError(
@@ -526,6 +526,14 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
             raise ValueError(
                 f'widget_class={type(widget).__name__} has no {rule.commit_signal!r} signal, '
                 f'needed for {quantity.name!r}\'s representation')
+        if kind == 'selector' and not hasattr(widget, 'addItems'):
+            raise ValueError(
+                f'widget_class={type(widget).__name__} has no addItems method, '
+                f'needed for {quantity.name!r}\'s selector representation')
+        if kind == 'toggle' and not hasattr(widget, 'setCheckable'):
+            raise ValueError(
+                f'widget_class={type(widget).__name__} has no setCheckable method, '
+                f'needed for {quantity.name!r}\'s toggle representation')
 
     def _add_slider(self, quantity: Quantity) -> None:
         """A slider over the declared range. It writes when released, or at once for keyboard and wheel steps."""
@@ -540,7 +548,9 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
 
         def set_slider(value, slider=slider, quantity=quantity):
             lo, hi = _range_of(quantity)
-            slider.setValue(round((value - lo) / (hi - lo) * SLIDER_STEPS))
+            # hi == lo is a degenerate (but not rejected) range - nothing to position the slider
+            # along, so it just stays put instead of dividing by zero.
+            slider.setValue(0 if hi == lo else round((value - lo) / (hi - lo) * SLIDER_STEPS))
         self._sync_for(quantity.name).bind(slider, setter=set_slider, mode=SyncMode.FROM_SYNC, init_from=None)
 
     def _slider_value(self, name: str) -> float:

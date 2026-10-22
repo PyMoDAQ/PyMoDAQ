@@ -198,6 +198,14 @@ class TestToolbarWidgets:
         with pytest.raises(ValueError, match='unknown widgets'):
             control(ui_add=('spinner_of_doom',))
 
+    def test_read_and_snap_cannot_both_be_requested(self):
+        # read/snap are the same one-shot representation (scalar vs array), not independent
+        # companion widgets - nothing else stopped ui_add=('snap',) from doubling up on a scalar
+        # measurement's own default 'read', which produced two toolbar buttons wired to the same
+        # action id (see hardware_module.py's _add_read_action).
+        with pytest.raises(ValueError, match='never both at once'):
+            toolbar_widgets(measurement(ui_add=('snap',)))
+
     def test_overrides_survive_serialization(self):
         q = Quantity.from_dict(control(lo=0, hi=1, ui_add=('slider',), ui_remove=('stop',)).to_dict())
         assert q.ui_add == ('slider',)

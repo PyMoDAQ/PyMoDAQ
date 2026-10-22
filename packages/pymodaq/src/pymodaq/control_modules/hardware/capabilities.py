@@ -150,6 +150,10 @@ def toolbar_widgets(quantity: 'Quantity') -> list[str]:
         defaults = tuple(quantity.widget if w in _WIDGET_OVERRIDES else w for w in defaults)
     widgets = [w for w in defaults if w not in quantity.ui_remove]
     widgets += [w for w in quantity.ui_add if w not in widgets]
+    if 'read' in widgets and 'snap' in widgets:
+        raise ValueError(
+            f'{quantity.name!r}: read and snap are the same one-shot representation (scalar vs '
+            f'array), never both at once - pick the one matching this quantity\'s shape')
     for name, action in quantity.actions.items():
         if action.button and name not in widgets:
             widgets.append(name)
