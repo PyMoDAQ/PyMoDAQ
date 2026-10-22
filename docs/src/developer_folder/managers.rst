@@ -1014,7 +1014,9 @@ A loop that blocks until each step is done
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The optimizers (``optimizers_base/optimizer.py``, ``run_opti``), the PID (``pid/pid_controller.py``) and the Data Mixer
-(``data_mixer/data_mixer.py``, ``snap``) use the blocking calls, each step needing the result of the previous one:
+(``data_mixer/data_mixer.py``, ``snap``) use the blocking calls, each step needing the result of the previous one
+(``grab_datas`` in the PID is the old name of ``grab_data``). They will be progressively moved to the ``*_with_callback``
+sequences, which do not run a polling loop in the GUI thread: prefer those in new code.
 
 .. code-block:: python
 
