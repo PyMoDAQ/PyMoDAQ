@@ -21,7 +21,11 @@ from qtpy.QtWidgets import (
 )
 from qtpy.QtCore import Qt
 
-from pymodaq_gui.utils.widget_sync import WidgetSync, SyncMode, ValueSync, DictSync
+from weakref import ref
+
+from pymodaq_gui.utils.widget_sync import (
+    WidgetSync, SyncMode, ValueSync, DictSync, make_property_getter, make_property_setter,
+)
 
 
 @pytest.fixture
@@ -1983,3 +1987,45 @@ class TestDeepCopyBugFix:
 
         # Should not emit (comparison works correctly with deep copy)
         assert len(changes) == 0
+
+
+class TestPropertyGetterSetterFunctions:
+    """make_property_getter/make_property_setter: free functions, usable outside a sync instance
+    (e.g. to build a representation widget's getter/setter from just a Qt property name)."""
+
+    def test_getter_reads_the_named_property(self, qtbot_app):
+        spin = QSpinBox()
+        spin.setValue(42)
+        getter = make_property_getter(ref(spin), 'value')
+        assert getter() == 42
+
+    def test_setter_writes_the_named_property(self, qtbot_app):
+        spin = QSpinBox()
+        setter = make_property_setter(ref(spin), 'value')
+        setter(7)
+        assert spin.value() == 7
+
+    def test_getter_returns_none_once_the_widget_is_gone(self, qtbot_app):
+        spin = QSpinBox()
+        widget_ref = ref(spin)
+        getter = make_property_getter(widget_ref, 'value')
+        del spin
+        assert getter() is None
+
+    def test_setter_is_a_noop_once_the_widget_is_gone(self, qtbot_app):
+        spin = QSpinBox()
+        widget_ref = ref(spin)
+        setter = make_property_setter(widget_ref, 'value')
+        del spin
+        setter(7)  # must not raise
+
+    def test_base_sync_private_methods_delegate_to_the_public_functions(self, qtbot_app):
+        """BaseWidgetSync._make_property_getter/_setter are now thin wrappers, not a second
+        implementation - this is what the promotion to module-level functions was for."""
+        sync = ValueSync(initial_value=0)
+        spin = QSpinBox()
+        spin.setValue(5)
+        widget_ref = ref(spin)
+        assert sync._make_property_getter(widget_ref, 'value')() == 5
+        sync._make_property_setter(widget_ref, 'value')(9)
+        assert spin.value() == 9
