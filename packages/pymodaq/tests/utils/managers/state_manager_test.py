@@ -51,8 +51,11 @@ def ini_state_manager(init_qt):
 
     splash = getattr(state_manager, 'splash_subentries', None)  # shown when a state is executed
     if splash is not None:
-        splash.close()
-        splash.deleteLater()
+        try:
+            splash.close()
+            splash.deleteLater()
+        except RuntimeError:  # already deleted by the test
+            pass
     for window in (state_manager.mainwindow, external_ui):
         window.close()
         window.deleteLater()
@@ -360,6 +363,15 @@ class TestWithSubEntries:
             assert time.perf_counter() - t0 < 0.2  # returned at once
             assert not state_manager.entry_applied
         assert state_manager.entry_applied
+
+    def test_splash_deleted_before_it_is_closed(self, state_with_subentries):
+        """ The splash is closed after a delay: deleting it in between must not raise in the event loop """
+        state_manager, qtbot = state_with_subentries
+        state_manager.execute_entry(blocking=False)
+        state_manager.splash_subentries.deleteLater()
+        QtWidgets.QApplication.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete)
+        state_manager.close_subentries_display(50)  # as finalize does, when the splash is gone
+        qtbot.wait(150)
 
     def test_non_blocking(self, state_with_subentries):
         """ In parallel, the modules are only started: everything is over at once, whatever the time they need """
