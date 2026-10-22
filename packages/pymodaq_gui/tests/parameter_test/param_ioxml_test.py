@@ -137,7 +137,7 @@ class TestXMLbackForth():
         defaultparameter = Parameter.create(title='Experiment', name='Experiment', type='group',
                                             children=ioxml.XML_file_to_parameter(
                                                 Path(__file__).resolve().parent.parent.joinpath(
-                                                    'data/preset_default.xml')))
+                                                    'data/experiment_default.xml')))
         saveto = tmp_path.joinpath('impossiblenamedonotuse')
         ioxml.parameter_to_xml_file(defaultparameter,
                                     saveto)

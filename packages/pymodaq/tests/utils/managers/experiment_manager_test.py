@@ -128,12 +128,12 @@ class TestExperimentManager:
 
 
 
-def test_remove_preset_related_files():
+def test_remove_experiment_related_files():
     from pymodaq.utils.config import (get_set_state_path, get_set_overshoot_path, get_set_roi_manager_path,
                                       get_set_remote_path)
     from pymodaq_gui.config import get_set_layout_path
 
-    name = 'test_remove_preset_related_files'
+    name = 'test_remove_experiment_related_files'
     files = [get_set_state_path(name).joinpath(f'{name}.state'),
              get_set_overshoot_path(name).joinpath(f'{name}.xml'),
              get_set_roi_manager_path().joinpath(f'{name}.rois'),
@@ -142,9 +142,23 @@ def test_remove_preset_related_files():
     for file in files:
         file.write_text('')
 
-    ExperimentManager.remove_preset_related_files(name)
+    ExperimentManager.remove_experiment_related_files(name)
 
     for file in files:
         assert not file.exists()
     assert not get_set_state_path().joinpath(name).exists()
     assert not get_set_overshoot_path().joinpath(name).exists()
+
+
+def test_preset_names_still_work_and_warn():
+    import pytest
+    from pymodaq.utils.config import get_set_state_path
+
+    name = 'test_old_preset_name'
+    get_set_state_path(name).joinpath(f'{name}.state').write_text('')
+
+    with pytest.warns(DeprecationWarning, match='remove_experiment_related_files'):
+        ExperimentManager.remove_preset_related_files(name)
+
+    assert not get_set_state_path().joinpath(name).exists()
+    assert hasattr(ExperimentManager, 'list_control_modules_from_experiment')

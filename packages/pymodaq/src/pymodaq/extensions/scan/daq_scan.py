@@ -510,7 +510,7 @@ class DAQScan(CustomExt):
         self.enable_workflow_actions(False)
         self.set_action_visible(WorkFlowActions.LOG, False)
 
-    def do_things_after_experiment_set(self, experiment_name: str):
+    def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: bool = None):
         """ This method is called whenever a experiment entry has been set.
 
         Its main purpose is to update the list of control modules in the manager and
@@ -519,7 +519,7 @@ class DAQScan(CustomExt):
         Can be reimplemented to add some more evolved actions
         """
 
-        super().do_things_after_experiment_set(experiment_name)
+        super().do_things_after_experiment_set(experiment_name, show_dashboard)
 
         # set the module saver type and applies its h5saver to submodules
         self._module_and_data_saver = module_saving.ScanSaver(self)
@@ -835,8 +835,6 @@ class DAQScan(CustomExt):
             settings_str = b'<All_settings title="All Settings" type="group">' + \
                            ioxml.parameter_to_xml_string(params) + \
                            ioxml.parameter_to_xml_string(self.settings)
-                           # ioxml.parameter_to_xml_string(
-                           #     self.dashboard.preset_manager.preset_params) +\
             settings_str += b'</All_settings>'
             attr['settings'] = settings_str
 

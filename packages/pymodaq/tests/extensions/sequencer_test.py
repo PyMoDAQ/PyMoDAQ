@@ -7,6 +7,10 @@ from pymodaq.extensions.sequencer.utilities.elements.choice import ChoiceElt
 from pymodaq.extensions.sequencer.utilities.elements.root import RootElt
 from pymodaq.extensions.sequencer.utilities.elements.wait import WaitElt
 from pymodaq.extensions.sequencer.utilities.holders.modules_manager_binding import ModulesManagerBinding
+from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltFactory
+from pymodaq.extensions.sequencer.utilities.elements.grab import GrabElt
+from pymodaq.utils.managers.modules_manager import ModulesManagerParam
+from pymodaq.extensions.sequencer.utilities.elements.choice import ChoiceElt
 from pymodaq.extensions.sequencer.models.composite_choice_model import CompositeChoiceModel
 
 seq_factory = SeqEltFactory()
@@ -122,6 +126,25 @@ class TestChoiceElt:
         elt.do_things_with_dashboard()
 
         assert model.settings['detectors']['selected'] == ['det1']
+    def test_grab_elt_construction(self, qtbot):
+        """ Regression test: GrabElt used to reference ModulesManager settings children
+        ('probe_data', 'test_actuator') that don't exist, raising a KeyError on every
+        construction. It should only hide the actuator-related children (it's detector-only).
+        """
+        elt = GrabElt(1)
+        settings = elt.modules_manager.settings
+        assert settings.child(ModulesManagerParam.ACTUATORS).opts['visible'] is False
+        assert settings.child(ModulesManagerParam.PROBE_ACTUATORS).opts['visible'] is False
+        assert settings.child(ModulesManagerParam.PROBE_ACTUATORS_RESULTS).opts['visible'] is False
+        assert settings.child(ModulesManagerParam.DETECTORS).opts['visible'] is True
+    def test_choice_elt_default_model_is_trivial(self, qtbot):
+        """ Regression: ChoiceElt's default used to resolve to choice_factory.models[0] -
+        whichever choice_models/*.py file pkgutil happens to import first, alphabetically.
+        Harmless while that was always 'false', but adding composite_choice_model.py here makes
+        'composite' sort first, which would otherwise silently flip every new ChoiceElt's
+        default from the trivial 'false' model to the much heavier composite one. """
+        elt = ChoiceElt(1)
+        assert elt.choice_model.model_name == 'false'
 
 
 class TestCompositeChoiceModel:

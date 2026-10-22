@@ -1,5 +1,5 @@
 
-from typing import Union, TYPE_CHECKING
+from typing import Union
 from pathlib import Path
 import sys
 
@@ -29,9 +29,6 @@ from pymodaq_gui.managers.settings.utils import (
 from pymodaq_gui.managers.manager_base import ManagerBase, ManagerActions
 from pymodaq_gui.utils.styling import ThemeColor
 
-
-if TYPE_CHECKING:
-    from pymodaq.dashboard import DashBoard
 
 
 logger = set_logger(get_module_name(__file__))
@@ -64,17 +61,15 @@ class SettingsManager(ManagerBase):
     icon_name = 'settings'
     settings_handler = SubEntryHandlerTypes.SETTINGS
 
-    def __init__(self,
-                 dashboard: 'DashBoard' = None,
-                 handler_id='settings'):
+    def __init__(self, handler_id='settings', **kwargs):
 
         self.subentry_handler: SubEntryHandler = None
         self.config_model = SettingsManagerModel(save_path=self.get_entry_folder())
 
-        super().__init__(dashboard=dashboard,
-                         tree=SettingsManagerParameterTree(
+        super().__init__(tree=SettingsManagerParameterTree(
                              manager=self,
-                             handler_id=handler_id))
+                             handler_id=handler_id),
+                         **kwargs)
 
         self.settings_to_apply: WidgetWithLabelTitle = None
 
@@ -380,7 +375,7 @@ if __name__ == "__main__":
 
     app = mkQApp('SettingsManager')
 
-    prog = SettingsManager(dashboard=None)
+    prog = SettingsManager()
     prog.update_settings(Path('../../resources/scan_settings.xml'))
     prog.mainwindow.show()
     prog.enable_actions(True)

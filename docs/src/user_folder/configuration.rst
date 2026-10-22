@@ -172,9 +172,11 @@ The GlobalConfig object
 +++++++++++++++++++++++
 
 In the code, all the preferences are accessed through a single object: ``GlobalConfig``, from
-``pymodaq_utils.config``. Each package (and each instrument plugin) registers its own preferences into it,
+``pymodaq_utils.config``. Each package (and each installed plugin) registers its own preferences into it,
 under a name: ``'utils'``, ``'data'``, ``'gui'``, ``'pymodaq'``, or the plugin name (``'mock'`` for
-*pymodaq_plugins_mock*...). This name is then the first element of the path to a value:
+*pymodaq_plugins_mock*...). The ``Config`` class of the ``utils`` module of every installed plugin package
+(instruments, extensions, models...) is registered when ``pymodaq`` is imported, by
+``pymodaq.utils.daq_utils.register_plugin_configs``. This name is then the first element of the path to a value:
 
 .. code-block:: python
 

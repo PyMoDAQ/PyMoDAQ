@@ -1,6 +1,8 @@
+import inspect
 import sys
+import tempfile
 from pathlib import Path
-from typing import Any, Union, TYPE_CHECKING, Optional
+from typing import Any, Union, Optional
 
 from qtpy.QtCore import Qt, QModelIndex
 from qtpy import QtWidgets, QtCore, QtGui
@@ -9,9 +11,10 @@ from qtpy.QtGui import QKeySequence
 from pymodaq_gui.utils.styling import create_icon, ThemeColor
 
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq.utils.custom_ext import CustomExt
+from pymodaq_gui.utils.custom_app import CustomApp
 
 from pymodaq_utils.enums import StrEnum
+from pymodaq_utils.config import GlobalConfig as Config
 
 from pymodaq_gui.messenger import dialog
 from pymodaq_gui.qt_utils import center_widget_on_screen_and_show, mkQApp
@@ -22,10 +25,6 @@ from pymodaq_gui.utils.widget_sync import WidgetSync, SyncMode
 
 
 logger = set_logger(get_module_name(__file__))
-
-
-if TYPE_CHECKING:
-    from pymodaq.dashboard import DashBoard
 
 
 class ManagerActions(StrEnum):
@@ -98,7 +97,10 @@ class ManagerSubEntriesModel(QtCore.QAbstractListModel):
 
 
 
-class ManagerBase(CustomExt):
+config = Config()
+
+
+class ManagerBase(CustomApp):
 
     new_entry = QtCore.Signal(str)
     applied_entry = QtCore.Signal(str)
@@ -112,11 +114,14 @@ class ManagerBase(CustomExt):
     icon_name = 'build_circle'  # the default icon to represent the manager in Toolbar and Menus
     default_entry_name = 'default'
 
-    def __init__(self,
-                 dashboard: 'DashBoard' = None,
-                 **kwargs):
+    def __init__(self, **kwargs):
+        # what CustomApp does not know about goes to init_extra, once the Qt side is initialized
+        app_params = inspect.signature(CustomApp.__init__).parameters
+        app_kwargs = {key: kwargs.pop(key) for key in list(kwargs) if key in app_params}
 
-        super().__init__(parent=QtWidgets.QMainWindow(), dashboard=dashboard, **kwargs)
+        super().__init__(parent=QtWidgets.QMainWindow(), **app_kwargs)
+
+        self.init_extra(**kwargs)
 
         self._entry_applied = False
         self._applied_entry_name: str = None
@@ -145,6 +150,19 @@ class ManagerBase(CustomExt):
 
         self.update_action_list()
         self.update_execute_action_tooltip(self.entry)
+
+        self.finish_init()
+
+    def init_extra(self, **kwargs):
+        """ Called right after the CustomApp initialization (and before the UI setup) with the
+        keyword arguments not used by CustomApp, to be reimplemented to make use of them
+        """
+        if kwargs:
+            raise TypeError(f'{self.__class__.__name__} got unexpected keyword arguments: {list(kwargs)}')
+
+    def finish_init(self):
+        """ Called at the end of the initialization of the manager, to be reimplemented if needed"""
+        pass
 
     def enable_actions(self, enable=True):
         self.entries_sync.update_key('enabled', enable)
@@ -340,9 +358,6 @@ class ManagerBase(CustomExt):
         self.entries_sync.value_changed.connect(lambda value: self.update_entry(value['current']))
         self.sync_entries_with(self.get_action_list())
 
-    def execute_current_entry(self):
-        self.execute_entry(self.entry)
-
     def sync_entries_with(self, combo: ComboBox):
         self.entries_sync.bind_properties(
             combo,
@@ -370,7 +385,7 @@ class ManagerBase(CustomExt):
 
     def quit_fun(self):
         self.entries_sync.unbind_all()
-        super().quit_fun()
+        return super().quit_fun()
 
     def create_entry(self, entry: str = None, bypass_dialog=False):
         if entry is not None:
@@ -479,19 +494,78 @@ class ManagerBase(CustomExt):
         """ Get the name of the last entry that has been successfully applied/executed """
         return self._applied_entry_name
 
-    def execute_entry(self, entry_path: str | Path = None, **kwargs):
-        """ To be called to execute the selected entry """
+    def execute_entry(self, entry_path: str | Path = None, reload: bool = True, **kwargs):
+        """ To be called to execute an entry
+
+        Parameters
+        ----------
+        entry_path: str or Path
+            The entry to execute. If None, the entry is executed as it is currently set in the manager, unsaved changes
+            included, and its file is left untouched (see :meth:`execute_current_entry`). Otherwise the entry (a name
+            or a file path) is first loaded in the manager, replacing its current settings, then executed.
+        reload: bool
+            Whether to load the entry in the manager before executing it, only relevant with an ``entry_path``.
+        """
         if entry_path is None:
-            self.save_check(self.entry, bypass_dialog=True)
-            entry_path = self.entry_filepath
+            # the managers execute from a file: give them a snapshot of what is currently set
+            with tempfile.TemporaryDirectory() as folder:
+                snapshot = Path(folder).joinpath(f'{self.entry}{self.entry_extension}')
+                self.save_entries(snapshot)
+                self._execute_from_path(snapshot, False, **kwargs)
+            return
 
         if isinstance(entry_path, str):
             entry_path = self.entry_path_from_name(entry_path)
+        self._execute_from_path(entry_path, reload, **kwargs)
 
-        self.update_entry(entry_path)
+    @property
+    def ask_before_executing_unsaved(self) -> bool:
+        """ Whether to ask what to do when executing settings that differ from the saved entry
 
-        if self.dashboard is None:
-            logger.info(f"Cannot Load {self.entry_type.capitalize()} file: {entry_path.stem} as no Dashboard is initialized")
+        Set by ``ask_before_executing_unsaved`` in the ``[manager]`` section of the gui configuration
+        """
+        return bool(config('gui', 'manager', 'ask_before_executing_unsaved'))
+
+    def execute_current_entry(self):
+        """ Execute the entry as currently set in the manager (also if not saved)
+
+        The entry file is left untouched, except if ``ask_before_executing_unsaved`` is True and the user chooses to
+        save the changes before executing (a popup is shown when the current settings differ from the saved entry).
+        """
+        if self.ask_before_executing_unsaved and self.has_unsaved_changes():
+            answer = self._ask_unsaved_changes()
+            if answer == QtWidgets.QMessageBox.StandardButton.Cancel:
+                return
+            if answer == QtWidgets.QMessageBox.StandardButton.Save:
+                self.save_check(self.entry, bypass_dialog=True)
+        self.execute_entry()
+
+    def has_unsaved_changes(self) -> bool:
+        """ Whether the settings currently set in the manager differ from the saved entry """
+        entry_path = self.entry_filepath
+        if not entry_path.is_file():
+            return False
+        with tempfile.TemporaryDirectory() as folder:
+            snapshot = Path(folder).joinpath(entry_path.name)
+            self.save_entries(snapshot)
+            return not snapshot.is_file() or snapshot.read_bytes() != entry_path.read_bytes()
+
+    def _ask_unsaved_changes(self) -> QtWidgets.QMessageBox.StandardButton:
+        """ Ask whether to save, to execute without saving or to cancel the execution"""
+        buttons = QtWidgets.QMessageBox.StandardButton
+        return QtWidgets.QMessageBox.question(
+            None, f'Unsaved {self.entry_type}',
+            f'The current settings differ from the saved {self.entry_type} "{self.entry}".\n'
+            f'Save them before executing? (Discard: execute without saving)',
+            buttons.Save | buttons.Discard | buttons.Cancel, buttons.Save)
+
+    def _execute_from_path(self, entry_path: Path, reload: bool, **kwargs):
+        if reload:
+            self.update_entry(entry_path)
+
+        if not self.can_execute_entry():
+            logger.info(f"Cannot Load {self.entry_type.capitalize()} file: {entry_path.stem} "
+                        f"as the manager cannot execute entries (no Dashboard initialized?)")
             return
 
         res = self._execute_entry(entry_path, **kwargs)
@@ -499,6 +573,14 @@ class ManagerBase(CustomExt):
             # covers the cases where _execute_entry is async and return None, while the async
             # execution will trigger set_entry_applied method (qt slot or manual call)
             self.entry_applied = res
+
+    def can_execute_entry(self) -> bool:
+        """ Whether entries can be executed, to be reimplemented
+
+        The base manager does not know about the dashboard: the managers working on it reimplement this method,
+        usually returning ``DashboardMixin.is_dashboard_available``
+        """
+        return False
 
     def _execute_entry(self, entry_path: Path = None, **kwargs) -> bool:
         """Particular implementation of the entry execution for this manager

@@ -44,3 +44,4 @@ features section.
    /developer_folder/configuration
    /developer_folder/instrument_plugins
    /developer_folder/extension_plugins
+   /developer_folder/legacy_to_current
