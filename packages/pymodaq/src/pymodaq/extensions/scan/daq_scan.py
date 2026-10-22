@@ -229,7 +229,6 @@ class DAQScan(CustomExt):
         
         logger.info('Initializing DAQScan')
 
-        self._ui_ready = False  # important to be here before super is called, see do_things_after_experiment_set
         self._naverage_to_restore: Optional[int] = None  # see update_average_option
 
         super().__init__(parent=dockarea,
@@ -281,7 +280,6 @@ class DAQScan(CustomExt):
         self.status_manager = ScanStatusBarManager(self)
 
         self.setup_ui()
-        self._ui_ready = True
 
         self.h5_manager.command_sig.connect(self.process_cmds)
 
@@ -306,14 +304,6 @@ class DAQScan(CustomExt):
             self._refresh_selection_tree_height)
         self.modules_manager.settings.child('probe_actuators_results').sigChildRemoved.connect(
             self._refresh_selection_tree_height)
-
-        self.scan_manager = ScanManager(self)
-        self.scan_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('scan_manager'),
-                                                    menu=self.get_menu('scan_manager'))
-
-        if self.dashboard.experiment_manager.entry_applied:
-            self.enable_workflow_actions(True, other_actions='ini_positions')
-            self.ini_scan_manager()
 
         logger.info('DAQScan Initialized')
 
@@ -510,6 +500,11 @@ class DAQScan(CustomExt):
         self.enable_workflow_actions(False)
         self.set_action_visible(WorkFlowActions.LOG, False)
 
+        # created here, so that it exists when do_things_after_experiment_set is called at the end of setup_ui
+        self.scan_manager = ScanManager(self)
+        self.scan_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('scan_manager'),
+                                                    menu=self.get_menu('scan_manager'))
+
     def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: bool = None):
         """ This method is called whenever a experiment entry has been set.
 
@@ -524,13 +519,8 @@ class DAQScan(CustomExt):
         # set the module saver type and applies its h5saver to submodules
         self._module_and_data_saver = module_saving.ScanSaver(self)
 
-        try:
-            self.enable_workflow_actions(True, other_actions='ini_positions')
-        except KeyError: #actions may not yet be activated
-            pass
-
-        if hasattr(self, 'scan_manager'):
-            self.ini_scan_manager()
+        self.enable_workflow_actions(True, other_actions='ini_positions')
+        self.ini_scan_manager()
 
     @property
     def module_and_data_saver(self) -> module_saving.ScanSaver:
