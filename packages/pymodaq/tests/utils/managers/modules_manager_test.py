@@ -391,6 +391,16 @@ class TestMoveActuatorsWithCallback:
         assert self.dte_back[1] in move_dte
 
 
+    def test_the_default_mode_is_absolute(self, qtbot, manager_with_emission):
+        """The mock actuators only answer to absolute moves"""
+        move_dte = DataToExport('move_dte', data=[DataActuator(name='X_axis', data=[np.atleast_1d(1.0)])])
+        received = []
+
+        with qtbot.waitSignal(manager_with_emission.move_done_signal, timeout=5000):
+            manager_with_emission.move_actuators_with_callback(move_dte, callback=received.append)
+        manager_with_emission.forget_callback(received.append, module_type=ModuleType.Actuator)
+        assert len(received) == 1
+
     @pytest.mark.parametrize('timeout_acts', [['X_axis', 'Y_axis'], ['X_axis'], ['Y_axis']])
     def test_timeout(self, qtbot, manager_with_emission, timeout_acts):
         """."""
