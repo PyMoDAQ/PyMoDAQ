@@ -72,7 +72,7 @@ Text version of the diagram:
 * ``CustomExt`` (in ``pymodaq``) is extended by every Dashboard extension, those shipped with PyMoDAQ as well as those
   in plugin packages.
 * The ``DashBoard`` creates the control modules and loads the extensions declared as entry points.
-* An extension uses the control modules of the Dashboard through its ``ModulesManager``; it does not create them.
+* An extension uses the control modules of the Dashboard through its ``ModulesManager``; it does not create them (see :ref:`modules_manager`).
 * The control modules load the instrument plugins, which drive the hardware.
 
 .. note::
