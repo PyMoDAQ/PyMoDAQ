@@ -134,9 +134,9 @@ def test_viewers_roi_select_and_crosshair_forwarding(ini_daq_viewer_ui):
     from pymodaq.control_modules.thread_commands import ControlToHardwareViewer
 
     prog, qtbot, win = ini_daq_viewer_ui
-    forms = [QtWidgets.QWidget() for _ in range(3)]  # kept alive and closed explicitly: temporaries are deleted
-    for form in forms:                              # in an arbitrary order and leave the items of the viewers
-        qtbot.addWidget(form)                       # (crosshair lines) without their ViewBox in the scene
+    # the parents are kept alive and deleted explicitly at the end: temporaries are deleted in an arbitrary order
+    # and may leave items of the viewers (crosshair lines) in a scene without their ViewBox
+    forms = [QtWidgets.QWidget() for _ in range(3)]
     viewers = [Viewer2D(form) for form in forms]
     commands = []
     prog.command_hardware.connect(commands.append)
