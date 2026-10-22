@@ -28,7 +28,7 @@ from typing import Iterator, Optional
 import pytest
 from qtpy import QtCore, QtWidgets
 
-from pymodaq_gui.qt_utils import mkQApp
+from pyqtgraph import mkQApp
 from pymodaq_utils.plugin_tools.checks import guess_package_name
 
 
@@ -51,7 +51,8 @@ def loaded_extension(extension_class: type, *ext_args, show: bool = False, theme
     show: bool
         Show the Dashboard and extension windows (False by default, no visible GUI is needed).
     theme: bool
-        Apply the PyMoDAQ theme. Useful only to test the styling: it makes every widget alive process style events.
+        Apply the PyMoDAQ theme again, even if one is already set. Useful only to test the styling: it makes every
+        widget alive process style events. By default the theme is applied only if the application has none.
 
     Yields
     ------
@@ -62,12 +63,12 @@ def loaded_extension(extension_class: type, *ext_args, show: bool = False, theme
     from pymodaq.dashboard import create_load_dashboard
     from pymodaq.utils.gui_utils.loader_utils import create_extension
 
-    mkQApp('extension_test')
-    if theme:
-        import qt_themes
-        from pymodaq_utils.config import GlobalConfig
-        config = GlobalConfig()
-        qt_themes.set_theme(theme=config('gui', 'style', 'theme')[0], style=config('gui', 'style', 'style')[0])
+    import qt_themes
+    from pymodaq_gui.qt_utils import apply_styling_rules
+
+    app = mkQApp('extension_test')  # a bare QApplication: the Dashboard needs a theme, applied only once (or on demand)
+    if theme or qt_themes.get_theme() is None:  # restyling an application with many live widgets can even crash Qt
+        apply_styling_rules(app)
 
     shared_ui, dashboard = create_load_dashboard(show_dashboard=show)
     win_ext, extension = create_extension(dashboard, extension_class, *ext_args, show_extension=show, **ext_kwargs)
