@@ -142,9 +142,9 @@ jobs:
 
           # 2. Run the test suite
           if [[ "${{ runner.os }}" == "Linux" ]]; then
-            xvfb-run -a bash -c 'python -X faulthandler -m pytest --capture=no -vv --cov=pymodaq -m "not leco"'
+            xvfb-run -a bash -c 'python -X faulthandler -m pytest -o faulthandler_timeout=100 --capture=no -vv --cov=pymodaq -m "not leco"'
           else
-            python -m pytest -vv --cov=pymodaq -m "not leco"
+            python -m pytest -o faulthandler_timeout=100 -vv --cov=pymodaq -m "not leco"
           fi
 
           # 3. Save pytest exit code to preserve test results
