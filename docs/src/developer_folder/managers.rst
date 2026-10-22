@@ -1072,8 +1072,42 @@ Rules
 * Start again from an empty selection after a new experiment.
 * Do not share a ``ModulesManager`` between extensions, unless it is on purpose the one of the Dashboard.
 
+.. _roi_manager_dev:
+
 ROI Manager
 +++++++++++
 
+``ROIManager`` (``pymodaq.utils.managers.roi_manager.roi_manager``) saves and restores the regions of interest (ROIs)
+defined in the viewers of the Dashboard detectors. Users see it as described in :ref:`roi_manager`; this section is
+for code that needs to use it.
 
+* The Dashboard creates it: ``dashboard.roi_manager``. It is a ``ManagerBase`` (see the sections above) with
+  ``entry_type = 'roi'``: an entry is a ``.rois`` file in the ``rois`` folder of the user configuration folder
+  (``pymodaq.utils.config.get_set_roi_manager_path``). Do not confuse it with the ROI manager of a single viewer
+  (``viewer.roi_manager``), which is where the ROIs actually live.
+* Like the State manager it uses the ``ModulesManager`` of the Dashboard (``own_modules_manager = False``) and cannot
+  execute an entry without a Dashboard (``can_execute_entry``).
+* An entry holds the checked ROIs of the *ROIs* list: for each of them the parameter of the ROI in its viewer,
+  with its path ``[detector title, viewer title, ROI name]``, serialized with the ``SerializableFactory``.
+* When an experiment is set (``do_things_after_experiment_set``), the manager refreshes its list of viewers, creates
+  an entry named after the experiment if there is none, and loads it. It executes it only if ``restore_rois`` is true
+  in the ``[viewer]`` section of the preferences.
+* Executing an entry clears the ROIs of each viewer it mentions and adds the saved ones; detectors that are no longer
+  in the Dashboard are skipped with a warning.
+
+From an extension or a script, use the usual ``ManagerBase`` methods on ``dashboard.roi_manager``:
+
+.. code-block:: python
+
+    roi_manager = dashboard.roi_manager
+    roi_manager.update_viewer_list_from_dashboard()   # after adding or removing detectors
+    roi_manager.update_roi_list()                      # list the ROIs of the selected viewers
+    roi_manager.save_check(bypass_dialog=True)        # save the checked ROIs in the current entry, without asking
+    roi_manager.execute_entry('my_experiment')         # re-create the ROIs of an entry in the viewers
+
+Rules:
+
+* The list of viewers is not updated by itself when you add detectors to a running Dashboard: refresh it before
+  saving.
+* ROIs are saved by viewer title, so renaming a detector or a viewer makes its saved ROIs unusable.
 
