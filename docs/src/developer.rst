@@ -12,7 +12,6 @@ Developer's Guide
    /developer_folder/sequencer_development
    /developer_folder/shared_ui
    /developer_folder/managers
-   /developer_folder/modules_manager
    /developer_folder/widget_sync
    /developer_folder/make_component_leco_available
 

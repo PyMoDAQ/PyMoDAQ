@@ -1,4 +1,4 @@
-"""The use cases of the ModulesManager page of the developer documentation (docs/src/developer_folder/modules_manager.rst)
+"""The use cases of the ModulesManager page of the developer documentation (docs/src/developer_folder/managers.rst, section Modules Manager)
 
 Each test runs the code shown in the page, on mock control modules answering immediately, so that the page stays true.
 """
