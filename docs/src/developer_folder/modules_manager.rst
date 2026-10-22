@@ -129,11 +129,12 @@ Moving actuators
 The positions are given in a ``DataToExport`` holding one ``DataActuator`` per actuator, **named like the actuator**
 (a ``DataToActuators`` also carries the mode). Their number has to be the number of selected actuators.
 
-``move_actuators_with_callback(dte_act, mode=MoveType.REL, callback=None, do_connect_modules=True)``
+``move_actuators_with_callback(dte_act, mode=MoveType.ABS, callback=None, do_connect_modules=True)``
     Selects the actuators named in ``dte_act``, starts the moves and returns immediately. ``callback(dte)`` is called with
     the positions reached when all the actuators have told they are done. Same rule as for the grab: call
-    ``forget_callback(callback, module_type=ModuleType.Actuator)``. **The default mode is relative**, give
-    ``mode=MoveType.ABS`` for absolute positions (a ``DataToActuators`` brings its own mode, which is then used).
+    ``forget_callback(callback, module_type=ModuleType.Actuator)``. The default mode is absolute, give
+    ``mode=MoveType.REL`` for relative moves (a ``DataToActuators`` brings its own mode, which is then used). Older
+    versions of this method defaulted to relative moves: give the mode explicitly in code that has to run on them.
 
 ``move_actuators(dte_act, mode=MoveType.ABS, polling=True)``
     Starts the moves and, with ``polling=True``, waits for them in a loop (blocking, as ``grab_data``). The actuators
