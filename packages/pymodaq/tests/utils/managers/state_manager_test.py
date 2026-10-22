@@ -53,9 +53,13 @@ def ini_state_manager(init_qt):
     if splash is not None:
         splash.close()
         splash.deleteLater()
-    state_manager.mainwindow.close()
-    external_ui.close()
-    qtbot.wait(10)  # let the deferred closings and deletions run before the next test
+    for window in (state_manager.mainwindow, external_ui):
+        window.close()
+        window.deleteLater()
+    # deferred deletions are not run by processEvents: without this the windows (and their large
+    # parameter trees) pile up from test to test and slow down every garbage collection
+    QtWidgets.QApplication.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete)
+    qtbot.wait(10)
 
 
 class TestStateManager:
