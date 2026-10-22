@@ -758,7 +758,7 @@ class ModulesManager(QObject, ParameterManager):
                        mode=MoveType.ABS,
                        polling=True,
                        ) -> DataToExport:
-        """will apply positions to each currently selected actuators. By Default the mode is absolute but can be
+        """Apply positions to each currently selected actuator. By default the mode is absolute.
 
         Deprecated, you should use move_actuators_with_callback to avoid using a polling mechanism which uses Qt event loop
         processevents in a while loop
@@ -772,7 +772,7 @@ class ModulesManager(QObject, ParameterManager):
         polling: bool (should not be used, prefer the callback version)
             if True will wait for the selected actuators to reach their target positions (they have to be
             connected to a method checking for the position and letting the programm know the move is done (default
-            connection is this object `move_done` method)
+            connection is the ``move_done`` method of this object)
 
         Returns
         -------

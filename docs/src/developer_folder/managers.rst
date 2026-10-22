@@ -805,6 +805,7 @@ See Also
 Modules Manager
 +++++++++++++++
 
+See :ref:`modules_manager`.
 
 ROI Manager
 +++++++++++
