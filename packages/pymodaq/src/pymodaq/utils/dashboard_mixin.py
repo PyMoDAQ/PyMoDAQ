@@ -29,7 +29,8 @@ class DashboardMixin:
     the Qt side of the object (``QObject.__init__``...) must be initialized first. The class using it
     calls :meth:`init_dashboard` then :meth:`connect_experiment_manager` once that is done:
 
-    * :class:`~pymodaq.utils.custom_ext.CustomExt` right after ``CustomApp.__init__``
+    * :class:`~pymodaq.utils.custom_ext.CustomExt` right after ``CustomApp.__init__``, the call for an experiment
+      already applied being made at the end of its ``setup_ui``
     * the managers through the hooks of :class:`~pymodaq_gui.managers.manager_base.ManagerBase`
       (:meth:`init_extra` before the UI is set up, :meth:`finish_init` once the manager is built)
     """
@@ -54,12 +55,25 @@ class DashboardMixin:
         else:
             self._modules_manager = None
 
-    def connect_experiment_manager(self):
-        """ Call do_things_after_experiment_set each time an experiment is applied (and now if one is)"""
+    def connect_experiment_manager(self, apply_now: bool = True):
+        """ Call do_things_after_experiment_set each time an experiment is applied
+
+        Parameters
+        ----------
+        apply_now: bool
+            If True, also call it now if an experiment is already applied. CustomExt passes False and makes this call
+            at the end of its setup_ui instead (see :meth:`apply_current_experiment`): the hook may need the UI.
+        """
         if self.dashboard is not None and self.experiment_manager is not None:
             self.experiment_manager.applied_entry.connect(self.do_things_after_experiment_set)
-            if self.experiment_manager.entry_applied:
-                self.do_things_after_experiment_set(self.experiment_manager.entry)
+            if apply_now:
+                self.apply_current_experiment()
+
+    def apply_current_experiment(self, show_dashboard: bool = None):
+        """ Call do_things_after_experiment_set if an experiment is already applied in the dashboard"""
+        if (self.dashboard is not None and self.experiment_manager is not None
+                and self.experiment_manager.entry_applied):
+            self.do_things_after_experiment_set(self.experiment_manager.entry, show_dashboard)
 
     # hooks of ManagerBase
     def init_extra(self, dashboard: 'DashBoard' = None, module_manager_class=ModulesManager):

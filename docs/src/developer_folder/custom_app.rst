@@ -232,7 +232,8 @@ know nothing about the Dashboard.
 
 The mixin has no ``__init__`` on purpose: the Qt side of the object (``QObject.__init__``...) has to be initialized
 first, and the class using the mixin then calls ``init_dashboard(dashboard, module_manager_class)`` and
-``connect_experiment_manager()``. ``CustomExt`` does so right after ``CustomApp.__init__``, and the managers through two
+``connect_experiment_manager()``. ``CustomExt`` does so right after ``CustomApp.__init__`` (the call for an experiment
+already applied waiting for the end of its ``setup_ui``, as it may use the user interface), and the managers through two
 hooks of ``ManagerBase`` (``init_extra`` before the user interface is set up, so ``dashboard`` is available in
 ``setup_ui``, and ``finish_init`` once the manager is built). A new object working with the Dashboard is therefore
 written ``class MyThing(DashboardMixin, CustomApp)`` (the mixin first) and does not need anything else.

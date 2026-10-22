@@ -108,6 +108,35 @@ def test_experiment_hook_called_when_an_experiment_is_applied():
         assert extension.calls == [('do_things_after_experiment_set', 'an_experiment')]
 
 
+@pytest.fixture
+def experiment_already_applied(monkeypatch):
+    """The Dashboard tells that an experiment is applied, as when an extension is opened from a loaded Dashboard"""
+    from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager
+    monkeypatch.setattr(ExperimentManager, 'entry_applied', property(lambda self: True, lambda self, value: None))
+
+
+def test_experiment_hook_called_after_the_ui_when_an_experiment_is_already_applied(experiment_already_applied):
+    """The hook may use the actions and widgets: called at the end of setup_ui, not in CustomExt.__init__"""
+    with loaded_extension(WorkflowExt) as (dashboard, extension):
+        names = [call[0] for call in extension.calls]
+        assert names.count('do_things_after_experiment_set') == 1
+        assert names[-1] == 'do_things_after_experiment_set'
+        assert names.index('do_things_after_ui_setup') < names.index('do_things_after_experiment_set')
+
+
+class DashboardToolbarExt(RecordingExt):
+    def setup_menus_and_toolbars(self, menubar=None):
+        super().setup_menus_and_toolbars(menubar)
+        self.create_dashboard_toolbar()
+
+
+@pytest.mark.parametrize('show', (True, False))
+def test_opening_an_extension_keeps_the_dashboard_visibility(experiment_already_applied, show):
+    """The 'Show Dashboard' action is not checked yet when the experiment hook is first called"""
+    with loaded_extension(DashboardToolbarExt, show=show) as (dashboard, extension):
+        assert dashboard.mainwindow.isVisible() is show
+
+
 def test_quit_fun_is_a_guard():
     with loaded_extension(RecordingExt) as (dashboard, extension):
         extension.can_quit = False
