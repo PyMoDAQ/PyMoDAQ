@@ -1,4 +1,5 @@
 import numbers
+from contextlib import contextmanager
 from pathlib import Path
 from typing import List, Union, Dict, Optional, Tuple, Any
 
@@ -244,6 +245,7 @@ class ParameterManager:
             tree: ParameterTree = None,
     ):
         self._current_filter_text = ""
+        self._building_tree = False
         self._settings: Parameter = None
         if settings_name is None:
             settings_name = self.settings_name
@@ -282,6 +284,9 @@ class ParameterManager:
             QtWidgets.QHeaderView.Interactive,
         )
         self._settings_tree.tree.resizeColumnToContents(0)
+        # connected once: connecting in set_settings would stack one more slot per call
+        self._settings_tree.tree.itemExpanded.connect(self._resize_first_column)
+        self._settings_tree.tree.itemCollapsed.connect(self._resize_first_column)
 
     @property
     def settings_tree(self) -> QtWidgets.QWidget:
@@ -324,12 +329,34 @@ class ParameterManager:
         settings = self.create_parameter(settings)
         self._settings = settings
 
-        self.tree.setParameters(
-            self._settings, showTop=False,
-        )  # load the tree with this parameter object
+        with self.tree_batch_update():
+            self.tree.setParameters(
+                self._settings, showTop=False,
+            )  # load the tree with this parameter object
         self.connect_tree()
-        self._settings_tree.tree.itemExpanded.connect(lambda: self._settings_tree.tree.resizeColumnToContents(0))
-        self._settings_tree.tree.itemCollapsed.connect(lambda: self._settings_tree.tree.resizeColumnToContents(0))
+
+    def _resize_first_column(self, *args):
+        if not self._building_tree:
+            self._settings_tree.tree.resizeColumnToContents(0)
+
+    @contextmanager
+    def tree_batch_update(self):
+        """Context manager to change many settings at once: the tree does not repaint nor resize its first column
+        for each item, it does it once at the end"""
+        tree = self._settings_tree.tree
+        already = self._building_tree
+        self._building_tree = True
+        tree.setUpdatesEnabled(False)
+        was_visible = tree.isVisible()
+        tree.setVisible(False)  # items added to a visible tree trigger layout computations for each of them
+        try:
+            yield
+        finally:
+            self._building_tree = already
+            if not already:
+                tree.setVisible(was_visible)
+                tree.setUpdatesEnabled(True)
+                tree.resizeColumnToContents(0)
 
     def connect_tree(self):
         self._settings.sigTreeStateChanged.connect(self.parameter_tree_changed)

@@ -71,6 +71,7 @@ class StateManager(DashboardMixin, SettingsManager):
     blocking_execution = True  # initial state of the 'blocking_execution' action
     _blocking_subentries = True  # whether the sub-entries wait for their modules, see execute_entry
     _requested_blocking: bool | None = None
+    _shown_settings_signature: bytes | str | None = None  # settings of the modules the tree was built from
     _blocking_in_parallel = True  # value of the 'blocking_execution' action to restore in parallel mode
 
     def __init__(self,
@@ -110,7 +111,11 @@ class StateManager(DashboardMixin, SettingsManager):
                 self.dashboard.modules_manager.actuators_all,
                 self.dashboard.modules_manager.detectors_all,
             )
-            self.update_settings(settings)
+            signature = ioxml.parameter_to_xml_string(settings)
+            if signature != self._shown_settings_signature or not self.settings.children():
+                # building the tree is what takes time: skip it if the modules did not change since last time
+                self.update_settings(settings)
+                self._shown_settings_signature = signature
         else:
             self.update_settings(self._experiment_manager_local.entry)
 
@@ -383,11 +388,12 @@ class StateManager(DashboardMixin, SettingsManager):
         settings : Parameter
             Settings containing all modules configuration
         """
-        self.settings = settings
-        self.set_readonly_setting(self.settings)
-        self.display_settings(display_all=False,
-                              param=self.settings)
-        self.set_drag_mode_recursive(self.settings, movable=True, drop_enabled=True)
+        with self.tree_batch_update():
+            self.settings = settings
+            self.set_readonly_setting(self.settings)
+            self.display_settings(display_all=False,
+                                  param=self.settings)
+            self.set_drag_mode_recursive(self.settings, movable=True, drop_enabled=True)
 
     @property
     def actuators(self) -> list[str]:
@@ -453,6 +459,7 @@ class StateManager(DashboardMixin, SettingsManager):
         self.experiment_manager.entries_sync.value_changed.connect(lambda value: self.set_experiment_filename(value['current']))
 
     def update_settings(self, settings: Union[Parameter, Path, str] = None):
+        self._shown_settings_signature = None  # the tree no longer reflects the last shown modules
         if settings is None:
             settings = self._get_settings_from_file()
             if settings == '':
