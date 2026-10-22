@@ -13,7 +13,7 @@ from qtpy import QtWidgets
 import time
 
 from pymodaq.utils.managers.modules.utils import ModuleType
-from pymodaq_utils.enums import enum_checker
+from pymodaq_utils.enums import enum_checker, StrEnum
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
 from pymodaq_utils.config import GlobalConfig as Config
@@ -35,6 +35,22 @@ logger = set_logger(get_module_name(__file__))
 config = Config()
 
 
+
+
+class ModulesManagerParam(StrEnum):
+    """ Names of the top-level children of ModulesManager.settings
+
+    Use these rather than hardcoding the matching string literal when accessing
+    `ModulesManager.settings.child(...)` from outside this class, so a future rename here is
+    a type-checkable/greppable break instead of a silent KeyError at runtime (as happened when
+    GrabElt was copied in referencing settings children that no longer existed).
+    """
+    PROBE_DETECTORS = 'probe_detectors'
+    PROBE_ACTUATORS = 'probe_actuators'
+    DETECTORS = 'detectors'
+    ACTUATORS = 'actuators'
+    PROBE_DETECTORS_RESULTS = 'probe_detectors_results'
+    PROBE_ACTUATORS_RESULTS = 'probe_actuators_results'
 
 
 class ModulesManager(QObject, ParameterManager):
@@ -61,16 +77,16 @@ class ModulesManager(QObject, ParameterManager):
                                     # the received responses (see grab_data/move_actuators)
 
     params = [
-        {'title': "Probe detectors", 'name': 'probe_detectors', 'type': 'action_led', 'value': False},
-        {'title': "Probe actuators", 'name': 'probe_actuators', 'type': 'action_led', 'value': False},
+        {'title': "Probe detectors", 'name': ModulesManagerParam.PROBE_DETECTORS, 'type': 'action_led', 'value': False},
+        {'title': "Probe actuators", 'name': ModulesManagerParam.PROBE_ACTUATORS, 'type': 'action_led', 'value': False},
 
-        {'title': 'Detectors', 'name': 'detectors', 'type': 'itemselect', 'checkbox': True},
-        {'title': 'Actuators', 'name': 'actuators', 'type': 'itemselect', 'checkbox': True},
+        {'title': 'Detectors', 'name': ModulesManagerParam.DETECTORS, 'type': 'itemselect', 'checkbox': True},
+        {'title': 'Actuators', 'name': ModulesManagerParam.ACTUATORS, 'type': 'itemselect', 'checkbox': True},
 
         # Probe results live in their own group, not nested under the probe buttons above,
         # so they render below the selection lists instead of pushing them out of view.
-        {'title': 'Probed detector data', 'name': 'probe_detectors_results', 'type': 'group', 'children': []},
-        {'title': 'Probed actuator positions', 'name': 'probe_actuators_results', 'type': 'group', 'children': []},
+        {'title': 'Probed detector data', 'name': ModulesManagerParam.PROBE_DETECTORS_RESULTS, 'type': 'group', 'children': []},
+        {'title': 'Probed actuator positions', 'name': ModulesManagerParam.PROBE_ACTUATORS_RESULTS, 'type': 'group', 'children': []},
     ]
 
     def __init__(self,
@@ -105,8 +121,8 @@ class ModulesManager(QObject, ParameterManager):
 
         # sigActivated emits the param itself (ActionLedParameter.activate()), but neither
         # handler takes any argument, so Qt drops it -- same as any other zero-arg slot.
-        self.settings.child('probe_detectors').sigActivated.connect(self.probe_detectors)
-        self.settings.child('probe_actuators').sigActivated.connect(self.probe_actuators)
+        self.settings.child(ModulesManagerParam.PROBE_DETECTORS).sigActivated.connect(self.probe_detectors)
+        self.settings.child(ModulesManagerParam.PROBE_ACTUATORS).sigActivated.connect(self.probe_actuators)
 
         self._detectors = []
         self._actuators = []
@@ -162,10 +178,10 @@ class ModulesManager(QObject, ParameterManager):
             return f'ModulesManager of "{self.parent_name}"'
 
     def show_only_control_modules(self, show: True):
-        self.settings.child('probe_detectors').show(not show)
-        self.settings.child('probe_actuators').show(not show)
-        self.settings.child('probe_detectors_results').show(not show)
-        self.settings.child('probe_actuators_results').show(not show)
+        self.settings.child(ModulesManagerParam.PROBE_DETECTORS).show(not show)
+        self.settings.child(ModulesManagerParam.PROBE_ACTUATORS).show(not show)
+        self.settings.child(ModulesManagerParam.PROBE_DETECTORS_RESULTS).show(not show)
+        self.settings.child(ModulesManagerParam.PROBE_ACTUATORS_RESULTS).show(not show)
 
     @classmethod
     def get_names(cls, modules:  list[Union['DAQ_Move', 'DAQ_Viewer']]):
@@ -236,7 +252,7 @@ class ModulesManager(QObject, ParameterManager):
     def set_actuators(self, actuators: list['DAQ_Move'], selected_actuators: list['DAQ_Move']):
         """Populates actuators and the subset to be selected in the UI"""
         self._actuators = actuators
-        self.settings.child('actuators').setValue(dict(all_items=self.get_names(actuators),
+        self.settings.child(ModulesManagerParam.ACTUATORS).setValue(dict(all_items=self.get_names(actuators),
                                                        selected=self.get_names(selected_actuators)))
     def set_actuators_from_names(self, actuators: list[str], selected_actuators: list[str]):
         """Populates actuators and the subset to be selected in the UI from their names"""
@@ -244,13 +260,13 @@ class ModulesManager(QObject, ParameterManager):
             assert act in self.actuators_name
         for act in selected_actuators:
             assert act in self.actuators_name
-        self.settings.child('actuators').setValue(dict(all_items=actuators,
+        self.settings.child(ModulesManagerParam.ACTUATORS).setValue(dict(all_items=actuators,
                                                        selected=selected_actuators))
 
     def set_detectors(self, detectors: list['DAQ_Viewer'], selected_detectors: list['DAQ_Viewer']):
         """Populates detectors and the subset to be selected in the UI"""
         self._detectors = detectors
-        self.settings.child('detectors').setValue(dict(all_items=self.get_names(detectors),
+        self.settings.child(ModulesManagerParam.DETECTORS).setValue(dict(all_items=self.get_names(detectors),
                                                        selected=self.get_names(selected_detectors)))
 
     def set_detectors_from_names(self, detectors: list[str], selected_detectors: list[str]):
@@ -259,7 +275,7 @@ class ModulesManager(QObject, ParameterManager):
             assert det in self.detectors_name
         for det in selected_detectors:
             assert det in self.detectors_name
-        self.settings.child('detectors').setValue(dict(all_items=detectors,
+        self.settings.child(ModulesManagerParam.DETECTORS).setValue(dict(all_items=detectors,
                                                        selected=selected_detectors))
 
     @property
@@ -317,43 +333,43 @@ class ModulesManager(QObject, ParameterManager):
     @property
     def detectors_name(self):
         """Get all the names of the detectors"""
-        return self.settings.child('detectors').value()['all_items']
+        return self.settings.child(ModulesManagerParam.DETECTORS).value()['all_items']
 
     @property
     def selected_detectors_name(self):
         """Get/Set the names of the selected detectors"""
-        return self.settings.child('detectors').value()['selected']
+        return self.settings.child(ModulesManagerParam.DETECTORS).value()['selected']
 
     @selected_detectors_name.setter
     def selected_detectors_name(self, detectors):
         if set(detectors).issubset(self.detectors_name):
-            self.settings.child('detectors').setValue(dict(all_items=self.detectors_name,
+            self.settings.child(ModulesManagerParam.DETECTORS).setValue(dict(all_items=self.detectors_name,
                                                            selected=detectors))
 
     @property
     def actuators_name(self):
         """Get all the names of the actuators"""
-        return self.settings.child('actuators').value()['all_items']
+        return self.settings.child(ModulesManagerParam.ACTUATORS).value()['all_items']
 
     @property
     def selected_actuators_name(self) -> List[str]:
         """Get/Set the names of the selected actuators"""
-        return self.settings.child('actuators').value()['selected']
+        return self.settings.child(ModulesManagerParam.ACTUATORS).value()['selected']
 
     @selected_actuators_name.setter
     def selected_actuators_name(self, actuators):
         if set(actuators).issubset(self.actuators_name):
-            self.settings.child('actuators').setValue(dict(all_items=self.actuators_name,
+            self.settings.child(ModulesManagerParam.ACTUATORS).setValue(dict(all_items=self.actuators_name,
                                                            selected=actuators))
 
     def value_changed(self, param):
         if param.name() == 'detectors':
             # Previously probed channels no longer reflect the current selection
-            self.settings.child('probe_detectors_results').clearChildren()
+            self.settings.child(ModulesManagerParam.PROBE_DETECTORS_RESULTS).clearChildren()
             self.detectors_changed.emit(param.value()['selected'])
 
         elif param.name() == 'actuators':
-            self.settings.child('probe_actuators_results').clearChildren()
+            self.settings.child(ModulesManagerParam.PROBE_ACTUATORS_RESULTS).clearChildren()
             self.actuators_changed.emit(param.value()['selected'])
 
     @contextmanager
@@ -390,7 +406,7 @@ class ModulesManager(QObject, ParameterManager):
             datas: DataToExport = self.grab_data(Naverage=1)
             logger.debug(f'Acquired: {datas.get_full_names()}')
 
-            results = self.settings.child('probe_detectors_results')
+            results = self.settings.child(ModulesManagerParam.PROBE_DETECTORS_RESULTS)
             results.clearChildren()
 
             data_children = []
@@ -440,7 +456,7 @@ class ModulesManager(QObject, ParameterManager):
         names = []
         if dim is not None:
             dim = enum_checker(DataDim, dim)
-        for det_param in self.settings.child('probe_detectors_results').children():
+        for det_param in self.settings.child(ModulesManagerParam.PROBE_DETECTORS_RESULTS).children():
             if dim is None or det_param.name() == dim.name:
                 names.extend([child.name() for child in det_param.children()])
         return names
@@ -449,7 +465,7 @@ class ModulesManager(QObject, ParameterManager):
         self.det_done_datas = DataToExport(name=__class__.__name__, control_module='DAQ_Viewer')
         self._received_data = 0
         self.det_done_flag = False
-        self.settings.child('probe_detectors').setValue(self.det_done_flag)
+        self.settings.child(ModulesManagerParam.PROBE_DETECTORS).setValue(self.det_done_flag)
 
         if check_do_override and 'DataMixer' in self.selected_detectors_name:
             overridden_detectors = self.get_mod_from_name(
@@ -649,7 +665,7 @@ class ModulesManager(QObject, ParameterManager):
         with self._probing(self.connect_actuators, self._on_actuator_probe_timeout):
             self.move_actuators(dte_act)
 
-        results = self.settings.child('probe_actuators_results')
+        results = self.settings.child(ModulesManagerParam.PROBE_ACTUATORS_RESULTS)
         results.clearChildren()
         for dact in self.move_done_positions:
             results.addChild(
@@ -733,7 +749,7 @@ class ModulesManager(QObject, ParameterManager):
                         mode: MoveType = MoveType.ABS,):
         self.move_done_positions = DataToExport(name=__class__.__name__, control_module='DAQ_Move')
         self.move_done_flag = False
-        self.settings.child('probe_actuators').setValue(self.move_done_flag)
+        self.settings.child(ModulesManagerParam.PROBE_ACTUATORS).setValue(self.move_done_flag)
 
         if mode == MoveType.ABS:
             command = ControlToHardwareMove.MOVE_ABS
@@ -822,7 +838,7 @@ class ModulesManager(QObject, ParameterManager):
             if len(self.move_done_positions) == len(self.actuators):
                 self.actuators_timeout_timer.stop()
                 self.move_done_flag = True
-                self.settings.child('probe_actuators').setValue(self.move_done_flag)
+                self.settings.child(ModulesManagerParam.PROBE_ACTUATORS).setValue(self.move_done_flag)
                 self.move_done_signal.emit(self.move_done_positions)
 
         except Exception as e:
@@ -837,7 +853,7 @@ class ModulesManager(QObject, ParameterManager):
             if self._received_data == len(self.detectors):
                 self.detectors_timeout_timer.stop()
                 self.det_done_flag = True
-                self.settings.child('probe_detectors').setValue(self.det_done_flag)
+                self.settings.child(ModulesManagerParam.PROBE_DETECTORS).setValue(self.det_done_flag)
                 self.det_done_signal.emit(self.det_done_datas)
 
 
