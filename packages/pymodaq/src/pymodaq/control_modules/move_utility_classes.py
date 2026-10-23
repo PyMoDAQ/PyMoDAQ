@@ -745,7 +745,8 @@ class DAQ_Move_base(PluginBase):
 
         self.emit_status(ThreadCommand(ThreadStatusMove.GET_ACTUATOR_VALUE, pos))
 
-    def set_default_values(self, red: float = None, green: float = None, relative: float = None):
+    def set_default_values(self, red: Optional[float] = None, green: Optional[float] = None,
+                           relative: Optional[float] = None):
         """Set from the plugin the values of the red, green and relative spinboxes of the UI
 
         Those are the *Value Red*, *Value Green* and *Value Relative* entries of the main settings of the module, and
