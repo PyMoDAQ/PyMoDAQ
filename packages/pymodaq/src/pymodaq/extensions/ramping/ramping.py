@@ -487,7 +487,8 @@ class RampingWorker(ExtensionWorker):
                                       data=self.app.q_from_param(('ramp', 'start')).magnitude,
                                       units=self.app.q_from_param(('ramp', 'start')).units, )]),
             mode=MoveType.ABS,
-            callback=callback
+            callback=callback,
+            detach_after_callback=True,
         )
 
 
@@ -498,10 +499,6 @@ class RampingWorker(ExtensionWorker):
         self.go_to_ini_ramp(callback=self._on_ini_ramp_done)
 
     def _on_ini_ramp_done(self, dte: DataToExport):
-        self.modules_manager.forget_callback(self._on_ini_ramp_done,
-                                             module_type=ModuleType.Actuator,
-                                             disconnect_modules=True)
-
         self.status_manager.set_permanent_status('Initializing Ramp')
         self.ini_things()
         self.connect_modules()
