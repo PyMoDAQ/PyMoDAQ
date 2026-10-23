@@ -81,6 +81,7 @@ def ini_state_manager(init_qt):
             splash.deleteLater()
         except RuntimeError:  # already deleted by the test
             pass
+    state_manager.quit_fun()
     for window in (state_manager.mainwindow, external_ui):
         window.close()
         window.deleteLater()

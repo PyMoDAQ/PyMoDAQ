@@ -367,7 +367,7 @@ class SettingsManagerTableView(QtWidgets.QTableView):
 
     def setmenu(self, status):
         if status:
-            self.menu = QtWidgets.QMenu()
+            self.menu = QtWidgets.QMenu(self)  # owned by the table: its slots would keep the table alive
             special_menu = self.menu.addMenu('Add Special Configuration')
 
             for entry in special_entry_factory.entries:

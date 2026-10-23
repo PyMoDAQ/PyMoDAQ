@@ -81,6 +81,7 @@ class StateManager(DashboardMixin, SettingsManager):
         self.subentry_handlers: list[StateSubEntryHandler] = []
         self.config_model = SettingsManagerModel()
 
+        self._own_experiment_manager = dashboard is None
         if dashboard is None:
             self._experiment_manager_local = ExperimentManager()
         else:
@@ -457,6 +458,11 @@ class StateManager(DashboardMixin, SettingsManager):
             self.experiment_manager.applied_entry.connect(self.set_experiment_filename)  #action slot from experiment menu need this to update the list onf state entries
 
         self.experiment_manager.entries_sync.value_changed.connect(lambda value: self.set_experiment_filename(value['current']))
+
+    def quit_fun(self):
+        if self._own_experiment_manager:  # else the one of the dashboard, quit by the dashboard
+            self._experiment_manager_local.quit_fun()
+        return super().quit_fun()
 
     def update_settings(self, settings: Union[Parameter, Path, str] = None):
         self._shown_settings_signature = None  # the tree no longer reflects the last shown modules

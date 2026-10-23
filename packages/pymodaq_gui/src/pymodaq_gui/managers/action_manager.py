@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Callable, Iterable as IterableType, Union, OrderedDict as OrderedDictType
 
 from multipledispatch import dispatch
+from multipledispatch.dispatcher import MethodDispatcher, str_signature
 from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtWidgets import QAction as QtQAction
 
@@ -260,6 +261,10 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
             menu.insertAction(before, action)
         else:
             menu.addAction(action)
+    if action.parent() is None and (toolbar is not None or menu is not None):
+        # an unparented action is never deleted while a slot connected to it (often a lambda holding the
+        # UI) is alive: it would keep the whole UI alive after it is closed
+        action.setParent(toolbar if toolbar is not None else menu)
     if shortcut is not None:
         action.setShortcut(shortcut)
     action.setVisible(visible)
@@ -341,6 +346,35 @@ def addwidget(klass: Union[str, QtWidgets.QWidget, object], *args, tip='',
     return widget
 
 
+class _InstanceMethodDispatcher(MethodDispatcher):
+    """ MethodDispatcher that does not store the instance it is accessed from
+
+    multipledispatch's MethodDispatcher, shared by all instances, keeps the last one in an attribute: the last UI
+    that called each method stayed alive after it was closed.
+    """
+    __slots__ = ()
+
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        return lambda *args, **kwargs: self._call(instance, *args, **kwargs)
+
+    def _call(self, instance, *args, **kwargs):
+        types = tuple([type(arg) for arg in args])
+        func = self.dispatch(*types)
+        if not func:
+            raise NotImplementedError(f'Could not find signature for {self.name}: <{str_signature(types)}>')
+        return func(instance, *args, **kwargs)
+
+
+def _delete_later(obj: QtCore.QObject, only_if_orphan=False):
+    try:
+        if not only_if_orphan or obj.parent() is None:
+            obj.deleteLater()
+    except RuntimeError:  # the C++ object was already deleted (e.g. with its parent)
+        pass
+
+
 class ActionManager:
     """MixIn Class to be used by all UserInterface to manage their QActions and the action they are connected to
 
@@ -365,6 +399,23 @@ class ActionManager:
         if menu is not None:
             self.reference_menu('default', menu)
             self.set_menu(menu)
+
+    def delete_actions(self):
+        """Schedule the deletion of all the QActions referenced in this manager, and of its toolbars and
+        menus that have no parent
+
+        A Qt object keeps the slots connected to its signals (often lambdas holding the manager) alive as
+        long as the C++ object exists. Unparented actions, toolbars or menus therefore keep the whole UI that
+        created them alive after it is closed, out of reach of Python's garbage collector. Call this when the
+        UI is closed for good.
+
+        .. versionadded:: 5.3.9
+        """
+        for action in self._actions.values():
+            _delete_later(action)
+        for widget in list(self._toolbars.values()) + list(self._menus.values()):
+            # the ones with a parent are owned (and deleted) by a window that may not be closed
+            _delete_later(widget, only_if_orphan=True)
 
     def _resolve_toolbar(self, toolbar: Union[str, QtWidgets.QToolBar, None],
                          auto: bool = True) -> Union[QtWidgets.QToolBar, None]:
@@ -672,6 +723,12 @@ class ActionManager:
             new_menu = menu
             if title:
                 new_menu.setTitle(title)
+
+        if new_menu.parent() is None:
+            # an unparented menu outlives the UI, and the slots connected to its actions keep the UI alive
+            owner = parent_menu if parent_menu is not None else self if isinstance(self, QtWidgets.QWidget) else None
+            if owner is not None:
+                new_menu.setParent(owner, new_menu.windowFlags())
 
         # Set icon if provided
         if icon_name and icon_name != '':
@@ -1113,3 +1170,8 @@ class ActionManager:
         for action_name in actions_name:
             is_enabled = is_enabled and self.is_action_enabled(action_name)
         return is_enabled
+
+
+for _dispatcher in vars(ActionManager).values():
+    if isinstance(_dispatcher, MethodDispatcher):
+        _dispatcher.__class__ = _InstanceMethodDispatcher

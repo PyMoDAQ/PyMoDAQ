@@ -43,6 +43,7 @@ def ini_daq_move_ui(init_qt):
     prog = DAQ_Move(widget)
     widget.show()
     yield prog, qtbot, widget
+    prog.quit_fun()
     widget.close()
 
 

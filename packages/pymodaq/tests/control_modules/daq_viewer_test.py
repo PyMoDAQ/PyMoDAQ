@@ -54,7 +54,7 @@ def ini_daq_viewer_ui(init_qt):
 
 
     yield prog, qtbot, shared_ui.mainwindow
-    prog.quit_fun()
+    shared_ui.quit_fun()  # quits prog too, as the Quit action of the standalone module
     QtWidgets.QApplication.processEvents()
 
 

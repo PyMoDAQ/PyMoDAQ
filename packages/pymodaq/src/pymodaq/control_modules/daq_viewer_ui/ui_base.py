@@ -294,8 +294,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.parent.closeEvent = lambda event: self.set_action_checked('show_graphs', False)
 
     def close(self):
-        for dock in self.viewer_docks:
-            dock.close()
+        ViewerDispatcher.close(self)
         super().close()
 
 

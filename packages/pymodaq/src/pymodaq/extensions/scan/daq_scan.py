@@ -289,8 +289,8 @@ class DAQScan(CustomExt):
 
         self.live_plotter = LoaderPlotter(self.live_plot_dockarea)
 
-        self.settings.child('plot_options', 'prepare_viewers').sigActivated.connect(
-            lambda: self.toggle_live_plots(True))
+        # a method, not a lambda: a lambda connected to a Parameter would keep the extension alive once closed
+        self.settings.child('plot_options', 'prepare_viewers').sigActivated.connect(self._prepare_live_plots)
         # Reuse the Detectors panel's probe button: probing already grabs the data
         # (populating its result tree), so just also refresh the plot selections from it
         self.modules_manager.settings.child('probe_detectors').sigActivated.connect(self.plot_from)
@@ -562,7 +562,7 @@ class DAQScan(CustomExt):
             except Exception as e:
                 logger.exception(str(e))
 
-
+        self.scan_manager.quit_fun()
         return True
 
     def create_dataset_settings(self):
@@ -1028,6 +1028,9 @@ class DAQScan(CustomExt):
         """
         viewers_enum, data_names, _ = self.check_number_type_viewers()
         self.live_plotter.prepare_viewers(viewers_enum, viewers_name=data_names)
+
+    def _prepare_live_plots(self):
+        self.toggle_live_plots(True)
 
     def toggle_live_plots(self, show: bool = True):
         """ Show/hide the Live Plots panel, keeping the 'show_live_plots' action's checked

@@ -179,6 +179,8 @@ class ControlModuleUI(CustomApp):
         """Close and clean up the settings widget. Subclasses should call super().close()."""
         if self._settings_widget is not None:
             self._settings_widget.close()
+            self._settings_widget.deleteLater()
+        self.delete_actions()
 
     def do_init(self, do_init=True):
         """Programmatically press the Init button
