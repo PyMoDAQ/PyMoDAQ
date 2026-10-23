@@ -873,6 +873,14 @@ class TestNavIndexes:
         data.nav_indexes = ()
         assert data.sig_indexes == (0, 1,  2)
 
+    def test_is_axis_signal_navigation(self):
+        data, shape = init_dataND()
+        data.nav_indexes = (1,)
+        for axis in data.axes_manager.axes:
+            is_nav = axis.index in data.nav_indexes
+            assert data.axes_manager.is_axis_navigation(axis) is is_nav
+            assert data.axes_manager.is_axis_signal(axis) is not is_nav
+
 
 class TestDataWithAxesSpread:
     def test_init_data(self, init_data_spread):
