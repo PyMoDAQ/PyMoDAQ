@@ -474,7 +474,7 @@ class DAQ_Move_base(PluginBase):
             return ''
 
     @axis_name.setter
-    def axis_name(self, name: Union[str, int]):
+    def axis_name(self, name: str):
         limits = self.settings.child('controller', 'axis').opts['limits']
         if name in limits:
             if isinstance(limits, list):
