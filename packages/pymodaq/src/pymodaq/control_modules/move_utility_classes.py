@@ -484,7 +484,7 @@ class DAQ_Move_base(PluginBase):
             self.axis_unit = self.axis_unit
             self.settings.child('epsilon').setValue(self.epsilon)
             if self.controller is not None:
-                self._current_value = self.get_actuator_value()
+                self._current_value = cast(DataActuator, self.get_actuator_value())
 
     @property
     def axis_names(self) -> Union[List, Dict]:
@@ -569,7 +569,7 @@ class DAQ_Move_base(PluginBase):
         return controller
 
     @property
-    def current_value(self) -> Any:
+    def current_value(self) -> Union[DataActuator, float]:
         """ Get/Set the last known value of the actuator
 
         Returned as a float if ``data_actuator_type`` is ``DataActuatorType.float`` (old style plugins), as a
@@ -582,11 +582,12 @@ class DAQ_Move_base(PluginBase):
             return self._current_value
 
     @current_value.setter
-    def current_value(self, value: Union[float, np.ndarray, DataActuator]):
-        if isinstance(value, (numbers.Number, np.ndarray, float, int)):
+    def current_value(self, value: Union[numbers.Number, float, np.ndarray, DataActuator]):
+        if isinstance(value, (numbers.Number, np.ndarray)):
             self._current_value = DataActuator(self._title, data=value,
                                                units=self.axis_unit)
         else:
+            value = cast(DataActuator, value)  # numbers (floats included) are handled above
             if (not Unit(self.axis_unit).is_compatible_with(
                     Unit(value.units)) and
                     value.units == ''):
@@ -594,7 +595,7 @@ class DAQ_Move_base(PluginBase):
             self._current_value = value
 
     @property
-    def target_value(self) -> Any:
+    def target_value(self) -> Union[DataActuator, float]:
         """ Get/Set the value the actuator should reach (within epsilon)
 
         Returned as a float if ``data_actuator_type`` is ``DataActuatorType.float`` (old style plugins), as a
@@ -618,7 +619,7 @@ class DAQ_Move_base(PluginBase):
             self._target_value = value
 
     @property
-    def current_position(self) -> Any:
+    def current_position(self) -> Union[DataActuator, float]:
         """Deprecated, use :attr:`current_value`"""
         deprecation_msg('current_position attribute should not be used, use current_value')
         return self.current_value
@@ -628,7 +629,7 @@ class DAQ_Move_base(PluginBase):
         self.current_value = value
 
     @property
-    def target_position(self) -> Any:
+    def target_position(self) -> Union[DataActuator, float]:
         """Deprecated, use :attr:`target_value`"""
         deprecation_msg('target_position attribute should not be used, use target_value')
         return self.target_value
@@ -682,7 +683,7 @@ class DAQ_Move_base(PluginBase):
         return position
 
     @abstractmethod
-    def get_actuator_value(self) -> Any:
+    def get_actuator_value(self) -> Union[DataActuator, float]:
         """Read the current value of the actuator from the hardware (to be implemented in the plugin)
 
         Returns
@@ -757,7 +758,7 @@ class DAQ_Move_base(PluginBase):
                 position = DataActuator(self._title, data=self.get_actuator_value(),
                                         units=self.axis_unit)
             else:
-                position = self.get_actuator_value()
+                position = cast(DataActuator, self.get_actuator_value())
         if position.name != self._title:  # make sure the emitted DataActuator has the name of the real implementation
             #of the plugin
             position.name = self._title

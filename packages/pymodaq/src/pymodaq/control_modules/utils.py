@@ -133,7 +133,7 @@ class QThreadProxy:
     """ Proxy around Qthread to attach/memorize hardware added to it
 
     Could not use inheritance as sometime, we have to use the main thread where methods cannot
-    be added. Here inherits from Generic to let the type checker believe we are faced with a real QThread
+    be added.
     """
     def __init__(self, thread: Optional[QThread] = None, parent=None):
         super().__init__()
