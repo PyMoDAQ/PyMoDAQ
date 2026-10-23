@@ -38,3 +38,4 @@ jobs:
           packages/pymodaq/src/pymodaq/utils/custom_ext.py
           packages/pymodaq/src/pymodaq/control_modules/plugin_base.py
           packages/pymodaq/src/pymodaq/control_modules/viewer_utility_classes.py
+          packages/pymodaq/src/pymodaq/control_modules/move_utility_classes.py
