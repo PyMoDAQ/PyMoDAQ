@@ -104,7 +104,8 @@ class ScannerElt(SeqEltBase):
                 dte_act = next_values,
                 mode= MoveType.ABS,
                 callback = self._on_move_done,
-                do_connect_modules=True)
+                do_connect_modules=True,
+                detach_after_callback=True)
 
             """ This will execute the children state and its bundled elements n_repeat times"""
             self._ind_execute += 1
@@ -125,10 +126,6 @@ class ScannerElt(SeqEltBase):
             Contains the actuators dwa at the moment when the move has been set as done
             (may be slightly different from the actual target dwa due to epsilon)
         """
-        self.dashboard.modules_manager.forget_callback(self._on_move_done,
-                                                       module_type = ModuleType.Actuator,
-                                                       disconnect_modules = True
-                                                       )
         self.save_data(self.scanner.positions_at(self._ind_execute), done=False)
 
         self.children_signal.emit()  # triggers the execution of this elt's first child

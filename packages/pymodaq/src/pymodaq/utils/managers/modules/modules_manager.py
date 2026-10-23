@@ -479,19 +479,40 @@ class ModulesManager(QObject, ParameterManager):
                 kwargs.update(dict(Naverage=Naverage if Naverage is not None else mod.Naverage))
                 mod.command_hardware.emit(utils.ThreadCommand(ControlToHardwareViewer.SINGLE, kwargs))
 
+    def _arm_callback(self, timeout_timer: QTimer, interval_ms: float, done_signal: Signal,
+                      callback: Callable, connect_modules: Callable[[bool], Any],
+                      do_connect_modules: bool):
+        """ Shared preamble: watch `done_signal` for `callback`, backed by `timeout_timer`,
+        connecting the underlying modules first if asked. """
+        timeout_timer.setInterval(int(interval_ms))
+        timeout_timer.start()
+        done_signal.connect(callback)
+        if do_connect_modules:
+            connect_modules(True)
+
+    def _auto_forgetting(self, callback: Callable[[DataToExport], Any], module_type: ModuleType,
+                         disconnect_modules: bool) -> Callable[[DataToExport], Any]:
+        """ Wrap `callback` so forget_callback is called on its behalf, right before it runs. """
+        def _wrapped(dte: DataToExport):
+            self.forget_callback(_wrapped, module_type=module_type,
+                                 disconnect_modules=disconnect_modules)
+            callback(dte)
+        return _wrapped
+
     def grab_data_with_callback(self,
                                 check_do_override=True,
                                 Naverage: Optional[int] = None,
                                 callback: Callable[[DataToExport], Any] = None,
                                 do_connect_modules=True,
+                                detach_after_callback=False,
                                 **kwargs):
 
         if callback is not None:
-            self.detectors_timeout_timer.setInterval(int(self.detector_timeout))
-            self.detectors_timeout_timer.start()
-            self.det_done_signal.connect(callback)
-            if do_connect_modules:
-                self.connect_detectors(True)
+            if detach_after_callback:
+                callback = self._auto_forgetting(callback, ModuleType.Detector, do_connect_modules)
+            self._arm_callback(self.detectors_timeout_timer, self.detector_timeout,
+                               self.det_done_signal, callback, self.connect_detectors,
+                               do_connect_modules)
         self._grab_data(check_do_override, Naverage, **kwargs)
 
     def _on_detectors_timeout(self):
@@ -699,22 +720,27 @@ class ModulesManager(QObject, ParameterManager):
     def move_actuators_with_callback(self, dte_act: DataToExport | DataToActuators,
                                      mode: MoveType = MoveType.REL,
                                      callback: Callable[[DataToExport], Any] = None,
-                                     do_connect_modules=True):
+                                     do_connect_modules=True,
+                                     detach_after_callback=False):
         """ Move actuators defined within a DataToExport to the value included in the DatActuators within
 
         This method will emit a signal to a given callback with a DataToExport containing
-        DataActuators when the moves are done"""
+        DataActuators when the moves are done.
+
+        detach_after_callback: if True, forget_callback is called on your behalf before
+        `callback` runs.
+        """
 
         if isinstance(dte_act, DataToActuators):
             mode = dte_act.mode
 
         self.selected_actuators_name = [dwa.name for dwa in dte_act]
         if callback is not None:
-            self.actuators_timeout_timer.setInterval(int(self.actuator_timeout * 1000))
-            self.actuators_timeout_timer.start()
-            self.move_done_signal.connect(callback)
-            if do_connect_modules:
-                self.connect_actuators(True)
+            if detach_after_callback:
+                callback = self._auto_forgetting(callback, ModuleType.Actuator, do_connect_modules)
+            self._arm_callback(self.actuators_timeout_timer, self.actuator_timeout * 1000,
+                               self.move_done_signal, callback, self.connect_actuators,
+                               do_connect_modules)
         self._move_actuators(dte_act, mode=mode,)
 
     def forget_callback(self,
