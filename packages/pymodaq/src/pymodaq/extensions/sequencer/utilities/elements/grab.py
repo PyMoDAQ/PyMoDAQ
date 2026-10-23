@@ -179,6 +179,7 @@ class GrabElt(SeqEltBase):
             self.modules_manager.selected_detectors_name = self.selected
             self.modules_manager.grab_data_with_callback(
                 callback=self._data_snapped,
+                detach_after_callback=True,
             )
         else:
             # trigger a grab and immediately move on to the next state!
@@ -188,9 +189,6 @@ class GrabElt(SeqEltBase):
             self.done_signal.emit()
 
     def _data_snapped(self, dte: DataToExport):
-        self.modules_manager.forget_callback(self._data_snapped,
-                                             module_type=ModuleType.Detector,
-                                             disconnect_modules=True)
         dte.name = dte[0].origin
         self.save_data(dte)  # emits the done_signal
 
