@@ -9,6 +9,7 @@ from __future__ import annotations
 from abc import ABC
 from importlib import import_module
 
+import datetime
 import os
 from pathlib import Path
 import sys
@@ -511,10 +512,27 @@ class DAQ_Viewer(ParameterControlModule):
         self.update_status("Timeout occurred", log_type="log")
 
     def save_current(self):
-        """Save current data into a h5file"""
+        """Save current data into a h5file.
+
+        Defaults the save dialog to today's dataset folder (``base_path/<year>/<YYYYMMDD>/``,
+        the same dated layout used everywhere else saving happens, instead of the bare
+        base path) with a timestamped filename already filled in, and restricts/forces
+        the .h5 extension.
+        """
         self._do_save_data = True
-        start_path = self._save_file_pathname or config('data', 'data_saving', 'h5file', 'save_path')
-        self._save_file_pathname = select_file(start_path=start_path, save=True, ext='h5')
+        base_path = Path(config('data', 'data_saving', 'h5file', 'save_path'))
+        today = datetime.date.today()
+        year_path = H5Saver.find_part_in_path_and_subpath(base_path, part=str(today.year), create=True)
+        day_path = H5Saver.find_part_in_path_and_subpath(year_path, part=today.strftime('%Y%m%d'), create=True)
+        default_name = datetime.datetime.now().strftime('Data_%Y%m%d_%H_%M_%S.h5')
+
+        pathname = select_file(start_path=day_path / default_name, save=True, ext='h5',
+                               filter='HDF5 files (*.h5)', force_save_extension=True)
+        if not pathname:
+            self._do_save_data = False
+            self.update_status('Save cancelled')
+            return
+        self._save_file_pathname = pathname
 
         self._save_export_data(self._data_to_save_export)
 
