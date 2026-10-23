@@ -42,3 +42,4 @@ jobs:
           packages/pymodaq/src/pymodaq/control_modules/move_utility_classes.py
           packages/pymodaq/src/pymodaq/utils/managers/modules/modules_manager.py
           packages/pymodaq/src/pymodaq/utils/dashboard_mixin.py
+          packages/pymodaq_gui/src/pymodaq_gui/utils/custom_app.py
