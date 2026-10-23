@@ -734,6 +734,89 @@ class ActionManager:
             warnings.warn(UserWarning(f'Impossible to add the widget {short_name} and type {klass} to the toolbar'))
         return widget
 
+    def add_action_group(self, short_name: str, name: str = '',
+                        icon_name: Union[str, Path, QtGui.QIcon] = '', tip='',
+                        checkable=False, checked=False,
+                        icon_checked: Union[str, Path, QtGui.QIcon] = None,
+                        icon_color: Union[QtGui.QColor, bytes, str] = None,
+                        icon_checked_color: Union[QtGui.QColor, bytes, str] = None,
+                        toolbar: Union[str, QtWidgets.QToolBar, None] = None,
+                        secondary_actions: IterableType[dict] = (),
+                        visible=True, enabled=True,
+                        follow_theme: bool = True,
+                        ) -> QtWidgets.QToolButton:
+        """Add several related actions to a toolbar under a single button, to avoid
+        overloading the toolbar with one slot per action.
+
+        The button shows and triggers a *primary* action directly (a regular action,
+        created and registered exactly like :meth:`add_action`, so
+        :meth:`connect_action`, :meth:`is_action_checked`, :meth:`set_action_checked`
+        ... all keep working on its ``short_name`` unchanged). A small dropdown arrow
+        next to it reveals the *secondary* actions, each created the same way as
+        :meth:`add_action` would from its spec dict, but added only to the dropdown,
+        never to a toolbar directly.
+
+        If there are no secondary actions, the button behaves like a plain toolbar
+        action (no dropdown arrow).
+
+        Parameters
+        ----------
+        short_name: str
+            the name of the primary action, as referenced in self._actions
+        name, icon_name, tip, checkable, checked, icon_checked, icon_color,
+        icon_checked_color, follow_theme:
+            forwarded to :meth:`add_action` for the primary action
+        toolbar: str or QToolBar or None
+            the toolbar the button is added to (defaults to the default toolbar)
+        secondary_actions: iterable of dict
+            one spec per dropdown entry, using the same keys as :meth:`add_action`
+            (at least ``short_name``); order is preserved in the dropdown menu
+        visible, enabled: bool
+            forwarded to the primary action
+
+        Returns
+        -------
+        QtWidgets.QToolButton
+            the created button, already added to the toolbar
+
+        See Also
+        --------
+        add_action
+        """
+        toolbar_obj = self._resolve_toolbar(toolbar, auto=True)
+
+        primary = self.add_action(short_name, name, icon_name, tip,
+                                  checkable=checkable, checked=checked,
+                                  toolbar=None, menu=None,
+                                  auto_toolbar=False, auto_menu=False,
+                                  visible=visible, enabled=enabled,
+                                  icon_checked=icon_checked,
+                                  icon_color=icon_color,
+                                  icon_checked_color=icon_checked_color,
+                                  follow_theme=follow_theme)
+
+        button = QtWidgets.QToolButton(toolbar_obj)
+        button.setDefaultAction(primary)
+        # Let the button pick up the toolbar's icon/text style (and keep following it
+        # on later changes) instead of freezing its style at creation time.
+        button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonFollowStyle)
+
+        if secondary_actions:
+            button.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.MenuButtonPopup)
+            dropdown = QtWidgets.QMenu(button)
+            for spec in secondary_actions:
+                spec = dict(spec)
+                spec_short_name = spec.pop('short_name')
+                self.add_action(spec_short_name, toolbar=None, menu=None,
+                                auto_toolbar=False, auto_menu=False, **spec)
+                dropdown.addAction(self._actions[spec_short_name])
+            button.setMenu(dropdown)
+        else:
+            button.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.DelayedPopup)
+
+        toolbar_obj.addWidget(button)
+        return button
+
     def add_menu(self, short_name: str, title: str = '',
                  parent_menu: QtWidgets.QMenuBar | QtWidgets.QMenu | str = None,
                  icon_name: Union[str, Path, QtGui.QIcon] = '', auto_menu=True,
