@@ -194,3 +194,20 @@ def test_axis_changed_from_the_ui_updates_units_and_epsilon(qtbot, AXIS_NAMES):
     assert hardware.axis_name == 'b'
     assert hardware.settings['units'] == '°'
     assert hardware.settings['epsilon'] == pytest.approx(0.65)
+
+
+def test_set_default_values_emits_main_settings_updates(qtbot):
+    class Hardware(DAQ_Move_base):
+        params = comon_parameters_fun(False, ['a'])
+
+    hardware = Hardware()
+    commands = []
+    hardware.emit_status = commands.append
+    red_value = 1.
+    relative_value = 0.5
+
+    hardware.set_default_values(red=red_value, relative=relative_value)
+
+    assert [(cmd.command, cmd.attribute) for cmd in commands] == [
+        ('update_main_settings', [['default_value_red'], red_value, 'value']),
+        ('update_main_settings', [['default_value_relative'], relative_value, 'value'])]

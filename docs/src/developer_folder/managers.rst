@@ -910,11 +910,14 @@ The detectors have to be *connected* to the manager for it to count their answer
 ``grab_done_signal`` of the selected detectors to the manager, ``connect_detectors(False)`` disconnects them. The
 ``*_with_callback`` methods do it for you.
 
-``grab_data_with_callback(callback=..., Naverage=None, check_do_override=True, do_connect_modules=True)``
+``grab_data_with_callback(callback=..., Naverage=None, check_do_override=True, do_connect_modules=True,
+detach_after_callback=True)``
     Asks each selected detector for a snap and returns immediately. ``callback(dte)`` is called with the data of all of
-    them when the last one has answered. It is connected to ``det_done_signal``, and **stays connected**: call
-    ``forget_callback(callback, module_type=ModuleType.Detector)`` in the callback (or when a timeout is reported) to
-    disconnect it and the detectors.
+    them when the last one has answered. It is connected to ``det_done_signal``. With ``detach_after_callback=True``
+    (the default) the manager calls ``forget_callback`` on your behalf right before running the callback, which
+    disconnects the callback and the detectors. With ``detach_after_callback=False`` the callback **stays connected**:
+    call ``forget_callback(callback, module_type=ModuleType.Detector)`` yourself in the callback (or when a timeout is
+    reported).
 
 ``grab_data(...)``
     The same, blocking: it waits for the answers, processing the Qt events in a loop, and returns the ``DataToExport``.
@@ -933,11 +936,12 @@ Moving actuators
 The positions are given in a ``DataToExport`` holding one ``DataActuator`` per actuator, **named like the actuator**
 (a ``DataToActuators`` also carries the mode). Their number has to be the number of selected actuators.
 
-``move_actuators_with_callback(dte_act, mode=MoveType.ABS, callback=None, do_connect_modules=True)``
+``move_actuators_with_callback(dte_act, mode=MoveType.ABS, callback=None, do_connect_modules=True,
+detach_after_callback=True)``
     Selects the actuators named in ``dte_act``, starts the moves and returns immediately. ``callback(dte)`` is called with
-    the positions reached when all the actuators have told they are done. Same rule as for the grab: call
-    ``forget_callback(callback, module_type=ModuleType.Actuator)``. The default mode is absolute, give
-    ``mode=MoveType.REL`` for relative moves (a ``DataToActuators`` brings its own mode, which is then used). Older
+    the positions reached when all the actuators have told they are done. Same rule as for the grab: with
+    ``detach_after_callback=False`` call ``forget_callback(callback, module_type=ModuleType.Actuator)`` yourself. The
+    default mode is absolute, give ``mode=MoveType.REL`` for relative moves (a ``DataToActuators`` brings its own mode, which is then used). Older
     versions of this method defaulted to relative moves: give the mode explicitly in code that has to run on them.
 
 ``move_actuators(dte_act, mode=MoveType.ABS, polling=True)``
@@ -963,7 +967,9 @@ A grab or a move that is not completed in time does not raise: the manager logs 
 each call: ``[viewer] timeout`` for the detectors (in ms, 10000 by default) and ``[actuator] polling_timeout_s`` for the
 actuators (in s, 20 by default). A blocking call returns at the timeout (with the data received so far); with a callback,
 the callback is never called and the timeout only tells you. Connect ``timeout_signal`` to stop what you were doing and
-call ``forget_callback``.
+call ``forget_callback`` (the callback is still connected: the manager only detaches it when it runs). With
+``detach_after_callback=True`` the manager connects its own wrapper of your callback, that ``forget_callback(callback)``
+cannot disconnect: use ``detach_after_callback=False`` if you have to clean up after a timeout.
 
 Probing
 ~~~~~~~
@@ -989,7 +995,6 @@ The chain of callbacks used by the Sequencer elements (``sequencer/utilities/ele
 
     from pymodaq.control_modules.enums import MoveType
     from pymodaq.utils.data import DataActuator
-    from pymodaq.utils.managers.modules import ModuleType
     from pymodaq_data.data import DataToExport
 
     def start(self, positions: dict[str, float], detectors: list[str]):
@@ -1000,14 +1005,13 @@ The chain of callbacks used by the Sequencer elements (``sequencer/utilities/ele
                                                           callback=self._on_move_done)
 
     def _on_move_done(self, dte_positions: DataToExport):
-        self.modules_manager.forget_callback(self._on_move_done, module_type=ModuleType.Actuator)
         self.modules_manager.grab_data_with_callback(callback=self._on_grab_done)
 
     def _on_grab_done(self, dte: DataToExport):
-        self.modules_manager.forget_callback(self._on_grab_done, module_type=ModuleType.Detector)
         ...  # use the data: dte.get_data_from_name(...), dte.get_origins()
 
-``move_actuators_with_callback`` selects the actuators, ``grab_data_with_callback`` uses the detectors selected before.
+``move_actuators_with_callback`` selects the actuators, ``grab_data_with_callback`` uses the detectors selected before. Both detach their callback by themselves before calling it
+(``detach_after_callback=True``), so there is no ``forget_callback`` to write.
 Nothing waits: the GUI stays alive during the moves and the grabs.
 
 A loop that blocks until each step is done
@@ -1068,8 +1072,9 @@ Rules
 
 * Never create control modules in an extension, use the ones of ``self.modules_manager``.
 * Select the modules before moving or grabbing; give one position per selected actuator, named like it.
-* Connect before a blocking call and disconnect after it; call ``forget_callback`` for each ``*_with_callback`` call, in
-  the callback and on a timeout.
+* Connect before a blocking call and disconnect after it; the ``*_with_callback`` calls detach their callback by themselves when it runs
+  (``detach_after_callback=True``); use ``detach_after_callback=False`` and call ``forget_callback`` yourself if you have to
+  clean up after a timeout.
 * Handle ``timeout_signal``: a missing answer is reported by it only.
 * Start again from an empty selection after a new experiment.
 * Do not share a ``ModulesManager`` between extensions, unless it is on purpose the one of the Dashboard.
