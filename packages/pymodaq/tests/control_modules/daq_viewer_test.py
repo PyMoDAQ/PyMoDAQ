@@ -1,4 +1,5 @@
 import os
+from unittest.mock import MagicMock
 from collections import OrderedDict
 import numpy as np
 
@@ -228,3 +229,17 @@ class TestSoftwareAveraging:
             prog.snap()
 
         assert blocker.args[0][0].errors is None
+
+
+class TestErrorsReplacedWarning:
+    @pytest.mark.parametrize('with_errors', [True, False])
+    def test_warning_only_if_the_plugin_provides_errors(self, with_errors):
+        worker = MagicMock()
+        worker.Naverage = 5
+        errors = [np.array([0.1, 0.1])] if with_errors else None
+        data = DataToExport('acquisition', data=[DataRaw('raw', data=[np.array([1., 2.])], errors=errors)])
+
+        daqvm.DetectorWorker._warn_if_errors_replaced(worker, data)
+
+        assert worker.logger.warning.called == with_errors
+        assert worker.status_sig.emit.called == with_errors

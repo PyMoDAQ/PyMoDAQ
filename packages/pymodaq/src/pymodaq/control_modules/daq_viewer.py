@@ -1220,6 +1220,7 @@ class DetectorWorker(HardwareWorkerBase):
             if self.ind_average == 1:
                 self.datas = data.deepcopy()
                 self.averaging_statistics.reset()
+                self._warn_if_errors_replaced(data)
             else:
                 self.datas = data.average(self.datas, self.ind_average - 1)
             self.averaging_statistics.add(data)
@@ -1236,6 +1237,21 @@ class DetectorWorker(HardwareWorkerBase):
             self.average_done = True  # expected to make sure the single_grab stop by itself
             self.data_detector_sig.emit(data)
         self.waiting_for_data = False
+
+    def _warn_if_errors_replaced(self, data: DataToExport):
+        """ Notify the user (log and status bar) that errors provided by the plugin are replaced by the
+        standard error of the mean when averaging, once per average
+
+        Parameters
+        ----------
+        data: DataToExport
+            The first acquisition of an average
+        """
+        if any(dwa.errors is not None for dwa in data):
+            message = ('The errors provided by the instrument plugin are replaced by the standard error of the mean '
+                       f'while averaging (Naverage = {self.Naverage}).')
+            self.logger.warning(message)
+            self.status_sig.emit(ThreadCommand(ThreadStatus.UPDATE_STATUS, message))
 
     def single(self, Naverage=1, *args, **kwargs):
         """ Convenience function to grab a single set of data
