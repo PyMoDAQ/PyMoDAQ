@@ -1,16 +1,15 @@
-import platform
-from packaging.version import Version
+import sys
 
-if Version(platform.python_version()) < Version('3.11'):
-    from strenum import StrEnum   # noqa  # pylint: disable=unused-import
+if sys.version_info < (3, 11):
+    from strenum import StrEnum as _StrEnum
 else:
-    from enum import StrEnum   # noqa  # pylint: disable=unused-import
+    from enum import StrEnum as _StrEnum
 
 from enum import Enum, auto   # noqa  # pylint: disable=unused-import
 from typing import List, Type, TypeVar, Union
 
 
-class StrEnum(StrEnum):  #to be imported in other modules
+class StrEnum(_StrEnum):  #to be imported in other modules
     @classmethod
     def names(cls) -> List[str]:
         """Returns all the names of the enum"""
