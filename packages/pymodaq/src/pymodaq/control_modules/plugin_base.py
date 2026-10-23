@@ -64,7 +64,7 @@ class PluginBase(QObject):
     self.ini_attributes() at the appropriate point in their own __init__.
     """
 
-    params = []
+    params: list[dict[str, Any]] = []
 
     def __init__(self, parent=None, params_state=None):
         QObject.__init__(self)
@@ -77,7 +77,7 @@ class PluginBase(QObject):
             elif isinstance(params_state, Parameter):
                 self.settings.restoreState(params_state.saveState())
         self.settings.sigTreeStateChanged.connect(self.send_param_status)
-        self.parent = parent
+        self.parent: Any = parent  # the worker (hides QObject.parent): emit_status uses its status_sig
         self.status = edict(info="", controller=None, initialized=False)
         self.controller: Any = None
         if parent is not None:
