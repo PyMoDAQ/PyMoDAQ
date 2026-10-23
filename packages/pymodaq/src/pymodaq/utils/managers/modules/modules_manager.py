@@ -511,8 +511,12 @@ class ModulesManager(QObject, ParameterManager):
                          disconnect_modules: bool) -> Callable[[DataToExport], Any]:
         """ Wrap `callback` so forget_callback is called on its behalf, right before it runs.
 
-        The wrapper is remembered so that forget_callback(callback) also disconnects it, and it is forgotten by the
-        manager itself if the move/grab times out (see _forget_pending_callbacks).
+        The wrapper, not `callback`, is what is connected to the done signal. It calls forget_callback with its own
+        reference (the connected one), so it disconnects itself right before running `callback`. If forget_callback
+        was given `callback`, nothing would be disconnected as `callback` itself is never connected: this is why the
+        (callback, wrapper) pairs are remembered, so that forget_callback(callback) also finds the wrapper.
+        If the move/grab times out the wrapper never runs: the manager then forgets it itself (see
+        _forget_pending_callbacks).
         """
         def _wrapped(dte: DataToExport):
             self.forget_callback(_wrapped, module_type=module_type,
