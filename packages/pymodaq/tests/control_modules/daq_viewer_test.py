@@ -210,3 +210,27 @@ class TestErrorsReplacedWarning:
 
         assert worker.logger.warning.called == with_errors
         assert worker.status_sig.emit.called == with_errors
+
+
+class TestLiveAveraging:
+    def test_errors_of_the_live_averaged_data(self, ini_daq_viewer_ui):
+        prog, qtbot, dockarea = ini_daq_viewer_ui
+        n_acquisitions = 6
+        rng = np.random.default_rng(7)
+        acquisitions = rng.normal(loc=1., scale=0.2, size=(n_acquisitions, 9))
+        prog.settings.child('main_settings', 'show_data').setValue(False)
+        prog.settings.child('main_settings', 'live_averaging').setValue(True)
+
+        for acquisition in acquisitions:
+            prog.show_data(DataToExport('acquisition', data=[DataRaw('raw', data=[acquisition])]))
+
+        live_averaged = prog.current_data[0]
+        assert live_averaged.n_averaged == n_acquisitions
+        assert live_averaged.data[0] == approx(acquisitions.mean(axis=0))
+        assert live_averaged.errors[0] == approx(acquisitions.std(axis=0, ddof=1) / np.sqrt(n_acquisitions))
+
+    def test_errors_replaced_message(self):
+        data = DataToExport('acquisition', data=[DataRaw('raw', data=[np.array([1., 2.])])])
+        assert daqvm.errors_replaced_message(data, 'live averaging') is None
+        data[0].errors = [np.array([0.1, 0.1])]
+        assert 'live averaging' in daqvm.errors_replaced_message(data, 'live averaging')

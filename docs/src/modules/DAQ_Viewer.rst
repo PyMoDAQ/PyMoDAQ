@@ -170,6 +170,7 @@ Main settings refers to settings common to all instrument plugin. They are mostl
 * **Live averaging**: *show averaging* must be set to ``False``. If set to ``True``, a *live* ``grab`` will perform
   non-stop averaging (current averaging value will be displayed just below, as *N Live aver.*, and can be reset with
   the |reset_live| button).  Could be used to check how much one should average, then set *Naverage* to this value
+  The standard error of the mean is attached to the live averaged data too, in their ``errors`` attribute.
 * **Wait time (ms)**: Extra waiting time before sending data to viewer, can be used to cadence DAQ_Scan execution, or
   data logging
 * **LECO options**: to connect the module to a LECO server (host, port and name of the module) and let other

@@ -67,6 +67,26 @@ config = Config()
 local_path = get_set_local_dir()
 
 
+def errors_replaced_message(data: DataToExport, averaging: str) -> Optional[str]:
+    """ Message telling that the errors provided by an instrument plugin are replaced by the standard error of the mean
+
+    Parameters
+    ----------
+    data: DataToExport
+        The first acquisition of an average
+    averaging: str
+        The kind of averaging, to be written in the message
+
+    Returns
+    -------
+    str or None: None if no DataWithAxes of data has errors
+    """
+    if any(dwa.errors is not None for dwa in data):
+        return ('The errors provided by the instrument plugin are replaced by the standard error of the mean '
+                f'({averaging})')
+    return None
+
+
 class DAQ_Viewer(ParameterControlModule):
     """ Main PyMoDAQ class to drive detectors
 
@@ -732,9 +752,12 @@ class DAQ_Viewer(ParameterControlModule):
 
                 if self._ind_continuous_grab == 0:
                     self._data_to_save_export = _current_data
+                    message = errors_replaced_message(_current_data, 'live averaging')
+                    if message is not None:
+                        self.update_status(message)
                 else:
                     self._data_to_save_export = \
-                        _current_data.average(self._data_to_save_export, self._ind_continuous_grab)
+                        _current_data.average_with_errors(self._data_to_save_export, self._ind_continuous_grab)
                 self._ind_continuous_grab += 1
             else:
                 for dwa in dte:
@@ -1168,9 +1191,8 @@ class DetectorWorker(HardwareWorkerBase):
         data: DataToExport
             The first acquisition of an average
         """
-        if any(dwa.errors is not None for dwa in data):
-            message = ('The errors provided by the instrument plugin are replaced by the standard error of the mean '
-                       f'while averaging (Naverage = {self.Naverage}).')
+        message = errors_replaced_message(data, f'Naverage = {self.Naverage}')
+        if message is not None:
             self.logger.warning(message)
             self.status_sig.emit(ThreadCommand(ThreadStatus.UPDATE_STATUS, message))
 
