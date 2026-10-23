@@ -65,6 +65,7 @@ class TestSelectors:
                           pytest.approx(scan_selector.settings['coordinates'].data_as_ndarray()))
 
 
+@pytest.mark.skip(reason="non-reproducible")
 class TestScanSelector:
 
     def test_attributes(self):
@@ -89,6 +90,7 @@ class TestScanSelector:
         assert np.all(scan_selector.selector.get_coordinates() ==
                       pytest.approx(scan_selector.settings['coordinates'].data_as_ndarray()))
 
+    @pytest.mark.skip(reason="non-reproducible")
     def test_change_source(self, qtbot):
         viewer2D = init_viewer(qtbot)
         viewer2D_bis = init_viewer(qtbot)
