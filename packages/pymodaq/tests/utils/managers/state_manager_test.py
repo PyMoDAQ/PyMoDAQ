@@ -1,5 +1,7 @@
+import gc
 import time
 import threading
+from contextlib import contextmanager
 # -*- coding: utf-8 -*-
 """
 Created the 07/11/2023
@@ -21,6 +23,22 @@ from pymodaq.utils.managers.state.subentries import (
 
 factory = SubEntryHandlerFactory()
 config = GlobalConfig()
+
+
+@contextmanager
+def no_garbage_collection():
+    """ Keep a timed call from being stretched by a garbage collection
+
+    With PySide6 the collections free the large widget trees left by the previous tests, which took minutes on
+    the CI runners.
+    """
+    was_enabled = gc.isenabled()
+    gc.disable()
+    try:
+        yield
+    finally:
+        if was_enabled:
+            gc.enable()
 
 
 @pytest.fixture
@@ -358,9 +376,11 @@ class TestWithSubEntries:
         state_manager.set_action_checked('parallel_execution', parallel)
 
         with qtbot.waitSignal(state_manager.applied_entry, timeout=5000):
-            t0 = time.perf_counter()
-            state_manager.execute_entry(blocking=True, block_caller=False)
-            assert time.perf_counter() - t0 < 0.2  # returned at once
+            with no_garbage_collection():
+                t0 = time.perf_counter()
+                state_manager.execute_entry(blocking=True, block_caller=False)
+                duration = time.perf_counter() - t0
+            assert duration < 0.2  # returned at once
             assert not state_manager.entry_applied
         assert state_manager.entry_applied
 
@@ -378,9 +398,11 @@ class TestWithSubEntries:
         state_manager, qtbot = state_with_subentries
         state_manager.set_action_checked('parallel_execution', True)
 
-        t0 = time.perf_counter()
-        state_manager.execute_entry(blocking=False)
-        assert time.perf_counter() - t0 < 0.2
+        with no_garbage_collection():
+            t0 = time.perf_counter()
+            state_manager.execute_entry(blocking=False)
+            duration = time.perf_counter() - t0
+        assert duration < 0.2
         assert state_manager.entry_applied
 
 
