@@ -342,7 +342,7 @@ class Filter2DFromRois(Filter):
                 yvals = yvals[ind_yaxis]
                 data_H = data[ind_xaxis]
                 data_V = data[ind_yaxis]
-                int_data = np.array([np.mean(data)])
+                int_data = np.atleast_1d(np.mean(data))
                 sub_data = None
                 _x_axis = dwa.get_axis_from_index_spread(0, 0)
                 x_axis = Axis(_x_axis.label, _x_axis.units, data=xvals, index=0, spread_order=0)
@@ -350,7 +350,7 @@ class Filter2DFromRois(Filter):
                 y_axis = Axis(_y_axis.label, _y_axis.units, data=yvals, index=0, spread_order=0)
                 sub_data_hor = DataFromRoi(Lineouts.HOR, distribution='spread', data=[data_H], axes=[x_axis])
                 sub_data_ver = DataFromRoi(Lineouts.VER, distribution='spread', data=[data_V], axes=[y_axis])
-                math_data = DataFromRoi(Lineouts.INT, data=int_data)
+                math_data = DataFromRoi(Lineouts.INT, data=[int_data])
             else:
                 # slices = self.get_slices_from_roi(roi, dwa.shape)
                 # sub_data: DataFromRoi = dwa.isig[slices[0], slices[1]]

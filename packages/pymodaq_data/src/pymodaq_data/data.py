@@ -1538,14 +1538,6 @@ class AxesManagerBase:
         """
         ...
 
-    @abstractmethod
-    def get_axis_from_index_spread(self, index: int, spread_order: int) -> Optional[Axis]:
-        """in spread mode, different nav axes have the same index (but not
-        the same spread_order integer value)
-
-        """
-        ...
-
     def compute_sig_indexes(self):
         _shape = list(self._data_shape)
         indexes = list(np.arange(len(self._data_shape)))
@@ -1684,14 +1676,6 @@ class AxesManagerBase:
         deprecation_msg('nav_axes parameter should not be used anymore, use nav_indexes')
         self.nav_indexes = nav_indexes
 
-    def is_axis_signal(self, axis: Axis) -> bool:
-        """Check if an axis is considered signal or navigation"""
-        return axis.index in self._nav_indexes
-
-    def is_axis_navigation(self, axis: Axis) -> bool:
-        """Check if an axis  is considered signal or navigation"""
-        return axis.index not in self._nav_indexes
-
     @abstractmethod
     def get_shape_from_index(self, index: IndexType) -> int:
         """Get the data shape at the given index"""
@@ -1705,8 +1689,11 @@ class AxesManagerBase:
     def get_axis_from_index(self, index: IndexType, create: bool = False) -> List[Optional[Axis]]:
         ...
 
-    def get_axis_from_index_spread(self, index: int, spread_order: int) -> Optional[Axis]:  # type: ignore[no-redef]  # defined twice, the last one wins
-        """Only valid for Spread data"""
+    def get_axis_from_index_spread(self, index: int, spread_order: int) -> Optional[Axis]:
+        """Only valid for Spread data
+
+        In spread mode, different nav axes have the same index (but not the same spread_order integer value)
+        """
         ...
 
     def get_nav_axes(self) -> List[Axis]:
@@ -1732,11 +1719,11 @@ class AxesManagerBase:
                     axes.append(ax)
         return axes
 
-    def is_axis_signal(self, axis: Axis) -> bool:  # type: ignore[no-redef]  # identical to the definition above
+    def is_axis_signal(self, axis: Axis) -> bool:
         """Check if an axis is considered signal or navigation"""
         return axis.index in self._nav_indexes
 
-    def is_axis_navigation(self, axis: Axis) -> bool:  # type: ignore[no-redef]  # identical to the definition above
+    def is_axis_navigation(self, axis: Axis) -> bool:
         """Check if an axis  is considered signal or navigation"""
         return axis.index not in self._nav_indexes
 
@@ -1976,16 +1963,6 @@ class AxesManagerSpread(AxesManagerBase):
 
             return [axis]
 
-    def get_axis_from_index_spread(self, index: int, spread_order: int) -> Optional[Axis]:
-        """in spread mode, different nav axes have the same index (but not
-        the same spread_order integer value)
-
-        """
-        for axis in self.axes:
-            if axis.index == index and axis.spread_order == spread_order:
-                return axis
-        return None
-
     def get_sorted_index(self, axis_index: int = 0, spread_index=0
                          ) -> Tuple[Optional[np.ndarray], Optional[Tuple[Any, ...]]]:
         """ Get the index to sort the specified axis
@@ -2030,7 +2007,11 @@ class AxesManagerSpread(AxesManagerBase):
         else:
             return None, None
 
-    def get_axis_from_index_spread(self, index: int, spread_order: int) -> Optional[Axis]:  # type: ignore[no-redef]  # defined twice, the last one wins
+    def get_axis_from_index_spread(self, index: int, spread_order: int) -> Optional[Axis]:
+        """in spread mode, different nav axes have the same index (but not
+        the same spread_order integer value)
+
+        """
         for axis in self.axes:
             if axis.index == index and axis.spread_order == spread_order:
                 return axis
