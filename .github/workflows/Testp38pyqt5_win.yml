@@ -9,3 +9,4 @@ jobs:
     with:
       python: '3.8'
       qt5: 'pyqt5'
+      os: 'ubuntu-22.04'  # python 3.8 is not available on ubuntu-latest
