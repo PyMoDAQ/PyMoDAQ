@@ -110,6 +110,102 @@ def test_menu_creation(qtbot):
     assert file_menu.title() == 'File'
 
 
+def test_action_group_without_secondary_actions(qtbot):
+    """A group with no secondary actions behaves like a single plain toolbar action"""
+    action_manager = ActionManager(toolbar=QtWidgets.QToolBar())
+    qtbot.addWidget(action_manager.toolbar)
+
+    button = action_manager.add_action_group(
+        'record', 'Record', 'save', checkable=True)
+
+    assert isinstance(button, QtWidgets.QToolButton)
+    assert button.defaultAction() is action_manager.get_action('record')
+    assert button.menu() is None
+    assert button.popupMode() == QtWidgets.QToolButton.ToolButtonPopupMode.DelayedPopup
+    # exactly one widget was added to the toolbar, not one action per slot
+    assert action_manager.toolbar.actions() == [button.defaultAction()] or \
+           len(action_manager.toolbar.actions()) == 1
+
+
+def test_action_group_with_secondary_actions(qtbot):
+    """Primary action is the button's default action; secondary ones only live in its dropdown"""
+    action_manager = ActionManager(toolbar=QtWidgets.QToolBar())
+    qtbot.addWidget(action_manager.toolbar)
+
+    calls = []
+    button = action_manager.add_action_group(
+        'continuous_save', 'Continuous Save', 'save', checkable=True,
+        secondary_actions=[
+            {'short_name': 'new_file', 'name': 'New file', 'icon_name': 'NewFile'},
+            {'short_name': 'browse_file', 'name': 'Browse file', 'icon_name': 'OpenFile'},
+        ])
+
+    # Primary action is registered and usable exactly like a plain add_action
+    action_manager.connect_action('continuous_save', lambda: calls.append('primary'))
+    action_manager.get_action('continuous_save').trigger()
+    assert calls == ['primary']
+    assert action_manager.is_action_checked('continuous_save')
+    action_manager.set_action_checked('continuous_save', False)
+    assert not action_manager.is_action_checked('continuous_save')
+
+    # Secondary actions are registered too and only appear in the dropdown menu
+    assert 'new_file' in action_manager.actions_names
+    assert 'browse_file' in action_manager.actions_names
+    action_manager.connect_action('new_file', lambda: calls.append('new_file'))
+    action_manager.get_action('new_file').trigger()
+    assert calls == ['primary', 'new_file']
+
+    assert button.popupMode() == QtWidgets.QToolButton.ToolButtonPopupMode.MenuButtonPopup
+    assert button.menu() is not None
+    assert button.menu().actions() == [
+        action_manager.get_action('new_file'), action_manager.get_action('browse_file')]
+
+    # The toolbar only grew by the one button, not by the secondary actions
+    assert len(action_manager.toolbar.actions()) == 1
+
+
+def test_action_group_primary_and_secondary_in_separate_toolbars(qtbot):
+    """Several groups can share one toolbar without their secondary actions leaking into it"""
+    action_manager = ActionManager(toolbar=QtWidgets.QToolBar())
+    qtbot.addWidget(action_manager.toolbar)
+
+    action_manager.add_action_group(
+        'group_a', 'A', '', secondary_actions=[{'short_name': 'a_sub', 'name': 'A sub'}])
+    action_manager.add_action_group(
+        'group_b', 'B', '', secondary_actions=[{'short_name': 'b_sub', 'name': 'B sub'}])
+
+    # Only the two group buttons sit in the toolbar, not their four underlying actions
+    assert len(action_manager.toolbar.actions()) == 2
+    assert 'a_sub' in action_manager.actions_names
+    assert 'b_sub' in action_manager.actions_names
+
+
+def test_action_group_uses_given_toolbar(qtbot):
+    """add_action_group respects an explicit, non-default toolbar"""
+    default_toolbar = QtWidgets.QToolBar()
+    other_toolbar = QtWidgets.QToolBar()
+    action_manager = ActionManager(toolbar=default_toolbar)
+    qtbot.addWidget(default_toolbar)
+    qtbot.addWidget(other_toolbar)
+    action_manager.reference_toolbar('other', other_toolbar)
+
+    action_manager.add_action_group('grouped', 'Grouped', '', toolbar='other',
+                                    secondary_actions=[{'short_name': 'sub', 'name': 'Sub'}])
+
+    assert len(default_toolbar.actions()) == 0
+    assert len(other_toolbar.actions()) == 1
+
+
+def test_action_group_secondary_action_missing_short_name_raises(qtbot):
+    """A secondary action spec without 'short_name' fails clearly rather than silently"""
+    action_manager = ActionManager(toolbar=QtWidgets.QToolBar())
+    qtbot.addWidget(action_manager.toolbar)
+
+    with pytest.raises(KeyError):
+        action_manager.add_action_group(
+            'grouped', 'Grouped', '', secondary_actions=[{'name': 'No short name'}])
+
+
 def test_menu_with_icon(qtbot):
     """Test creating menus with icons"""
     menu = QtWidgets.QMenu()
