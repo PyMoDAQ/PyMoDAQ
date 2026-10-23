@@ -13,9 +13,9 @@ import re
 
 import numpy as np
 from numpy.lib.mixins import NDArrayOperatorsMixin
-from typing import List, Tuple, Union, Any, Callable, Type
+from typing import List, Tuple, Union, Any, Callable, Type, Optional, cast
 from typing import Iterable as IterableType
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from collections import OrderedDict
 import logging
 
@@ -50,7 +50,7 @@ logger = set_logger(get_module_name(__file__))
 
 
 
-def parse_quantity(quantity: str) -> Q_:
+def parse_quantity(quantity: str) -> pint.Quantity:
     """
     Converts a string into a Pint Quantity object using
     a regex to split it in two parts and force usage of
@@ -73,7 +73,7 @@ def parse_quantity(quantity: str) -> Q_:
         return Q_(value, unit)
     return Q_(quantity)
 
-def dimensionless_aware_reduce_units(q: Type[Q_]) -> Type[Q_]:
+def dimensionless_aware_reduce_units(q: pint.Quantity) -> pint.Quantity:
     """
     Take a quantity q and converts it to its reduced units.
     For dimensionless units it compact them
@@ -89,9 +89,10 @@ def dimensionless_aware_reduce_units(q: Type[Q_]) -> Type[Q_]:
     # this may fire a pint.errors.UndefinedBehavior warning when the magnitude is a numpy array
     # but pint https://github.com/hgrecco/pint/issues/2274 fixed this in July 2026
     # at the moment, it just returns the same quantity layout
-    return q.to_compact() if q.dimensionless else q.to_reduced_units()
+    return q.to_compact() if q.dimensionless else q.to_reduced_units()  # type: ignore[return-value]  # pint types
 
 def check_units(units: str):
+    """Return `units` if it is defined in the pint registry, else log a warning and return '' (dimensionless)"""
     try:
         Unit(units)
         return units
@@ -101,7 +102,7 @@ def check_units(units: str):
     return ''
 
 
-def squeeze(data_array: np.ndarray, do_squeeze=True, squeeze_indexes: Tuple[int]=None) -> np.ndarray:
+def squeeze(data_array: Union[np.ndarray, np.generic], do_squeeze=True, squeeze_indexes: Optional[Tuple[int, ...]] = None) -> np.ndarray:
     """ Squeeze numpy arrays return at least 1D arrays except if do_squeeze is False"""
     if do_squeeze:
         return np.atleast_1d(np.squeeze(data_array, axis=squeeze_indexes))
@@ -110,19 +111,26 @@ def squeeze(data_array: np.ndarray, do_squeeze=True, squeeze_indexes: Tuple[int]
 
 
 class DataIndexWarning(Warning):
+    """Warning about an invalid index in a data object"""
     pass
 
 
 class DataTypeWarning(Warning):
+    """Warning about an unexpected type of data"""
     pass
 
 
 class DataDimWarning(Warning):
+    """Warning about an unexpected dimension of data"""
     pass
 
 
 class DataSizeWarning(Warning):
+    """Warning about an unexpected size of data"""
     pass
+
+
+IndexType = Union[int, np.integer]  # indexes may be numpy integers when computed from the shape
 
 
 WARNINGS = [DataIndexWarning, DataTypeWarning, DataDimWarning, DataSizeWarning]
@@ -136,18 +144,22 @@ else:
 
 
 class DataShapeError(Exception):
+    """Raised when the shapes of data arrays are not compatible"""
     pass
 
 
 class DataLengthError(Exception):
+    """Raised when the lengths of data arrays or lists are not compatible"""
     pass
 
 
 class DataDimError(Exception):
+    """Raised when the dimension of data is not the expected one"""
     pass
 
 
 class DataUnitError(Exception):
+    """Raised when units are not compatible"""
     pass
 
 
@@ -192,10 +204,16 @@ class DataDim(BaseEnum):
 
     @property
     def dim_index(self):
-       return self.value
+        """int: the integer value of this dimension (0 for Data0D, 1 for Data1D, ...)"""
+        return self.value
 
     @staticmethod
     def from_data_array(data_array: np.ndarray):
+        """Get the DataDim corresponding to the shape of a numpy array
+
+        A 1D array of size 1 is Data0D, other 1D arrays are Data1D, 2D arrays are Data2D and any array with
+        more dimensions is DataND.
+        """
         if len(data_array.shape) == 1 and data_array.size == 1:
             return DataDim['Data0D']
         elif len(data_array.shape) == 1 and data_array.size > 1:
@@ -274,18 +292,18 @@ class Axis(SerializableBase):
                                        cls.deserialize)
         return super().__new__(cls)
 
-    def __init__(self, label: str = '', units: str = '', data: np.ndarray = None, index: int = 0,
+    def __init__(self, label: str = '', units: str = '', data: Optional[Union[np.ndarray, pint.Quantity]] = None, index: int = 0,
                  scaling=None, offset=None, size=None, spread_order: int = 0):
         super().__init__()
 
-        self.iaxis: Axis = SpecialSlicersData(self, False)
-        self.vaxis: Axis = SpecialSlicersData(self, False, False)
+        self.iaxis: SpecialSlicersData = SpecialSlicersData(self, False)
+        self.vaxis: SpecialSlicersData = SpecialSlicersData(self, False, False)
 
         self._size = size
-        self._data = None
-        self._index = None
-        self._label = None
-        self._units = None
+        self._data: Optional[np.ndarray] = None
+        self._index: int = None  # type: ignore[assignment]  # set just below
+        self._label: str = None  # type: ignore[assignment]  # set just below
+        self._units: str = None  # type: ignore[assignment]  # set just below
         self._scaling = scaling
         self._offset = offset
 
@@ -354,14 +372,20 @@ class Axis(SerializableBase):
         return axis, remaining_bytes
 
     @staticmethod
-    def from_quantity(quantity: Q_[np.ndarray], label='axis', index=0) -> Axis:
+    def from_quantity(quantity: pint.Quantity, label='axis', index=0) -> Axis:
+        """Create an Axis whose data and units are those of a pint Quantity"""
         return Axis(label, str(quantity.units), data=quantity.magnitude,
                     index=index)
 
     def copy(self):
+        """Return a shallow copy of this axis"""
         return copy.copy(self)
 
     def as_dwa(self, set_itself_as_axis=False) -> DataWithAxes:
+        """Convert this axis to a DataRaw whose data are the axis values
+
+        If `set_itself_as_axis` is False, the axes of the returned object are created with default values.
+        """
         dwa = DataRaw(self.label, units=self.units,
                       data=[self.get_data()],
                       labels=[f'{self.label}_{self.units}'])
@@ -397,7 +421,11 @@ class Axis(SerializableBase):
         units = check_units(units)
         self._units = units
 
-    def units_as(self, units: str, inplace=True, context: str = None, **context_kwargs):
+    def units_as(self, units: str, inplace=True, context: Optional[str] = None, **context_kwargs):
+        """Convert the axis to other units, optionally using a pint context
+
+        If `inplace` is True the axis is modified and None is returned, else a new Axis is returned.
+        """
         if inplace:
             #self._units = units
             if context is None:
@@ -415,6 +443,10 @@ class Axis(SerializableBase):
                             data=self.get_quantity().to(units))
 
     def to_reduced_units(self, inplace=False):
+        """Convert the axis to reduced units (see :func:`dimensionless_aware_reduce_units`)
+
+        If `inplace` is True the axis is modified and None is returned, else a new Axis is returned.
+        """
         quantity = dimensionless_aware_reduce_units(self.get_quantity())
         if inplace:
             self.data = quantity.magnitude
@@ -424,6 +456,10 @@ class Axis(SerializableBase):
                         data=quantity.magnitude)
 
     def to_base_units(self, inplace=False):
+        """Convert the axis to pint base units
+
+        If `inplace` is True the axis is modified and None is returned, else a new Axis is returned.
+        """
         quantity = self.get_quantity().to_base_units()
         if inplace:
             self.data = quantity.magnitude
@@ -443,17 +479,17 @@ class Axis(SerializableBase):
         self._index = ind
 
     @property
-    def data(self):
-        """np.ndarray: get/set the data of Axis"""
+    def data(self) -> Optional[np.ndarray]:
+        """np.ndarray: get/set the data of Axis (None if the axis is linear, see :meth:`get_data`)"""
         return self._data
 
     @data.setter
-    def data(self, data: Union[np.ndarray, Q_]):
+    def data(self, data: Optional[Union[np.ndarray, pint.Quantity]]):
         if data is not None:
             data = self._check_data_valid(data)
             self.get_scale_offset_from_data(data)
             self._size = data.size
-        elif self.size is None:
+        elif self._size is None:
             self._size = 0
         self._data = data
 
@@ -461,11 +497,11 @@ class Axis(SerializableBase):
         """Convenience method to obtain the axis data (usually None because scaling and offset are used)"""
         return self._data if self._data is not None else self._linear_data(self.size)
 
-    def get_quantity(self) -> Q_:
+    def get_quantity(self) -> pint.Quantity:
         """ Convenience method to obtain the numerical data as a quantity array"""
         return Q_(self.get_data(), self.units)
 
-    def get_data_at(self, indexes: Union[int, IterableType, slice]) -> np.ndarray:
+    def get_data_at(self, indexes: Union[int, IterableType, slice]) -> Union[np.ndarray, np.generic]:
         """ Get data at specified indexes
 
         Parameters
@@ -476,7 +512,7 @@ class Axis(SerializableBase):
             indexes = np.array(indexes)
         return self.get_data()[indexes]
 
-    def get_scale_offset_from_data(self, data: np.ndarray = None):
+    def get_scale_offset_from_data(self, data: Optional[Union[np.ndarray, pint.Quantity]] = None):
         """Get the scaling and offset from the axis's data
 
         If data is not None, extract the scaling and offset
@@ -487,6 +523,7 @@ class Axis(SerializableBase):
         """
         if data is None and self._data is not None:
             data = self._data
+        data = cast(np.ndarray, data)  # as in the original code, None is not handled below
 
         if self.is_axis_linear(data):
             if len(data) == 1:
@@ -498,6 +535,10 @@ class Axis(SerializableBase):
             self._size = len(data)
 
     def is_axis_linear(self, data=None):
+        """Check if the axis values are linearly spaced
+
+        Uses `data` if given, else the axis data. Returns False if there is no data.
+        """
         if data is None:
             data = self.get_data()
         if data is not None:
@@ -532,7 +573,7 @@ class Axis(SerializableBase):
             self._size = _size
 
     @property
-    def axis_width(self) -> Q_:
+    def axis_width(self) -> pint.Quantity:
         """get the width of the axis in axis unit
 
         That is the difference between the max value and the min value of the axis
@@ -548,7 +589,7 @@ class Axis(SerializableBase):
         elif index < 0:
             raise ValueError('index for the Axis class should be a positive integer')
 
-    def _check_data_valid(self, data: Union[np.ndarray, Q_]) -> np.ndarray:
+    def _check_data_valid(self, data: Union[np.ndarray, pint.Quantity]) -> np.ndarray:
         if isinstance(data, Q_):
             self.units = str(data.units)
             data = data.magnitude
@@ -568,6 +609,7 @@ class Axis(SerializableBase):
 
     @staticmethod
     def create_simple_linear_data(nsteps: int):
+        """Return the array [0, 1, ..., nsteps-1]"""
         return np.linspace(0, nsteps-1, nsteps)
 
     def __len__(self):
@@ -605,7 +647,7 @@ class Axis(SerializableBase):
         if isinstance(scale, numbers.Real):
             ax = copy.deepcopy(self)
             if self.data is not None:
-                ax.data *= scale
+                ax.data *= scale  # type: ignore[assignment]
             else:
                 ax._offset *= scale
                 ax._scaling *= scale
@@ -615,12 +657,12 @@ class Axis(SerializableBase):
         if isinstance(offset, numbers.Real):
             ax = copy.deepcopy(self)
             if self.data is not None:
-                ax.data += offset
+                ax.data += offset  # type: ignore[assignment]
             else:
                 ax._offset += offset
             return ax
 
-    def __eq__(self, other: Axis):
+    def __eq__(self, other: object):
         if isinstance(other, Axis):
             eq = self.label == other.label
             eq = eq and (Unit(self.units).is_compatible_with(other.units))
@@ -639,6 +681,7 @@ class Axis(SerializableBase):
             return False
 
     def mean(self):
+        """Mean value of the axis (for linear axes, the value at the middle of the axis)"""
         if self._data is not None:
             return np.mean(self._data)
         else:
@@ -650,18 +693,20 @@ class Axis(SerializableBase):
 
 
     def min(self):
+        """Minimum value of the axis"""
         if self._data is not None:
             return np.min(self._data)
         else:
             return self.offset + (self.size * self.scaling if self.scaling < 0 else 0)
 
     def max(self):
+        """Maximum value of the axis"""
         if self._data is not None:
             return np.max(self._data)
         else:
             return self.offset + (self.size * self.scaling if self.scaling > 0 else 0)
 
-    def find_index(self, threshold: Union[float, Q_]) -> int:
+    def find_index(self, threshold: Union[float, numbers.Number, pint.Quantity]) -> int:
         """find the index of the threshold value within the axis"""
         if isinstance(threshold, Q_):
             threshold = threshold.m_as(self.units)
@@ -670,11 +715,13 @@ class Axis(SerializableBase):
         elif threshold >= self.max():
             return len(self)
         elif self._data is not None:
-            return mutils.find_index(self._data, threshold)[0][0]
+            return mutils.find_index(self._data, threshold)[0][0]  # type: ignore[arg-type]  # a Quantity is converted above
         else:
             return int((threshold - self.offset) / self.scaling)
 
-    def find_indexes(self, thresholds: IterableType[Union[float, Q_]]) -> IterableType[int]:
+    def find_indexes(self, thresholds: Union[numbers.Number, IterableType[Union[float, numbers.Number, pint.Quantity]]]
+                     ) -> IterableType[int]:
+        """Find the indexes of several values within the axis, see :meth:`find_index`"""
         if isinstance(thresholds, numbers.Number):
             thresholds = [thresholds]
         return [self.find_index(threshold) for threshold in thresholds]
@@ -777,7 +824,7 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
     origin: str
         An identifier of the element where the data originated, for instance the DAQ_Viewer's name. Used when appending
         DataToExport in DAQ_Scan to disintricate from which origin data comes from when scanning multiple detectors.
-    shape: Tuple[int]
+    shape: Tuple[int, ...]
         The shape of the underlying data
     size: int
         The size of the ndarrays stored in the object
@@ -820,23 +867,24 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
         return super().__new__(cls)
 
     def __init__(self, name: str,
-                 source: DataSource = None, dim: DataDim = None,
-                 distribution: DataDistribution = DataDistribution.uniform,
-                 data: List[np.ndarray] = None,
-                 labels: List[str] = None, origin: str = '',
+                 source: Union[DataSource, str] = None,  # type: ignore[assignment]  # required: None raises a ValueError
+                 dim: Optional[Union[DataDim, str]] = None,
+                 distribution: Union[DataDistribution, str] = DataDistribution.uniform,
+                 data: Optional[List[np.ndarray]] = None,
+                 labels: Optional[List[str]] = None, origin: str = '',
                  units: str = '',
                  **kwargs):
 
         super().__init__(name=name)
         self._iter_index = 0
-        self._shape = None
-        self._size = None
-        self._data = None
-        self._length = None
-        self._labels = None
+        self._shape: Tuple[int, ...] = None  # type: ignore[assignment]  # set by the data setter
+        self._size: int = None  # type: ignore[assignment]  # set by the data setter
+        self._data: List[np.ndarray] = None  # type: ignore[assignment]  # set by the data setter
+        self._length: int = None  # type: ignore[assignment]  # set by the data setter
+        self._labels: List[str] = None  # type: ignore[assignment]  # set by _check_labels
         self._dim = dim
         self._units = check_units(units)
-        self._errors = None
+        self._errors: Optional[Sequence[np.ndarray]] = None
         self.origin = origin
         self._averaged = False
         self._n_averaged = 0
@@ -850,7 +898,7 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
         self.data = data  # dim consistency is actually checked within the setter method
 
         self._check_labels(labels)
-        self.extra_attributes = []
+        self.extra_attributes: List[str] = []
         self.add_extra_attribute(**kwargs)
 
     @property
@@ -862,7 +910,7 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
         units = check_units(units)
         self.units_as(units, inplace=True)
 
-    def units_as(self, units: str, inplace=True, context: str = None,
+    def units_as(self, units: str, inplace=True, context: Optional[str] = None,
                  **context_kwargs) -> 'DataBase':
         """ Set the object units to the new one (if possible)
 
@@ -913,7 +961,7 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
         dwa.force_units(str(data_quantities[0].units))
         return dwa
 
-    def value(self, units: str = None) -> float:
+    def value(self, units: Optional[str] = None) -> float:
         """Returns the underlying float value (of the first elt in the data list) if this data
         holds only a float otherwise returns a mean of the underlying data
 
@@ -939,7 +987,7 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
             else:
                 return float(np.mean(self.data[0]))
 
-    def values(self, units: str = None) -> List[float]:
+    def values(self, units: Optional[str] = None) -> List[float]:
         """Returns the underlying float value (for each data array in the data list) if this data
         holds only a float otherwise returns a mean of the underlying data"""
         if self.length == 1 and self.size == 1:
@@ -956,7 +1004,7 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
             else:
                 return [float(np.mean(data_array)) for data_array in self.data]
 
-    def equal_to(self, other: 'DataBase', epsilon: Union[float, Q_])-> bool:
+    def equal_to(self, other: 'DataBase', epsilon: Union[float, pint.Quantity])-> bool:
         """ Check if two data object are equal within epsilon """
         if isinstance(epsilon, numbers.Number):
             epsilon = Q_(epsilon, self.units)
@@ -972,16 +1020,16 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
 
     def as_dte(self, name: str = 'mydte') -> DataToExport:
         """Convenience method to wrap the DataWithAxes object into a DataToExport"""
-        return DataToExport(name, data=[self])
+        return DataToExport(name, data=[self])  # type: ignore[list-item]  # a DataWithAxes in practice
 
     def split_as_dte(self, name: str = 'mydte') -> DataToExport:
         """ Convenience method to split each ndarray into a DataWithAxes object """
-        return DataToExport(name, data=[type(self)(self.labels[ind],
+        return DataToExport(name, data=[type(self)(self.labels[ind],  # type: ignore[misc]  # a DataWithAxes in practice
                                                    source=self.source,
                                                    dim=self.dim,
                                                    data=[array],
                                                    labels=[self.labels[ind]],
-                                                   axes=deepcopy(self.axes),
+                                                   axes=deepcopy(self.axes),  # type: ignore[attr-defined]
                                                    units=self.units,
                                                    ) for ind, array in enumerate(self)])
 
@@ -1036,7 +1084,7 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
 
     def __getitem__(self, item) -> np.ndarray:
         if (isinstance(item, int) and item < len(self)) or isinstance(item, slice):
-            return self.data[item]
+            return self.data[item]  # type: ignore[return-value]  # a list for a slice
         else:
             raise IndexError(f'The index should be an integer lower than the data length')
 
@@ -1127,6 +1175,7 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
         return self._comparison_common(other, '__gt__')
 
     def deepcopy(self):
+        """Return a deep copy of this object"""
         return copy.deepcopy(self)
 
     @property
@@ -1178,7 +1227,8 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
         DataBase: the averaged DataBase object
         """
         if isinstance(other, DataBase) and len(other) == len(self) and isinstance(weight, numbers.Number):
-            averaged_data = (other * weight + self) / (weight + 1)
+            # the operators are inherited from NDArrayOperatorsMixin, untyped for mypy
+            averaged_data = cast(DataBase, (other * weight + self) / (weight + 1))
             averaged_data.name = self.name
             averaged_data.add_extra_attribute(**{Averaging.AVERAGED: True,
                                                  Averaging.N_AVERAGED: weight + 1})
@@ -1305,10 +1355,10 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
         return self._labels
 
     @labels.setter
-    def labels(self, labels: List['str']):
+    def labels(self, labels: Optional[List[str]]):
         self._check_labels(labels)
 
-    def _check_labels(self, labels: List['str']):
+    def _check_labels(self, labels: Optional[List[str]]):
         if labels is None:
             labels = []
         else:
@@ -1321,8 +1371,12 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
         """Get the data by its index in the list, same as self[index]"""
         return self.data[index]
 
-    def _check_data_type(self, data: List[Union[np.ndarray, Q_]]) -> List[np.ndarray]:
-        """Make sure data is a list of non-empty nd-arrays."""
+    def _check_data_type(self, data: Any) -> List[np.ndarray]:
+        """Make sure data is a list of non-empty nd-arrays.
+
+        A single ndarray, quantity or number is wrapped in a list (with a warning), quantities are
+        converted to arrays (and set the units of the object). A TypeError is raised otherwise.
+        """
         if data is None:
             raise TypeError('Data should be a non-empty list of non-empty numpy arrays')
 
@@ -1356,6 +1410,7 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
         return data
 
     def check_shape_from_data(self, data: List[np.ndarray]):
+        """Set the shape of the object from the first array of `data`"""
         self._shape = data[0].shape
 
     @staticmethod
@@ -1407,7 +1462,7 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
                 raise DataShapeError('The shape of the ndarrays in data is not the same')
 
     @property
-    def quantities(self) -> list[Q_]:
+    def quantities(self) -> list[pint.Quantity]:
         """ Get the arrays as pint quantities (with units)"""
         return [Q_(array, self.units) for array in self.data]
 
@@ -1417,11 +1472,11 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
         return self._data
 
     @data.setter
-    def data(self, data: List[Union[np.ndarray, Q_]]):
-        data = self._check_data_type(data)
-        self._check_shape_dim_consistency(data)
-        self._check_same_shape(data)
-        self._data = data
+    def data(self, data: Optional[List[Any]]):
+        arrays = self._check_data_type(data)
+        self._check_shape_dim_consistency(arrays)
+        self._check_same_shape(arrays)
+        self._data = arrays
 
     def to_dict(self):
         """ Get the data arrays into dictionary whose keys are the labels"""
@@ -1435,11 +1490,11 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
 
         new in 4.3.0
         """
-        return 10 * np.log10(self / np.max(self))
+        return 10 * np.log10(self / np.max(self))  # type: ignore[call-overload]
 
 
 class AxesManagerBase:
-    def __init__(self, data_shape: Tuple[int], axes: List[Axis], nav_indexes=None, sig_indexes=None, **kwargs):
+    def __init__(self, data_shape: Tuple[int, ...], axes: List[Axis], nav_indexes=None, sig_indexes=None, **kwargs):
         self._data_shape = data_shape[:]  # initial shape needed for self._check_axis
         self._axes = axes[:]
         self._nav_indexes = nav_indexes
@@ -1462,7 +1517,8 @@ class AxesManagerBase:
         ...
 
     @abstractmethod
-    def get_sorted_index(self, axis_index: int = 0, spread_index=0) -> Tuple[np.ndarray, Tuple[slice]]:
+    def get_sorted_index(self, axis_index: int = 0, spread_index=0
+                         ) -> Tuple[Optional[np.ndarray], Optional[Tuple[Any, ...]]]:
         """ Get the index to sort the specified axis
 
         Parameters
@@ -1475,13 +1531,15 @@ class AxesManagerBase:
         Returns
         -------
         np.ndarray: the sorted index from the specified axis
-        tuple of slice:
+        tuple of indexes (arrays and Ellipsis):
             used to slice the underlying data
+
+        Both are None if the axis is absent
         """
         ...
 
     @abstractmethod
-    def get_axis_from_index_spread(self, index: int, spread_order: int) -> Axis:
+    def get_axis_from_index_spread(self, index: int, spread_order: int) -> Optional[Axis]:
         """in spread mode, different nav axes have the same index (but not
         the same spread_order integer value)
 
@@ -1548,7 +1606,7 @@ class AxesManagerBase:
             self._check_axis(axes)
 
     @property
-    def shape(self) -> Tuple[int]:
+    def shape(self) -> Tuple[int, ...]:
         # self._data_shape = self.compute_shape_from_axes()
         return self._data_shape
 
@@ -1565,11 +1623,12 @@ class AxesManagerBase:
         return tuple([self.shape[ind] for ind in self.nav_indexes])
 
     def append_axis(self, axis: Axis):
+        """Append an axis to the axes and check that the resulting axes are valid"""
         self._axes.append(axis)
         self._check_axis([axis])
 
     @property
-    def nav_indexes(self) -> IterableType[int]:
+    def nav_indexes(self) -> Tuple[int, ...]:
         return self._nav_indexes
 
     @nav_indexes.setter
@@ -1591,7 +1650,7 @@ class AxesManagerBase:
         self.shape
 
     @property
-    def sig_indexes(self) -> IterableType[int]:
+    def sig_indexes(self) -> Tuple[IndexType, ...]:  # numpy integers if computed from the shape
         return self._sig_indexes
 
     @sig_indexes.setter
@@ -1634,7 +1693,7 @@ class AxesManagerBase:
         return axis.index not in self._nav_indexes
 
     @abstractmethod
-    def get_shape_from_index(self, index: int) -> int:
+    def get_shape_from_index(self, index: IndexType) -> int:
         """Get the data shape at the given index"""
         ...
 
@@ -1643,10 +1702,10 @@ class AxesManagerBase:
         return [axis.index for axis in self._axes]
 
     @abstractmethod
-    def get_axis_from_index(self, index: int, create: bool = False) -> List[Axis]:
+    def get_axis_from_index(self, index: IndexType, create: bool = False) -> List[Optional[Axis]]:
         ...
 
-    def get_axis_from_index_spread(self, index: int, spread_order: int) -> Axis:
+    def get_axis_from_index_spread(self, index: int, spread_order: int) -> Optional[Axis]:  # type: ignore[no-redef]  # defined twice, the last one wins
         """Only valid for Spread data"""
         ...
 
@@ -1662,6 +1721,7 @@ class AxesManagerBase:
                                     for index in self.nav_indexes]))
 
     def get_signal_axes(self):
+        """Get the signal axes (axes whose index is not a navigation one) of size larger than 1"""
         if self.sig_indexes is None:
             self._sig_indexes = tuple([int(axis.index) for axis in self.axes if axis.index not in self.nav_indexes])
         axes = []
@@ -1672,11 +1732,11 @@ class AxesManagerBase:
                     axes.append(ax)
         return axes
 
-    def is_axis_signal(self, axis: Axis) -> bool:
+    def is_axis_signal(self, axis: Axis) -> bool:  # type: ignore[no-redef]  # identical to the definition above
         """Check if an axis is considered signal or navigation"""
         return axis.index in self._nav_indexes
 
-    def is_axis_navigation(self, axis: Axis) -> bool:
+    def is_axis_navigation(self, axis: Axis) -> bool:  # type: ignore[no-redef]  # identical to the definition above
         """Check if an axis  is considered signal or navigation"""
         return axis.index not in self._nav_indexes
 
@@ -1701,7 +1761,7 @@ class AxesManagerUniform(AxesManagerBase):
             shape = self._data_shape
         return tuple(shape)
 
-    def get_shape_from_index(self, index: int) -> int:
+    def get_shape_from_index(self, index: IndexType) -> int:
         """Get the data shape at the given index"""
         if index > len(self._data_shape) or index < 0:
             raise IndexError('The specified index does not correspond to any data dimension')
@@ -1726,7 +1786,7 @@ class AxesManagerUniform(AxesManagerBase):
                 axes[ind] = axis
         self._axes = axes
 
-    def get_axis_from_index(self, index: int, create: bool = False) -> List[Axis]:
+    def get_axis_from_index(self, index: IndexType, create: bool = False) -> List[Optional[Axis]]:
         """Get the axis referred by a given data dimensionality index
 
         If the axis is absent, create a linear one to fit the data shape if parameter create is True
@@ -1758,14 +1818,15 @@ class AxesManagerUniform(AxesManagerBase):
                 warnings.warn(DataIndexWarning(f'The axis requested with index {index} is not present, returning None'))
         return [axis]
 
-    def get_axis_from_index_spread(self, index: int, spread_order: int) -> Axis:
+    def get_axis_from_index_spread(self, index: int, spread_order: int) -> Optional[Axis]:
         """in spread mode, different nav axes have the same index (but not
         the same spread_order integer value)
 
         """
         return None
 
-    def get_sorted_index(self, axis_index: int = 0, spread_index=0) -> Tuple[np.ndarray, Tuple[slice]]:
+    def get_sorted_index(self, axis_index: int = 0, spread_index=0
+                         ) -> Tuple[Optional[np.ndarray], Optional[Tuple[Any, ...]]]:
         """ Get the index to sort the specified axis
 
         Parameters
@@ -1778,22 +1839,24 @@ class AxesManagerUniform(AxesManagerBase):
         Returns
         -------
         np.ndarray: the sorted index from the specified axis
-        tuple of slice:
+        tuple of indexes (arrays and Ellipsis):
             used to slice the underlying data
+
+        Both are None if the axis is absent
         """
 
         axes = self.get_axis_from_index(axis_index)
         if axes[0] is not None:
             sorted_index = np.argsort(axes[0].get_data())
             axes[0].data = axes[0].get_data()[sorted_index]
-            slices = []
+            slices: List[Any] = []
             for ind in range(len(self.shape)):
                 if ind == axis_index:
                     slices.append(sorted_index)
                 else:
                     slices.append(Ellipsis)
-            slices = tuple(slices)
-            return sorted_index, slices
+            slices_tuple = tuple(slices)
+            return sorted_index, slices_tuple
         else:
             return None, None
 
@@ -1874,13 +1937,13 @@ class AxesManagerSpread(AxesManagerBase):
             shape = self._data_shape
         return tuple(shape)
 
-    def get_shape_from_index(self, index: int) -> int:
+    def get_shape_from_index(self, index: IndexType) -> int:
         """Get the data shape at the given index"""
         if index > len(self._data_shape) or index < 0:
             raise IndexError('The specified index does not correspond to any data dimension')
         return self._data_shape[index]
 
-    def get_axis_from_index(self, index: int, create: bool = False) -> List[Axis]:
+    def get_axis_from_index(self, index: IndexType, create: bool = False) -> List[Optional[Axis]]:
         """in spread mode, different nav axes have the same index (but not
         the same spread_order integer value) so may return multiple axis
 
@@ -1913,7 +1976,7 @@ class AxesManagerSpread(AxesManagerBase):
 
             return [axis]
 
-    def get_axis_from_index_spread(self, index: int, spread_order: int) -> Axis:
+    def get_axis_from_index_spread(self, index: int, spread_order: int) -> Optional[Axis]:
         """in spread mode, different nav axes have the same index (but not
         the same spread_order integer value)
 
@@ -1921,8 +1984,10 @@ class AxesManagerSpread(AxesManagerBase):
         for axis in self.axes:
             if axis.index == index and axis.spread_order == spread_order:
                 return axis
+        return None
 
-    def get_sorted_index(self, axis_index: int = 0, spread_index=0) -> Tuple[np.ndarray, Tuple[slice]]:
+    def get_sorted_index(self, axis_index: int = 0, spread_index=0
+                         ) -> Tuple[Optional[np.ndarray], Optional[Tuple[Any, ...]]]:
         """ Get the index to sort the specified axis
 
         Parameters
@@ -1935,8 +2000,10 @@ class AxesManagerSpread(AxesManagerBase):
         Returns
         -------
         np.ndarray: the sorted index from the specified axis
-        tuple of slice:
+        tuple of indexes (arrays and Ellipsis):
             used to slice the underlying data
+
+        Both are None if the axis is absent
         """
 
         if axis_index in self.nav_indexes:
@@ -1946,27 +2013,28 @@ class AxesManagerSpread(AxesManagerBase):
 
         if axis is not None:
             sorted_index = np.argsort(axis.get_data())
-            slices = []
+            slices: List[Any] = []
             for ind in range(len(self.shape)):
                 if ind == axis_index:
                     slices.append(sorted_index)
                 else:
                     if slices[-1] is Ellipsis:  # only one ellipsis
                         slices.append(Ellipsis)
-            slices = tuple(slices)
+            slices_tuple = tuple(slices)
 
             for nav_index in self.nav_indexes:
                 for axis in self.get_axis_from_index(nav_index):
-                    axis.data = axis.get_data()[sorted_index]
+                    axis.data = axis.get_data()[sorted_index]  # type: ignore[union-attr]  # axes of nav indexes are expected to exist
 
-            return sorted_index, slices
+            return sorted_index, slices_tuple
         else:
             return None, None
 
-    def get_axis_from_index_spread(self, index: int, spread_order: int) -> Axis:
+    def get_axis_from_index_spread(self, index: int, spread_order: int) -> Optional[Axis]:  # type: ignore[no-redef]  # defined twice, the last one wins
         for axis in self.axes:
             if axis.index == index and axis.spread_order == spread_order:
                 return axis
+        return None
 
     def _get_dimension_str(self):
         try:
@@ -2012,14 +2080,15 @@ class DataWithAxes(DataBase, SerializableBase):
         return super().__new__(cls)
 
     def __init__(self, name: str,
-                 source: DataSource = None, dim: DataDim = None,
-                 distribution: DataDistribution = DataDistribution.uniform,
-                 data: List[np.ndarray] = None,
-                 labels: List[str] = None, origin: str = '',
+                 source: Union[DataSource, str] = None,  # type: ignore[assignment]  # required: None raises a ValueError
+                 dim: Optional[Union[DataDim, str]] = None,
+                 distribution: Union[DataDistribution, str] = DataDistribution.uniform,
+                 data: Optional[List[np.ndarray]] = None,
+                 labels: Optional[List[str]] = None, origin: str = '',
                  units: str = '',
                  axes: List[Axis] = [],
-                 nav_indexes: Tuple[int] = (),
-                 errors: Iterable[np.ndarray] = None,
+                 nav_indexes: Tuple[int, ...] = (),
+                 errors: Optional[Iterable[np.ndarray]] = None,
                  **kwargs):
 
         if 'nav_axes' in kwargs:
@@ -2099,6 +2168,7 @@ class DataWithAxes(DataBase, SerializableBase):
         bytes_string += ser_factory.get_apply_serializer(dwa.origin)
         bytes_string += ser_factory.get_apply_serializer(list(dwa.nav_indexes))
         bytes_string += ser_factory.get_apply_serializer(dwa.axes)
+        errors: Sequence[np.ndarray]
         if dwa.errors is None:
             errors = []  # have to use this extra attribute as if I force dwa.errors = [], it will be
             # internally modified as None again
@@ -2153,11 +2223,12 @@ class DataWithAxes(DataBase, SerializableBase):
         dwa.timestamp = timestamp
         return dwa, remaining_bytes
 
-    def get_axes_sizes(self) -> Iterable[Q_]:
+    def get_axes_sizes(self) -> Iterable[pint.Quantity]:
+        """Get the width (as a pint Quantity) of each axis, creating the missing axes if needed"""
         self.create_missing_axes()
         return [self.get_axis_from_index(index)[0].axis_width for index in range(len(self.axes))]
 
-    def check_axes_linear(self, axes: List[Axis] = None) -> bool:
+    def check_axes_linear(self, axes: Optional[List[Axis]] = None) -> bool:
         """ Check if any axis may be non linear
 
         Should trigger a spread like distribution except id dim is Data1D, in which cas, it doesn't
@@ -2170,7 +2241,7 @@ class DataWithAxes(DataBase, SerializableBase):
             are_axes_linear = are_axes_linear and axis.is_axis_linear()
         return are_axes_linear
 
-    def _check_errors(self, errors: Iterable[np.ndarray]):
+    def _check_errors(self, errors: Optional[Iterable[np.ndarray]]):
         """ Make sure the errors object is adapted to the len/shape of the dwa object
 
         new in 4.2.0
@@ -2193,10 +2264,10 @@ class DataWithAxes(DataBase, SerializableBase):
             logger.warning('the errors field is incompatible with the structure of the data')
             self._errors = None
         else:
-            self._errors = errors
+            self._errors = cast(Sequence[np.ndarray], errors)
 
     @property
-    def errors(self):
+    def errors(self) -> Optional[Sequence[np.ndarray]]:
         """ Get/Set the errors bar values as a list of np.ndarray
 
         new in 4.2.0
@@ -2204,7 +2275,7 @@ class DataWithAxes(DataBase, SerializableBase):
         return self._errors
 
     @errors.setter
-    def errors(self, errors: Iterable[np.ndarray]):
+    def errors(self, errors: Optional[Iterable[np.ndarray]]):
         self._check_errors(errors)
 
     def get_error(self, index):
@@ -2236,6 +2307,7 @@ class DataWithAxes(DataBase, SerializableBase):
         return plotter_factory.get(plotter_backend).plot(self, *args, viewer=viewer, **kwargs)
 
     def set_axes_manager(self, data_shape, axes, nav_indexes, **kwargs):
+        """Create the axes manager (uniform or spread, depending on the distribution) of this object"""
         if self.distribution == DataDistribution.uniform or len(nav_indexes) == 0:
             self._distribution = DataDistribution.uniform
             self.axes_manager = AxesManagerUniform(data_shape=data_shape, axes=axes,
@@ -2424,10 +2496,10 @@ class DataWithAxes(DataBase, SerializableBase):
 
         see numpy.pad method for the signature and possible named arguments
         """
-        return np.pad(self, pad_width, **kwargs)
+        return np.pad(self, pad_width, **kwargs)  # type: ignore[arg-type]
 
-    def ft(self, axis: int = 0, axis_label: str = None,
-           axis_units: str = None, labels: List[str] = None) -> DataWithAxes:
+    def ft(self, axis: int = 0, axis_label: Optional[str] = None,
+           axis_units: Optional[str] = None, labels: Optional[List[str]] = None) -> DataWithAxes:
         """Process the Fourier Transform of the data on the specified axis and returns the new data
 
         Parameters
@@ -2470,8 +2542,8 @@ class DataWithAxes(DataBase, SerializableBase):
             axis_obj.units = f'rad/{axis_obj.units}'
         return new_data
 
-    def ift(self, axis: int = 0, axis_label: str = None,
-           axis_units: str = None, labels: List[str] = None) -> DataWithAxes:
+    def ift(self, axis: int = 0, axis_label: Optional[str] = None,
+           axis_units: Optional[str] = None, labels: Optional[List[str]] = None) -> DataWithAxes:
         """Process the inverse Fourier Transform of the data on the specified axis and returns the
         new data
 
@@ -2514,7 +2586,7 @@ class DataWithAxes(DataBase, SerializableBase):
             axis_obj.units = str(Unit(f'rad/({axis_obj.units})'))
         return new_data
 
-    def fit(self, function: Callable, initial_guess: IterableType, data_index: int = None,
+    def fit(self, function: Callable, initial_guess: IterableType, data_index: Optional[int] = None,
             axis_index: int = 0, **kwargs) -> DataCalculated:
         """ Apply 1D curve fitting using the scipy optimization package
 
@@ -2616,7 +2688,7 @@ class DataWithAxes(DataBase, SerializableBase):
                     self._dim = DataDim['Data2D']
         if len(self.nav_indexes) > 0:
             self._dim = DataDim['DataND']
-        return self._dim
+        return self._dim  # type: ignore[return-value]  # processed from the data and axes above
 
 
     @property
@@ -2635,7 +2707,7 @@ class DataWithAxes(DataBase, SerializableBase):
         self.set_axes_manager(self.shape, axes=axes, nav_indexes=self.nav_indexes)
         self._axes = axes
 
-    def axes_limits(self, axes_indexes: List[int] = None) -> List[Tuple[float, float]]:
+    def axes_limits(self, axes_indexes: Optional[Sequence[IndexType]] = None) -> List[Tuple[float, float]]:
         """Get the limits of specified axes (all if axes_indexes is None)"""
         if axes_indexes is None:
             return [(axis.min(), axis.max()) for axis in self.axes]
@@ -2653,7 +2725,7 @@ class DataWithAxes(DataBase, SerializableBase):
         return self._am.nav_indexes
 
     @nav_indexes.setter
-    def nav_indexes(self, indexes: List[int]):
+    def nav_indexes(self, indexes: IterableType[IndexType]):
         """create new axis manager with new navigation indexes"""
         self.set_axes_manager(self.shape, axes=self.axes, nav_indexes=indexes)
         self.get_dim_from_data_axes()
@@ -2682,7 +2754,7 @@ class DataWithAxes(DataBase, SerializableBase):
     def get_axis_from_index_spread(self, index: int, spread: int):
         return self._am.get_axis_from_index_spread(index, spread)
 
-    def get_axis_from_label(self, label: str) -> Axis:
+    def get_axis_from_label(self, label: str) -> Optional[Axis]:
         """Get the axis referred by a given label
 
         Parameters
@@ -2697,6 +2769,7 @@ class DataWithAxes(DataBase, SerializableBase):
         for axis in self.axes:
             if axis.label == label:
                 return axis
+        return None
 
     def create_missing_axes(self):
         """Check if given the data shape, some axes are missing to properly define the data
@@ -2780,7 +2853,7 @@ class DataWithAxes(DataBase, SerializableBase):
         total_slices = tuple(total_slices)
         return total_slices, _slices_as_index
 
-    def check_squeeze(self, total_slices: IterableType[slice], is_navigation: bool):
+    def check_squeeze(self, total_slices: Tuple[Any, ...], is_navigation: bool):
 
         do_squeeze = True
         if 1 in self.data[0][total_slices].shape:
@@ -2877,12 +2950,13 @@ class DataWithAxes(DataBase, SerializableBase):
                             distribution=distribution)
         return data
 
-    def deepcopy_with_new_data(self,
-                               data: List[np.ndarray] = None,
-                               remove_axes_index: Union[int, List[int]] = None,
-                               source: DataSource = DataSource.calculated,
+    def deepcopy_with_new_data(self,  # type: ignore[return]  # None if an exception occurs
+                               data: List[np.ndarray] = None,  # type: ignore[assignment]  # required
+                               remove_axes_index: Optional[Union[IndexType, List[IndexType], Tuple[IndexType, ...]]] = None,
+                               source: Union[DataSource, str] = DataSource.calculated,
                                keep_dim=False,
-                               errors: List[np.ndarray] = None,) -> DataWithAxes:
+                               errors: Optional[List[np.ndarray]] = None,
+                               ) -> DataWithAxes:
         """deepcopy without copying the initial data (saving memory)
 
         The new data, may have some axes stripped as specified in remove_axes_index
@@ -2913,7 +2987,7 @@ class DataWithAxes(DataBase, SerializableBase):
             if errors is not None and check_errors(data, errors):
                 errors = None
             old_data = self.data
-            self._data = None
+            self._data = None  # type: ignore[assignment]  # restored at the end, avoids copying the old data
             new_data = self.deepcopy()
             new_data._data = data
             new_data.errors = errors
@@ -2978,6 +3052,7 @@ class DataWithAxes(DataBase, SerializableBase):
         return self.axes_manager
 
     def get_data_dimension(self) -> str:
+        """Get the string describing the dimensions of the data, e.g. (nav0, nav1|sig0)"""
         return str(self._am)
 
     def get_data_as_dwa(self, index: int = 0) -> DataWithAxes:
@@ -3201,14 +3276,14 @@ class DataWithAxes(DataBase, SerializableBase):
 class DataRaw(DataWithAxes):
     """Specialized DataWithAxes set with source as 'raw'. To be used for raw data"""
     def __init__(self, name: str,
-                 dim: DataDim = None,
-                 distribution: DataDistribution = DataDistribution.uniform,
-                 data: List[np.ndarray] = None,
-                 labels: List[str] = None, origin: str = '',
+                 dim: Optional[Union[DataDim, str]] = None,
+                 distribution: Union[DataDistribution, str] = DataDistribution.uniform,
+                 data: Optional[List[np.ndarray]] = None,
+                 labels: Optional[List[str]] = None, origin: str = '',
                  units: str = '',
                  axes: List[Axis] = [],
-                 nav_indexes: Tuple[int] = (),
-                 errors: Iterable[np.ndarray] = None,
+                 nav_indexes: Tuple[int, ...] = (),
+                 errors: Optional[Iterable[np.ndarray]] = None,
                  **kwargs):
         if 'source' in kwargs:
             kwargs.pop('source')
@@ -3232,14 +3307,14 @@ class DataCalculated(DataWithAxes):
     """Specialized DataWithAxes set with source as 'calculated'. To be used for
     processed/calculated data"""
     def __init__(self, name: str,
-                 dim: DataDim = None,
-                 distribution: DataDistribution = DataDistribution.uniform,
-                 data: List[np.ndarray] = None,
-                 labels: List[str] = None, origin: str = '',
+                 dim: Optional[Union[DataDim, str]] = None,
+                 distribution: Union[DataDistribution, str] = DataDistribution.uniform,
+                 data: Optional[List[np.ndarray]] = None,
+                 labels: Optional[List[str]] = None, origin: str = '',
                  units: str = '',
                  axes: List[Axis] = [],
-                 nav_indexes: Tuple[int] = (),
-                 errors: Iterable[np.ndarray] = None,
+                 nav_indexes: Tuple[int, ...] = (),
+                 errors: Optional[Iterable[np.ndarray]] = None,
                  **kwargs):
 
         if 'source' in kwargs:
@@ -3262,14 +3337,14 @@ class DataFromRoi(DataCalculated):
     """Specialized DataWithAxes set with source as 'calculated'.
     To be used for processed data from region of interest"""
     def __init__(self, name: str,
-                 dim: DataDim = None,
-                 distribution: DataDistribution = DataDistribution.uniform,
-                 data: List[np.ndarray] = None,
-                 labels: List[str] = None, origin: str = '',
+                 dim: Optional[Union[DataDim, str]] = None,
+                 distribution: Union[DataDistribution, str] = DataDistribution.uniform,
+                 data: Optional[List[np.ndarray]] = None,
+                 labels: Optional[List[str]] = None, origin: str = '',
                  units: str = '',
                  axes: List[Axis] = [],
-                 nav_indexes: Tuple[int] = (),
-                 errors: Iterable[np.ndarray] = None,
+                 nav_indexes: Tuple[int, ...] = (),
+                 errors: Optional[Iterable[np.ndarray]] = None,
                  **kwargs):
 
         super().__init__(name, source=DataSource.calculated,
@@ -3324,12 +3399,12 @@ class DataToExport(DataLowLevel, SerializableBase):
         if not isinstance(data, list):
             raise TypeError('Data stored in a DataToExport object should be as a list of objects'
                             ' inherited from DataWithAxis')
-        self._data = []
+        self._data: List[DataWithAxes] = []
         self._iter_index = 0
 
         self.data = data
 
-        self.extra_attributes = []
+        self.extra_attributes: List[str] = []
         self.add_extra_attribute(**kwargs)
 
     def add_extra_attribute(self, **kwargs):
@@ -3507,11 +3582,11 @@ class DataToExport(DataLowLevel, SerializableBase):
 
         """
         def average(dwa: DataWithAxes, other_dwa: DataWithAxes) -> DataWithAxes:
-            return dwa.average(other_dwa, weight)
+            return dwa.average(other_dwa, weight)  # type: ignore[return-value]
 
         return self._combine(other, average)
 
-    def merge_as_dwa(self, dim: Union[str, DataDim], name: str = None) -> DataRaw:
+    def merge_as_dwa(self, dim: Union[str, DataDim], name: Optional[str] = None) -> Optional[DataWithAxes]:
         """ attempt to merge filtered dwa into one
 
         Only possible if all filtered dwa and underlying data have same shape
@@ -3535,6 +3610,7 @@ class DataToExport(DataLowLevel, SerializableBase):
                 name = self.name
             dwa.name = name
             return dwa
+        return None
 
     def __repr__(self):
         repr = f'{self.__class__.__name__}: {self.name} <len:{len(self)}>\n'
@@ -3570,7 +3646,7 @@ class DataToExport(DataLowLevel, SerializableBase):
         else:
             raise IndexError(f'The index should be a positive integer lower than the data length')
 
-    def get_names(self, dim: DataDim = None) -> List[str]:
+    def get_names(self, dim: Optional[Union[DataDim, str]] = None) -> List[str]:
         """Get the names of the stored DataWithAxes,  eventually filtered by dim
 
         Parameters
@@ -3586,7 +3662,7 @@ class DataToExport(DataLowLevel, SerializableBase):
         else:
             return [data.name for data in self.get_data_from_dim(dim).data]
 
-    def get_full_names(self, dim: DataDim = None):
+    def get_full_names(self, dim: Optional[Union[DataDim, str]] = None):
         """Get the ful names including the origin attribute into the returned value,  eventually filtered by dim
 
         Parameters
@@ -3606,7 +3682,7 @@ class DataToExport(DataLowLevel, SerializableBase):
         else:
             return [data.get_full_name() for data in self.get_data_from_dim(dim).data]
 
-    def get_origins(self, dim: DataDim = None):
+    def get_origins(self, dim: Optional[Union[DataDim, str]] = None):
         """Get the origins of the underlying data into the returned value,  eventually filtered by dim
 
         Parameters
@@ -3630,16 +3706,18 @@ class DataToExport(DataLowLevel, SerializableBase):
     def get_data_from_full_name(self, full_name: str, deepcopy=False) -> DataWithAxes:
         """Get the DataWithAxes with matching full name"""
         if deepcopy:
-            data = self.get_data_from_name_origin('/'.join(full_name.split('/')[1:]), full_name.split('/')[0]).deepcopy()
+            data = self.get_data_from_name_origin('/'.join(full_name.split('/')[1:]), full_name.split('/')[0]).deepcopy()  # type: ignore[union-attr]
         else:
             data = self.get_data_from_name_origin('/'.join(full_name.split('/')[1:]), full_name.split('/')[0])
         return data
 
     def get_data_from_full_names(self, full_names: List[str], deepcopy=False) -> DataToExport:
+        """Get the data matching the given full names (see :meth:`get_data_from_full_name`) as a new DataToExport"""
         data = [self.get_data_from_full_name(full_name, deepcopy) for full_name in full_names]
         return DataToExport(name=self.name, data=data)
 
     def get_dim_presents(self) -> List[str]:
+        """Get the names of the dimensions (Data0D, Data1D, ...) for which at least one data is present"""
         dims = []
         for dim in DataDim.names():
             if len(self.get_data_from_dim(dim)) != 0:
@@ -3647,7 +3725,7 @@ class DataToExport(DataLowLevel, SerializableBase):
 
         return dims
 
-    def get_data_from_source(self, source: DataSource, deepcopy=False, sort_by_name=False) -> DataToExport:
+    def get_data_from_source(self, source: Union[DataSource, str], deepcopy=False, sort_by_name=False) -> DataToExport:
         """Get the data matching the given DataSource
 
         Returns
@@ -3706,7 +3784,7 @@ class DataToExport(DataLowLevel, SerializableBase):
             data = [sel[0] for sel in selection]
         return DataToExport(name=self.name, data=data)
 
-    def get_data_from_dim(self, dim: DataDim, deepcopy=False, sort_by_name=False) -> DataToExport:
+    def get_data_from_dim(self, dim: Union[DataDim, str], deepcopy=False, sort_by_name=False) -> DataToExport:
         """Get the data matching the given DataDim
 
         Returns
@@ -3797,16 +3875,18 @@ class DataToExport(DataLowLevel, SerializableBase):
         return data
 
     def get_data_from_names(self, names: List[str] | str) -> DataToExport:
+        """Get the data whose name is in `names` as a new DataToExport"""
         if isinstance(names, str):
             names = [names]
         return DataToExport(self.name, data=[dwa for dwa in self if dwa.name in names])
 
     def get_data_from_origins(self, origins: list[str] | str) -> DataToExport:
+        """Get the data whose origin is in `origins` as a new DataToExport"""
         if isinstance(origins, str):
             origins = [origins]
         return DataToExport(self.name, data=[dwa for dwa in self if dwa.origin in origins])
 
-    def get_data_from_name_origin(self, name: str, origin: str = '') -> DataWithAxes:
+    def get_data_from_name_origin(self, name: str, origin: str = '') -> Optional[DataWithAxes]:
         """Get the data matching the given name and the given origin"""
         if origin == '':
             data, _ = find_objects_in_list_from_attr_name_val(self.data, 'name', name, return_first=True)
@@ -3887,14 +3967,16 @@ class DataToExport(DataLowLevel, SerializableBase):
             raise TypeError('Data stored in a DataToExport object should be objects inherited from DataWithAxis')
 
     def deepcopy(self):
+        """Return a deep copy of this object, named 'Copy', with deep copies of its data"""
         return DataToExport('Copy', data=[data.deepcopy() for data in self])
 
     @dispatch(list)
     def append(self, data_list: List[DataWithAxes]):
+        """Append each DataWithAxes of the list, see the DataWithAxes version"""
         for dwa in data_list:
             self.append(dwa)
 
-    @dispatch(DataWithAxes)
+    @dispatch(DataWithAxes)  # type: ignore[no-redef]  # multipledispatch
     def append(self, dwa: DataWithAxes):
         """Append/replace DataWithAxes object to the data attribute
 
@@ -3909,8 +3991,9 @@ class DataToExport(DataLowLevel, SerializableBase):
             self._data.pop(self.data.index(obj))
         self._data.append(dwa)
 
-    @dispatch(object)
+    @dispatch(object)  # type: ignore[no-redef]  # multipledispatch
     def append(self, dte: DataToExport):
+        """Append the data of another DataToExport (other objects are ignored)"""
         if isinstance(dte, DataToExport):
             self.append(dte.data)
 
@@ -3943,7 +4026,7 @@ class DataToExport(DataLowLevel, SerializableBase):
         return xr.DataTree(dataset=root_ds, children=children)
 
     @classmethod
-    def from_xarray(cls, dt, name: str = None) -> 'DataToExport':
+    def from_xarray(cls, dt, name: Optional[str] = None) -> 'DataToExport':
         """Construct a DataToExport from an xarray.DataTree or a dict of Datasets.
 
         Parameters

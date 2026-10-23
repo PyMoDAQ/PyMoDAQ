@@ -9,7 +9,7 @@ import time
 from packaging import version as version_mod
 from pathlib import Path
 import traceback
-from typing import Any, cast, List, Optional, Tuple, Union
+from typing import Any, cast, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -448,7 +448,7 @@ def find_object_if_matched_attr_name_val(obj, attr_name, attr_value):
     return False
 
 
-def find_objects_in_list_from_attr_name_val(objects: List[object], attr_name: str,
+def find_objects_in_list_from_attr_name_val(objects: Sequence[Any], attr_name: str,
                                             attr_value: object, return_first=True):
     """ lookup within a list of objects. Look for the objects within the list which has the correct attribute name,
     value pair
