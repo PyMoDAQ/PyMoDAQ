@@ -34,7 +34,7 @@ from pymodaq_utils.config import GlobalConfig as Config, get_set_local_dir
 from pymodaq_gui.h5modules.browsing import browse_data
 from pymodaq_gui.h5modules.saving import H5Saver
 from pymodaq.utils.h5modules import module_saving
-from pymodaq_data.h5modules.backends import Node, SaveType
+from pymodaq_data.h5modules.backends import Node, SaveType, SWMR_CAPABLE_BACKENDS
 from pymodaq_utils.utils import ThreadCommand, find_dict_in_list_from_key_val
 
 from pymodaq_gui.parameter import Parameter
@@ -164,6 +164,15 @@ class DAQ_Viewer(ParameterControlModule):
 
         self.settings.child('main_settings', 'DAQ_type').setValue(self._detector.daq_type.name)
         self.settings.child('main_settings', 'detector_type').setValue(self._detector.module_name)
+
+        # H5SaverBase.__init__ flips this visible for a live instance's own settings
+        # tree; DAQ_Viewer's saver_settings is a static clone (get_params_for_save_type)
+        # that never runs through it, so it would otherwise stay permanently hidden
+        # regardless of backend - leaving SWMR/flush_interval impossible to see or
+        # change from this UI.
+        backend_name = self.settings['saver_settings', 'backend', 'backend_type']
+        self.settings.child('saver_settings', 'backend', 'swmr_options').setOpts(
+            visible=backend_name in SWMR_CAPABLE_BACKENDS)
 
         self._grabing: bool = False
         self._do_bkg: bool = False
@@ -532,6 +541,15 @@ class DAQ_Viewer(ParameterControlModule):
             self.module_and_data_saver.h5saver = self._h5saver_continuous
             self._h5saver_continuous.init_file(update_h5=True)
 
+            # Same wiring DAQScan does for its own h5saver: the 'flush_interval'
+            # settings value is otherwise only ever read here, never applied to the
+            # H5Saver itself, so without this tick_flush stays a permanent no-op
+            # regardless of what the user configured.
+            if self._h5saver_continuous.swmr_mode:
+                interval = self._h5saver_continuous.settings[
+                    'backend', 'swmr_options', 'flush_interval']
+                self._h5saver_continuous.set_swmr_flush_interval(interval)
+
             self.module_and_data_saver = module_saving.DetectorTimeSaver(self)
             self.module_and_data_saver.h5saver = self._h5saver_continuous
             self.module_and_data_saver.get_set_node()
@@ -874,12 +892,24 @@ class DAQ_Viewer(ParameterControlModule):
                                                      [param.value()]))
 
         elif param.name() in putils.iter_children(self.settings.child('saver_settings'), []):
-            try:
-                if param.name() == 'do_save':
-                    self.setup_continuous_saving(param.value())
+            if param.name() == 'backend_type':
+                swmr_capable = param.value() in SWMR_CAPABLE_BACKENDS
+                self.settings.child('saver_settings', 'backend', 'swmr_options').setOpts(
+                    visible=swmr_capable)
+                if not swmr_capable and self.settings[
+                        'saver_settings', 'backend', 'swmr_options', 'enable_swmr']:
+                    self.settings.child(
+                        'saver_settings', 'backend', 'swmr_options', 'enable_swmr').setValue(False)
+            elif param.name() == 'do_save':
+                self.setup_continuous_saving(param.value())
+
+            # Forward to the real h5saver actually doing the saving: this settings
+            # tree (self.settings) is only a disconnected display clone.
+            if self._h5saver_continuous is not None:
+                try:
                     self._h5saver_continuous.settings.child(*path[1:]).setValue(param.value())
-            except KeyError:
-                pass
+                except KeyError:
+                    pass
 
     # -------------------------------------------------------------------------
     # Thread status handler

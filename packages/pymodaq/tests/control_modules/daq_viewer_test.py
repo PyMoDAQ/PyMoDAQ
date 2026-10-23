@@ -156,3 +156,29 @@ def test_viewers_roi_select_and_crosshair_forwarding(ini_daq_viewer_ui):
     assert len(commands) == 0
     viewers[2].crosshair_dragged.emit(7., 8.)
     assert commands[-1].attribute == dict(crosshair_info=(7., 8.), ind_viewer=0)
+
+
+def test_swmr_options_visible_and_forwarded(ini_daq_viewer_without_ui, tmp_path):
+    """swmr_options (enable_swmr, flush_interval) must be visible on DAQ_Viewer's own
+    settings tree for an swmr-capable (h5py) backend - not permanently hidden like the
+    rest of H5SaverBase's params, since those only become visible via H5SaverBase's own
+    __init__/value_changed, which never run against this disconnected display clone -
+    and changes made there must reach the real _h5saver_continuous once it exists."""
+    prog, qtbot = ini_daq_viewer_without_ui
+
+    assert prog.settings.child('saver_settings', 'backend', 'swmr_options').opts['visible'] is True
+
+    prog.setup_continuous_saving(init=True)
+    prog._h5saver_continuous.settings.child('base_path').setValue(str(tmp_path))
+
+    prog.settings.child('saver_settings', 'backend', 'swmr_options', 'enable_swmr').setValue(True)
+    assert prog._h5saver_continuous.settings['backend', 'swmr_options', 'enable_swmr'] is True
+
+    prog.settings.child('saver_settings', 'backend', 'swmr_options', 'flush_interval').setValue(2)
+    assert prog._h5saver_continuous.settings['backend', 'swmr_options', 'flush_interval'] == 2
+
+    # Enabling do_save must actually apply the configured flush_interval to the real
+    # H5Saver (set_swmr_flush_interval is otherwise never called, same as DAQScan does
+    # for its own h5saver) - without this, tick_flush stays a permanent no-op.
+    prog._h5saver_continuous.settings.child('do_save').setValue(True)
+    assert prog._h5saver_continuous._flush_interval == 2
