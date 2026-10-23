@@ -504,8 +504,17 @@ class ModulesManager(QObject, ParameterManager):
                                 Naverage: Optional[int] = None,
                                 callback: Callable[[DataToExport], Any] = None,
                                 do_connect_modules=True,
-                                detach_after_callback=False,
+                                detach_after_callback=True,
                                 **kwargs):
+        """ Do a single grab of the selected detectors, calling `callback` with a DataToExport
+        holding the data of all of them when the last one has answered.
+
+        If a detector does not answer in time (config viewer/timeout), the callback is not called
+        and the timeout_signal is emitted.
+
+        detach_after_callback: if True (default), forget_callback is called on your behalf right
+        before `callback` runs.
+        """
 
         if callback is not None:
             if detach_after_callback:
@@ -721,13 +730,13 @@ class ModulesManager(QObject, ParameterManager):
                                      mode: MoveType = MoveType.REL,
                                      callback: Callable[[DataToExport], Any] = None,
                                      do_connect_modules=True,
-                                     detach_after_callback=False):
+                                     detach_after_callback=True):
         """ Move actuators defined within a DataToExport to the value included in the DatActuators within
 
         This method will emit a signal to a given callback with a DataToExport containing
         DataActuators when the moves are done.
 
-        detach_after_callback: if True, forget_callback is called on your behalf before
+        detach_after_callback: if True (default), forget_callback is called on your behalf before
         `callback` runs.
         """
 

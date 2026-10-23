@@ -22,7 +22,6 @@ from qtpy.QtCore import Signal, QDateTime, QDate, QTime, QTimer
 from pymodaq_gui.managers.h5manager import FileAction
 from pymodaq.control_modules.enums import MoveType
 from pymodaq.utils.custom_ext import CustomExt
-from pymodaq.utils.managers.modules import ModuleType
 from pymodaq_data.plotting.utils import PlotColors
 from pymodaq_gui.utils.styling import color_to_rgba, ThemeColor
 
@@ -1531,9 +1530,6 @@ class DAQScanAcquisition(ExtensionWorker):
 
     def _on_ini_positions(self, dte: DataToExport):
         self._update_status("Initial values of actuators reached!")
-        self.modules_manager.forget_callback(self._on_ini_positions,
-                                             module_type=ModuleType.Actuator,
-                                             disconnect_modules=True)
         if self._running:
             self.init_things()
             self.advance()
@@ -1604,9 +1600,6 @@ class DAQScanAcquisition(ExtensionWorker):
 
     def _on_move_done(self, move_dte: DataToExport):
         try:
-            self.modules_manager.forget_callback(self._on_move_done,
-                                                 module_type=ModuleType.Actuator,
-                                                 disconnect_modules=False)
             self.modules_manager.order_positions(move_dte)
 
             QTimer.singleShot(int(self.settings['time_flow', 'wait_time_between']),
@@ -1631,9 +1624,6 @@ class DAQScanAcquisition(ExtensionWorker):
 
     def _on_grab_done(self, dte_grabed: DataToExport):
         try:
-            self.modules_manager.forget_callback(self._on_grab_done,
-                                                 module_type=ModuleType.Detector,
-                                                 disconnect_modules=False)
             self.det_done(dte_grabed)
 
         except Exception as e:
