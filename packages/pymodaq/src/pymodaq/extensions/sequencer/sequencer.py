@@ -288,6 +288,12 @@ class Sequencer(CustomExt):
             self.sequence_worker.stop("User prompted a quit of the Application, Stopping the Acquisition")
             return False
 
+        for sequence in self.sequences:
+            # else the class registry keeps the closed sequences (offered to the SequenceElt of a new Sequencer)
+            SequenceElt.unregister_sequence(sequence)
+            # a sequence is never quit itself: its actions would keep it (and the Sequencer) alive
+            sequence.delete_actions()
+            sequence.view.delete_actions()
         return True
 
 

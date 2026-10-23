@@ -246,13 +246,7 @@ class DAQ_Viewer(ParameterControlModule):
         if self.ui is not None:
             return self._viewers
 
-    @viewers.setter
-    def viewers(self, viewers: List[ViewerBase]):
-        for viewer in self._viewers:
-            try:
-                viewer.data_to_export_signal.disconnect()
-            except TypeError as e:
-                pass
+    def _disconnect_viewers(self):
         for signal, slot in self._viewer_connections:
             try:
                 signal.disconnect(slot)
@@ -260,8 +254,12 @@ class DAQ_Viewer(ParameterControlModule):
                 pass
         self._viewer_connections = []
 
+    @viewers.setter
+    def viewers(self, viewers: List[ViewerBase]):
+        self._disconnect_viewers()
+
         for ind_viewer, viewer in enumerate(viewers):
-            viewer.data_to_export_signal.connect(self._get_data_from_viewer)
+            self._connect_viewer_signal(viewer.data_to_export_signal, self._get_data_from_viewer)
 
             # ind_viewer bound as default argument (evaluated now, not when the slot is called)
             self._connect_viewer_signal(
@@ -391,6 +389,8 @@ class DAQ_Viewer(ParameterControlModule):
                 dock.setEnabled(True)
 
     def _quit_cleanup(self):
+        # the viewers' signals hold slots referencing this module: they would keep it alive
+        self._disconnect_viewers()
         if self._lcd is not None:
             try:
                 self._lcd.parent.close()
