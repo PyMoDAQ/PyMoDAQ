@@ -1,5 +1,5 @@
 from time import perf_counter
-from typing import Iterable, TYPE_CHECKING, Callable
+from typing import Iterable, Optional, TYPE_CHECKING, Callable
 
 import numpy as np
 from qtpy import QtWidgets, QtCore
@@ -208,7 +208,7 @@ class RampExtension(CustomExt):
         self.status_manager.create_permanent_widgets()
         self.status_manager.set_permanent_status('Waiting for instructions')
 
-    def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: bool = None):
+    def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: Optional[bool] = None):
         super().do_things_after_experiment_set(experiment_name, show_dashboard)
         self.settings.child('actuator').setLimits(self.modules_manager.actuators_name)
         self.display_control_modules()
