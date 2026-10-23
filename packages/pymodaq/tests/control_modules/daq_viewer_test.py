@@ -164,3 +164,27 @@ def test_viewers_roi_select_and_crosshair_forwarding(ini_daq_viewer_ui):
         form.close()
         form.deleteLater()
     QtWidgets.QApplication.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete)
+
+def test_continuous_save_creates_single_correctly_named_file(ini_daq_viewer_without_ui, tmp_path):
+    """Enabling continuous saving must create exactly one file, named with the
+    'Data' base_name (not the generic H5Saver default 'Scan'), and must never touch
+    the generic scan-typed self.h5saver as a side effect (see module_and_data_saver
+    override): that side effect used to silently create a second, stray
+    Dataset_...h5 file the first time continuous saving was enabled."""
+    prog, qtbot = ini_daq_viewer_without_ui
+
+    assert prog._h5saver is None
+
+    prog.setup_continuous_saving(init=True)
+    assert prog._h5saver is None, "generic scan-typed h5saver must not be created as a side effect"
+
+    prog._h5saver_continuous.settings.child('base_path').setValue(str(tmp_path))
+    prog._h5saver_continuous.settings.child('do_save').setValue(True)
+
+    assert prog._h5saver is None, "generic scan-typed h5saver must not be created by enabling do_save"
+
+    created_files = list(tmp_path.rglob('*.h5'))
+    assert len(created_files) == 1, f"expected exactly one file, got {created_files}"
+    assert created_files[0].name.startswith('Data_'), (
+        f"expected the 'Data' base_name, got {created_files[0].name}")
+    assert prog._h5saver_continuous.settings['base_name'] == 'Data'
