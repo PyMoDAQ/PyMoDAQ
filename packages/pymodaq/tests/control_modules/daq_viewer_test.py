@@ -165,26 +165,58 @@ def test_viewers_roi_select_and_crosshair_forwarding(ini_daq_viewer_ui):
         form.deleteLater()
     QtWidgets.QApplication.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete)
 
-def test_continuous_save_creates_single_correctly_named_file(ini_daq_viewer_without_ui, tmp_path):
-    """Enabling continuous saving must create exactly one file, named with the
-    'Data' base_name (not the generic H5Saver default 'Scan'), and must never touch
-    the generic scan-typed self.h5saver as a side effect (see module_and_data_saver
-    override): that side effect used to silently create a second, stray
-    Dataset_...h5 file the first time continuous saving was enabled."""
-    prog, qtbot = ini_daq_viewer_without_ui
+def test_continuous_save_toolbar_group_structure(ini_daq_viewer_ui):
+    """The toolbar exposes one grouped button for continuous saving: the (now hidden)
+    settings-tree entries are replaced by a single toolbar entry point."""
+    prog, qtbot, dockarea = ini_daq_viewer_ui
+    ui = prog.ui
 
-    assert prog._h5saver is None
+    for name in ('do_save', 'new_file', 'show_file', 'custom_name'):
+        assert prog.settings.child('saver_settings', name).opts['visible'] is False
+
+    button = next(child for child in ui.toolbar.findChildren(QtWidgets.QToolButton)
+                  if child.defaultAction() is ui.get_action('continuous_save'))
+    assert [a.text() for a in button.menu().actions()] == [
+        'Save Current Data', 'New file', 'Browse file']
+
+    # Same icons H5Manager uses for these exact actions everywhere else in the app
+    assert not ui.get_action('new_file').icon().isNull()
+    assert not ui.get_action('browse_file').icon().isNull()
+
+
+def test_background_toolbar_group_structure(ini_daq_viewer_ui):
+    """background_snap/background_subtract are now one grouped toolbar button, with
+    unchanged short names so existing wiring (DO_BKG/TAKE_BKG) keeps working as-is."""
+    prog, qtbot, dockarea = ini_daq_viewer_ui
+    ui = prog.ui
+
+    button = next(child for child in ui.toolbar.findChildren(QtWidgets.QToolButton)
+                  if child.defaultAction() is ui.get_action('background_subtract'))
+    assert [a.text() for a in button.menu().actions()] == ['Snap Background']
+
+
+
+def test_save_current_during_continuous_save(ini_daq_viewer_without_ui, tmp_path):
+    """A one-shot save must not replace the continuous-saving module saver: it used to,
+    so continuous saving then kept appending into the closed one-shot file."""
+    from pymodaq_data.data import DataRaw
+    from pymodaq.utils.data import DataToExport
+    from pymodaq.utils.h5modules.module_saving import DetectorTimeSaver
+
+    prog, qtbot = ini_daq_viewer_without_ui
+    dte = DataToExport('data', data=[DataRaw('ch0', data=[np.array([1., 2., 3.])])])
 
     prog.setup_continuous_saving(init=True)
-    assert prog._h5saver is None, "generic scan-typed h5saver must not be created as a side effect"
-
     prog._h5saver_continuous.settings.child('base_path').setValue(str(tmp_path))
-    prog._h5saver_continuous.settings.child('do_save').setValue(True)
+    prog.settings.child('saver_settings', 'do_save').setValue(True)
+    prog.append_data(dte)
 
-    assert prog._h5saver is None, "generic scan-typed h5saver must not be created by enabling do_save"
+    prog._save_data(tmp_path.joinpath('one_shot.h5'), dte)
+    assert tmp_path.joinpath('one_shot.h5').is_file()
 
-    created_files = list(tmp_path.rglob('*.h5'))
-    assert len(created_files) == 1, f"expected exactly one file, got {created_files}"
-    assert created_files[0].name.startswith('Data_'), (
-        f"expected the 'Data' base_name, got {created_files[0].name}")
-    assert prog._h5saver_continuous.settings['base_name'] == 'Data'
+    assert isinstance(prog.module_and_data_saver, DetectorTimeSaver)
+    assert prog.module_and_data_saver.h5saver is prog._h5saver_continuous
+    prog.append_data(dte)
+    assert prog.settings['saver_settings', 'N_saved'] == 2
+
+    prog.settings.child('saver_settings', 'do_save').setValue(False)

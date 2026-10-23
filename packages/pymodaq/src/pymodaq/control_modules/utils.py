@@ -25,11 +25,13 @@ from pymodaq_gui.parameter.utils import ParameterWithPath
 from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_gui.h5modules.saving import H5Saver
+from pymodaq_data.h5modules.backends import SWMR_CAPABLE_BACKENDS
 
 from pymodaq.utils.leco.pymodaq_listener import ActorListener, LECOClientCommands, LECOCommands, LECOComponentMixin
 from pymodaq.utils.h5modules.module_saving import DetectorSaver, ActuatorSaver
 from pymodaq.control_modules.thread_commands import (ThreadStatus, ControlToHardware,
-                                                     ControleModuleType, ControllerStatus)  # noqa: F401
+                                                     ControleModuleType, ControllerStatus,
+                                                     UiToMainSaving)  # noqa: F401
 
 if TYPE_CHECKING:
     from .daq_move_ui.ui_base import DAQMoveUI
@@ -337,15 +339,18 @@ class ControlModule(QObject):
         self.h5saver.close_file()
 
     @property
-    def module_and_data_saver(self):
-        if self._module_and_data_saver.h5saver is None or not self._module_and_data_saver.h5saver.isopen():
-            self._module_and_data_saver.h5saver = self.h5saver
+    def module_and_data_saver(self) -> Union[DetectorSaver, ActuatorSaver, None]:
+        """The module saver used for continuous saving (see ParameterControlModule).
+
+        No fallback onto the generic ``self.h5saver``: its getter creates or reopens a
+        file on every access, which used to leave stray files behind each time a saver
+        was attached here before its real h5saver.
+        """
         return self._module_and_data_saver
 
     @module_and_data_saver.setter
     def module_and_data_saver(self, mod: Union[DetectorSaver, ActuatorSaver]):
         self._module_and_data_saver = mod
-        self._module_and_data_saver.h5saver = self.h5saver
 
     def custom_command(self, command: str, **kwargs):
         self.command_hardware.emit(ThreadCommand(command, kwargs))
@@ -532,6 +537,15 @@ class ParameterControlModule(ParameterManager, LECOComponentMixin, ControlModule
     # The full settings key is derived automatically as "<kind>_settings".
     _hw_kind: str = ''
 
+    # Continuous saving: subclasses set the H5Saver save type and the module_saving
+    # time-saver class (DetectorTimeSaver, ActuatorTimeSaver...) used while saving.
+    _continuous_save_type: str = ''
+    _continuous_saver_class: Optional[type] = None
+    # saver_settings entries driven from the toolbar's Continuous Save group instead,
+    # or meaningless for a control module's own continuous saving.
+    _hidden_saver_params = ('do_save', 'new_file', 'show_file', 'custom_name',
+                            'current_scan_name', 'current_scan_path', 'base_name')
+
     @property
     def _hw_settings_name(self) -> str:
         return f"{self._hw_kind}_settings"
@@ -547,6 +561,16 @@ class ParameterControlModule(ParameterManager, LECOComponentMixin, ControlModule
         ControlModule.__init__(self, title=title)
 
         self.do_init_hardware_signal.connect(self.init_hardware)
+
+        # The H5Saver actually writing continuous-save files. saver_settings is only a
+        # display clone of its parameters (built from get_params_for_save_type), kept in
+        # sync by _saver_settings_changed.
+        self._h5saver_continuous: Optional[H5Saver] = None
+        if self._has_saver_settings:
+            for name in self._hidden_saver_params:
+                self.settings.child('saver_settings', name).setOpts(visible=False)
+            self._update_swmr_options_visibility(
+                self.settings['saver_settings', 'backend', 'backend_type'])
 
 
     def thread_status(self, status: ThreadCommand):
@@ -648,9 +672,12 @@ class ParameterControlModule(ParameterManager, LECOComponentMixin, ControlModule
                     self.settings[self._hw_settings_name, 'controller', 'controller_status'] == ControllerStatus.MASTER)
             self.controller_and_thread.id = self.settings[self._hw_settings_name, 'controller', 'controller_ID']
 
+        path = self.settings.childPath(param)
+        if path is not None and path[0] == 'saver_settings':
+            self._saver_settings_changed(param, path)
+
         self._module_value_changed(param)
 
-        path = self.settings.childPath(param)
         if (path is not None and
                 'main_settings' not in path and
                 'saver_settings' not in path):
@@ -658,6 +685,122 @@ class ParameterControlModule(ParameterManager, LECOComponentMixin, ControlModule
             if self.settings.child('main_settings', 'leco', 'leco_connected').value():
                 self._leco_commands_signal.emit(
                     ThreadCommand(LECOCommands.SEND_INFO, ParameterWithPath(param, path)))
+
+    # -------------------------------------------------------------------------
+    # Continuous saving
+    # -------------------------------------------------------------------------
+
+    @property
+    def _has_saver_settings(self) -> bool:
+        return 'saver_settings' in self.settings.names
+
+    def _update_swmr_options_visibility(self, backend: str):
+        """Mirror H5SaverBase's own behaviour on the saver_settings display clone, which
+        never goes through H5SaverBase.__init__/value_changed: without this, SWMR options
+        stay hidden whatever the backend."""
+        swmr_capable = backend in SWMR_CAPABLE_BACKENDS
+        swmr_options = self.settings.child('saver_settings', 'backend', 'swmr_options')
+        swmr_options.setOpts(visible=swmr_capable)
+        if not swmr_capable and swmr_options['enable_swmr']:
+            swmr_options.child('enable_swmr').setValue(False)
+
+    def _saver_settings_changed(self, param: Parameter, path: list):
+        if param.name() == 'backend_type':
+            self._update_swmr_options_visibility(param.value())
+        elif param.name() == 'do_save':
+            self.setup_continuous_saving(param.value())
+
+        # Forward to the H5Saver actually doing the saving (once it exists): setting
+        # do_save on it is what triggers _init_continuous_save.
+        if self._h5saver_continuous is not None:
+            try:
+                self._h5saver_continuous.settings.child(*path[1:]).setValue(param.value())
+            except KeyError:
+                pass
+
+    def setup_continuous_saving(self, init: bool = True):
+        """Create the continuous-saving H5Saver the first time saving is enabled"""
+        if init and self._h5saver_continuous is None:
+            self._h5saver_continuous = H5Saver(save_type=self._continuous_save_type)
+            # connected once only: reconnecting on every enable stacked up connections,
+            # each one opening its own file on the next enable
+            self._h5saver_continuous.settings.child('do_save').sigValueChanged.connect(
+                self._init_continuous_save)
+
+    def _init_continuous_save(self):
+        """Start or stop continuous saving, following the H5Saver's do_save"""
+        if self._h5saver_continuous.settings['do_save']:
+            self._h5saver_continuous.settings.child('base_name').setValue('Data')
+            self.settings.child('saver_settings', 'N_saved').show()
+            self._open_continuous_save_file()
+            self._continuous_save_started()
+        else:
+            self.settings.child('saver_settings', 'N_saved').hide()
+            self._continuous_save_stopped()
+            self._h5saver_continuous.close_file()
+            self._report_continuous_save_file(active=False)
+
+    def _open_continuous_save_file(self):
+        h5saver = self._h5saver_continuous
+        h5saver.close_file()
+        h5saver.init_file(update_h5=True)
+        if h5saver.swmr_mode:
+            # The flush_interval setting is never applied to the H5Saver by itself
+            # (DAQScan does the same for its own h5saver): without this, tick_flush
+            # stays a no-op and data only reaches the disk when the file is closed.
+            h5saver.set_swmr_flush_interval(h5saver.settings['backend', 'swmr_options', 'flush_interval'])
+        # Setting .h5saver rebuilds the module saver's data saver, whose SWMR state is
+        # per file: a new file must go through it again
+        self.module_and_data_saver = self._continuous_saver_class(self)
+        self.module_and_data_saver.h5saver = h5saver
+        self.module_and_data_saver.get_set_node()
+        self.settings.child('saver_settings', 'N_saved').setValue(0)
+        self._report_continuous_save_file(active=True)
+
+    def _continuous_save_started(self):
+        """Override to start feeding data to append_data once a file is open"""
+        pass
+
+    def _continuous_save_stopped(self):
+        """Override to stop feeding data to append_data before the file is closed"""
+        pass
+
+    def new_continuous_save_file(self):
+        """Close the current continuous-save file and carry on saving into a fresh one"""
+        if self._h5saver_continuous is None or not self._h5saver_continuous.settings['do_save']:
+            self.update_status('Continuous saving is not active: enable it before starting a new file')
+            return
+        self._open_continuous_save_file()
+
+    def browse_continuous_save_file(self):
+        """Open the continuous-save file in an H5Browser"""
+        if self._h5saver_continuous is None:
+            self.update_status('No continuous-save file yet: enable continuous saving first')
+            return
+        self._h5saver_continuous.show_file_content()
+
+    def _report_continuous_save_file(self, active: bool):
+        """Show where data is being saved: status message, the 'h5file:' settings entry
+        and the toolbar button's tooltip/checked state. Otherwise files were created
+        silently and the only way to check was to look on disk."""
+        pathname = self._h5saver_continuous.settings['current_h5_file'] if active else ''
+        self.settings.child('saver_settings', 'current_h5_file').setValue(pathname)
+        if active:
+            self.update_status(f'Continuous saving to: {pathname}')
+        if self.ui is not None:
+            self.ui.set_continuous_save_state(active, pathname)
+
+    def _process_saving_ui_cmd(self, cmd: ThreadCommand) -> bool:
+        """Handle the Continuous Save toolbar group commands. Returns True if handled."""
+        if cmd.command == UiToMainSaving.DO_SAVE:
+            self.settings.child('saver_settings', 'do_save').setValue(cmd.attribute)
+        elif cmd.command == UiToMainSaving.SAVE_NEW:
+            self.new_continuous_save_file()
+        elif cmd.command == UiToMainSaving.OPEN:
+            self.browse_continuous_save_file()
+        else:
+            return False
+        return True
 
     def _module_value_changed(self, param: Parameter):
         """Override in subclasses to handle module-specific parameter changes.
