@@ -81,6 +81,8 @@ class ModulesManager(QObject, ParameterManager):
                  parent_name: str = '',
                  **kwargs: Any) -> None:
         self.parent_name = parent_name
+        # (callback, wrapper) pairs of the callbacks that detach themselves, see _auto_forgetting
+        self._auto_forgetting_wrappers: list[tuple[Callable[..., Any], Callable[..., Any]]] = []
         QObject.__init__(self)
         ParameterManager.__init__(self)
         if detectors is None:
@@ -506,11 +508,15 @@ class ModulesManager(QObject, ParameterManager):
 
     def _auto_forgetting(self, callback: Callable[[DataToExport], Any], module_type: ModuleType,
                          disconnect_modules: bool) -> Callable[[DataToExport], Any]:
-        """ Wrap `callback` so forget_callback is called on its behalf, right before it runs. """
+        """ Wrap `callback` so forget_callback is called on its behalf, right before it runs.
+
+        The wrapper is remembered so that forget_callback(callback) also disconnects it, for instance after a timeout.
+        """
         def _wrapped(dte: DataToExport):
             self.forget_callback(_wrapped, module_type=module_type,
                                  disconnect_modules=disconnect_modules)
             callback(dte)
+        self._auto_forgetting_wrappers.append((callback, _wrapped))
         return _wrapped
 
     def grab_data_with_callback(self,
@@ -830,22 +836,35 @@ class ModulesManager(QObject, ParameterManager):
 
         Optionaly also disconnect each selected actuaor and/or detector to the inner method checking when each move/grab
         is done
+
+        This also works for a callback given to a *_with_callback method with detach_after_callback=True, that has not
+        been called (for instance because of a timeout).
         """
+        callbacks = [callback]
+        for original, wrapper in list(self._auto_forgetting_wrappers):
+            if wrapper is callback:  # the wrapper is running or is forgotten directly, it is done with
+                self._auto_forgetting_wrappers.remove((original, wrapper))
+            elif original == callback:
+                self._auto_forgetting_wrappers.remove((original, wrapper))
+                callbacks.append(wrapper)
+
         if module_type == ModuleType.Detector or module_type==ModuleType.Control:
             if disconnect_modules:
                 self.connect_detectors(False)
-            try:
-                self.det_done_signal.disconnect(callback)
-            except TypeError:
-                pass
+            for cb in callbacks:
+                try:
+                    self.det_done_signal.disconnect(cb)
+                except TypeError:
+                    pass
 
         if module_type == ModuleType.Actuator or module_type == ModuleType.Control:
             if disconnect_modules:
                 self.connect_actuators(False)
-            try:
-                self.move_done_signal.disconnect(callback)
-            except TypeError:
-                pass
+            for cb in callbacks:
+                try:
+                    self.move_done_signal.disconnect(cb)
+                except TypeError:
+                    pass
 
 
     def _move_actuators(self, dte_act: DataToExport | DataToActuators,
