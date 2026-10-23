@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional
 import yaml
 
 from pymodaq_gui.utils.app_worker import ExtensionWorker, SaverWorker
@@ -176,7 +177,7 @@ class Sequencer(CustomExt):
 
         self.create_dashboard_toolbar(add_break=False)
 
-    def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: bool = None):
+    def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: Optional[bool] = None):
         super().do_things_after_experiment_set(experiment_name, show_dashboard)
 
     def setup_actions(self):

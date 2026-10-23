@@ -4,7 +4,7 @@ Created the 25/10/2022
 
 @author: Sebastien Weber
 """
-from typing import TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 import numpy as np
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
@@ -86,7 +86,7 @@ class Console(CustomExt):
     def _quit_fun(self) -> bool:
         return True
 
-    def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: bool = None):
+    def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: Optional[bool] = None):
         super().do_things_after_experiment_set(experiment_name, show_dashboard)
 
         self.console.push_variables(

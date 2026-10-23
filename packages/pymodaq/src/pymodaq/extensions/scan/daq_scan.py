@@ -505,7 +505,7 @@ class DAQScan(CustomExt):
         self.scan_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('scan_manager'),
                                                     menu=self.get_menu('scan_manager'))
 
-    def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: bool = None):
+    def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: Optional[bool] = None):
         """ This method is called whenever a experiment entry has been set.
 
         Its main purpose is to update the list of control modules in the manager and
