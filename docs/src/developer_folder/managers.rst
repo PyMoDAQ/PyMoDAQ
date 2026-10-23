@@ -966,10 +966,9 @@ A grab or a move that is not completed in time does not raise: the manager logs 
 ``timeout_signal`` with the titles of the modules it did not hear from. The duration is read from the configuration at
 each call: ``[viewer] timeout`` for the detectors (in ms, 10000 by default) and ``[actuator] polling_timeout_s`` for the
 actuators (in s, 20 by default). A blocking call returns at the timeout (with the data received so far); with a callback,
-the callback is never called and the timeout only tells you. Connect ``timeout_signal`` to stop what you were doing and
-call ``forget_callback`` (the callback is still connected: the manager only detaches it when it runs). With
-``detach_after_callback=True`` the manager connects its own wrapper of your callback, that ``forget_callback(callback)``
-cannot disconnect: use ``detach_after_callback=False`` if you have to clean up after a timeout.
+the callback is never called and the timeout only tells you. Connect ``timeout_signal`` to stop what you were doing. With
+``detach_after_callback=True`` (the default) the manager also forgets the callback (and disconnects the modules) by
+itself at the timeout; with ``detach_after_callback=False`` call ``forget_callback`` yourself.
 
 Probing
 ~~~~~~~
@@ -1072,9 +1071,8 @@ Rules
 
 * Never create control modules in an extension, use the ones of ``self.modules_manager``.
 * Select the modules before moving or grabbing; give one position per selected actuator, named like it.
-* Connect before a blocking call and disconnect after it; the ``*_with_callback`` calls detach their callback by themselves when it runs
-  (``detach_after_callback=True``); use ``detach_after_callback=False`` and call ``forget_callback`` yourself if you have to
-  clean up after a timeout.
+* Connect before a blocking call and disconnect after it; the ``*_with_callback`` calls detach their callback by
+  themselves when it runs or at the timeout (``detach_after_callback=True``), otherwise call ``forget_callback`` yourself.
 * Handle ``timeout_signal``: a missing answer is reported by it only.
 * Start again from an empty selection after a new experiment.
 * Do not share a ``ModulesManager`` between extensions, unless it is on purpose the one of the Dashboard.
