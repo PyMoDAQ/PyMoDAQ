@@ -739,7 +739,7 @@ class DAQ_Move(ParameterControlModule):
             * **move_done**: update the UI current value and emits the move_done signal
             * **outofbounds**: emits the bounds_signal signal with a True argument
             * **set_allowed_values**: used to change the behaviour of the spinbox controlling absolute values (see
-              :meth:`daq_move_ui.set_abs_spinbox_properties`
+              :meth:`DAQMoveUI.set_abs_spinbox_properties<pymodaq.control_modules.daq_move_ui.ui_base.DAQMoveUI.set_abs_spinbox_properties>`
             * stop: stop the motion
         """
 

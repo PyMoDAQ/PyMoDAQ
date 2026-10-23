@@ -3,16 +3,20 @@ name: Test for pymodaq
 on:
   workflow_dispatch:
   workflow_call:
+  schedule:
+    - cron: '0 3 * * 0'  # every Sunday: the whole test matrix
 
   pull_request:
     paths:
       - 'packages/pymodaq/**'
+      - '.github/workflows/tests-pymodaq.yml'
     branches:
       - '*'
       - '!badges'
   push:
     paths:
       - 'packages/pymodaq/**'
+      - '.github/workflows/tests-pymodaq.yml'
     branches:
       - '*'
       - '!badges'
@@ -26,10 +30,10 @@ jobs:
     continue-on-error: true
     strategy:
       fail-fast: false
-      matrix:
-        os: ["ubuntu-latest", "windows-latest",]
-        python-version: ["3.11",]
-        qt-backend: ["pyqt6", "pyside6",]
+      # pull requests and pushes: the two ends of the supported Python range on PyQt6, one PySide6 job (the slowest)
+      # and one Windows job. The whole matrix runs every week (schedule) and on manual dispatch.
+      matrix: >-
+        ${{ fromJSON((github.event_name == 'pull_request' || github.event_name == 'push') && '{"include": [{"os": "ubuntu-latest", "python-version": "3.10", "qt-backend": "pyqt6"}, {"os": "ubuntu-latest", "python-version": "3.13", "qt-backend": "pyqt6"}, {"os": "ubuntu-latest", "python-version": "3.12", "qt-backend": "pyside6"}, {"os": "windows-latest", "python-version": "3.12", "qt-backend": "pyqt6"}]}' || '{"os": ["ubuntu-latest", "windows-latest"], "python-version": ["3.10", "3.11", "3.12", "3.13"], "qt-backend": ["pyqt6", "pyside6"]}') }}
     runs-on: ${{ matrix.os }}
     env:
       PYTEST_QT_API: ${{ matrix.qt-backend }}
@@ -138,9 +142,9 @@ jobs:
 
           # 2. Run the test suite
           if [[ "${{ runner.os }}" == "Linux" ]]; then
-            xvfb-run -a bash -c 'python -X faulthandler -m pytest --capture=no -vv --cov=pymodaq -m "not leco"'
+            xvfb-run -a bash -c 'python -X faulthandler -m pytest -o faulthandler_timeout=100 --capture=no -vv --cov=pymodaq -m "not leco"'
           else
-            python -m pytest -vv --cov=pymodaq -m "not leco"
+            python -m pytest -o faulthandler_timeout=100 -vv --cov=pymodaq -m "not leco"
           fi
 
           # 3. Save pytest exit code to preserve test results

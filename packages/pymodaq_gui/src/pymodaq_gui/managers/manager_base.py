@@ -393,6 +393,7 @@ class ManagerBase(CustomApp):
 
     def quit_fun(self):
         self.entries_sync.unbind_all()
+        self.entries_sync.deleteLater()  # unparented: the slots connected to it would keep this manager alive
         return super().quit_fun()
 
     def create_entry(self, entry: str = None, bypass_dialog=False):

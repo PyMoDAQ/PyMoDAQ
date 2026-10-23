@@ -2,7 +2,7 @@ from abc import abstractmethod
 
 HW_KIND = 'detector'
 HW_SETTINGS_KEY = f'{HW_KIND}_settings'
-from typing import Iterable, Optional, Union
+from typing import Any, Iterable, Optional, Union
 
 from pymodaq_data.data import DataToExport
 from pymodaq_gui.plotting.items.roi import RoiInfo
@@ -106,7 +106,7 @@ class DAQ_Viewer_base(PluginBase):
     dte_signal = Signal(DataToExport)
     dte_signal_temp = Signal(DataToExport)
 
-    params = []
+    params: list[dict[str, Any]] = []
 
     def __init__(self, parent=None, params_state=None):
         super().__init__(parent, params_state)
@@ -221,4 +221,4 @@ class DAQ_Viewer_base(PluginBase):
         self.scan_parameters = scan_parameters
 
 if __name__ == '__main__':
-    test = DAQ_Viewer_base()
+    test = DAQ_Viewer_base()  # type: ignore[abstract]

@@ -212,7 +212,8 @@ class Histogrammer(QObject):
     gradient_changed = Signal()
 
     def __init__(self, histogram_container: QtWidgets.QWidget, histogram_refs=IMAGE_TYPES):
-        super().__init__()
+        # owned by its container: an unparented QObject keeps the slots connected to it alive
+        super().__init__(histogram_container)
         self._histograms = dict([])
         self._histogram_refs = histogram_refs
         self._histogram_container = histogram_container
@@ -363,7 +364,8 @@ class View2D(ActionManager, QtCore.QObject):
             self.roi_widget, self.rois_dock, f'{self.title} ROIs',
             detached=config('gui', 'viewer', 'rois_as_popup'),
             layout_config_path=('gui', 'viewer', 'rois_dock_layout'),
-            is_shown=lambda: self.is_action_checked('roi'))
+            is_shown=lambda: self.is_action_checked('roi'),
+            owner=self.parent_widget)
         self.roi_target: Union[pgROI, Crosshair] = None
 
         self.setup_view_box()

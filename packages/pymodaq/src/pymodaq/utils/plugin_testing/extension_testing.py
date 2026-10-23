@@ -80,7 +80,10 @@ def loaded_extension(extension_class: type, *ext_args, show: bool = False, theme
             QtWidgets.QApplication.processEvents()
         finally:
             dashboard.quit_fun()
-            # the quit functions do not delete the windows
+            # the quit functions do not delete the windows, nor the actions of the window wrappers (they would keep
+            # the apps alive)
+            for wrapper in (win_ext, shared_ui, extension):  # the extension too, in case its quit was refused
+                wrapper.delete_actions()
             for widget in (win_ext.mainwindow, shared_ui.parent, dashboard.tree):
                 widget.close()
                 widget.deleteLater()

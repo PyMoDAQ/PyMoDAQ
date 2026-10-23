@@ -133,9 +133,9 @@ class QThreadProxy:
     """ Proxy around Qthread to attach/memorize hardware added to it
 
     Could not use inheritance as sometime, we have to use the main thread where methods cannot
-    be added. Here inherits from Generic to let the type checker believe we are faced with a real QThread
+    be added.
     """
-    def __init__(self, thread: QThread = None, parent=None):
+    def __init__(self, thread: Optional[QThread] = None, parent=None):
         super().__init__()
         self.thread: QThread = thread if thread is not None else QThread(parent)
 
@@ -191,7 +191,18 @@ class QThreadProxy:
         return list(self._hardwares.keys())
 
 
-def create_controller_param(axis_name: str = None, axis_names: Optional[list[str]] = None) -> dict:
+def create_controller_param(axis_name: Optional[Union[str, int]] = None,
+                            axis_names: Optional[Union[list[str], dict[str, int]]] = None) -> dict:
+    """Create the 'controller' parameter group (status, ID and, if names are given, the axis to use)
+
+    Parameters
+    ----------
+    axis_name: str or int, optional
+        The axis selected by default: its name if ``axis_names`` is a list, its value if it is a dict.
+    axis_names: list of str or dict of str to int, optional
+        The names of all the axes of the controller. The axis parameter is created only if both
+        ``axis_name`` and ``axis_names`` are given.
+    """
     controller_param = {'title': 'Controller:', 'name': 'controller', 'type': 'group', 'children': [
         {'title': 'Controller Status:', 'name': 'controller_status', 'type': 'list',
          'value': ControllerStatus.MASTER.value,

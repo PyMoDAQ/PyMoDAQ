@@ -50,3 +50,9 @@ known-first-party = ["pymodaq", "pymodaq_utils", "pymodaq_data", "pymodaq_gui"]
 
 [tool.ruff.lint.per-file-ignores]
 "**/tests/*" = ["B", "SIM"]  # relaxed rules for tests
+[tool.mypy]
+# Limited type check, see .github/workflows/typing.yml: only an allow-list of modules is checked
+mypy_path = "packages/pymodaq_utils/src:packages/pymodaq_data/src:packages/pymodaq_gui/src:packages/pymodaq_scripting/src:packages/pymodaq/src"
+ignore_missing_imports = true
+follow_imports = "silent"
+disable_error_code = ["import-untyped"]

@@ -6,6 +6,7 @@ Created the 31/08/2023
 """
 import numpy as np
 import pytest
+from easydict import EasyDict as edict
 from pymodaq.control_modules.move_utility_classes import (DAQ_Move_base, comon_parameters_fun, main,
                                                           DataActuatorType, check_units,
                                                           DataActuator)
@@ -169,6 +170,32 @@ def test_settings_legacy_multiaxes_access(qtbot):
                 == hardware.settings['controller', 'controller_status'])
 
 
+@pytest.mark.parametrize("AXIS_NAMES", [['a', 'b'], {'a': 0, 'b': 2}])
+def test_axis_changed_from_the_ui_updates_units_and_epsilon(qtbot, AXIS_NAMES):
+    """Changing the axis in the settings (as the UI does) refreshes the units and epsilon settings
+
+    The value of the axis parameter is the name for a list of names but the value of the dict for named axes.
+    """
+    class Hardware(DAQ_Move_base):
+        _axis_names = AXIS_NAMES
+        _controller_units = {'a': 'mm', 'b': '°'} if isinstance(AXIS_NAMES, dict) else ['mm', '°']
+        _epsilons = {'a': 0.1, 'b': 0.65} if isinstance(AXIS_NAMES, dict) else [0.1, 0.65]
+
+        params = comon_parameters_fun(axis_names=_axis_names)
+
+    hardware = Hardware()
+    assert hardware.settings['units'] == 'mm'
+    assert hardware.settings['epsilon'] == pytest.approx(0.1)
+
+    axis_param = hardware.settings.child('controller', 'axis')
+    axis_param.setValue(AXIS_NAMES['b'] if isinstance(AXIS_NAMES, dict) else 'b')
+    hardware.update_settings(edict(path=['controller', 'axis'], param=axis_param, change='value'))
+
+    assert hardware.axis_name == 'b'
+    assert hardware.settings['units'] == '°'
+    assert hardware.settings['epsilon'] == pytest.approx(0.65)
+
+
 def test_set_default_values_emits_main_settings_updates(qtbot):
     class Hardware(DAQ_Move_base):
         params = comon_parameters_fun(False, ['a'])
@@ -176,9 +203,11 @@ def test_set_default_values_emits_main_settings_updates(qtbot):
     hardware = Hardware()
     commands = []
     hardware.emit_status = commands.append
+    red_value = 1.
+    relative_value = 0.5
 
-    hardware.set_default_values(red=1., relative=0.5)
+    hardware.set_default_values(red=red_value, relative=relative_value)
 
     assert [(cmd.command, cmd.attribute) for cmd in commands] == [
-        ('update_main_settings', [['default_value_red'], 1., 'value']),
-        ('update_main_settings', [['default_value_relative'], 0.5, 'value'])]
+        ('update_main_settings', [['default_value_red'], red_value, 'value']),
+        ('update_main_settings', [['default_value_relative'], relative_value, 'value'])]

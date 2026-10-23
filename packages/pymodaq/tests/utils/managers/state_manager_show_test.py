@@ -27,6 +27,7 @@ def state_manager(qtbot, monkeypatch):
     qtbot.addWidget(state_manager.mainwindow)
     state_manager.names = names
     yield state_manager
+    state_manager.quit_fun()
     state_manager.mainwindow.close()
 
 
