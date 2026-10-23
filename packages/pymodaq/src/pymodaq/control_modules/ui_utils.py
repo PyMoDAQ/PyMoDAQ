@@ -34,7 +34,7 @@ class ControlModuleUI(CustomApp):
 
     See Also
     --------
-    :class:`daq_move_ui.DAQ_Move_UI`, :class:`daq_viewer_ui.DAQ_Viewer_UI`
+    :class:`DAQMoveUI<pymodaq.control_modules.daq_move_ui.ui_base.DAQMoveUI>`, :class:`daq_viewer_ui.DAQ_Viewer_UI`
     """
     command_sig = QtCore.Signal(ThreadCommand)
 
