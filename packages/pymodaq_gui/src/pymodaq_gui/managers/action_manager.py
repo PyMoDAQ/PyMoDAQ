@@ -743,14 +743,17 @@ class ActionManager:
         --------
         add_action, get_menu
         """
-        if auto_menu and parent_menu is None:
-            parent_menu = self._menu
-        elif isinstance(parent_menu, str):
-            parent_menu = self.get_menu(parent_menu)
+        parent: Union[QtWidgets.QMenuBar, QtWidgets.QMenu, None]
+        if isinstance(parent_menu, str):
+            parent = self.get_menu(parent_menu)
+        elif auto_menu and parent_menu is None:
+            parent = self._menu
+        else:
+            parent = parent_menu
         before = self._resolve_menu(before, auto=False)
 
         if menu is None:
-            new_menu = QtWidgets.QMenu(title, parent=parent_menu)
+            new_menu = QtWidgets.QMenu(title, parent=parent)
         else:
             new_menu = menu
             if title:
@@ -758,7 +761,7 @@ class ActionManager:
 
         if new_menu.parent() is None:
             # an unparented menu outlives the UI, and the slots connected to its actions keep the UI alive
-            owner = parent_menu if parent_menu is not None else self if isinstance(self, QtWidgets.QWidget) else None
+            owner = parent if parent is not None else self if isinstance(self, QtWidgets.QWidget) else None
             if owner is not None:
                 new_menu.setParent(owner, new_menu.windowFlags())
 
@@ -770,11 +773,11 @@ class ActionManager:
                 new_menu.setIcon(create_icon(icon_name))
 
         # Add to parent menu if specified
-        if parent_menu is not None:
+        if parent is not None:
             if before is None:
-                parent_menu.addMenu(new_menu)
+                parent.addMenu(new_menu)
             else:
-                parent_menu.insertMenu(before.menuAction(), new_menu)
+                parent.insertMenu(before.menuAction(), new_menu)
 
         # Store reference
         self._menus[short_name] = new_menu
