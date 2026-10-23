@@ -7,6 +7,13 @@ from contextlib import contextmanager
 Created the 07/11/2023
 
 @author: Sebastien Weber
+
+Context: the tests asserting that a call returns "at once" (``test_blocking_without_blocking_the_caller``,
+``test_non_blocking``) time it with ``no_garbage_collection``. The state manager windows and their large parameter
+trees are not freed as soon as a test ends: with PySide6 on the CI runners a garbage collection starting inside the
+timed call could take minutes (up to 886 s measured) to free them, and fail the assertion whatever the code does.
+This only keeps the measure reliable, it does not make the collections faster: the leaks themselves are a
+separate matter (see issue #1275).
 """
 import pytest
 from pathlib import Path
