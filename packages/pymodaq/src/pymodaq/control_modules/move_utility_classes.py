@@ -569,15 +569,15 @@ class DAQ_Move_base(PluginBase):
         return controller
 
     @property
-    def current_value(self) -> Union[DataActuator, float]:
+    def current_value(self) -> DataActuator:
         """ Get/Set the last known value of the actuator
 
-        Returned as a float if ``data_actuator_type`` is ``DataActuatorType.float`` (old style plugins), as a
-        DataActuator otherwise. When set with a number or an array, it is converted into a DataActuator
+        A DataActuator. For deprecated old style plugins (``data_actuator_type`` is ``DataActuatorType.float``) a
+        float is returned instead. When set with a number or an array, it is converted into a DataActuator
         using the current axis unit; a DataActuator without units gets the axis unit.
         """
         if self.data_actuator_type == self.data_actuator_type.float:
-            return self._current_value.value()
+            return self._current_value.value()  # type: ignore[return-value]  # float for the deprecated old style plugins
         else:
             return self._current_value
 
@@ -595,14 +595,14 @@ class DAQ_Move_base(PluginBase):
             self._current_value = value
 
     @property
-    def target_value(self) -> Union[DataActuator, float]:
+    def target_value(self) -> DataActuator:
         """ Get/Set the value the actuator should reach (within epsilon)
 
-        Returned as a float if ``data_actuator_type`` is ``DataActuatorType.float`` (old style plugins), as a
-        DataActuator otherwise. Same conversions as :attr:`current_value` when set.
+        A DataActuator. For deprecated old style plugins (``data_actuator_type`` is ``DataActuatorType.float``) a
+        float is returned instead. Same conversions as :attr:`current_value` when set.
         """
         if self.data_actuator_type.name == self.data_actuator_type.float:
-            return self._target_value.value()
+            return self._target_value.value()  # type: ignore[return-value]  # float for the deprecated old style plugins
         else:
             return self._target_value
 
@@ -620,7 +620,7 @@ class DAQ_Move_base(PluginBase):
             self._target_value = value
 
     @property
-    def current_position(self) -> Union[DataActuator, float]:
+    def current_position(self) -> DataActuator:
         """Deprecated, use :attr:`current_value`"""
         deprecation_msg('current_position attribute should not be used, use current_value')
         return self.current_value
@@ -630,7 +630,7 @@ class DAQ_Move_base(PluginBase):
         self.current_value = value
 
     @property
-    def target_position(self) -> Union[DataActuator, float]:
+    def target_position(self) -> DataActuator:
         """Deprecated, use :attr:`target_value`"""
         deprecation_msg('target_position attribute should not be used, use target_value')
         return self.target_value
@@ -684,13 +684,14 @@ class DAQ_Move_base(PluginBase):
         return position
 
     @abstractmethod
-    def get_actuator_value(self) -> Union[DataActuator, float]:
+    def get_actuator_value(self) -> DataActuator:
         """Read the current value of the actuator from the hardware (to be implemented in the plugin)
 
         Returns
         -------
         DataActuator
-            (or a float for old style plugins, see ``data_actuator_type``) the value in the axis unit.
+            the value in the axis unit (a float is still accepted for deprecated old style plugins, see
+            ``data_actuator_type``).
         """
         if hasattr(self, 'check_position'):
             deprecation_msg('check_position method in plugins is deprecated, use get_actuator_value',3)
