@@ -81,6 +81,9 @@ class ModulesManager(QObject, ParameterManager):
                  parent_name: str = '',
                  **kwargs: Any) -> None:
         self.parent_name = parent_name
+        # the self-detaching callback waiting for its move/grab (one per type of module), see _auto_forgetting:
+        # module type -> (wrapper, disconnect_modules)
+        self._pending_auto_forgetting: dict[ModuleType, tuple[Callable[..., Any], bool]] = {}
         QObject.__init__(self)
         ParameterManager.__init__(self)
         if detectors is None:
@@ -506,11 +509,19 @@ class ModulesManager(QObject, ParameterManager):
 
     def _auto_forgetting(self, callback: Callable[[DataToExport], Any], module_type: ModuleType,
                          disconnect_modules: bool) -> Callable[[DataToExport], Any]:
-        """ Wrap `callback` so forget_callback is called on its behalf, right before it runs. """
+        """ Wrap `callback` so forget_callback is called on its behalf, right before it runs.
+
+        The wrapper, not `callback`, is what is connected to the done signal. It calls forget_callback with its own
+        reference (the connected one), so it disconnects itself right before running `callback`.
+        If the move/grab times out the wrapper never runs: the manager then forgets it itself (see
+        _forget_pending_callback).
+        """
         def _wrapped(dte: DataToExport):
+            self._pending_auto_forgetting.pop(module_type, None)
             self.forget_callback(_wrapped, module_type=module_type,
                                  disconnect_modules=disconnect_modules)
             callback(dte)
+        self._pending_auto_forgetting[module_type] = (_wrapped, disconnect_modules)
         return _wrapped
 
     def grab_data_with_callback(self,
@@ -553,17 +564,26 @@ class ModulesManager(QObject, ParameterManager):
                                do_connect_modules)
         self._grab_data(check_do_override, Naverage, **kwargs)
 
+    def _forget_pending_callback(self, module_type: ModuleType) -> None:
+        """ After a timeout, the self-detaching callback (detach_after_callback=True) waiting for this type of
+        modules will never run: disconnect it (and the modules) so that it does not fire on a later grab/move """
+        pending = self._pending_auto_forgetting.pop(module_type, None)
+        if pending is not None:
+            self.forget_callback(pending[0], module_type=module_type, disconnect_modules=pending[1])
+
     def _on_detectors_timeout(self) -> None:
         missing_detectors = self.get_missing_detectors()
         self.timeout_signal.emit(missing_detectors)
         logger.error('Timeout Fired during waiting for data to be acquired from: '
                      f'{", ".join(missing_detectors)}')
+        self._forget_pending_callback(ModuleType.Detector)
 
     def _on_actuators_timeout(self) -> None:
         missing_actuators = self.get_missing_actuators()
         self.timeout_signal.emit(missing_actuators)
         logger.error('Timeout Fired during waiting for data to be acquired from: '
                      f'{", ".join(missing_actuators)}')
+        self._forget_pending_callback(ModuleType.Actuator)
 
     def grab_data(self, check_do_override: bool = True, Naverage: Optional[int] = None,
                   **kwargs: Any) -> DataToExport:
