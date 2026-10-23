@@ -14,16 +14,16 @@ if TYPE_CHECKING:
 
 
 class ConditionHolderBase:
-    """ Shared machinery for "holds one pluggable model, picked via a combo + nested settings
-    tree, with detector/actuator refresh delegated to ModulesManagerBinding" - used today by
-    ConditionHolder (ChoiceModelBase/ChoiceModelFactory), and designed to be shared by a
-    planned SwitchConditionHolder (SwitchModelBase/SwitchModelFactory) once that lands.
+    """ Base for a holder that builds up an element with one pluggable model, picked via a
+    combo + nested settings tree, with detector/actuator refresh delegated to
+    ModulesManagerBinding. Used today by ConditionHolder (ChoiceModelBase/ChoiceModelFactory),
+    and designed to be shared by a planned SwitchConditionHolder (SwitchModelBase/
+    SwitchModelFactory) once that lands.
 
-    Plain single inheritance, not a mixin, on purpose: a concrete subclass only needs to
-    specialize `factory` and `dict_key` (SwitchConditionHolder's planned shape additionally
-    overrides the `model` setter to wire up `outcomes_changed`) - ordinary inheritance, no
-    cooperative super() across siblings, not the kind of multiple inheritance that caused the
-    ordering bugs the mixin version of this code had (see git history).
+    Ordinary single inheritance between holders: a concrete subclass only needs to specialize
+    `factory` and `dict_key` (SwitchConditionHolder's planned shape additionally overrides the
+    `model` setter to wire up `outcomes_changed`) - no cooperative super() across siblings to
+    coordinate.
     """
 
     #: the ChoiceModelFactory/SwitchModelFactory instance to pick registered models from

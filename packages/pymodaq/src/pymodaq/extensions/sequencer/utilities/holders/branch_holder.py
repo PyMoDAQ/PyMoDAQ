@@ -18,12 +18,11 @@ class BranchHolder:
     owning element's mstate, one per declared outcome - generalizes ChoiceElt's True/False
     branching to an arbitrary outcome set.
 
-    Plain composition - `self.branches = BranchHolder(elt, branch_labels)` - not a mixin:
-    construct it explicitly, whenever the owning element chooses to (there's no __init__-order
-    puzzle to get right, unlike the mixin version this replaced). `branch_labels` (outcome
-    value -> display label) is fixed for ChoiceElt's binary choice ({True: 'True',
-    False: 'False'}) today; `rebuild()` lets it be resynced whenever an owner's outcome set
-    can itself change shape.
+    A holder: the owning element builds itself up by constructing one of these and keeping it
+    as an attribute - `self.branches = BranchHolder(elt, branch_labels)` - whenever it chooses
+    to, rather than inheriting this behavior. `branch_labels` (outcome value -> display label)
+    is fixed for ChoiceElt's binary choice ({True: 'True', False: 'False'}) today; `rebuild()`
+    lets it be resynced whenever an owner's outcome set can itself change shape.
     """
 
     def __init__(self, elt: 'SeqEltBase', branch_labels: dict):
@@ -31,10 +30,6 @@ class BranchHolder:
         self.branch_labels: dict = {}
         self._go_to: dict = {}
         self.value_transitions: dict = {}
-        # Register on elt before rebuild() can touch elt.mstate: its first-ever access lazily
-        # builds a CompositeState that stringifies elt via __repr__, which reads elt.branches -
-        # so elt.branches must already exist by then, regardless of whether the caller
-        # constructs this one-step (`elt.branches = BranchHolder(elt, labels)`) or in two steps.
         elt.branches = self
         self.rebuild(branch_labels)
 
@@ -56,15 +51,10 @@ class BranchHolder:
             self.elt.mstate.removeTransition(transition)
             self._go_to.pop(branch, None)
 
-        # Populate _go_to for every new branch *before* constructing any ValueTransition: the
-        # first-ever access to elt.mstate (right below) lazily builds a CompositeState, whose
-        # setup stringifies the element via __repr__ - which for ChoiceElt reads
-        # _go_to - so _go_to must already have an entry (even a None placeholder) for every
-        # branch before that first .mstate touch, not filled in partway through this same loop.
         for branch in new_branches:
+            # Give every branch a _go_to entry (even a None placeholder) as soon as it's
+            # created, so go_to_true/go_to_false/to_dict_custom can always index it directly.
             self._go_to.setdefault(branch, None)
-
-        for branch in new_branches:
             transition = ValueTransition(self.elt.go_to_signal, branch, source_state=self.elt.mstate)
             # Plain addTransition(), not track_transition(): this is the element's own
             # permanent behavior, not per-run tree wiring, so it must survive

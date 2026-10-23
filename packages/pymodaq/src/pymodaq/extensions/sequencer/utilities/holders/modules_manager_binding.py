@@ -10,13 +10,13 @@ logger = set_logger(get_module_name(__file__))
 
 
 class ModulesManagerBinding:
-    """ Owns a ModulesManager kept in sync with the Dashboard's detector/actuator catalog.
+    """ A holder that builds up an element with live detector/actuator info: owns a
+    ModulesManager kept in sync with the Dashboard's catalog.
 
-    Plain composition, not a mixin: an element that needs live detector/actuator info
-    (GrabElt; a condition model that probes detectors) constructs one explicitly -
-    `self.modules_binding = ModulesManagerBinding.attach(self)` - rather than inheriting the
-    behavior. Elements that don't need it (WaitElt, RepeatElt...) simply never create one;
-    there's nothing to opt out of.
+    An element that needs it (GrabElt; a condition model that probes detectors) constructs one
+    explicitly - `self.modules_binding = ModulesManagerBinding.attach(self)` - rather than
+    inheriting the behavior. Elements that don't need it (WaitElt, RepeatElt...) simply never
+    create one; there's nothing to opt out of.
 
     `on_refresh` is the one optional extra: most owners only need the raw catalog kept current
     (`self.modules_manager.detectors_all`/`.actuators_all`), but some also need to react every

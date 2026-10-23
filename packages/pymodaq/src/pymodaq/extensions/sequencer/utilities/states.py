@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Union
+from typing import Callable, Optional, TYPE_CHECKING, Any, Union
 import qtpy
 from qtpy import QtCore
 
@@ -22,11 +22,25 @@ class MyState(QState):
     def __init__(self, parent=None, name: str = None):
         super().__init__(parent)
 
+        # Static fallback only (e.g. InterruptState, which has no owning elt to describe it
+        # lazily - see `name_fn` below). Elements of the sequencer tree get their name computed
+        # on demand instead.
         if name is not None:
             self.setObjectName(name)
 
         self.incoming_transition: TrackedTransition | None = None  # This will hold the transition object
         self.source_state: MyState | CompositeState | None = None
+        #: when set, overrides objectName() with a value computed at call time rather than one
+        #: frozen in at construction - see CompositeState.setup_states() for why that matters.
+        #: Safe to do here only because objectName()/setObjectName() in this module are read
+        #: solely by the onEntry/onExit debug logs below - nothing Qt-internal or outside this
+        #: module depends on the native QObject value.
+        self.name_fn: Optional[Callable[[], str]] = None
+
+    def objectName(self) -> str:
+        if self.name_fn is not None:
+            return self.name_fn()
+        return super().objectName()
 
     def onEntry(self, event, /):
         logger.debug(f'Entering {self.objectName()}')
@@ -42,6 +56,12 @@ class MyQFinalState(QFinalState):
 
         self.incoming_transition: TrackedTransition | None = None  # This will hold the transition object
         self.source_state: MyState | CompositeState | None = None
+        self.name_fn: Optional[Callable[[], str]] = None
+
+    def objectName(self) -> str:
+        if self.name_fn is not None:
+            return self.name_fn()
+        return super().objectName()
 
     def onEntry(self, event, /):
         logger.debug(f'Entering  {self.objectName()}')
@@ -73,14 +93,19 @@ class CompositeState(MyState):
             self._elt.initialize_element()
 
     def setup_states(self):
-        self.setObjectName(f'State of the elt: {self._elt}')
+        # Deferred, not `setObjectName(f'...{self._elt}')`: `self._elt`'s __repr__ (ChoiceElt's,
+        # for instance) can read attributes other holders of the same element set up later in
+        # its __init__ - condition before branches, say. Evaluating the name only when a state
+        # is actually entered (debug logging, below) means that by construction the whole
+        # element already exists, so no such ordering constraint is needed between holders.
+        self.name_fn = lambda: f'State of the elt: {self._elt}'
 
         self.execute_state = MyState(self)
-        self.execute_state.setObjectName(f'ExecuteState of the elt: {self._elt}')
+        self.execute_state.name_fn = lambda: f'ExecuteState of the elt: {self._elt}'
         self.done_state = MyQFinalState(self)
-        self.done_state.setObjectName(f'FinalState of the elt: {self._elt}')
+        self.done_state.name_fn = lambda: f'FinalState of the elt: {self._elt}'
         self.children_state = MyState(self)
-        self.children_state.setObjectName(f'ChildrenState of the elt: {self._elt}')
+        self.children_state.name_fn = lambda: f'ChildrenState of the elt: {self._elt}'
         self.setInitialState(self.execute_state)
 
     def track_transition(self, transition: QAbstractTransition) -> QAbstractTransition:

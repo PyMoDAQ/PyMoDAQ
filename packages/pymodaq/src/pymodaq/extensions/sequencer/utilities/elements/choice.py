@@ -26,17 +26,12 @@ class ChoiceElt(SeqEltBase):
     """ Branches to one of two other elements (by id, anywhere in the tree) based on a
     pluggable condition.
 
-    Composes two independent, reusable pieces rather than inheriting them: `condition`
+    Built up from two holders, each owning one self-contained concern: `condition`
     (ConditionHolder - picks a ChoiceModel) and `branches` (BranchHolder - holds the
     True/False targets). go_to_true/go_to_false stay as plain properties over branches'
-    storage (public API / YAML keys unchanged).
-
-    `condition` is constructed before `branches` deliberately: branches' first touch of
-    self.mstate (building its first ValueTransition) lazily constructs a CompositeState that
-    stringifies this element via __repr__, which reads self.choice_model - so condition needs
-    to already exist. With composition this is just the plain, visible order of two lines
-    below, not a cooperative-super()-unwind-order puzzle to get right (see git history for the
-    two different bugs that puzzle caused when this was built from mixins instead).
+    storage (public API / YAML keys unchanged). Construction order between the two doesn't
+    matter: nothing reads this element's __repr__ (which touches both) until a state is
+    actually entered, by which point both already exist - see CompositeState.setup_states().
     """
 
     elt_name = 'choice'
