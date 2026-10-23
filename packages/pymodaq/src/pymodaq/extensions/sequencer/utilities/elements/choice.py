@@ -1,7 +1,5 @@
 from typing import Any
 
-from pyqtgraph import mkColor
-
 from serializall import SerializableFactory
 
 from pymodaq_data import DataToExport
@@ -9,6 +7,7 @@ from pymodaq_data import DataToExport
 from pymodaq_utils.warnings import deprecation_msg
 
 from qt_themes import get_theme
+from pymodaq_gui.utils.styling import color_to_rgba
 from pymodaq_gui.utils.widgets.combo import ComboBox
 from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltBase, SeqEltFactory
 from pymodaq.extensions.sequencer.utilities.elements.button import AddButtonPlaceholder
@@ -102,8 +101,8 @@ class ChoiceElt(SeqEltBase):
     def _style_go_to_combo(self, combo: ComboBox, branch: bool):
         color_name = 'green' if branch else 'red'
         combo.setStyleSheet(
-            f"""background-color: #{hex(mkColor(getattr(get_theme(), color_name)).rgb())[2:]};
-                color: #{hex(mkColor(get_theme().base).rgb())[2:]};
+            f"""background-color: {color_to_rgba(getattr(get_theme(), color_name))};
+                color: {color_to_rgba(get_theme().base)};
             """)
 
     def _create_widget(self, base_widget: WidgetWithToolbar) -> WidgetWithToolbar:
