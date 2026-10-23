@@ -1049,6 +1049,12 @@ command. In that case the attribute argument of the ThreadCommand should be a di
 :py:meth:`set_abs_spinbox_properties<pymodaq.control_modules.daq_move_ui.ui_base.DAQMoveUI.set_abs_spinbox_properties>`.
 
 
+The values of the red, green and relative spinboxes of the UI (the *Value Red*, *Value Green* and *Value Relative*
+entries of the main settings of the module) can also be set from the plugin with the
+:py:meth:`set_default_values<pymodaq.control_modules.move_utility_classes.DAQ_Move_base.set_default_values>` helper,
+for instance ``self.set_default_values(red=400., green=800.)``. It relies on the generic *update_main_settings*
+command, whose attribute is ``[['default_value_red'], 400., 'value']``.
+
 DAQ_Viewer specific commands
 ****************************
 
