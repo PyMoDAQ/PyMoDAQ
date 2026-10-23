@@ -290,6 +290,7 @@ class DAQMoveUI(ControlModuleUI):
                         "Refresh Value Continuously", checkable=True,
                         toolbar=toolbar, icon_checked='repeat_on',
                         icon_checked_color=ThemeColor.GREEN)
+        self._setup_saving_actions(toolbar=toolbar)
         self.add_widget('status', self.statusbar, toolbar=toolbar)
 
     def setup_absolute_spinbox_actions(self, toolbar: QtWidgets.QToolBar = None):

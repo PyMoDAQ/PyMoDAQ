@@ -1,6 +1,6 @@
 from importlib import import_module
 from pathlib import Path
-from typing import Union, TYPE_CHECKING
+from typing import Iterable, Union, TYPE_CHECKING
 import numpy as np
 from qtpy import QtCore, QtWidgets, QtGui
 import qt_themes
@@ -14,6 +14,8 @@ from pymodaq_gui.plotting.utils.plot_utils import DetachablePanel
 from pymodaq_gui.utils.widgets.widget_with_label_title import WidgetWithLabelTitle
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import GlobalConfig as Config
+
+from pymodaq.control_modules.thread_commands import UiToMainSaving
 
 
 if TYPE_CHECKING:
@@ -40,6 +42,7 @@ class ControlModuleUI(CustomApp):
 
     # Common icon name for initialization action
     INIT_ICON = 'cable'
+    CONTINUOUS_SAVE_TIP = 'Toggle continuous saving'
 
     def __init__(self, app: 'ControlModule', parent, title, settings_dock: Dock = None,):
         super().__init__(parent, title=title)
@@ -127,6 +130,37 @@ class ControlModuleUI(CustomApp):
                         checkable=True, icon_checked_color=ThemeColor.GREEN,
                         toolbar=toolbar)
 
+    def _setup_saving_actions(self, toolbar: QtWidgets.QToolBar = None,
+                              extra_actions: Iterable[dict] = ()) -> None:
+        """Add the Continuous Save toolbar group.
+
+        The button face toggles continuous saving; its dropdown holds ``extra_actions``
+        (add_action specs, e.g. a one-shot save) followed by New file / Browse file.
+        """
+        self.add_action_group(
+            'continuous_save', 'Continuous Save', 'save', checkable=True,
+            tip=self.CONTINUOUS_SAVE_TIP, icon_checked_color=ThemeColor.GREEN,
+            toolbar=toolbar,
+            secondary_actions=[
+                *extra_actions,
+                # Same icons H5Manager uses for these actions elsewhere in the app
+                {'short_name': 'new_file', 'name': 'New file', 'icon_name': 'add_circle',
+                 'tip': 'Start a fresh file for continuous saving'},
+                {'short_name': 'browse_file', 'name': 'Browse file', 'icon_name': 'folder_data',
+                 'tip': 'Open the current continuous-save file in an H5Browser'},
+            ])
+
+    def set_continuous_save_state(self, active: bool, pathname: str = '') -> None:
+        """Reflect the continuous-saving state on its toolbar button, including when it
+        was changed from code rather than by clicking it."""
+        if not self.has_action('continuous_save'):
+            return
+        action = self.get_action('continuous_save')
+        if action.isChecked() != active:
+            self.set_action_checked('continuous_save', active)
+        action.setToolTip(f'{self.CONTINUOUS_SAVE_TIP} (current file: {pathname})'
+                          if active and pathname else self.CONTINUOUS_SAVE_TIP)
+
     def update_init_icon(self, initialized: bool, action_name: str = 'init') -> None:
         """Update the initialization action icon based on state
 
@@ -174,6 +208,13 @@ class ControlModuleUI(CustomApp):
             self.connect_action('show_settings', self._show_settings)
         if hasattr(self, '_init_action_name') and self._init_action_name in self.actions_names:
             self.connect_action(self._init_action_name, self.send_init)
+        if self.has_action('continuous_save'):
+            self.connect_action('continuous_save', lambda checked: self.command_sig.emit(
+                ThreadCommand(UiToMainSaving.DO_SAVE, checked)))
+            self.connect_action('new_file', lambda: self.command_sig.emit(
+                ThreadCommand(UiToMainSaving.SAVE_NEW)))
+            self.connect_action('browse_file', lambda: self.command_sig.emit(
+                ThreadCommand(UiToMainSaving.OPEN)))
 
     def close(self):
         """Close and clean up the settings widget. Subclasses should call super().close()."""

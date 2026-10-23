@@ -135,6 +135,14 @@ class UiToMainMove(StrEnum):
     RESET_VALUE = 'reset_value'  # only valid for Relative actuator
 
 
+class UiToMainSaving(StrEnum):
+    """ Continuous-saving commands sent by any ControlModuleUI to its ControlModule
+    """
+    DO_SAVE = 'do_save'
+    SAVE_NEW = 'save_new'
+    OPEN = 'open'
+
+
 class UiToMainViewer(StrEnum):
     """ Allowed Commands to be sent from the DAQ_Viewer_UI to the DAQ_Viewer
     """
@@ -147,8 +155,8 @@ class UiToMainViewer(StrEnum):
     SNAP = 'snap'
     GRAB = 'grab'
     SAVE_CURRENT = 'save_current'
-    SAVE_NEW = 'save_new'
-    OPEN = 'open'
+    SAVE_NEW = 'save_new'  # see UiToMainSaving
+    OPEN = 'open'  # see UiToMainSaving
     RESET_LIVE = 'reset_live'
 
     DETECTOR_CHANGED = 'detector_changed'
