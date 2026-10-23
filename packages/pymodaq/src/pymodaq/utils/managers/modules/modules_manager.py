@@ -81,8 +81,9 @@ class ModulesManager(QObject, ParameterManager):
                  parent_name: str = '',
                  **kwargs: Any) -> None:
         self.parent_name = parent_name
-        # (callback, wrapper) pairs of the callbacks that detach themselves, see _auto_forgetting
-        self._auto_forgetting_wrappers: list[tuple[Callable[..., Any], Callable[..., Any]]] = []
+        # (callback, wrapper, module_type, disconnect_modules) of the callbacks that detach themselves, see
+        # _auto_forgetting
+        self._auto_forgetting_wrappers: list[tuple[Callable[..., Any], Callable[..., Any], ModuleType, bool]] = []
         QObject.__init__(self)
         ParameterManager.__init__(self)
         if detectors is None:
@@ -510,13 +511,14 @@ class ModulesManager(QObject, ParameterManager):
                          disconnect_modules: bool) -> Callable[[DataToExport], Any]:
         """ Wrap `callback` so forget_callback is called on its behalf, right before it runs.
 
-        The wrapper is remembered so that forget_callback(callback) also disconnects it, for instance after a timeout.
+        The wrapper is remembered so that forget_callback(callback) also disconnects it, and it is forgotten by the
+        manager itself if the move/grab times out (see _forget_pending_callbacks).
         """
         def _wrapped(dte: DataToExport):
             self.forget_callback(_wrapped, module_type=module_type,
                                  disconnect_modules=disconnect_modules)
             callback(dte)
-        self._auto_forgetting_wrappers.append((callback, _wrapped))
+        self._auto_forgetting_wrappers.append((callback, _wrapped, module_type, disconnect_modules))
         return _wrapped
 
     def grab_data_with_callback(self,
@@ -559,17 +561,26 @@ class ModulesManager(QObject, ParameterManager):
                                do_connect_modules)
         self._grab_data(check_do_override, Naverage, **kwargs)
 
+    def _forget_pending_callbacks(self, module_type: ModuleType) -> None:
+        """ After a timeout, the self-detaching callbacks (detach_after_callback=True) waiting for this type of
+        modules will never run: disconnect them (and the modules) so that they do not fire on a later grab/move """
+        for entry in list(self._auto_forgetting_wrappers):
+            if entry[2] == module_type:
+                self.forget_callback(entry[1], module_type=module_type, disconnect_modules=entry[3])
+
     def _on_detectors_timeout(self) -> None:
         missing_detectors = self.get_missing_detectors()
         self.timeout_signal.emit(missing_detectors)
         logger.error('Timeout Fired during waiting for data to be acquired from: '
                      f'{", ".join(missing_detectors)}')
+        self._forget_pending_callbacks(ModuleType.Detector)
 
     def _on_actuators_timeout(self) -> None:
         missing_actuators = self.get_missing_actuators()
         self.timeout_signal.emit(missing_actuators)
         logger.error('Timeout Fired during waiting for data to be acquired from: '
                      f'{", ".join(missing_actuators)}')
+        self._forget_pending_callbacks(ModuleType.Actuator)
 
     def grab_data(self, check_do_override: bool = True, Naverage: Optional[int] = None,
                   **kwargs: Any) -> DataToExport:
@@ -841,11 +852,12 @@ class ModulesManager(QObject, ParameterManager):
         been called (for instance because of a timeout).
         """
         callbacks = [callback]
-        for original, wrapper in list(self._auto_forgetting_wrappers):
+        for entry in list(self._auto_forgetting_wrappers):
+            original, wrapper = entry[0], entry[1]
             if wrapper is callback:  # the wrapper is running or is forgotten directly, it is done with
-                self._auto_forgetting_wrappers.remove((original, wrapper))
+                self._auto_forgetting_wrappers.remove(entry)
             elif original == callback:
-                self._auto_forgetting_wrappers.remove((original, wrapper))
+                self._auto_forgetting_wrappers.remove(entry)
                 callbacks.append(wrapper)
 
         if module_type == ModuleType.Detector or module_type==ModuleType.Control:

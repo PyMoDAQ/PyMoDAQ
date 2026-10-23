@@ -431,7 +431,7 @@ class TestMoveActuatorsWithCallback:
             for act in blocker.args[0]:
                 assert act in timeout_acts
 
-    def test_forget_callback_after_timeout_disconnects_the_self_detaching_callback(self, qtbot, manager_with_emission):
+    def test_self_detaching_callback_is_forgotten_after_a_timeout(self, qtbot, manager_with_emission):
         manager_with_emission.selected_actuators_name = ['X_axis']
         act = manager_with_emission.get_mod_from_name('X_axis', mod=ModuleType.Actuator)
         act.do_emission = False
@@ -443,10 +443,10 @@ class TestMoveActuatorsWithCallback:
             with qtbot.waitSignal(manager_with_emission.timeout_signal, timeout=5000):
                 manager_with_emission.move_actuators_with_callback(move_dte, callback=received.append)
 
-        manager_with_emission.forget_callback(received.append, module_type=ModuleType.Actuator)
-        manager_with_emission.move_done_signal.emit(DataToExport('late_positions'))
+        manager_with_emission.move_done_signal.emit(DataToExport('late_positions'))  # no forget_callback needed
 
         assert received == []
+        assert manager_with_emission._auto_forgetting_wrappers == []
 
 class TestGrabData:
     def test_callback_called_when_done(self, qtbot, manager_with_emission):
@@ -495,8 +495,8 @@ class TestGrabData:
         for det in blocker.args[0]:
             assert det in timeout_dets
 
-    def test_forget_callback_after_timeout_disconnects_the_self_detaching_callback(self, qtbot, manager_with_emission):
-        """With detach_after_callback=True the manager connects a wrapper: forget_callback(callback) must find it"""
+    def test_self_detaching_callback_is_forgotten_after_a_timeout(self, qtbot, manager_with_emission):
+        """With detach_after_callback=True the manager connects a wrapper, that it forgets by itself on a timeout"""
         manager_with_emission.selected_detectors_name = ['Det1']
         det = manager_with_emission.get_mod_from_name('Det1', mod=ModuleType.Detector)
         det.do_emission = False
@@ -507,10 +507,24 @@ class TestGrabData:
             with qtbot.waitSignal(manager_with_emission.timeout_signal, timeout=5000):
                 manager_with_emission.grab_data_with_callback(callback=received.append)
 
+        manager_with_emission.det_done_signal.emit(DataToExport('late_data'))  # no forget_callback needed
+
+        assert received == []
+        assert manager_with_emission._auto_forgetting_wrappers == []
+
+    def test_forget_callback_finds_the_wrapper_of_a_self_detaching_callback(self, qtbot, manager_with_emission):
+        manager_with_emission.selected_detectors_name = ['Det1']
+        manager_with_emission.get_mod_from_name('Det1', mod=ModuleType.Detector).do_emission = False
+        received = []
+        with patch.object(manager_with_emission.detectors_timeout_timer, 'start'):  # no timeout, nothing answers
+            manager_with_emission.grab_data_with_callback(callback=received.append)
+        assert len(manager_with_emission._auto_forgetting_wrappers) == 1
+
         manager_with_emission.forget_callback(received.append, module_type=ModuleType.Detector)
         manager_with_emission.det_done_signal.emit(DataToExport('late_data'))
 
         assert received == []
+        assert manager_with_emission._auto_forgetting_wrappers == []
 
     def test_wrappers_are_not_kept_once_the_callback_ran(self, qtbot, manager_with_emission):
         manager_with_emission.selected_detectors_name = ['Det1']
