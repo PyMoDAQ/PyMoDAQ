@@ -81,9 +81,9 @@ class ModulesManager(QObject, ParameterManager):
                  parent_name: str = '',
                  **kwargs: Any) -> None:
         self.parent_name = parent_name
-        # (callback, wrapper, module_type, disconnect_modules) of the callbacks that detach themselves, see
-        # _auto_forgetting
-        self._auto_forgetting_wrappers: list[tuple[Callable[..., Any], Callable[..., Any], ModuleType, bool]] = []
+        # the self-detaching callback waiting for its move/grab (one per type of module), see _auto_forgetting:
+        # module type -> (wrapper, disconnect_modules)
+        self._pending_auto_forgetting: dict[ModuleType, tuple[Callable[..., Any], bool]] = {}
         QObject.__init__(self)
         ParameterManager.__init__(self)
         if detectors is None:
@@ -512,17 +512,16 @@ class ModulesManager(QObject, ParameterManager):
         """ Wrap `callback` so forget_callback is called on its behalf, right before it runs.
 
         The wrapper, not `callback`, is what is connected to the done signal. It calls forget_callback with its own
-        reference (the connected one), so it disconnects itself right before running `callback`. If forget_callback
-        was given `callback`, nothing would be disconnected as `callback` itself is never connected: this is why the
-        (callback, wrapper) pairs are remembered, so that forget_callback(callback) also finds the wrapper.
+        reference (the connected one), so it disconnects itself right before running `callback`.
         If the move/grab times out the wrapper never runs: the manager then forgets it itself (see
-        _forget_pending_callbacks).
+        _forget_pending_callback).
         """
         def _wrapped(dte: DataToExport):
+            self._pending_auto_forgetting.pop(module_type, None)
             self.forget_callback(_wrapped, module_type=module_type,
                                  disconnect_modules=disconnect_modules)
             callback(dte)
-        self._auto_forgetting_wrappers.append((callback, _wrapped, module_type, disconnect_modules))
+        self._pending_auto_forgetting[module_type] = (_wrapped, disconnect_modules)
         return _wrapped
 
     def grab_data_with_callback(self,
@@ -565,26 +564,26 @@ class ModulesManager(QObject, ParameterManager):
                                do_connect_modules)
         self._grab_data(check_do_override, Naverage, **kwargs)
 
-    def _forget_pending_callbacks(self, module_type: ModuleType) -> None:
-        """ After a timeout, the self-detaching callbacks (detach_after_callback=True) waiting for this type of
-        modules will never run: disconnect them (and the modules) so that they do not fire on a later grab/move """
-        for entry in list(self._auto_forgetting_wrappers):
-            if entry[2] == module_type:
-                self.forget_callback(entry[1], module_type=module_type, disconnect_modules=entry[3])
+    def _forget_pending_callback(self, module_type: ModuleType) -> None:
+        """ After a timeout, the self-detaching callback (detach_after_callback=True) waiting for this type of
+        modules will never run: disconnect it (and the modules) so that it does not fire on a later grab/move """
+        pending = self._pending_auto_forgetting.pop(module_type, None)
+        if pending is not None:
+            self.forget_callback(pending[0], module_type=module_type, disconnect_modules=pending[1])
 
     def _on_detectors_timeout(self) -> None:
         missing_detectors = self.get_missing_detectors()
         self.timeout_signal.emit(missing_detectors)
         logger.error('Timeout Fired during waiting for data to be acquired from: '
                      f'{", ".join(missing_detectors)}')
-        self._forget_pending_callbacks(ModuleType.Detector)
+        self._forget_pending_callback(ModuleType.Detector)
 
     def _on_actuators_timeout(self) -> None:
         missing_actuators = self.get_missing_actuators()
         self.timeout_signal.emit(missing_actuators)
         logger.error('Timeout Fired during waiting for data to be acquired from: '
                      f'{", ".join(missing_actuators)}')
-        self._forget_pending_callbacks(ModuleType.Actuator)
+        self._forget_pending_callback(ModuleType.Actuator)
 
     def grab_data(self, check_do_override: bool = True, Naverage: Optional[int] = None,
                   **kwargs: Any) -> DataToExport:
@@ -851,36 +850,22 @@ class ModulesManager(QObject, ParameterManager):
 
         Optionaly also disconnect each selected actuaor and/or detector to the inner method checking when each move/grab
         is done
-
-        This also works for a callback given to a *_with_callback method with detach_after_callback=True, that has not
-        been called (for instance because of a timeout).
         """
-        callbacks = [callback]
-        for entry in list(self._auto_forgetting_wrappers):
-            original, wrapper = entry[0], entry[1]
-            if wrapper is callback:  # the wrapper is running or is forgotten directly, it is done with
-                self._auto_forgetting_wrappers.remove(entry)
-            elif original == callback:
-                self._auto_forgetting_wrappers.remove(entry)
-                callbacks.append(wrapper)
-
         if module_type == ModuleType.Detector or module_type==ModuleType.Control:
             if disconnect_modules:
                 self.connect_detectors(False)
-            for cb in callbacks:
-                try:
-                    self.det_done_signal.disconnect(cb)
-                except TypeError:
-                    pass
+            try:
+                self.det_done_signal.disconnect(callback)
+            except TypeError:
+                pass
 
         if module_type == ModuleType.Actuator or module_type == ModuleType.Control:
             if disconnect_modules:
                 self.connect_actuators(False)
-            for cb in callbacks:
-                try:
-                    self.move_done_signal.disconnect(cb)
-                except TypeError:
-                    pass
+            try:
+                self.move_done_signal.disconnect(callback)
+            except TypeError:
+                pass
 
 
     def _move_actuators(self, dte_act: DataToExport | DataToActuators,

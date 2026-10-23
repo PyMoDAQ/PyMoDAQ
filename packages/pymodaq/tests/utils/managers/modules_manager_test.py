@@ -446,7 +446,7 @@ class TestMoveActuatorsWithCallback:
         manager_with_emission.move_done_signal.emit(DataToExport('late_positions'))  # no forget_callback needed
 
         assert received == []
-        assert manager_with_emission._auto_forgetting_wrappers == []
+        assert manager_with_emission._pending_auto_forgetting == {}
 
 class TestGrabData:
     def test_callback_called_when_done(self, qtbot, manager_with_emission):
@@ -510,21 +510,7 @@ class TestGrabData:
         manager_with_emission.det_done_signal.emit(DataToExport('late_data'))  # no forget_callback needed
 
         assert received == []
-        assert manager_with_emission._auto_forgetting_wrappers == []
-
-    def test_forget_callback_finds_the_wrapper_of_a_self_detaching_callback(self, qtbot, manager_with_emission):
-        manager_with_emission.selected_detectors_name = ['Det1']
-        manager_with_emission.get_mod_from_name('Det1', mod=ModuleType.Detector).do_emission = False
-        received = []
-        with patch.object(manager_with_emission.detectors_timeout_timer, 'start'):  # no timeout, nothing answers
-            manager_with_emission.grab_data_with_callback(callback=received.append)
-        assert len(manager_with_emission._auto_forgetting_wrappers) == 1
-
-        manager_with_emission.forget_callback(received.append, module_type=ModuleType.Detector)
-        manager_with_emission.det_done_signal.emit(DataToExport('late_data'))
-
-        assert received == []
-        assert manager_with_emission._auto_forgetting_wrappers == []
+        assert manager_with_emission._pending_auto_forgetting == {}
 
     def test_wrappers_are_not_kept_once_the_callback_ran(self, qtbot, manager_with_emission):
         manager_with_emission.selected_detectors_name = ['Det1']
@@ -536,7 +522,7 @@ class TestGrabData:
         assert len(received) == 1
         manager_with_emission.det_done_signal.emit(DataToExport('again'))  # the wrapper disconnected itself
         assert len(received) == 1
-        assert manager_with_emission._auto_forgetting_wrappers == []
+        assert manager_with_emission._pending_auto_forgetting == {}
 
 
 class TestProbeDetectors:
