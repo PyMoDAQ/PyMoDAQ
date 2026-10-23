@@ -308,7 +308,19 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         if self.mainwindow is not None:
             self.mainwindow.close()
         self.disconnect_tree()
+        self.delete_actions()
         return True
+
+    def delete_actions(self):
+        """Schedule the deletion of the QActions of this app, including the ones of its H5Manager
+
+        See :meth:`ActionManager.delete_actions`
+
+        .. versionadded:: 5.3.9
+        """
+        super().delete_actions()
+        self._h5_manager.delete_actions()
+        self._h5_manager.deleteLater()  # unparented: the slots connected to its signals would keep the app alive
 
     def do_things_after_ui_setup(self):
         """ Method to be reimplemented in order to do things after the UI setup
