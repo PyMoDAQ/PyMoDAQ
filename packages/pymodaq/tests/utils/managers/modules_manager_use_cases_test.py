@@ -9,7 +9,7 @@ from qtpy.QtCore import QObject, Signal
 from pymodaq.control_modules.enums import MoveType
 from pymodaq.control_modules.thread_commands import ControlToHardwareMove, ControlToHardwareViewer
 from pymodaq.utils.data import DataActuator
-from pymodaq.utils.managers.modules import ModulesManager, ModuleType
+from pymodaq.utils.managers.modules import ModulesManager
 from pymodaq_data.data import DataRaw, DataToExport
 from pymodaq_utils.utils import ThreadCommand
 
@@ -68,11 +68,9 @@ class MoveThenGrab:
                                                           callback=self._on_move_done)
 
     def _on_move_done(self, dte_positions: DataToExport):
-        self.modules_manager.forget_callback(self._on_move_done, module_type=ModuleType.Actuator)
         self.modules_manager.grab_data_with_callback(callback=self._on_grab_done)
 
     def _on_grab_done(self, dte: DataToExport):
-        self.modules_manager.forget_callback(self._on_grab_done, module_type=ModuleType.Detector)
         self.data = dte
 
 
