@@ -6,6 +6,7 @@ from qtpy import QtWidgets, QtCore
 import pytest
 from pytest import fixture, approx
 import qt_themes
+from pymodaq_data.data import DataToExport, DataRaw
 from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
 from pymodaq.utils.gui_utils.loader_utils import create_load_daq_viewer
 from pymodaq_gui.utils.dock import DockArea
@@ -164,3 +165,66 @@ def test_viewers_roi_select_and_crosshair_forwarding(ini_daq_viewer_ui):
         form.close()
         form.deleteLater()
     QtWidgets.QApplication.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete)
+
+
+class TestAveragingStatistics:
+    def test_standard_error_of_the_mean(self):
+        n_spectra = 25
+        rng = np.random.default_rng(1)
+        spectra = rng.normal(loc=3., scale=0.5, size=(n_spectra, 40))
+        statistics = daqvm.AveragingStatistics()
+        for spectrum in spectra:
+            statistics.add(DataToExport('acquisition', data=[DataRaw('raw', data=[spectrum])]))
+
+        expected_error = np.std(spectra, axis=0, ddof=1) / np.sqrt(n_spectra)
+        assert statistics.n_data == n_spectra
+        assert statistics.standard_errors()[0][0] == approx(expected_error)
+
+    def test_errors_are_only_set_from_two_acquisitions(self):
+        statistics = daqvm.AveragingStatistics()
+        data = DataToExport('acquisition', data=[DataRaw('raw', data=[np.array([1., 2.])])])
+        statistics.add(data)
+        statistics.set_errors(data)
+        assert data[0].errors is None
+        with pytest.raises(ValueError):
+            statistics.standard_errors()
+
+        statistics.add(DataToExport('acquisition', data=[DataRaw('raw', data=[np.array([3., 2.])])]))
+        statistics.set_errors(data)
+        assert data[0].errors[0] == approx(np.array([1., 0.]))
+
+    def test_reset(self):
+        statistics = daqvm.AveragingStatistics()
+        statistics.add(DataToExport('acquisition', data=[DataRaw('raw', data=[np.array([1.])])]))
+        statistics.reset()
+        assert statistics.n_data == 0
+
+
+class TestSoftwareAveraging:
+    def test_errors_of_the_averaged_data(self, ini_daq_viewer_without_ui):
+        prog, qtbot = ini_daq_viewer_without_ui
+        n_average = 10
+        prog.detector = SelectedModule(DAQTypesEnum['DAQ1D'], 'Mock')
+        with qtbot.waitSignal(prog.init_signal, timeout=10000):
+            prog.init_hardware(True)
+        prog.settings.child('main_settings', 'Naverage').setValue(n_average)
+
+        with qtbot.waitSignal(prog.grab_done_signal, timeout=20000) as blocker:
+            prog.snap()
+
+        averaged_data = blocker.args[0]
+        assert averaged_data[0].n_averaged == n_average
+        assert averaged_data[0].errors is not None
+        assert averaged_data[0].errors[0].shape == averaged_data[0].data[0].shape
+        assert np.all(averaged_data[0].errors[0] >= 0)
+
+    def test_no_errors_without_averaging(self, ini_daq_viewer_without_ui):
+        prog, qtbot = ini_daq_viewer_without_ui
+        prog.detector = SelectedModule(DAQTypesEnum['DAQ1D'], 'Mock')
+        with qtbot.waitSignal(prog.init_signal, timeout=10000):
+            prog.init_hardware(True)
+
+        with qtbot.waitSignal(prog.grab_done_signal, timeout=20000) as blocker:
+            prog.snap()
+
+        assert blocker.args[0][0].errors is None

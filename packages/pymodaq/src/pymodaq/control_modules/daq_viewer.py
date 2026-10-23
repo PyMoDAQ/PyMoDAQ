@@ -15,6 +15,7 @@ import sys
 from typing import List, Tuple, Union, Optional
 import time
 
+import numpy as np
 from easydict import EasyDict as edict
 from qtpy import QtWidgets
 from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal
@@ -976,6 +977,80 @@ class DAQ_Viewer(ParameterControlModule):
             super().process_leco_commands(status=status)
 
 
+class AveragingStatistics:
+    """ Running statistics of the data averaged software wise by the DAQ_Viewer
+
+    The mean itself is computed by :meth:`pymodaq_data.data.DataToExport.average`. This object follows, array by array,
+    the sum of the squared deviations to the mean (Welford's algorithm, stable and without keeping the N acquisitions
+    in memory), so that the standard error of the mean, sigma / sqrt(N), can be attached to the
+    averaged data in their ``errors`` attribute.
+
+    Only the averaging done by the DAQ_Viewer is concerned. If an instrument plugin sets ``hardware_averaging`` to
+    ``True``, the averaging is done by the instrument and it is up to the plugin to fill the ``errors`` attribute of the
+    data it emits.
+    """
+
+    def __init__(self):
+        self._n = 0
+        self._mean: List[List[np.ndarray]] = []
+        self._sum_sq_dev: List[List[np.ndarray]] = []
+
+    @property
+    def n_data(self) -> int:
+        """ The number of acquisitions taken into account"""
+        return self._n
+
+    def reset(self):
+        """ Forget everything, to be called before starting a new average"""
+        self._n = 0
+        self._mean = []
+        self._sum_sq_dev = []
+
+    def add(self, data: DataToExport):
+        """ Take a new acquisition into account
+
+        Parameters
+        ----------
+        data: DataToExport
+            The acquisition, it has the same structure (number of DataWithAxes and shape of their arrays) as all
+            the previous ones
+        """
+        new_arrays = [[np.asarray(array, dtype=float if not np.iscomplexobj(array) else complex)
+                       for array in dwa.data] for dwa in data]
+        self._n += 1
+        if self._n == 1:
+            self._mean = new_arrays
+            self._sum_sq_dev = [[np.zeros(array.shape) for array in dwa_arrays] for dwa_arrays in new_arrays]
+            return
+        for mean_arrays, sum_arrays, dwa_arrays in zip(self._mean, self._sum_sq_dev, new_arrays):
+            for ind, new_array in enumerate(dwa_arrays):
+                delta = new_array - mean_arrays[ind]
+                mean_arrays[ind] = mean_arrays[ind] + delta / self._n
+                sum_arrays[ind] = sum_arrays[ind] + np.real(delta * np.conj(new_array - mean_arrays[ind]))
+
+    def standard_errors(self) -> List[List[np.ndarray]]:
+        """ The standard error of the mean, sqrt(sum((x_i - mean)^2) / (N (N - 1))), for each array of each
+        DataWithAxes. Needs at least two acquisitions."""
+        if self._n < 2:
+            raise ValueError('At least two acquisitions are needed to compute a standard error')
+        return [[np.sqrt(array / (self._n * (self._n - 1))) for array in dwa_arrays]
+                for dwa_arrays in self._sum_sq_dev]
+
+    def set_errors(self, data: DataToExport):
+        """ Set the standard error of the mean as the ``errors`` attribute of each DataWithAxes of data (replacing
+        existing ones), only if at least two acquisitions have been taken into account
+
+        Parameters
+        ----------
+        data: DataToExport
+            The averaged data, same structure as the acquisitions
+        """
+        if self._n < 2:
+            return
+        for dwa, errors in zip(data, self.standard_errors()):
+            dwa.errors = errors
+
+
 class DetectorWorker(HardwareWorkerBase):
     """ Worker class to control the instrument plugin
 
@@ -1005,6 +1080,7 @@ class DetectorWorker(HardwareWorkerBase):
         self.ind_average = 0
         self.Naverage = 1
         self.average_done = False
+        self.averaging_statistics = AveragingStatistics()
         self.hardware_averaging = False
         self.show_averaging = False
         self.wait_time = settings_parameter['main_settings', 'wait_time']
@@ -1128,7 +1204,10 @@ class DetectorWorker(HardwareWorkerBase):
     def data_ready(self, data: DataToExport):
         """ Process the data received from the instrument plugin class
 
-        Processing here is eventual software averaging if it was not possible in the instrument plugin class
+        Processing here is eventual software averaging if it was not possible in the instrument plugin class. In this
+        case, the standard error of the mean is also computed and attached to the averaged data (``errors`` attribute of
+        each DataWithAxes). With a hardware averaging (``hardware_averaging`` set to ``True`` in the plugin) the
+        statistics are not available here, it is up to the plugin to provide the ``errors`` if wanted.
 
         Parameters
         ----------
@@ -1140,8 +1219,11 @@ class DetectorWorker(HardwareWorkerBase):
             self.ind_average += 1
             if self.ind_average == 1:
                 self.datas = data.deepcopy()
+                self.averaging_statistics.reset()
             else:
                 self.datas = data.average(self.datas, self.ind_average - 1)
+            self.averaging_statistics.add(data)
+            self.averaging_statistics.set_errors(self.datas)
 
             if self.show_averaging:
                 self.emit_temp_data(self.datas)

@@ -162,7 +162,9 @@ Main settings refers to settings common to all instrument plugin. They are mostl
   in which the data will be displayed and saved. Default is ``as_is``
 * **Show data and process**: boolean for plotting (or not data in the data viewer)
 * **Refresh time (ms)**: used to slow down the refreshing of the display (but not of the eventual saving...)
-* **Naverage**: integer to set in order to do data averaging, see :ref:`hardware_averaging`.
+* **Naverage**: integer to set in order to do data averaging, see :ref:`hardware_averaging`. If the averaging is done
+  by the DAQ_Viewer (not by the instrument), the standard error of the mean is attached to the averaged data, in their
+  ``errors`` attribute.
 * **Show averaging**: in the case of software averaging (see :ref:`hardware_averaging`), if this is set to ``True``,
   intermediate averaging data will be displayed
 * **Live averaging**: *show averaging* must be set to ``False``. If set to ``True``, a *live* ``grab`` will perform
