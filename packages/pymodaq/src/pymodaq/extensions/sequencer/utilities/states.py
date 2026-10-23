@@ -52,6 +52,13 @@ class MyQFinalState(QFinalState):
 
 
 class _SignalRelay(QtCore.QObject):
+    """ Forwards the signals of a sequence element to transitions owned by a state
+
+    A transition built directly on the signal of an element holds a reference to it. As the states are kept alive by
+    their C++ parent, this creates a reference cycle (state -> element -> sequence -> state) going through C++ that
+    the garbage collector cannot see, and the whole sequence (and its widgets) is never freed. Building the
+    transitions on the signals of this relay, which belongs to the state, keeps the element out of the cycle.
+    """
     children_signal = QtCore.Signal()
     done_signal = QtCore.Signal()
 
