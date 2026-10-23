@@ -167,3 +167,18 @@ def test_settings_legacy_multiaxes_access(qtbot):
     with pytest.deprecated_call():
         assert (hardware.settings['multiaxes', 'multi_status']
                 == hardware.settings['controller', 'controller_status'])
+
+
+def test_set_default_values_emits_main_settings_updates(qtbot):
+    class Hardware(DAQ_Move_base):
+        params = comon_parameters_fun(False, ['a'])
+
+    hardware = Hardware()
+    commands = []
+    hardware.emit_status = commands.append
+
+    hardware.set_default_values(red=1., relative=0.5)
+
+    assert [(cmd.command, cmd.attribute) for cmd in commands] == [
+        ('update_main_settings', [['default_value_red'], 1., 'value']),
+        ('update_main_settings', [['default_value_relative'], 0.5, 'value'])]
