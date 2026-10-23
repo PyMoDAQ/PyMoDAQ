@@ -44,3 +44,4 @@ jobs:
           packages/pymodaq/src/pymodaq/utils/dashboard_mixin.py
           packages/pymodaq_gui/src/pymodaq_gui/utils/custom_app.py
           packages/pymodaq_gui/src/pymodaq_gui/managers/parameter_manager.py
+          packages/pymodaq_gui/src/pymodaq_gui/managers/action_manager.py
