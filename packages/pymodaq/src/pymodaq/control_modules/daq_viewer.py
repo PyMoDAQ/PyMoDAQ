@@ -526,6 +526,7 @@ class DAQ_Viewer(ParameterControlModule):
         """
         if self._h5saver_continuous.settings.child('do_save').value():
 
+            self._h5saver_continuous.settings.child('base_name').setValue('Data')
             self.settings.child('saver_settings', 'base_name').setValue('Data')
             self.settings.child('saver_settings', 'N_saved').show()
             self.settings.child('saver_settings', 'N_saved').setValue(0)
@@ -822,6 +823,25 @@ class DAQ_Viewer(ParameterControlModule):
     # -------------------------------------------------------------------------
     # Saving
     # -------------------------------------------------------------------------
+
+    @property
+    def module_and_data_saver(self) -> Union[module_saving.DetectorSaver,
+                                              module_saving.DetectorTimeSaver]:
+        """Override the base :class:`ControlModule` property.
+
+        The base getter/setter eagerly fall back to the generic, scan-typed
+        ``self.h5saver`` (and open a file for it) whenever no h5saver has been
+        attached yet. DAQ_Viewer never wants that fallback: every call site
+        here assigns its own detector-typed h5saver (``_h5saver_continuous``
+        or an ad hoc one) right after setting this attribute, so the fallback
+        only causes a stray, unused ``Dataset_...h5`` file to be created.
+        """
+        return self._module_and_data_saver
+
+    @module_and_data_saver.setter
+    def module_and_data_saver(self, mod: Union[module_saving.DetectorSaver,
+                                                module_saving.DetectorTimeSaver]):
+        self._module_and_data_saver = mod
 
     def setup_continuous_saving(self, init: bool = True):
         """Configure the objects dealing with the continuous saving mode"""
