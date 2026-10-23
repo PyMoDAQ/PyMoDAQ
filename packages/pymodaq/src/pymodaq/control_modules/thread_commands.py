@@ -113,7 +113,7 @@ class ControlToHardwareViewer(StrEnum):
 
 
 class UiToMainMove(StrEnum):
-    """ Allowed Commands to be sent from the DAQ_Move_UI to the DAQ_Move
+    """ Allowed Commands to be sent from the DAQMoveUI to the DAQ_Move
     """
     INIT = 'init'
     QUIT = 'quit'
