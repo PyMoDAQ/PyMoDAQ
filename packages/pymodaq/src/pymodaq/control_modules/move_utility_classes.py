@@ -928,7 +928,9 @@ class DAQ_Move_base(PluginBase):
         if settings_parameter_dict['change'] == 'value':
             param = settings_parameter_dict['param']
             if param.name() == 'axis':
-                self.axis_name = param.value()
+                # the value of the parameter is the axis name for a list of names but the value of the dict for named
+                # axes: the axis_name getter always returns the name, setting it updates units and epsilon
+                self.axis_name = self.axis_name
             elif param.name() == 'epsilon':
                 self.epsilon = param.value()
 
