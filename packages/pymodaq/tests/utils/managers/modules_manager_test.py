@@ -534,6 +534,8 @@ class TestGrabData:
             manager_with_emission.grab_data_with_callback(callback=received.append)
 
         assert len(received) == 1
+        manager_with_emission.det_done_signal.emit(DataToExport('again'))  # the wrapper disconnected itself
+        assert len(received) == 1
         assert manager_with_emission._auto_forgetting_wrappers == []
 
 
