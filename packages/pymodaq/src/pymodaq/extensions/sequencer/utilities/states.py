@@ -1,3 +1,4 @@
+import weakref
 from typing import TYPE_CHECKING, Any, Union
 import qtpy
 from qtpy import QtCore
@@ -50,6 +51,18 @@ class MyQFinalState(QFinalState):
         logger.debug(f'Exiting {self.objectName()}')
 
 
+class _SignalRelay(QtCore.QObject):
+    """ Forwards the signals of a sequence element to transitions owned by a state
+
+    A transition built directly on the signal of an element holds a reference to it. As the states are kept alive by
+    their C++ parent, this creates a reference cycle (state -> element -> sequence -> state) going through C++ that
+    the garbage collector cannot see, and the whole sequence (and its widgets) is never freed. Building the
+    transitions on the signals of this relay, which belongs to the state, keeps the element out of the cycle.
+    """
+    children_signal = QtCore.Signal()
+    done_signal = QtCore.Signal()
+
+
 class CompositeState(MyState):
     def __init__(self, elt: 'SeqEltBase', *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -61,16 +74,26 @@ class CompositeState(MyState):
 
         self.transitions_to_keep = []
 
-        self._elt = elt
+        self._elt_ref = weakref.ref(elt)  # the states are held by C++ (their parent): a strong reference to the
+        # element, that refers to the sequence, would be a cycle the garbage collector can not see
 
         self.setup_states()
 
         self.execute_state.entered.connect(elt.execute)
+        # the transitions listen to relays owned by this state: a transition holding a signal of the element
+        # would keep the element (and this state, held by it) alive
+        self._relay = _SignalRelay(self)
+        elt.children_signal.connect(self._relay.children_signal)
+        elt.done_signal.connect(self._relay.done_signal)
         self.transitions_to_keep.append(
-            self.execute_state.addTransition(elt.children_signal, self.children_state))
+            self.execute_state.addTransition(self._relay.children_signal, self.children_state))
 
         self.transitions_to_keep.append(
-            self.addTransition(elt.done_signal, self.done_state))  # apply to all substates)
+            self.addTransition(self._relay.done_signal, self.done_state))  # apply to all substates)
+
+    @property
+    def _elt(self) -> 'SeqEltBase':
+        return self._elt_ref()
 
     def set_do_init(self, value: bool) -> None:
         if value and hasattr(self._elt, 'initialize_element'):
