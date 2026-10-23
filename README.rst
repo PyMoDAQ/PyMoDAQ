@@ -15,28 +15,16 @@ PyMoDAQ
 ====== ========== ======= ======
 Python Qt Backend OS      Passed
 ====== ========== ======= ======
-3.8    Qt5        Linux   |38Qt5|
 3.10   Qt5        Linux   |310Qt5|
 3.11   Qt5        Linux   |311Qt5|
-3.8    Qt5        Windows |38Qt5win|
-3.8    PySide2    Linux   |38pyside|
 ====== ========== ======= ======
 
-
-.. |38Qt5| image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp38pyqt5.yml/badge.svg?branch=4.4.x
-    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp38pyqt5.yml
 
 .. |310Qt5| image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp310pyqt5.yml/badge.svg?branch=4.4.x
     :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp310pyqt5.yml
 
 .. |311Qt5| image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp311pyqt5.yml/badge.svg?branch=4.4.x
     :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp311pyqt5.yml
-
-.. |38Qt5win| image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp38pyqt5_win.yml/badge.svg?branch=4.4.x
-    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp38pyqt5_win.yml
-
-.. |38pyside| image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp38pyside2.yml/badge.svg?branch=4.4.x
-    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp38pyside2.yml
 
 
 

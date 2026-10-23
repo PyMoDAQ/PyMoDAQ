@@ -9,14 +9,10 @@ on:
         qt5:
           required: true
           type: string
-        os:
-          required: false
-          type: string
-          default: ubuntu-latest
 
 jobs:
   build:
-    runs-on: ${{ inputs.os }}
+    runs-on: ubuntu-latest
     env:
       DISPLAY: ':99.0'
       QT_DEBUG_PLUGINS: 1
