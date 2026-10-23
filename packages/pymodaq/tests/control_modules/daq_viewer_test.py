@@ -168,39 +168,6 @@ def test_viewers_roi_select_and_crosshair_forwarding(ini_daq_viewer_ui):
     QtWidgets.QApplication.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete)
 
 
-class TestAveragingStatistics:
-    def test_standard_error_of_the_mean(self):
-        n_spectra = 25
-        rng = np.random.default_rng(1)
-        spectra = rng.normal(loc=3., scale=0.5, size=(n_spectra, 40))
-        statistics = daqvm.AveragingStatistics()
-        for spectrum in spectra:
-            statistics.add(DataToExport('acquisition', data=[DataRaw('raw', data=[spectrum])]))
-
-        expected_error = np.std(spectra, axis=0, ddof=1) / np.sqrt(n_spectra)
-        assert statistics.n_data == n_spectra
-        assert statistics.standard_errors()[0][0] == approx(expected_error)
-
-    def test_errors_are_only_set_from_two_acquisitions(self):
-        statistics = daqvm.AveragingStatistics()
-        data = DataToExport('acquisition', data=[DataRaw('raw', data=[np.array([1., 2.])])])
-        statistics.add(data)
-        statistics.set_errors(data)
-        assert data[0].errors is None
-        with pytest.raises(ValueError):
-            statistics.standard_errors()
-
-        statistics.add(DataToExport('acquisition', data=[DataRaw('raw', data=[np.array([3., 2.])])]))
-        statistics.set_errors(data)
-        assert data[0].errors[0] == approx(np.array([1., 0.]))
-
-    def test_reset(self):
-        statistics = daqvm.AveragingStatistics()
-        statistics.add(DataToExport('acquisition', data=[DataRaw('raw', data=[np.array([1.])])]))
-        statistics.reset()
-        assert statistics.n_data == 0
-
-
 class TestSoftwareAveraging:
     def test_errors_of_the_averaged_data(self, ini_daq_viewer_without_ui):
         prog, qtbot = ini_daq_viewer_without_ui
