@@ -104,6 +104,15 @@ class SequenceWidgetDelegate(QtWidgets.QStyledItemDelegate):
             layout = QtWidgets.QVBoxLayout(container)
             layout.setContentsMargins(1, 1, 1, 1)
             layout.addWidget(widget)
+
+            # The popup is frameless (no native border to drag-resize from), so content that's
+            # taller than its computed size_hint would otherwise just be clipped with no way
+            # to see the rest - a size grip lets the user stretch it instead.
+            grip_row = QtWidgets.QHBoxLayout()
+            grip_row.addStretch()
+            grip_row.addWidget(QtWidgets.QSizeGrip(container))
+            layout.addLayout(grip_row)
+
             container.setFocusProxy(widget)
             return container
 

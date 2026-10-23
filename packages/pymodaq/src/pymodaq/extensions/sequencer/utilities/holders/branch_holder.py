@@ -12,6 +12,12 @@ from pymodaq.extensions.sequencer.utilities.widget_with_toolbar import WidgetWit
 if TYPE_CHECKING:
     from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltBase
 
+#: branch target sentinel meaning "wherever this element would go next anyway" - resolved
+#: against elt.mstate.next_state (Sequence.recursive_connect_elts() sets it on every run), not
+#: a specific id. A plain string, not an int, so it can never collide with a real element id
+#: and round-trips through to_dict/from_dict with no special-casing needed.
+CONTINUE = 'continue'
+
 
 class BranchHolder:
     """ Holds N labeled branch targets (element ids) and N ValueTransitions wired into the
@@ -63,8 +69,11 @@ class BranchHolder:
             self.elt.mstate.addTransition(transition)
             self.value_transitions[branch] = transition
 
-    def set_go_to(self, branch, value: int):
+    def set_go_to(self, branch, value: int | str):
         self._go_to[branch] = value
+        if value == CONTINUE:
+            self.value_transitions[branch].setTargetState(self.elt.mstate.next_state)
+            return
         target_elt = self.elt.get_elt_from_id(value)
         if target_elt is not None:
             self.value_transitions[branch].update_target(target_elt.mstate)
@@ -74,20 +83,32 @@ class BranchHolder:
         return self.elt.get_ids(without_ids=(self.elt.id,),
                                 without_types=(AddButtonPlaceholder,))[index]
 
+    def _combo_index_to_value(self, index: int) -> int | str:
+        """ Resolve the target combo's own selected index (0 = the synthetic "Continue" entry,
+        1+ = real elements) - not the same numbering as _index_to_id's, which the deprecated
+        set_go_to_true/set_go_to_false still document as a plain index into get_ids(...), with
+        no Continue offset. """
+        if index == 0:
+            return CONTINUE
+        return self._index_to_id(index - 1)
+
     def _create_combo(self, branch, style_hook=None) -> ComboBox:
         combo = ComboBox()
         with QtCore.QSignalBlocker(combo):
+            combo.addItem('Continue')
             combo.addItems(self.elt.get_elts_as_str(without_ids=(self.elt.id,),
                                                      without_types=(AddButtonPlaceholder,)))
             target_id = self._go_to.get(branch)
-            if target_id is not None:
+            if target_id == CONTINUE:
+                combo.setCurrentIndex(0)
+            elif target_id is not None:
                 combo.setCurrentText(str(self.elt.get_elt_from_id(target_id)))
             else:
                 # Leave genuinely unset rather than showing Qt's default index-0 selection,
                 # which would misleadingly look like a target is already configured.
                 combo.setCurrentIndex(-1)
             combo.currentIndexChanged.connect(
-                lambda index, b=branch: self.set_go_to(b, self._index_to_id(index)))
+                lambda index, b=branch: self.set_go_to(b, self._combo_index_to_value(index)))
             combo.setToolTip(f'Go to this elt if {self.branch_labels[branch]}')
         if style_hook is not None:
             style_hook(combo, branch)
@@ -103,17 +124,22 @@ class BranchHolder:
     def update_target_states(self):
         """ Resolve any not-yet-resolved branch target now that the tree may have changed.
 
+        A CONTINUE branch is always re-resolved, not just when still unset: what "continue"
+        points at can change across runs if the tree was restructured, unlike a real element's
+        target which doesn't move once resolved.
+
         Leaves a transition's target as None if the id doesn't resolve to a real element
         (e.g. never set, or its target was since removed) - check_set_is_valid's own
         targetState() is None check is what reports that as a proper ElementError.
         """
         for branch, transition in self.value_transitions.items():
-            if transition.targetState() is None:
-                target_id = self._go_to.get(branch)
-                if target_id is not None:
-                    target_elt = self.elt.get_elt_from_id(target_id)
-                    if target_elt is not None:
-                        transition.setTargetState(target_elt.mstate)
+            target_id = self._go_to.get(branch)
+            if target_id == CONTINUE:
+                transition.setTargetState(self.elt.mstate.next_state)
+            elif transition.targetState() is None and target_id is not None:
+                target_elt = self.elt.get_elt_from_id(target_id)
+                if target_elt is not None:
+                    transition.setTargetState(target_elt.mstate)
 
     def check_set_is_valid(self):
         """ Raises ElementError naming whichever branch(es) have no resolvable target. """

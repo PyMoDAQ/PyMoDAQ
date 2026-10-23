@@ -1,5 +1,7 @@
 from typing import Any
 
+from qtpy import QtCore
+
 from serializall import SerializableFactory
 
 from pymodaq_data import DataToExport
@@ -57,11 +59,11 @@ class ChoiceElt(SeqEltBase):
         self.choice_model = value
 
     @property
-    def go_to_true(self) -> int:
+    def go_to_true(self) -> int | str:
         return self.branches._go_to[True]
 
     @go_to_true.setter
-    def go_to_true(self, value: int):
+    def go_to_true(self, value: int | str):
         self.branches.set_go_to(True, value)
 
     def set_go_to_true(self, index: int):
@@ -72,11 +74,11 @@ class ChoiceElt(SeqEltBase):
         self.go_to_true = self.branches._index_to_id(index)
 
     @property
-    def go_to_false(self) -> int:
+    def go_to_false(self) -> int | str:
         return self.branches._go_to[False]
 
     @go_to_false.setter
-    def go_to_false(self, value: int):
+    def go_to_false(self, value: int | str):
         self.branches.set_go_to(False, value)
 
     def set_go_to_false(self, index: int):
@@ -138,3 +140,7 @@ class ChoiceElt(SeqEltBase):
     def check_set_is_valid(self) -> bool:
         self.branches.check_set_is_valid()
         self.condition.check_set_is_valid()
+
+    def size_hint(self) -> QtCore.QSize:
+        rows = self.condition.count_settings_rows(self.condition.model.settings)
+        return QtCore.QSize(200, 150 + rows * 25)

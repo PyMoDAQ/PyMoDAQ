@@ -4,6 +4,7 @@ import weakref
 from qtpy import QtCore
 
 from pymodaq_gui.managers.parameter_manager import ParameterTreeWidget
+from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.utils.widgets.combo import ComboBox
 
 from pymodaq.extensions.sequencer.utilities.holders.modules_manager_binding import ModulesManagerBinding
@@ -62,6 +63,16 @@ class ConditionHolderBase:
     def set_model(self, value: str):
         self.model = value
 
+    @staticmethod
+    def count_settings_rows(settings: Parameter) -> int:
+        """ Total rows `settings` would render, recursively through nested groups - a plain
+        len(settings.children()) only sees the top level, which stays constant even as e.g. a
+        composite choice model's 'conditions' group grows (each condition is a nested child of
+        that group, not a sibling of 'operator'), so it can't be used to size anything around
+        the tree. """
+        return sum(1 + ConditionHolderBase.count_settings_rows(child)
+                   for child in settings.children())
+
     def create_widget(self, base_widget: WidgetWithToolbar) -> WidgetWithToolbar:
         combo = ComboBox()
         with QtCore.QSignalBlocker(combo):
@@ -75,7 +86,7 @@ class ConditionHolderBase:
         parameter_tree = ParameterTreeWidget()
         parameter_tree.tree.setParameters(self.model.settings, showTop=False)
         self._param_tree_widget = weakref.ref(parameter_tree)
-        parameter_tree.tree.setMinimumHeight(len(self.model.settings.children()) * 50)
+        parameter_tree.tree.setMinimumHeight(self.count_settings_rows(self.model.settings) * 25)
         combo.currentTextChanged.connect(lambda: self._update_params(parameter_tree))
         base_widget.insert_widget(parameter_tree.widget, 2)
         base_widget.tree = parameter_tree
@@ -85,7 +96,7 @@ class ConditionHolderBase:
     def _update_params(self, param: ParameterTreeWidget):
         param.widget.setVisible(len(self.model.params) != 0)
         param.tree.setParameters(self.model.settings, showTop=False)
-        param.tree.setMinimumHeight(len(self.model.settings.children()) * 50)
+        param.tree.setMinimumHeight(self.count_settings_rows(self.model.settings) * 25)
 
     def to_dict(self) -> dict[str, Any]:
         dict_config = {self.dict_key: self.model.model_name}

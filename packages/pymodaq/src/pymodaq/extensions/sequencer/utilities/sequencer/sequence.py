@@ -209,9 +209,10 @@ class Sequence(CustomExt):
             if ind_child == 0:
                 elt.mstate.children_state.setInitialState(child.mstate)
             if ind_child == len(elt.children_without_add) - 1:
-                child.mstate.add_external_transition(child.mstate.finished, elt.mstate.execute_state)
+                child.mstate.next_state = elt.mstate.execute_state
             else:
-                child.mstate.add_external_transition(child.mstate.finished, elt.children[ind_child+1].mstate)
+                child.mstate.next_state = elt.children[ind_child+1].mstate
+            child.mstate.add_external_transition(child.mstate.finished, child.mstate.next_state)
             child.mstate.assignProperty(self.label, 'text', repr(child))
             if child.children_allowed:
                 self.recursive_connect_elts(child)

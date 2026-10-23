@@ -79,6 +79,12 @@ class CompositeState(MyState):
         self.children_state: MyState | None = None
         self._external_transitions = []
 
+        #: whatever Sequence.recursive_connect_elts() wires this element's own forward
+        #: progress to (next sibling, or the parent's execute_state if it's last) - stashed
+        #: there each run so anything else that needs "what comes after me" (BranchHolder's
+        #: CONTINUE branches) doesn't have to recompute sibling/parent lookups itself.
+        self.next_state: Union['CompositeState', MyQFinalState, None] = None
+
         self._elt = elt
 
         self.setup_states()

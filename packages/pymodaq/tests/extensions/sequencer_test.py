@@ -8,6 +8,7 @@ from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltFactory
 from pymodaq.extensions.sequencer.utilities.elements.choice import ChoiceElt
 from pymodaq.extensions.sequencer.utilities.elements.root import RootElt
 from pymodaq.extensions.sequencer.utilities.elements.wait import WaitElt
+from pymodaq.extensions.sequencer.utilities.holders.branch_holder import CONTINUE
 from pymodaq.extensions.sequencer.utilities.holders.modules_manager_binding import ModulesManagerBinding
 from pymodaq.extensions.sequencer.utilities.elements.grab import GrabElt
 from pymodaq.extensions.sequencer.utilities.states import TrackedTransition
@@ -184,6 +185,78 @@ class TestChoiceElt:
         elt.go_to_true = wait.id
         elt.go_to_false = 9999  # never resolves to a real element
         elt.branches.update_target_states()  # must not raise
+
+    def test_continue_branch_round_trips(self, qtbot):
+        """ A branch set to CONTINUE serializes as the plain string, not an id - no special
+        casing needed in to_dict_custom/from_dict_custom. """
+        root = RootElt()
+        elt = ChoiceElt(1, parent=root)
+        wait = WaitElt(10, parent=root)
+        root._children = [elt, wait]
+        elt.go_to_true = CONTINUE
+        elt.go_to_false = wait.id
+
+        saved = elt.to_dict_custom()
+        assert saved['go_to_true'] == CONTINUE
+        reloaded = ChoiceElt(1, parent=root)
+        reloaded.from_dict_custom(dict(saved))
+        assert reloaded.go_to_true == CONTINUE
+        assert reloaded == elt
+
+    def test_continue_branch_resolves_to_next_state(self, qtbot):
+        """ CONTINUE resolves against elt.mstate.next_state - whatever
+        Sequence.recursive_connect_elts() wires this element's own forward progress to - not a
+        specific element id. """
+        root = RootElt()
+        elt = ChoiceElt(1, parent=root)
+        wait_a = WaitElt(2, parent=root)
+        wait_b = WaitElt(3, parent=root)
+        root._children = [elt, wait_a, wait_b]
+        elt.go_to_true = CONTINUE
+        elt.go_to_false = wait_b.id
+
+        elt.mstate.next_state = wait_a.mstate  # what recursive_connect_elts() would set
+        elt.branches.update_target_states()
+
+        assert elt.branches.value_transitions[True].targetState() is wait_a.mstate
+
+    def test_continue_branch_always_re_resolves(self, qtbot):
+        """ Unlike a real element id (only resolved when still unset), a CONTINUE branch must
+        be re-resolved every call: what "continue" points at can change across runs if the tree
+        was restructured in between, so a stale, already-resolved target can't be left to
+        stick. """
+        root = RootElt()
+        elt = ChoiceElt(1, parent=root)
+        wait_a = WaitElt(2, parent=root)
+        wait_b = WaitElt(3, parent=root)
+        root._children = [elt, wait_a, wait_b]
+        elt.go_to_true = CONTINUE
+        elt.go_to_false = wait_b.id
+
+        elt.mstate.next_state = wait_a.mstate
+        elt.branches.update_target_states()
+        assert elt.branches.value_transitions[True].targetState() is wait_a.mstate
+
+        # tree restructured: a new element now follows elt instead
+        inserted = WaitElt(4, parent=root)
+        elt.mstate.next_state = inserted.mstate
+        elt.branches.update_target_states()
+        assert elt.branches.value_transitions[True].targetState() is inserted.mstate
+
+    def test_combo_index_vs_deprecated_index_stay_independent(self, qtbot):
+        """ The target combo's own index numbering (0 = Continue, 1+ = real elements) must not
+        leak into _index_to_id, which set_go_to_true/set_go_to_false still document as a plain
+        index into get_ids(...) with no Continue offset - sharing one numbering would silently
+        break anyone still using the deprecated index-based setters. """
+        root = RootElt()
+        elt = ChoiceElt(1, parent=root)
+        wait_a = WaitElt(2, parent=root)
+        wait_b = WaitElt(3, parent=root)
+        root._children = [elt, wait_a, wait_b]
+
+        assert elt.branches._combo_index_to_value(0) == CONTINUE
+        assert elt.branches._index_to_id(0) == wait_a.id
+        assert elt.branches._combo_index_to_value(1) == elt.branches._index_to_id(0)
 
     def test_dashboard_refresh_preserves_detector_selection(self, qtbot):
         """ Regression: ThresholdChoiceModel.updated_module_manager used to force-select every
