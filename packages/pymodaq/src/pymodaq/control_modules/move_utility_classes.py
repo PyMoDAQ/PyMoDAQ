@@ -582,7 +582,7 @@ class DAQ_Move_base(PluginBase):
             return self._current_value
 
     @current_value.setter
-    def current_value(self, value: Union[numbers.Number, float, np.ndarray, DataActuator]):
+    def current_value(self, value: Union[int, float, np.ndarray, DataActuator]):
         if isinstance(value, (numbers.Number, np.ndarray)):
             self._current_value = DataActuator(self._title, data=value,
                                                units=self.axis_unit)
@@ -607,11 +607,12 @@ class DAQ_Move_base(PluginBase):
             return self._target_value
 
     @target_value.setter
-    def target_value(self, value: Union[numbers.Number, DataActuator]):
+    def target_value(self, value: Union[int, float, DataActuator]):
         if isinstance(value, numbers.Number):
             self._target_value = DataActuator(self._title, data=value,
                                               units=self.axis_unit)
         else:
+            value = cast(DataActuator, value)  # numbers (floats included) are handled above
             if (not Unit(self.axis_unit).is_compatible_with(
                     Unit(value.units)) and
                     value.units == ''):
