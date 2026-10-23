@@ -9,6 +9,7 @@ from __future__ import annotations
 from abc import ABC
 from importlib import import_module
 
+import datetime
 import os
 from pathlib import Path
 import sys
@@ -38,7 +39,6 @@ from pymodaq_data.h5modules.backends import Node, SaveType
 from pymodaq_utils.utils import ThreadCommand, find_dict_in_list_from_key_val
 
 from pymodaq_gui.parameter import Parameter
-from pymodaq_gui.parameter import utils as putils
 from pymodaq.control_modules.viewer_utility_classes import params as daq_viewer_params
 from pymodaq_utils import utils
 from pymodaq_utils.warnings import deprecation_msg
@@ -95,6 +95,8 @@ class DAQ_Viewer(ParameterControlModule):
     """
     settings_name = 'daq_viewer_settings'
     _hw_kind = 'detector'
+    _continuous_save_type = 'detector'
+    _continuous_saver_class = module_saving.DetectorTimeSaver
     _ini_hw_cmd = ControlToHardware.INI_HARDWARE
     custom_sig = Signal(ThreadCommand)  # particular case where DAQ_Viewer is used for a custom module
 
@@ -156,10 +158,6 @@ class DAQ_Viewer(ParameterControlModule):
         self.splash_sc = get_splash_sc()
 
 
-        self._module_and_data_saver: Union[None,
-                                          module_saving.DetectorSaver,
-                                          module_saving.DetectorTimeSaver] = None
-        self._h5saver_continuous: Optional[H5Saver] = None
         self._ind_continuous_grab = 0
 
         self.settings.child('main_settings', 'DAQ_type').setValue(self._detector.daq_type.name)
@@ -344,7 +342,10 @@ class DAQ_Viewer(ParameterControlModule):
                 * take_bkg
                 * viewers_changed
                 * quit
+            and the continuous-saving ones, see UiToMainSaving
         """
+        if self._process_saving_ui_cmd(cmd):
+            return
 
         if cmd.command == UiToMainViewer.INIT:
             self.do_init_hardware_signal.emit(cmd.attribute[0])  # usually connected to ini_hardware method, but could be bypassed (see Dashboard)
@@ -511,42 +512,39 @@ class DAQ_Viewer(ParameterControlModule):
         self.update_status("Timeout occurred", log_type="log")
 
     def save_current(self):
-        """Save current data into a h5file"""
+        """Save current data into a h5file.
+
+        Defaults the save dialog to today's dataset folder (``base_path/<year>/<YYYYMMDD>/``,
+        the same dated layout used everywhere else saving happens, instead of the bare
+        base path) with a timestamped filename already filled in, and restricts/forces
+        the .h5 extension.
+        """
         self._do_save_data = True
-        start_path = self._save_file_pathname or config('data', 'data_saving', 'h5file', 'save_path')
-        self._save_file_pathname = select_file(start_path=start_path, save=True, ext='h5')
+        base_path = Path(config('data', 'data_saving', 'h5file', 'save_path'))
+        today = datetime.date.today()
+        year_path = H5Saver.find_part_in_path_and_subpath(base_path, part=str(today.year), create=True)
+        day_path = H5Saver.find_part_in_path_and_subpath(year_path, part=today.strftime('%Y%m%d'), create=True)
+        default_name = datetime.datetime.now().strftime('Data_%Y%m%d_%H_%M_%S.h5')
+
+        pathname = select_file(start_path=day_path / default_name, save=True, ext='h5',
+                               filter='HDF5 files (*.h5)', force_save_extension=True)
+        if not pathname:
+            self._do_save_data = False
+            self.update_status('Save cancelled')
+            return
+        self._save_file_pathname = pathname
 
         self._save_export_data(self._data_to_save_export)
 
 
-    def _init_continuous_save(self):
-        """ Initialize the continuous saving H5Saver object
+    def _continuous_save_started(self):
+        self.grab_done_signal.connect(self.append_data)
 
-        Update the module_and_data_saver attribute as :class:`DetectorTimeSaver` object
-        """
-        if self._h5saver_continuous.settings.child('do_save').value():
-
-            self._h5saver_continuous.settings.child('base_name').setValue('Data')
-            self.settings.child('saver_settings', 'base_name').setValue('Data')
-            self.settings.child('saver_settings', 'N_saved').show()
-            self.settings.child('saver_settings', 'N_saved').setValue(0)
-            self.module_and_data_saver.h5saver = self._h5saver_continuous
-            self._h5saver_continuous.init_file(update_h5=True)
-
-            self.module_and_data_saver = module_saving.DetectorTimeSaver(self)
-            self.module_and_data_saver.h5saver = self._h5saver_continuous
-            self.module_and_data_saver.get_set_node()
-
-            self.grab_done_signal.connect(self.append_data)
-        else:
-            self._do_continuous_save = False
-            self.settings.child('saver_settings', 'N_saved').hide()
+    def _continuous_save_stopped(self):
+        try:
             self.grab_done_signal.disconnect(self.append_data)
-
-            try:
-                self._h5saver_continuous.close()
-            except Exception as e:
-                self.logger.exception(str(e))
+        except (TypeError, RuntimeError):
+            pass  # was not connected
 
     def append_data(self, dte: DataToExport = None,
                     where: Union[Node, str] = None,
@@ -577,8 +575,9 @@ class DAQ_Viewer(ParameterControlModule):
 
         self.settings.child('saver_settings', 'N_saved').setValue(self.settings['saver_settings', 'N_saved'] + 1)
 
-    def _add_data_to_saver(self, dte: DataToExport, init_step=False, where=None, **kwargs):
-        """Adds DataToExport data to the current node using the declared module_and_data_saver
+    def _add_data_to_saver(self, dte: DataToExport, init_step=False, where=None,
+                           saver: module_saving.DetectorSaver = None, **kwargs):
+        """Adds DataToExport data to the current node using the given saver
 
         Filters the data to be saved by DataSource as specified in the current H5Saver (see self.module_and_data_saver)
 
@@ -588,22 +587,26 @@ class DAQ_Viewer(ParameterControlModule):
             The data to be saved
         init_step: bool
             If True, means this is the first step of saving (if multisaving), then save background if any and a png image
+        saver: DetectorSaver, optional
+            defaults to self.module_and_data_saver, the continuous-saving one
         kwargs: dict
-            Other named parameters to be passed as is to the module_and_data_saver
+            Other named parameters to be passed as is to the saver
 
         See Also
         --------
         DetectorSaver, DetectorTimeSaver
 
         """
+        if saver is None:
+            saver = self.module_and_data_saver
         if dte is not None:
-            detector_node = self.module_and_data_saver.get_set_node(where)
-            dte = self.module_and_data_saver.filter_data(dte)
-            self.module_and_data_saver.add_data(detector_node, dte, **kwargs)
+            detector_node = saver.get_set_node(where)
+            dte = saver.filter_data(dte)
+            saver.add_data(detector_node, dte, **kwargs)
 
             if init_step:
                 if self._do_bkg and self._bkg is not None:
-                    self.module_and_data_saver.add_bkg(detector_node, self._bkg)
+                    saver.add_bkg(detector_node, self._bkg)
 
     def _save_data(self, path=None, dte: DataToExport = None):
         """Private. Practical implementation to save data into a h5file altogether with metadata, axes, background...
@@ -622,10 +625,12 @@ class DAQ_Viewer(ParameterControlModule):
             path = Path(path)
         h5saver = H5Saver(save_type='detector')
         h5saver.init_file(update_h5=True, custom_naming=False, addhoc_file_path=path)
-        self.module_and_data_saver = module_saving.DetectorSaver(self)
-        self.module_and_data_saver.h5saver = h5saver
+        # a saver of its own: replacing module_and_data_saver here used to break an
+        # ongoing continuous save, which kept appending to this closed one-shot file
+        saver = module_saving.DetectorSaver(self)
+        saver.h5saver = h5saver
 
-        self._add_data_to_saver(dte, init_step=True)
+        self._add_data_to_saver(dte, init_step=True, saver=saver)
 
         if self.ui is not None:
             (root, filename) = os.path.split(str(path))
@@ -821,38 +826,6 @@ class DAQ_Viewer(ParameterControlModule):
                     self.viewers[ind].show_data(dwa)
 
     # -------------------------------------------------------------------------
-    # Saving
-    # -------------------------------------------------------------------------
-
-    @property
-    def module_and_data_saver(self) -> Union[module_saving.DetectorSaver,
-                                              module_saving.DetectorTimeSaver]:
-        """Override the base :class:`ControlModule` property.
-
-        The base getter/setter eagerly fall back to the generic, scan-typed
-        ``self.h5saver`` (and open a file for it) whenever no h5saver has been
-        attached yet. DAQ_Viewer never wants that fallback: every call site
-        here assigns its own detector-typed h5saver (``_h5saver_continuous``
-        or an ad hoc one) right after setting this attribute, so the fallback
-        only causes a stray, unused ``Dataset_...h5`` file to be created.
-        """
-        return self._module_and_data_saver
-
-    @module_and_data_saver.setter
-    def module_and_data_saver(self, mod: Union[module_saving.DetectorSaver,
-                                                module_saving.DetectorTimeSaver]):
-        self._module_and_data_saver = mod
-
-    def setup_continuous_saving(self, init: bool = True):
-        """Configure the objects dealing with the continuous saving mode"""
-        if init:
-            self.module_and_data_saver = module_saving.DetectorSaver(self)
-            self._h5saver_continuous = H5Saver(save_type='detector')
-            self._h5saver_continuous.settings.child('do_save').sigValueChanged.connect(self._init_continuous_save)
-        else:
-            self._h5saver_continuous.close_file()
-
-    # -------------------------------------------------------------------------
     # Settings / Plugin management
     # -------------------------------------------------------------------------
 
@@ -892,14 +865,6 @@ class DAQ_Viewer(ParameterControlModule):
         elif param.name() == 'wait_time':
             self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.UPDATE_WAIT_TIME,
                                                      [param.value()]))
-
-        elif param.name() in putils.iter_children(self.settings.child('saver_settings'), []):
-            try:
-                if param.name() == 'do_save':
-                    self.setup_continuous_saving(param.value())
-                    self._h5saver_continuous.settings.child(*path[1:]).setValue(param.value())
-            except KeyError:
-                pass
 
     # -------------------------------------------------------------------------
     # Thread status handler

@@ -35,7 +35,6 @@ from pymodaq_data.h5modules.backends import Node, SaveType
 
 from pymodaq_gui.h5modules.saving import H5Saver
 from pymodaq_gui.parameter import ioxml, Parameter
-from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.qt_utils import mkQApp
 
 from pymodaq.utils.h5modules import module_saving
@@ -87,6 +86,8 @@ class DAQ_Move(ParameterControlModule):
 
     settings_name = "daq_move_settings"
     _hw_kind = 'actuator'
+    _continuous_save_type = 'actuator'
+    _continuous_saver_class = module_saving.ActuatorTimeSaver
     _ini_hw_cmd = ControlToHardware.INI_HARDWARE
 
     move_done_signal = Signal(DataActuator)
@@ -143,15 +144,6 @@ class DAQ_Move(ParameterControlModule):
         self.splash_sc = get_splash_sc()
         if len(ACTUATOR_NAMES) > 0:  # will be 0 if no valid plugins are installed
             self.actuator = kwargs.get("actuator", ACTUATOR_NAMES[0])
-
-        self._module_and_data_saver: module_saving.ActuatorTimeSaver = None
-        for hidden_param in ('custom_name',
-                            'current_scan_name',
-                            'current_scan_path',
-                            'current_h5_file',
-                            'new_file',
-                            'base_name'):
-            self.settings.child('saver_settings', hidden_param).setOpts(visible=False)
 
         self._move_done_bool = True
 
@@ -315,7 +307,11 @@ class DAQ_Move(ParameterControlModule):
             * actuator_changed
             * rel_value
             * quit
+            and the continuous-saving ones, see UiToMainSaving
         """
+        if self._process_saving_ui_cmd(cmd):
+            return
+
         if cmd.command == UiToMainMove.INIT:
             self.do_init_hardware_signal.emit(cmd.attribute[0])  # usually connected to ini_hardware method, but could be bypassed (see Dashboard/ModulesManager)
         elif cmd.command == UiToMainMove.GET_VALUE:
@@ -562,29 +558,6 @@ class DAQ_Move(ParameterControlModule):
     # Saving
     # -------------------------------------------------------------------------
 
-    def setup_continuous_saving(self, init: bool = True):
-        """Configure the objects dealing with the continuous saving mode"""
-        if init:
-            self.module_and_data_saver = module_saving.ActuatorTimeSaver(self)
-            self.module_and_data_saver.h5saver = self.h5saver
-            self.h5saver.settings.child('do_save').sigValueChanged.connect(self._init_continuous_save)
-        else:
-            self.h5saver.close_file()
-
-    def _init_continuous_save(self):
-        """ Initialize the continuous saving H5Saver object
-
-        Update the module_and_data_saver attribute as :class:`ActuatorTimeSaver` object
-        """
-        if self.settings.child('saver_settings', 'do_save').value():
-
-            self.settings.child('saver_settings', 'base_name').setValue('Data')
-            self.settings.child('saver_settings', 'N_saved').show()
-            self.settings.child('saver_settings', 'N_saved').setValue(0)
-            self.h5saver.init_file(update_h5=True)
-        else:
-            self.settings.child('saver_settings', 'N_saved').hide()
-
     def append_data(
         self, dte: Optional[DataToExport] = None, where: Union[Node, str, None] = None
     ):
@@ -669,11 +642,6 @@ class DAQ_Move(ParameterControlModule):
         """Handle actuator-specific parameter changes."""
         if param.name() == "refresh_timeout":
             self._refresh_timer.setInterval(param.value())
-        elif param.name() in putils.iter_children(self.settings.child('saver_settings'), []):
-            path = self.settings.childPath(param)
-            if param.name() == 'do_save':
-                self.setup_continuous_saving(param.value())
-                self.h5saver.settings.child(*path[1:]).setValue(param.value())
         elif param.name() == 'default_value_red':
             if self.ui is not None:
                 self.ui.set_abs_value_red(Q_(param.value(), self.units))
