@@ -80,7 +80,7 @@ class RepeatElt(SeqEltBase):
         return self.n_repeat == other.n_repeat
 
     def __repr__(self):
-        return f'{super().__repr__()} - {self.n_repeat}'
+        return f'{super().__repr__()} - {self.n_repeat} - {self._ind_execute}'
 
     def check_set_is_valid(self):
         """ Check the validity of the element
