@@ -1673,12 +1673,12 @@ class AxesManagerBase:
         return axes
 
     def is_axis_signal(self, axis: Axis) -> bool:
-        """Check if an axis is considered signal or navigation"""
-        return axis.index in self._nav_indexes
+        """Check if an axis is a signal one (its index is not a navigation index)"""
+        return axis.index not in self._nav_indexes
 
     def is_axis_navigation(self, axis: Axis) -> bool:
-        """Check if an axis  is considered signal or navigation"""
-        return axis.index not in self._nav_indexes
+        """Check if an axis is a navigation one (its index is a navigation index)"""
+        return axis.index in self._nav_indexes
 
     def __repr__(self):
         return self._get_dimension_str()
