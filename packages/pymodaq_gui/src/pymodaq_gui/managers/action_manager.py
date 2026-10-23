@@ -1120,11 +1120,14 @@ class ActionManager:
 
     @dispatch(Iterable)  # type: ignore[no-redef]
     def is_action_visible(self, actions_name: IterableType) -> bool:
-        """Check the visibility of a given action or the list of an action"""
-        isvisible = False
-        for action_name in actions_name:
-            isvisible = isvisible and self.is_action_visible(action_name)
-        return isvisible
+        """Check the visibility of a list of actions
+
+        Returns
+        -------
+        bool
+            True if all the actions are visible (and for an empty list)
+        """
+        return all(self.is_action_visible(action_name) for action_name in actions_name)
 
     @dispatch(str)
     def is_action_checked(self, action_name: str) -> bool:
@@ -1137,11 +1140,14 @@ class ActionManager:
 
     @dispatch(Iterable)  # type: ignore[no-redef]
     def is_action_checked(self, actions_name: IterableType) -> bool:
-        """Get the CheckState of a given action or a list of actions"""
-        ischecked = False
-        for action_name in actions_name:
-            ischecked = ischecked and self.is_action_checked(action_name)
-        return ischecked
+        """Get the CheckState of a list of actions
+
+        Returns
+        -------
+        bool
+            True if all the actions are checked (and for an empty list)
+        """
+        return all(self.is_action_checked(action_name) for action_name in actions_name)
 
     @dispatch(str, bool)
     def set_action_visible(self, action_name: str, visible: bool = True) -> None:
@@ -1204,11 +1210,14 @@ class ActionManager:
 
     @dispatch(Iterable)  # type: ignore[no-redef]
     def is_action_enabled(self, actions_name: IterableType) -> bool:
-        """Get the EnabledState of a given action or a list of actions"""
-        is_enabled = False
-        for action_name in actions_name:
-            is_enabled = is_enabled and self.is_action_enabled(action_name)
-        return is_enabled
+        """Get the EnabledState of a list of actions
+
+        Returns
+        -------
+        bool
+            True if all the actions are enabled (and for an empty list)
+        """
+        return all(self.is_action_enabled(action_name) for action_name in actions_name)
 
 
 for _dispatcher in vars(ActionManager).values():
