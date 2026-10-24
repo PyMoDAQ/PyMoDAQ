@@ -95,7 +95,8 @@ class DAQ_Viewer_base(PluginBase):
         --------
         send_param_status
     """
-    hardware_averaging = False
+    hardware_averaging = False  # True if the instrument averages itself: the plugin should then fill the `errors` of
+    # the data it emits, as the DAQ_Viewer only computes the standard error of the mean of its own averaging
     supported_platforms: Optional[tuple] = None  # systems the plugin works on, values of sys.platform ('win32', 'linux',
     # 'darwin'). None: all of them. PyMoDAQ refuses to initialize the plugin on another system.
     supported_architectures: Optional[tuple] = None  # processor architectures the plugin works on, values of

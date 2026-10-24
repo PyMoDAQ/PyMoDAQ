@@ -1,4 +1,5 @@
 import os
+from unittest.mock import MagicMock
 from collections import OrderedDict
 import numpy as np
 
@@ -6,6 +7,7 @@ from qtpy import QtWidgets, QtCore
 import pytest
 from pytest import fixture, approx
 import qt_themes
+from pymodaq_data.data import DataToExport, DataRaw
 from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
 from pymodaq.utils.gui_utils.loader_utils import create_load_daq_viewer
 from pymodaq_gui.utils.dock import DockArea
@@ -164,3 +166,71 @@ def test_viewers_roi_select_and_crosshair_forwarding(ini_daq_viewer_ui):
         form.close()
         form.deleteLater()
     QtWidgets.QApplication.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete)
+
+
+class TestSoftwareAveraging:
+    def test_errors_of_the_averaged_data(self, ini_daq_viewer_without_ui):
+        prog, qtbot = ini_daq_viewer_without_ui
+        n_average = 10
+        prog.detector = SelectedModule(DAQTypesEnum['DAQ1D'], 'Mock')
+        with qtbot.waitSignal(prog.init_signal, timeout=10000):
+            prog.init_hardware(True)
+        prog.settings.child('main_settings', 'Naverage').setValue(n_average)
+
+        with qtbot.waitSignal(prog.grab_done_signal, timeout=20000) as blocker:
+            prog.snap()
+
+        averaged_data = blocker.args[0]
+        assert averaged_data[0].n_averaged == n_average
+        assert averaged_data[0].errors is not None
+        assert averaged_data[0].errors[0].shape == averaged_data[0].data[0].shape
+        assert np.all(averaged_data[0].errors[0] >= 0)
+
+    def test_no_errors_without_averaging(self, ini_daq_viewer_without_ui):
+        prog, qtbot = ini_daq_viewer_without_ui
+        prog.detector = SelectedModule(DAQTypesEnum['DAQ1D'], 'Mock')
+        with qtbot.waitSignal(prog.init_signal, timeout=10000):
+            prog.init_hardware(True)
+
+        with qtbot.waitSignal(prog.grab_done_signal, timeout=20000) as blocker:
+            prog.snap()
+
+        assert blocker.args[0][0].errors is None
+
+
+class TestErrorsReplacedWarning:
+    @pytest.mark.parametrize('with_errors', [True, False])
+    def test_warning_only_if_the_plugin_provides_errors(self, with_errors):
+        worker = MagicMock()
+        worker.Naverage = 5
+        errors = [np.array([0.1, 0.1])] if with_errors else None
+        data = DataToExport('acquisition', data=[DataRaw('raw', data=[np.array([1., 2.])], errors=errors)])
+
+        daqvm.DetectorWorker._warn_if_errors_replaced(worker, data)
+
+        assert worker.logger.warning.called == with_errors
+        assert worker.status_sig.emit.called == with_errors
+
+
+class TestLiveAveraging:
+    def test_errors_of_the_live_averaged_data(self, ini_daq_viewer_ui):
+        prog, qtbot, dockarea = ini_daq_viewer_ui
+        n_acquisitions = 6
+        rng = np.random.default_rng(7)
+        acquisitions = rng.normal(loc=1., scale=0.2, size=(n_acquisitions, 9))
+        prog.settings.child('main_settings', 'show_data').setValue(False)
+        prog.settings.child('main_settings', 'live_averaging').setValue(True)
+
+        for acquisition in acquisitions:
+            prog.show_data(DataToExport('acquisition', data=[DataRaw('raw', data=[acquisition])]))
+
+        live_averaged = prog.current_data[0]
+        assert live_averaged.n_averaged == n_acquisitions
+        assert live_averaged.data[0] == approx(acquisitions.mean(axis=0))
+        assert live_averaged.errors[0] == approx(acquisitions.std(axis=0, ddof=1) / np.sqrt(n_acquisitions))
+
+    def test_errors_replaced_message(self):
+        data = DataToExport('acquisition', data=[DataRaw('raw', data=[np.array([1., 2.])])])
+        assert daqvm.errors_replaced_message(data, 'live averaging') is None
+        data[0].errors = [np.array([0.1, 0.1])]
+        assert 'live averaging' in daqvm.errors_replaced_message(data, 'live averaging')
