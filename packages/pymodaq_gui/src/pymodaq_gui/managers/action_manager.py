@@ -707,16 +707,15 @@ class ActionManager:
         return widget  # type: ignore[return-value]  # None (with a warning) if the widget could not be created
 
     def add_action_group(self, short_name: str, name: str = '',
-                        icon_name: Union[str, Path, QtGui.QIcon] = '', tip='',
-                        checkable=False, checked=False,
-                        icon_checked: Union[str, Path, QtGui.QIcon] = None,
-                        icon_color: Union[QtGui.QColor, bytes, str] = None,
-                        icon_checked_color: Union[QtGui.QColor, bytes, str] = None,
-                        toolbar: Union[str, QtWidgets.QToolBar, None] = None,
-                        secondary_actions: IterableType[dict] = (),
-                        visible=True, enabled=True,
-                        follow_theme: bool = True,
-                        ) -> QtWidgets.QToolButton:
+                         icon_name: Union[str, Path, QtGui.QIcon] = '', tip: str = '',
+                         checkable: bool = False, checked: bool = False,
+                         icon_checked: Union[str, Path, QtGui.QIcon, None] = None,
+                         icon_color: Union[QtGui.QColor, bytes, str, None] = None,
+                         icon_checked_color: Union[QtGui.QColor, bytes, str, None] = None,
+                         toolbar: Union[str, QtWidgets.QToolBar, None] = None,
+                         secondary_actions: IterableType[dict] = (),
+                         visible: bool = True, enabled: bool = True,
+                         ) -> QtWidgets.QToolButton:
         """Add several related actions to a toolbar under a single button, to avoid
         overloading the toolbar with one slot per action.
 
@@ -736,7 +735,7 @@ class ActionManager:
         short_name: str
             the name of the primary action, as referenced in self._actions
         name, icon_name, tip, checkable, checked, icon_checked, icon_color,
-        icon_checked_color, follow_theme:
+        icon_checked_color:
             forwarded to :meth:`add_action` for the primary action
         toolbar: str or QToolBar or None
             the toolbar the button is added to (defaults to the default toolbar)
@@ -764,8 +763,7 @@ class ActionManager:
                                   visible=visible, enabled=enabled,
                                   icon_checked=icon_checked,
                                   icon_color=icon_color,
-                                  icon_checked_color=icon_checked_color,
-                                  follow_theme=follow_theme)
+                                  icon_checked_color=icon_checked_color)
 
         button = QtWidgets.QToolButton(toolbar_obj)
         button.setDefaultAction(primary)
@@ -786,7 +784,8 @@ class ActionManager:
         else:
             button.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.DelayedPopup)
 
-        toolbar_obj.addWidget(button)
+        if toolbar_obj is not None:
+            toolbar_obj.addWidget(button)
         return button
 
     def add_menu(self, short_name: str, title: str = '',
