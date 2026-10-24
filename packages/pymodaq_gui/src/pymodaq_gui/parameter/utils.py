@@ -1,7 +1,7 @@
 from __future__ import annotations
 from contextlib import contextmanager
 import inspect
-from typing import List, Tuple, Union
+from typing import Any, Dict, Iterable, Iterator, List, Sequence, Optional, Tuple, Union
 import numpy as np
 from collections import OrderedDict
 from pymodaq_utils.utils import find_keys_from_val
@@ -25,31 +25,33 @@ class ParameterWithPath(SerializableBase):
     ----------
     parameter: Parameter
         a Parameter object
-    path: full path of the parameter, if None it is constructed from the parameter parents
+    path: full path of the parameter (a list of names, an empty tuple is also used for a parameter not in a tree),
+        if None it is constructed from the parameter parents
     """
-    def __init__(self, parameter: Parameter, path: List[str] = None):
+    def __init__(self, parameter: Parameter, path: Optional[Sequence[str]] = None) -> None:
         super().__init__()
         self._parameter = parameter
         if path is None:
             path = get_param_path(parameter)
         self._path = path
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'Parameter {self.parameter.name()} with path {self.path}'
 
-    def __eq__(self, other: 'ParameterWithPath'):
-        return (self.path == other.path and
-                compareStructureParameter(self.parameter, other.parameter))
+    def __eq__(self, other: object) -> bool:
+        return (self.path == other.path and  # type: ignore[attr-defined]  # only ParameterWithPath are compared
+                compareStructureParameter(self.parameter, other.parameter))  # type: ignore[attr-defined]
 
     @property
     def parameter(self) -> Parameter:
         return self._parameter
 
     @property
-    def path(self) -> List[str]:
+    def path(self) -> Sequence[str]:
         return self._path
 
-    def value(self):
+    def value(self) -> Any:
+        """The value of the parameter"""
         return self.parameter.value()
 
     @staticmethod
@@ -80,7 +82,19 @@ class ParameterWithPath(SerializableBase):
         return ParameterWithPath(param_obj, path), remaining_bytes
 
 
-def get_widget_from_tree(parameter_tree, widget_instance):
+def get_widget_from_tree(parameter_tree: Any, widget_instance: type) -> List[Any]:
+    """Get the widgets of the items of a ParameterTree whose class has the name of the given class
+
+    Parameters
+    ----------
+    parameter_tree: ParameterTree
+    widget_instance: type
+        The widget class (only its name is compared)
+
+    Returns
+    -------
+    list of the matching widgets
+    """
     widgets = []
     for item in parameter_tree.listAllItems():
         if hasattr(item, 'widget'):
@@ -218,7 +232,8 @@ def compareValuesParameter(param1:Parameter, param2: Parameter, with_self: bool 
     return is_same
 
 
-def iter_children(param, childlist: list = [], filter_type=(), filter_name=(), select_filter=False)-> list:
+def iter_children(param: Parameter, childlist: list = [], filter_type: Iterable[str] = (),
+                  filter_name: Iterable[str] = (), select_filter: bool = False) -> list:
     """
     Get a list of parameters' name under a given Parameter (see iter_children_params)
 
@@ -231,8 +246,9 @@ def iter_children(param, childlist: list = [], filter_type=(), filter_name=(), s
                                 filter_type=(), filter_name=(), select_filter=False)
 
 
-def iter_children_params(param, childlist: list = [], output_type=None,
-                         filter_type=(), filter_name=(), select_filter=False)-> list:
+def iter_children_params(param: Parameter, childlist: list = [], output_type: Optional[str] = None,
+                         filter_type: Iterable[str] = (), filter_name: Iterable[str] = (),
+                         select_filter: bool = False) -> list:
     """
     Get a list of parameters under a given Parameter.
 
@@ -276,7 +292,7 @@ def iter_children_params(param, childlist: list = [], output_type=None,
     return childlist
 
 
-def get_param_from_name(parent: Parameter, name) -> Parameter:
+def get_param_from_name(parent: Parameter, name: str) -> Optional[Parameter]:
     """Get Parameter under parent whose name is name
 
     Parameters
@@ -287,6 +303,7 @@ def get_param_from_name(parent: Parameter, name) -> Parameter:
     Returns
     -------
     Parameter
+        The first parameter found (depth first), None if there is none
     """
     for child in parent.children():
         if child.name() == name:
@@ -295,16 +312,19 @@ def get_param_from_name(parent: Parameter, name) -> Parameter:
             ch = get_param_from_name(child, name)
             if ch is not None:
                 return ch
+    return None
 
 
-def is_name_in_dict(dict_tmp, name):
+def is_name_in_dict(dict_tmp: Dict[str, Any], name: str) -> bool:
+    """Check if a dict, as used to init a Parameter, has the given name"""
     if 'name' in dict_tmp:
         if dict_tmp['name'] == name:
             return True
     return False
 
 
-def get_param_dict_from_name(parent_list, name, pop=False):
+def get_param_dict_from_name(parent_list: List[Dict[str, Any]], name: str,
+                             pop: bool = False) -> Optional[Dict[str, Any]]:
     """Get dict under parent whose name is name. The parent_list structure is the one used to init a Parameter object
 
     Parameters
@@ -315,7 +335,7 @@ def get_param_dict_from_name(parent_list, name, pop=False):
 
     Returns
     -------
-    dict the matched dict
+    dict the matched dict, None if there is none
     """
     for index, parent_dict in enumerate(parent_list):
         if is_name_in_dict(parent_dict, name):
@@ -328,9 +348,10 @@ def get_param_dict_from_name(parent_list, name, pop=False):
             ch = get_param_dict_from_name(parent_dict['children'], name, pop)
             if ch is not None:
                 return ch
+    return None
 
 
-def set_param_from_param(param_old, param_new):
+def set_param_from_param(param_old: Parameter, param_new: Parameter) -> None:
     """
         Walk through parameters children and set values using new parameter values.
     """
@@ -355,9 +376,9 @@ def set_param_from_param(param_old, param_new):
                 elif isinstance(child_old.opts['limits'], dict):
                     if child_new.value() not in child_old.opts['limits'].values():
                         child_new_key = find_keys_from_val(child_new.opts['limits'], child_new.value())[0]
-                        new_limits = child_old.opts['limits'].copy()
-                        new_limits.update({child_new_key: child_new.value()})
-                        child_old.setLimits(new_limits)
+                        new_limits_dict = child_old.opts['limits'].copy()
+                        new_limits_dict.update({child_new_key: child_new.value()})
+                        child_old.setLimits(new_limits_dict)
                 if 'value' in child_new.opts:
                     child_old.setValue(child_new.value())
             elif 'str' in param_type or 'browsepath' in param_type or 'text' in param_type:
@@ -424,7 +445,7 @@ def filter_parameter_tree(param:Parameter, search_text:str = "") -> bool:
 
     return should_show
 
-def change_visibility_all_descendants(param: Parameter, visible: bool = True):
+def change_visibility_all_descendants(param: Parameter, visible: bool = True) -> None:
     """Recursively show all descendants of a parameter"""
     if param.hasChildren():
         param.setOpts(expanded=True)
@@ -437,7 +458,7 @@ def change_visibility_all_descendants(param: Parameter, visible: bool = True):
 
 
         
-def scroll_log(scroll_val, min_val, max_val):
+def scroll_log(scroll_val: float, min_val: float, max_val: float) -> float:
     """
     Convert a scroll value [0-100] to a log scale between min_val and max_val
 
@@ -457,7 +478,7 @@ def scroll_log(scroll_val, min_val, max_val):
     return 10 ** value
 
 
-def scroll_linear(scroll_val, min_val, max_val):
+def scroll_linear(scroll_val: float, min_val: float, max_val: float) -> float:
     """
     Convert a scroll value [0-100] to a linear scale between min_val and max_val
 
@@ -480,7 +501,7 @@ def scroll_linear(scroll_val, min_val, max_val):
 
 
 if __name__ == '__main__':              # pragma: no cover
-    parent = [
+    parent: List[Dict[str, Any]] = [
         {'title': 'Spectro Settings:', 'name': 'spectro_settings', 'type': 'group', 'expanded': True,
             'children': [
                 {'title': 'Home Wavelength (nm):', 'name': 'spectro_wl_home', 'type': 'float', 'value': 600, 'min': 0,
@@ -497,14 +518,14 @@ if __name__ == '__main__':              # pragma: no cover
 
     d = get_param_dict_from_name(parent, 'lines')
 
-    d['readonly'] = False
+    d['readonly'] = False  # type: ignore[index]
     print(parent[0]['children'][1]['children'])
 
 
 
 
 @contextmanager
-def tree_change_blocker(param: Parameter, keep: set[str] = None):
+def tree_change_blocker(param: Parameter, keep: Optional[set[str]] = None) -> Iterator[None]:
     """ Block and accumulate the tree change signals of param, keeping only some change types
 
     Backward compatible version of ``Parameter.treeChangeBlocker(keep=...)``, whose ``keep`` argument is only
