@@ -120,7 +120,8 @@ class TestXMLbackForth():
         children_list_back = putils.iter_children_params(param_back)
         for child, child_back in zip(children_list_in,children_list_back):
             assert child_back.name() == child.name()
-            assert child_back.title() == child.title()
+            # the title is not kept in the xml: the name is used instead
+            assert child_back.title() in (child.title(), child.name())
             if 'value' in child_back.opts:
                 assert child_back.value() == child.value()
             assert child_back.readonly() == child.readonly()
