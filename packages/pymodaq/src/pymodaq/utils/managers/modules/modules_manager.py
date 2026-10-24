@@ -12,7 +12,7 @@ from qtpy import QtWidgets
 import time
 
 from pymodaq.utils.managers.modules.utils import ModuleType
-from pymodaq_utils.enums import enum_checker
+from pymodaq_utils.enums import enum_checker, StrEnum
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
 from pymodaq_utils.config import GlobalConfig as Config
@@ -35,6 +35,22 @@ logger = set_logger(get_module_name(__file__))
 config = Config()
 
 
+
+
+class ModulesManagerParam(StrEnum):
+    """ Names of the top-level children of ModulesManager.settings
+
+    Use these rather than hardcoding the matching string literal when accessing
+    `ModulesManager.settings.child(...)` from outside this class, so a future rename here is
+    a type-checkable/greppable break instead of a silent KeyError at runtime (as happened when
+    GrabElt was copied in referencing settings children that no longer existed).
+    """
+    PROBE_DETECTORS = 'probe_detectors'
+    PROBE_ACTUATORS = 'probe_actuators'
+    DETECTORS = 'detectors'
+    ACTUATORS = 'actuators'
+    PROBE_DETECTORS_RESULTS = 'probe_detectors_results'
+    PROBE_ACTUATORS_RESULTS = 'probe_actuators_results'
 
 
 class ModulesManager(QObject, ParameterManager):
@@ -61,16 +77,20 @@ class ModulesManager(QObject, ParameterManager):
                                     # the received responses (see grab_data/move_actuators)
 
     params = [
-        {'title': "Probe detectors", 'name': 'probe_detectors', 'type': 'action_led', 'value': False},
-        {'title': "Probe actuators", 'name': 'probe_actuators', 'type': 'action_led', 'value': False},
+        {'title': "Probe detectors", 'name': ModulesManagerParam.PROBE_DETECTORS.value,
+         'type': 'action_led', 'value': False},
+        {'title': "Probe actuators", 'name': ModulesManagerParam.PROBE_ACTUATORS.value,
+         'type': 'action_led', 'value': False},
 
-        {'title': 'Detectors', 'name': 'detectors', 'type': 'itemselect', 'checkbox': True},
-        {'title': 'Actuators', 'name': 'actuators', 'type': 'itemselect', 'checkbox': True},
+        {'title': 'Detectors', 'name': ModulesManagerParam.DETECTORS.value, 'type': 'itemselect', 'checkbox': True},
+        {'title': 'Actuators', 'name': ModulesManagerParam.ACTUATORS.value, 'type': 'itemselect', 'checkbox': True},
 
         # Probe results live in their own group, not nested under the probe buttons above,
         # so they render below the selection lists instead of pushing them out of view.
-        {'title': 'Probed detector data', 'name': 'probe_detectors_results', 'type': 'group', 'children': []},
-        {'title': 'Probed actuator positions', 'name': 'probe_actuators_results', 'type': 'group', 'children': []},
+        {'title': 'Probed detector data', 'name': ModulesManagerParam.PROBE_DETECTORS_RESULTS.value,
+         'type': 'group', 'children': []},
+        {'title': 'Probed actuator positions', 'name': ModulesManagerParam.PROBE_ACTUATORS_RESULTS.value,
+         'type': 'group', 'children': []},
     ]
 
     def __init__(self,
