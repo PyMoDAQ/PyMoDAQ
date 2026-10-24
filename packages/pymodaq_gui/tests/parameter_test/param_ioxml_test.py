@@ -120,14 +120,33 @@ class TestXMLbackForth():
         children_list_back = putils.iter_children_params(param_back)
         for child, child_back in zip(children_list_in,children_list_back):
             assert child_back.name() == child.name()
-            # the title is not kept in the xml: the name is used instead
-            assert child_back.title() in (child.title(), child.name())
+            assert child_back.title() == child.title()
             if 'value' in child_back.opts:
                 assert child_back.value() == child.value()
             assert child_back.readonly() == child.readonly()
             if 'limits' in child_back.opts:
                 assert child_back.opts['limits'] == child.opts['limits']
             assert child_back.opts['removable'] == child.opts['removable']
+
+    def test_titles_kept_in_xml(self):
+        settings = Parameter.create(name='settings', type='group', children=[
+            {'title': 'My nice title:', 'name': 'a_name', 'type': 'int', 'value': 1},
+            {'title': 'Group title', 'name': 'a_group', 'type': 'group', 'children': [
+                {'title': 'Child title', 'name': 'child', 'type': 'str', 'value': 'x'}]},
+            {'name': 'no_title', 'type': 'float', 'value': 1.5},
+        ])
+        param_back = ioxml.XML_string_to_pobject(ioxml.parameter_to_xml_string(settings))
+
+        assert param_back.child('a_name').title() == 'My nice title:'
+        assert param_back.child('a_group').title() == 'Group title'
+        assert param_back.child('a_group', 'child').title() == 'Child title'
+        assert param_back.child('no_title').title() == 'no_title'
+
+    def test_xml_without_title_attribute_uses_name(self):
+        xml = b'<settings title="settings" type="group"><a_name type="int" value="1" />' \
+              b'</settings>'
+        param_back = ioxml.XML_string_to_pobject(xml)
+        assert param_back.child('a_name').title() == 'a_name'
 
     def test_load_save_overwrite_xml_file(self, tmp_path):
         """
