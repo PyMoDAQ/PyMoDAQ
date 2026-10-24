@@ -232,7 +232,7 @@ def compareValuesParameter(param1:Parameter, param2: Parameter, with_self: bool 
     return is_same
 
 
-def iter_children(param: Parameter, childlist: list = [], filter_type: Iterable[str] = (),
+def iter_children(param: Parameter, childlist: Optional[list] = None, filter_type: Iterable[str] = (),
                   filter_name: Iterable[str] = (), select_filter: bool = False) -> list:
     """
     Get a list of parameters' name under a given Parameter (see iter_children_params)
@@ -243,10 +243,10 @@ def iter_children(param: Parameter, childlist: list = [], filter_type: Iterable[
         The list of the children name from the given node.       
     """
     return iter_children_params(param, childlist=childlist, output_type='name',
-                                filter_type=(), filter_name=(), select_filter=False)
+                                filter_type=filter_type, filter_name=filter_name, select_filter=select_filter)
 
 
-def iter_children_params(param: Parameter, childlist: list = [], output_type: Optional[str] = None,
+def iter_children_params(param: Parameter, childlist: Optional[list] = None, output_type: Optional[str] = None,
                          filter_type: Iterable[str] = (), filter_name: Iterable[str] = (),
                          select_filter: bool = False) -> list:
     """
@@ -256,8 +256,8 @@ def iter_children_params(param: Parameter, childlist: list = [], output_type: Op
     ----------
     param : Parameter (pyqtgraph)
         the root node to be coursed
-    childlist: list
-        the child/output list
+    childlist: list, optional
+        the child/output list, the results are appended to it. A new list is used if None
     output_type: str
         the attribute of parameter that will be added to the output list
     filter_type: list
@@ -273,20 +273,21 @@ def iter_children_params(param: Parameter, childlist: list = [], output_type: Op
     list
         The list of the children from the given node.    
     """
+    if childlist is None:
+        childlist = []
     for child in param.children():
         # XNOR Gate        
         is_filtered = child.type() in filter_type or child.name() in filter_name
         add_selected_child = select_filter and is_filtered
         add_notselected_child = not select_filter and not is_filtered
         if add_selected_child or add_notselected_child:            
-            if output_type is not None:            
+            if output_type is not None:
                 try:
-                    output = getattr(child,output_type)()
-                except Exception as e:
+                    childlist.append(getattr(child, output_type)())
+                except Exception as e:  # this child cannot give the attribute: it is skipped
                     print(str(e))
-            else:                    
-                output = child
-            childlist.append(output)
+            else:
+                childlist.append(child)
         if child.hasChildren():
              childlist.extend(iter_children_params(child, [], output_type, filter_type, filter_name, select_filter))
     return childlist
