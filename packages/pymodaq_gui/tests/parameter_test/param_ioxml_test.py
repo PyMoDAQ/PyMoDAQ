@@ -128,6 +128,26 @@ class TestXMLbackForth():
                 assert child_back.opts['limits'] == child.opts['limits']
             assert child_back.opts['removable'] == child.opts['removable']
 
+    def test_titles_kept_in_xml(self):
+        settings = Parameter.create(name='settings', type='group', children=[
+            {'title': 'My nice title:', 'name': 'a_name', 'type': 'int', 'value': 1},
+            {'title': 'Group title', 'name': 'a_group', 'type': 'group', 'children': [
+                {'title': 'Child title', 'name': 'child', 'type': 'str', 'value': 'x'}]},
+            {'name': 'no_title', 'type': 'float', 'value': 1.5},
+        ])
+        param_back = ioxml.XML_string_to_pobject(ioxml.parameter_to_xml_string(settings))
+
+        assert param_back.child('a_name').title() == 'My nice title:'
+        assert param_back.child('a_group').title() == 'Group title'
+        assert param_back.child('a_group', 'child').title() == 'Child title'
+        assert param_back.child('no_title').title() == 'no_title'
+
+    def test_xml_without_title_attribute_uses_name(self):
+        xml = b'<settings title="settings" type="group"><a_name type="int" value="1" />' \
+              b'</settings>'
+        param_back = ioxml.XML_string_to_pobject(xml)
+        assert param_back.child('a_name').title() == 'a_name'
+
     def test_load_save_overwrite_xml_file(self, tmp_path):
         """
         Testing to load default experiment saving it under a name,
