@@ -46,3 +46,7 @@ jobs:
           packages/pymodaq_gui/src/pymodaq_gui/managers/parameter_manager.py
           packages/pymodaq_gui/src/pymodaq_gui/managers/action_manager.py
           packages/pymodaq_gui/src/pymodaq_gui/parameter/utils.py
+          packages/pymodaq_gui/src/pymodaq_gui/config_saver_loader.py
+          packages/pymodaq_gui/src/pymodaq_gui/managers/config_manager.py
+          packages/pymodaq_gui/src/pymodaq_gui/managers/runner_thread_manager.py
+          packages/pymodaq_gui/src/pymodaq_gui/managers/settings/subentries.py
