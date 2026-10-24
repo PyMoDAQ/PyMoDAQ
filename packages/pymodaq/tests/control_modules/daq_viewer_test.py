@@ -1,3 +1,4 @@
+import datetime
 import os
 from collections import OrderedDict
 import numpy as np
@@ -164,3 +165,93 @@ def test_viewers_roi_select_and_crosshair_forwarding(ini_daq_viewer_ui):
         form.close()
         form.deleteLater()
     QtWidgets.QApplication.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete)
+
+def test_continuous_save_toolbar_group_structure(ini_daq_viewer_ui):
+    """The toolbar exposes one grouped button for continuous saving: the (now hidden)
+    settings-tree entries are replaced by a single toolbar entry point."""
+    prog, qtbot, dockarea = ini_daq_viewer_ui
+    ui = prog.ui
+
+    for name in ('do_save', 'new_file', 'show_file', 'custom_name'):
+        assert prog.settings.child('saver_settings', name).opts['visible'] is False
+
+    button = next(child for child in ui.toolbar.findChildren(QtWidgets.QToolButton)
+                  if child.defaultAction() is ui.get_action('continuous_save'))
+    assert [a.text() for a in button.menu().actions()] == [
+        'Save Current Data', 'New file', 'Browse file']
+
+    # Same icons H5Manager uses for these exact actions everywhere else in the app
+    assert not ui.get_action('new_file').icon().isNull()
+    assert not ui.get_action('browse_file').icon().isNull()
+
+
+def test_background_toolbar_group_structure(ini_daq_viewer_ui):
+    """background_snap/background_subtract are now one grouped toolbar button, with
+    unchanged short names so existing wiring (DO_BKG/TAKE_BKG) keeps working as-is."""
+    prog, qtbot, dockarea = ini_daq_viewer_ui
+    ui = prog.ui
+
+    button = next(child for child in ui.toolbar.findChildren(QtWidgets.QToolButton)
+                  if child.defaultAction() is ui.get_action('background_subtract'))
+    assert [a.text() for a in button.menu().actions()] == ['Snap Background']
+
+
+
+def test_save_current_defaults_to_dated_folder_with_prefilled_name(
+        ini_daq_viewer_without_ui, tmp_path, monkeypatch):
+    """save_current's dialog should default into today's dataset folder (not the bare
+    base path), with a timestamped .h5 name already filled in and the extension enforced."""
+    prog, qtbot = ini_daq_viewer_without_ui
+    prog._data_to_save_export = None
+
+    config['data', 'data_saving', 'h5file', 'save_path'] = str(tmp_path)
+
+    captured = {}
+
+    def fake_select_file(start_path=None, save=True, ext=None, filter=None,
+                         force_save_extension=False):
+        captured.update(start_path=start_path, filter=filter,
+                        force_save_extension=force_save_extension)
+        return ''  # simulate the user cancelling, so no actual save/grab is attempted
+
+    monkeypatch.setattr(daqvm, 'select_file', fake_select_file)
+
+    prog.save_current()
+
+    today = datetime.date.today()
+    expected_dir = tmp_path / str(today.year) / today.strftime('%Y%m%d')
+    assert captured['start_path'].parent == expected_dir
+    assert captured['start_path'].name.startswith('Data_')
+    assert captured['start_path'].suffix == '.h5'
+    assert captured['filter'] == 'HDF5 files (*.h5)'
+    assert captured['force_save_extension'] is True
+    assert expected_dir.is_dir()
+
+    # Cancelling must not leave save-in-progress state set
+    assert prog._do_save_data is False
+
+
+def test_save_current_during_continuous_save(ini_daq_viewer_without_ui, tmp_path):
+    """A one-shot save must not replace the continuous-saving module saver: it used to,
+    so continuous saving then kept appending into the closed one-shot file."""
+    from pymodaq_data.data import DataRaw
+    from pymodaq.utils.data import DataToExport
+    from pymodaq.utils.h5modules.module_saving import DetectorTimeSaver
+
+    prog, qtbot = ini_daq_viewer_without_ui
+    dte = DataToExport('data', data=[DataRaw('ch0', data=[np.array([1., 2., 3.])])])
+
+    prog.setup_continuous_saving(init=True)
+    prog._h5saver_continuous.settings.child('base_path').setValue(str(tmp_path))
+    prog.settings.child('saver_settings', 'do_save').setValue(True)
+    prog.append_data(dte)
+
+    prog._save_data(tmp_path.joinpath('one_shot.h5'), dte)
+    assert tmp_path.joinpath('one_shot.h5').is_file()
+
+    assert isinstance(prog.module_and_data_saver, DetectorTimeSaver)
+    assert prog.module_and_data_saver.h5saver is prog._h5saver_continuous
+    prog.append_data(dte)
+    assert prog.settings['saver_settings', 'N_saved'] == 2
+
+    prog.settings.child('saver_settings', 'do_save').setValue(False)
