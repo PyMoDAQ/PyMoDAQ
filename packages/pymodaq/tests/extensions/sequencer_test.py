@@ -1,3 +1,6 @@
+import copy
+import logging
+
 import pytest
 
 from qtpy import QtCore
@@ -5,11 +8,13 @@ from qtpy import QtCore
 from pymodaq_data import DataToExport
 
 from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltFactory, ElementError
+from pymodaq.extensions.sequencer.utilities.elements.button import AddButtonPlaceholder
 from pymodaq.extensions.sequencer.utilities.elements.choice import ChoiceElt
 from pymodaq.extensions.sequencer.utilities.elements.group import GroupElt
 from pymodaq.extensions.sequencer.utilities.elements.root import RootElt
+from pymodaq.extensions.sequencer.utilities.elements.switch import SwitchElt
 from pymodaq.extensions.sequencer.utilities.elements.wait import WaitElt
-from pymodaq.extensions.sequencer.utilities.holders.branch_holder import CONTINUE
+from pymodaq.extensions.sequencer.utilities.holders.rule import CONTINUE, MANUAL_OVERRIDE_ID
 from pymodaq.extensions.sequencer.utilities.holders.modules_manager_binding import ModulesManagerBinding
 from pymodaq.extensions.sequencer.utilities.elements.grab import GrabElt
 from pymodaq.extensions.sequencer.utilities.elements.while_loop import WhileElt
@@ -24,7 +29,7 @@ class TestElements:
 
     def test_registered_elements(self, ):
         for elt in ('button', 'choice', 'grab', 'group', 'move', 'repeat', 'root', 'scanner',
-                   'sequence', 'state', 'wait', 'while'):
+                   'sequence', 'state', 'switch', 'wait', 'while'):
             assert elt in seq_factory.elements
 
     def test_grab_elt_construction(self, qtbot):
@@ -73,7 +78,7 @@ class TestCompositeStateTransitions:
     before every run, even the first, since the tree may have been edited since the last one -
     only tears down transitions explicitly registered as ephemeral via
     track_transition()/add_external_transition(); anything added directly via addTransition()
-    (an element's own permanent behavior, e.g. BranchHolder's go_to transitions) survives by
+    (an element's own permanent behavior, e.g. a SwitchElt Rule's go_to transition) survives by
     construction, with no opt-in needed. This replaces an earlier, inverted design
     (transitions_to_keep, an opt-in allowlist for permanent transitions) that caused the
     stuck-ChoiceElt bug: a permanent transition not added to that allowlist was wiped the same
@@ -116,8 +121,11 @@ class TestCompositeStateTransitions:
 
 
 class TestChoiceElt:
-    """ ChoiceElt's True/False branching: BranchHolder holds the two targets/transitions,
-    ConditionHolder holds the pluggable ChoiceModel. Regression coverage for three bugs the
+    """ ChoiceElt's True/False branching: the permanently-locked 2-Rule case of SwitchElt's
+    general Rule list (see TestSwitchElt, below) - one Rule holds the pluggable ChoiceModel
+    and the True target, the mandatory fallback Rule holds the False target. Regression
+    coverage for three bugs the composition refactor surfaced and fixed, none of which had
+    prior test coverage: a
     composition refactor surfaced and fixed, none of which had prior test coverage: a
     copy-paste error message, a None-target crash, and a dashboard refresh that silently wiped
     the user's detector selection."""
@@ -142,13 +150,11 @@ class TestChoiceElt:
         mstate before each run (recursive_disconnect_elts, so a stale pass's wiring doesn't leak
         into the next one) - CompositeState.clear_transitions() only tears down transitions
         explicitly registered as ephemeral (track_transition()/add_external_transition()).
-        BranchHolder's True/False ValueTransitions are added with a plain addTransition(), so
-        they're permanent by construction and were never at risk from this clear - but that
-        wasn't always true: this test used to catch the inverse bug, where they *were* wiped
-        (via an opt-in transitions_to_keep allowlist they weren't registered in) and never
-        recreated, leaving the element stuck forever after the first Start. Pre-existing in the
-        mixin-based ChoiceElt too, not a regression from the composition refactor (verified
-        against dev before this PR).
+        Rule's True/False ValueTransitions are added with a plain addTransition(), so they're
+        permanent by construction and were never at risk from this clear - but that wasn't
+        always true: this test used to catch the inverse bug, where they *were* wiped (via an
+        opt-in transitions_to_keep allowlist they weren't registered in) and never recreated,
+        leaving the element stuck forever after the first Start.
         """
         root = RootElt()
         elt = ChoiceElt(1, parent=root)
@@ -161,10 +167,10 @@ class TestChoiceElt:
         elt.mstate.clear_state_and_transitions()  # what recursive_disconnect_elts() does
 
         transitions = elt.mstate.transitions()
-        assert elt.branches.value_transitions[True] in transitions
-        assert elt.branches.value_transitions[False] in transitions
-        assert elt.branches.value_transitions[True].targetState() is wait_t.mstate
-        assert elt.branches.value_transitions[False].targetState() is wait_f.mstate
+        assert elt._condition_rule.transition in transitions
+        assert elt.fallback_rule.transition in transitions
+        assert elt._condition_rule.transition.targetState() is wait_t.mstate
+        assert elt.fallback_rule.transition.targetState() is wait_f.mstate
 
     def test_check_set_is_valid_names_the_actual_missing_branch(self, qtbot):
         """ Regression: both branches' error messages used to say 'False', even when True's
@@ -187,7 +193,8 @@ class TestChoiceElt:
         root._children = [elt, wait]
         elt.go_to_true = wait.id
         elt.go_to_false = 9999  # never resolves to a real element
-        elt.branches.update_target_states()  # must not raise
+        for rule in elt.rules:
+            rule.update_target_state()  # must not raise
 
     def test_continue_branch_round_trips(self, qtbot):
         """ A branch set to CONTINUE serializes as the plain string, not an id - no special
@@ -219,9 +226,10 @@ class TestChoiceElt:
         elt.go_to_false = wait_b.id
 
         elt.mstate.next_state = wait_a.mstate  # what recursive_connect_elts() would set
-        elt.branches.update_target_states()
+        for rule in elt.rules:
+            rule.update_target_state()
 
-        assert elt.branches.value_transitions[True].targetState() is wait_a.mstate
+        assert elt._condition_rule.transition.targetState() is wait_a.mstate
 
     def test_continue_branch_always_re_resolves(self, qtbot):
         """ Unlike a real element id (only resolved when still unset), a CONTINUE branch must
@@ -237,29 +245,32 @@ class TestChoiceElt:
         elt.go_to_false = wait_b.id
 
         elt.mstate.next_state = wait_a.mstate
-        elt.branches.update_target_states()
-        assert elt.branches.value_transitions[True].targetState() is wait_a.mstate
+        for rule in elt.rules:
+            rule.update_target_state()
+        assert elt._condition_rule.transition.targetState() is wait_a.mstate
 
         # tree restructured: a new element now follows elt instead
         inserted = WaitElt(4, parent=root)
         elt.mstate.next_state = inserted.mstate
-        elt.branches.update_target_states()
-        assert elt.branches.value_transitions[True].targetState() is inserted.mstate
+        for rule in elt.rules:
+            rule.update_target_state()
+        assert elt._condition_rule.transition.targetState() is inserted.mstate
 
     def test_combo_index_vs_deprecated_index_stay_independent(self, qtbot):
         """ The target combo's own index numbering (0 = Continue, 1+ = real elements) must not
-        leak into _index_to_id, which set_go_to_true/set_go_to_false still document as a plain
-        index into get_ids(...) with no Continue offset - sharing one numbering would silently
-        break anyone still using the deprecated index-based setters. """
+        leak into the deprecated set_go_to_true/set_go_to_false's plain index into
+        get_ids(...) with no Continue offset - sharing one numbering would silently break
+        anyone still using the deprecated index-based setters. """
         root = RootElt()
         elt = ChoiceElt(1, parent=root)
         wait_a = WaitElt(2, parent=root)
         wait_b = WaitElt(3, parent=root)
         root._children = [elt, wait_a, wait_b]
+        ids = elt.get_ids(without_ids=(elt.id,), without_types=(AddButtonPlaceholder,))
 
-        assert elt.branches._combo_index_to_value(0) == CONTINUE
-        assert elt.branches._index_to_id(0) == wait_a.id
-        assert elt.branches._combo_index_to_value(1) == elt.branches._index_to_id(0)
+        assert elt._combo_index_to_value(0) == CONTINUE
+        assert ids[0] == wait_a.id
+        assert elt._combo_index_to_value(1) == ids[0]
 
     def test_dashboard_refresh_preserves_detector_selection(self, qtbot):
         """ Regression: ThresholdChoiceModel.updated_module_manager used to force-select every
@@ -300,6 +311,173 @@ class TestChoiceElt:
         elt.do_things_with_dashboard()
 
         assert model.settings['detectors']['selected'] == ['det1']
+
+
+class TestSwitchElt:
+    """ SwitchElt's general N-way Rule list: an ordered (condition, target) Rule list,
+    evaluated top to bottom, first match wins, with a mandatory always-matching fallback
+    Rule. ChoiceElt (TestChoiceElt, above) is the permanently-locked 2-Rule case of this. """
+
+    def test_starts_with_only_the_fallback(self, qtbot):
+        """ A brand-new SwitchElt starts minimal: just the fallback, nothing to configure. """
+        elt = SwitchElt(1)
+        assert len(elt.rules) == 1
+        assert elt.rules[0] is elt.fallback_rule
+        assert elt.fallback_rule.condition.model.model_name == 'true'
+
+    def test_add_rule_inserts_before_the_fallback(self, qtbot):
+        elt = SwitchElt(1)
+        rule = elt.add_rule()
+        assert elt.rules == [rule, elt.fallback_rule]
+
+        rule_2 = elt.add_rule()
+        assert elt.rules == [rule, rule_2, elt.fallback_rule]
+
+    def test_remove_rule(self, qtbot):
+        elt = SwitchElt(1)
+        rule = elt.add_rule()
+        other = elt.add_rule()
+        elt.remove_rule(rule.id)
+        assert elt.rules == [other, elt.fallback_rule]
+
+    def test_remove_rule_cannot_remove_the_fallback(self, qtbot):
+        elt = SwitchElt(1)
+        elt.remove_rule(elt.fallback_rule.id)
+        assert elt.rules == [elt.fallback_rule]
+
+    def test_first_matching_rule_wins(self, qtbot):
+        root = RootElt()
+        elt = SwitchElt(1, parent=root)
+        targets = [WaitElt(10 + i, parent=root) for i in range(3)]
+        root._children = [elt] + targets
+
+        rule_1 = elt.add_rule()
+        rule_1.condition.model = 'false'
+        rule_1.go_to = targets[0].id
+        rule_2 = elt.add_rule()
+        rule_2.condition.model = 'true'
+        rule_2.go_to = targets[1].id
+        elt.fallback_rule.go_to = targets[2].id
+
+        resolved = []
+        elt.go_to_signal.connect(lambda rule_id: resolved.append(rule_id))
+        elt._execute()
+
+        assert resolved == [rule_2.id]
+
+    def test_fallback_always_matches_when_nothing_else_does(self, qtbot):
+        root = RootElt()
+        elt = SwitchElt(1, parent=root)
+        wait = WaitElt(10, parent=root)
+        root._children = [elt, wait]
+        rule = elt.add_rule()
+        rule.condition.model = 'false'
+        rule.go_to = wait.id
+        elt.fallback_rule.go_to = wait.id
+
+        resolved = []
+        elt.go_to_signal.connect(lambda rule_id: resolved.append(rule_id))
+        elt._execute()
+
+        assert resolved == [elt.fallback_rule.id]
+
+    def test_manual_override_bypasses_rule_evaluation(self, qtbot):
+        root = RootElt()
+        elt = SwitchElt(1, parent=root)
+        wait_rule_target = WaitElt(10, parent=root)
+        wait_override_target = WaitElt(11, parent=root)
+        root._children = [elt, wait_rule_target, wait_override_target]
+        rule = elt.add_rule()
+        rule.condition.model = 'true'
+        rule.go_to = wait_rule_target.id
+        elt.fallback_rule.go_to = wait_rule_target.id
+
+        elt.manual_override_target = wait_override_target.id
+        elt.manual_override_enabled = True
+
+        resolved = []
+        elt.go_to_signal.connect(lambda rule_id: resolved.append(rule_id))
+        elt._execute()
+
+        assert resolved == [MANUAL_OVERRIDE_ID]
+        assert elt._manual_target.transition.targetState() is wait_override_target.mstate
+
+    def test_check_set_is_valid_names_the_broken_rule(self, qtbot):
+        root = RootElt()
+        elt = SwitchElt(1, parent=root)
+        wait = WaitElt(10, parent=root)
+        root._children = [elt, wait]
+        rule = elt.add_rule()
+        rule.condition.model = 'false'
+        # rule.go_to is never set - its target stays unresolved
+        elt.fallback_rule.go_to = wait.id
+        with pytest.raises(ElementError, match=rule.label):
+            elt.check_set_is_valid()
+
+    def test_check_set_is_valid_warns_on_overlapping_rules(self, qtbot, caplog):
+        root = RootElt()
+        elt = SwitchElt(1, parent=root)
+        wait = WaitElt(10, parent=root)
+        root._children = [elt, wait]
+        rule_1 = elt.add_rule()
+        rule_1.condition.model = 'true'
+        rule_1.go_to = wait.id
+        rule_2 = elt.add_rule()
+        rule_2.condition.model = 'true'
+        rule_2.go_to = wait.id
+        elt.fallback_rule.go_to = wait.id
+
+        with caplog.at_level(logging.WARNING):
+            elt.check_set_is_valid()
+
+        assert 'overlap' in caplog.text.lower()
+
+    def test_check_set_is_valid_does_not_warn_when_rules_dont_overlap(self, qtbot, caplog):
+        root = RootElt()
+        elt = SwitchElt(1, parent=root)
+        wait = WaitElt(10, parent=root)
+        root._children = [elt, wait]
+        rule = elt.add_rule()
+        rule.condition.model = 'false'
+        rule.go_to = wait.id
+        elt.fallback_rule.go_to = wait.id
+
+        with caplog.at_level(logging.WARNING):
+            elt.check_set_is_valid()
+
+        assert 'overlap' not in caplog.text.lower()
+
+    def test_save_load_round_trip(self, qtbot):
+        root = RootElt()
+        elt = SwitchElt(1, parent=root)
+        waits = [WaitElt(10 + i, parent=root) for i in range(2)]
+        root._children = [elt] + waits
+        rule = elt.add_rule()
+        rule.condition.model = 'true'
+        rule.go_to = waits[0].id
+        elt.fallback_rule.go_to = CONTINUE
+        elt.manual_override_enabled = True
+        elt.manual_override_target = waits[1].id
+
+        saved = elt.to_dict_custom()
+        reloaded = SwitchElt(1, parent=root)
+        # deepcopy: unlike ChoiceElt/WhileElt's flat to_dict_custom, SwitchElt's 'rules' and
+        # 'fallback' are nested dicts/lists - from_dict_custom pops keys out of them in place,
+        # so a shallow dict(saved) would let that mutate `saved` itself through the shared
+        # nested objects.
+        reloaded.from_dict_custom(copy.deepcopy(saved))
+
+        assert reloaded.to_dict_custom() == saved
+        assert reloaded == elt
+
+    def test_choice_elt_cannot_add_or_remove_rules(self, qtbot):
+        """ ChoiceElt is the permanently-locked 2-Rule case: no add/remove-Rule affordance. """
+        elt = ChoiceElt(1)
+        assert elt.rules_locked is True
+        with pytest.raises(ElementError):
+            elt.add_rule()
+        with pytest.raises(ElementError):
+            elt.remove_rule(elt.fallback_rule.id)
 
 
 class TestCompositeChoiceModel:

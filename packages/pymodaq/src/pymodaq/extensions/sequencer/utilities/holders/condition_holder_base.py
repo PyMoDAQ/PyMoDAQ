@@ -17,24 +17,22 @@ if TYPE_CHECKING:
 class ConditionHolderBase:
     """ Base for a holder that builds up an element with one pluggable model, picked via a
     combo + nested settings tree, with detector/actuator refresh delegated to
-    ModulesManagerBinding. Used today by ConditionHolder (ChoiceModelBase/ChoiceModelFactory),
-    and designed to be shared by a planned SwitchConditionHolder (SwitchModelBase/
-    SwitchModelFactory) once that lands.
+    ModulesManagerBinding. Used by ConditionHolder (ChoiceModelBase/ChoiceModelFactory) - one
+    instance per ChoiceElt, and one per Rule of a SwitchElt's rule list (see
+    `holders/rule.py`).
 
     Ordinary single inheritance between holders: a concrete subclass only needs to specialize
-    `factory` and `dict_key` (SwitchConditionHolder's planned shape additionally overrides the
-    `model` setter to wire up `outcomes_changed`) - no cooperative super() across siblings to
-    coordinate.
+    `factory` and `dict_key` - no cooperative super() across siblings to coordinate.
     """
 
-    #: the ChoiceModelFactory/SwitchModelFactory instance to pick registered models from
+    #: the ChoiceModelFactory instance to pick registered models from
     factory = None
     #: the key this condition's chosen model name is saved under in to_dict/from_dict
     dict_key: str = None
     #: model_name a brand new instance resolves its lazy default to. None falls back to
     #: factory.models[0] (whichever model happened to be discovered/registered first) - leave
-    #: unset only when that's harmless (e.g. ConditionHolder's true/false are both trivial);
-    #: set explicitly whenever the default actually matters (see SwitchConditionHolder).
+    #: unset only when that's harmless; set explicitly whenever the default actually matters
+    #: (see ConditionHolder.default_model_name).
     default_model_name: str = None
 
     def __init__(self, elt: 'SeqEltBase', combo_tooltip: Optional[str] = None):

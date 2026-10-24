@@ -1,21 +1,12 @@
 from typing import Any
 
-from qtpy import QtCore
-
 from serializall import SerializableFactory
-
-from pymodaq_data import DataToExport
 
 from pymodaq_utils.warnings import deprecation_msg
 
-from qt_themes import get_theme
-from pymodaq_gui.utils.styling import color_to_rgba
-from pymodaq_gui.utils.widgets.combo import ComboBox
-from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltBase, SeqEltFactory, SeqEltCategory
+from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltFactory, SeqEltCategory
 from pymodaq.extensions.sequencer.utilities.elements.button import AddButtonPlaceholder
-from pymodaq.extensions.sequencer.utilities.holders.branch_holder import BranchHolder
-from pymodaq.extensions.sequencer.utilities.holders.condition_holder import ConditionHolder
-from pymodaq.extensions.sequencer.utilities.widget_with_toolbar import WidgetWithToolbar
+from pymodaq.extensions.sequencer.utilities.elements.switch import SwitchElt
 
 
 ser_factory = SerializableFactory()
@@ -23,36 +14,40 @@ ser_factory = SerializableFactory()
 
 @SerializableFactory.register_decorator()
 @SeqEltFactory.register_elt()
-class ChoiceElt(SeqEltBase):
+class ChoiceElt(SwitchElt):
     """ Branches to one of two other elements (by id, anywhere in the tree) based on a
     pluggable condition.
 
-    Built up from two holders, each owning one self-contained concern: `condition`
-    (ConditionHolder - picks a ChoiceModel) and `branches` (BranchHolder - holds the
-    True/False targets). go_to_true/go_to_false stay as plain properties over branches'
-    storage (public API / YAML keys unchanged). Construction order between the two doesn't
-    matter: nothing reads this element's __repr__ (which touches both) until a state is
-    actually entered, by which point both already exist - see CompositeState.setup_states().
+    The permanently-locked 2-Rule case of SwitchElt's general Rule list: exactly one
+    pluggable-condition Rule (go_to_true/choice_model) plus the mandatory fallback
+    (go_to_false, since the fallback is the only other thing that can ever fire once the
+    condition Rule doesn't match) - no add/remove-Rule UI or API. go_to_true/go_to_false/
+    choice_model stay as plain properties over those two rules' storage, so this class's
+    public shape and saved-sequence format (go_to_true/go_to_false/choice_model, flat, no
+    rules/fallback nesting) are completely unaffected by the SwitchElt redesign.
     """
 
     elt_name = 'choice'
     elt_category = SeqEltCategory.LOGIC
+    rules_locked = True
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.condition = ConditionHolder(self, combo_tooltip='Choice Model')
-        self.branches = BranchHolder(self, {True: 'True', False: 'False'})
+        self._condition_rule = self._insert_rule()
+        self._condition_rule.label = 'True'
+        self._fallback.label = 'False'
 
-    def do_things_with_dashboard(self):
-        self.condition.bind_to_dashboard()
+    @property
+    def condition(self):
+        return self._condition_rule.condition
 
     @property
     def choice_model(self):
-        return self.condition.model
+        return self._condition_rule.condition.model
 
     @choice_model.setter
     def choice_model(self, value: str):
-        self.condition.model = value
+        self._condition_rule.condition.model = value
 
     def set_choice_model(self, value: str):
         """ Deprecated: set `choice_model` directly instead. """
@@ -61,33 +56,33 @@ class ChoiceElt(SeqEltBase):
 
     @property
     def go_to_true(self) -> int | str:
-        return self.branches._go_to[True]
+        return self._condition_rule.go_to
 
     @go_to_true.setter
     def go_to_true(self, value: int | str):
-        self.branches.set_go_to(True, value)
+        self._condition_rule.go_to = value
 
     def set_go_to_true(self, index: int):
         """ Deprecated: set `go_to_true` directly with an element id instead. `index` here is
         an index into `get_ids(without_ids=self.without_ids, without_types=self.without_types)`,
         not an id. """
         deprecation_msg('ChoiceElt.set_go_to_true is deprecated, set go_to_true directly with an element id')
-        self.go_to_true = self.branches._index_to_id(index)
+        self.go_to_true = self.get_ids(without_ids=(self.id,), without_types=(AddButtonPlaceholder,))[index]
 
     @property
     def go_to_false(self) -> int | str:
-        return self.branches._go_to[False]
+        return self._fallback.go_to
 
     @go_to_false.setter
     def go_to_false(self, value: int | str):
-        self.branches.set_go_to(False, value)
+        self._fallback.go_to = value
 
     def set_go_to_false(self, index: int):
         """ Deprecated: set `go_to_false` directly with an element id instead. `index` here is
         an index into `get_ids(without_ids=self.without_ids, without_types=self.without_types)`,
         not an id. """
         deprecation_msg('ChoiceElt.set_go_to_false is deprecated, set go_to_false directly with an element id')
-        self.go_to_false = self.branches._index_to_id(index)
+        self.go_to_false = self.get_ids(without_ids=(self.id,), without_types=(AddButtonPlaceholder,))[index]
 
     @property
     def without_ids(self):
@@ -101,18 +96,6 @@ class ChoiceElt(SeqEltBase):
         deprecation_msg('ChoiceElt.without_types is deprecated')
         return (AddButtonPlaceholder,)
 
-    def _style_go_to_combo(self, combo: ComboBox, branch: bool):
-        color_name = 'green' if branch else 'red'
-        combo.setStyleSheet(
-            f"""background-color: {color_to_rgba(getattr(get_theme(), color_name))};
-                color: {color_to_rgba(get_theme().base)};
-            """)
-
-    def _create_widget(self, base_widget: WidgetWithToolbar) -> WidgetWithToolbar:
-        base_widget = self.condition.create_widget(base_widget)
-        self.branches.create_widgets(base_widget, style_hook=self._style_go_to_combo)
-        return base_widget
-
     def to_dict_custom(self) -> dict[str, Any]:
         dict_config = {'go_to_true': self.go_to_true,
                        'go_to_false': self.go_to_false}
@@ -124,24 +107,6 @@ class ChoiceElt(SeqEltBase):
         self.go_to_false = dict_config.pop('go_to_false')
         self.condition.from_dict(dict_config)
 
-    def _eq(self, other: 'ChoiceElt') -> bool:
-        if not hasattr(other, 'go_to_true'):
-            return False
-        if not (self.go_to_false == other.go_to_false and
-                self.go_to_true == other.go_to_true):
-            return False
-        return self.condition.eq(other.condition)
-
     def __repr__(self):
-        return f'{super().__repr__()} - Model: {self.choice_model.model_name} - True: {self.go_to_true} - False: {self.go_to_false}'
-
-    def _execute(self, dte: DataToExport=None):
-        self.choice_model.execute(dte)
-
-    def check_set_is_valid(self) -> bool:
-        self.branches.check_set_is_valid()
-        self.condition.check_set_is_valid()
-
-    def size_hint(self) -> QtCore.QSize:
-        rows = self.condition.count_settings_rows(self.condition.model.settings)
-        return QtCore.QSize(200, 150 + rows * 25)
+        return (f'{self.id} - {self.elt_name.capitalize()} - Model: {self.choice_model.model_name} '
+               f'- True: {self.go_to_true} - False: {self.go_to_false}')
