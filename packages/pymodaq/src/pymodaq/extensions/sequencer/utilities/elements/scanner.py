@@ -31,6 +31,7 @@ ser_factory = SerializableFactory()
 class ScannerElt(SeqEltBase):
 
     elt_name = 'scanner'
+    elt_category = 'Actions'
     children_allowed = True
 
     def __init__(self, *args, **kwargs):

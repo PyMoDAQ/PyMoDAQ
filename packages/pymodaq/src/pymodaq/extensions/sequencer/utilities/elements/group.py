@@ -16,6 +16,7 @@ class GroupElt(SeqEltBase):
     steps into one named unit" primitive, addable anywhere like any other element.
     """
     elt_name = 'group'
+    elt_category = 'Structure'
     children_allowed = True
 
     def __init__(self, *args, **kwargs):

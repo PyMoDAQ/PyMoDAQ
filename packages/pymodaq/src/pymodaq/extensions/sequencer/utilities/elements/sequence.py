@@ -24,6 +24,7 @@ ser_factory = SerializableFactory()
 class SequenceElt(SeqEltBase):
 
     elt_name = 'sequence'
+    elt_category = 'Structure'
     children_allowed = False
     sequences: list['Sequence'] = []
 

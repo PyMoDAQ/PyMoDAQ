@@ -37,6 +37,7 @@ class Status(StrEnum):
 class GrabElt(SeqEltBase):
 
     elt_name = 'grab'
+    elt_category = 'Actions'
     children_allowed = False
 
     def __init__(self, *args, **kwargs):

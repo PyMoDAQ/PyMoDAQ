@@ -29,6 +29,7 @@ logger = set_logger(get_module_name(__file__))
 class StateElt(SeqEltBase):
 
     elt_name = 'state'
+    elt_category = 'Experiment'
     children_allowed = False
 
     def __init__(self, *args, **kwargs):

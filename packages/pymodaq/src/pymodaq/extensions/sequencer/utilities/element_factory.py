@@ -1,7 +1,7 @@
 from pathlib import Path
 from importlib import import_module
 from dataclasses import dataclass, Field, InitVar
-from typing import Tuple, Callable, TYPE_CHECKING, Any, Union, Iterable, Mapping
+from typing import Tuple, Callable, TYPE_CHECKING, Any, Union, Iterable, Mapping, Optional
 
 from qtpy import QtCore, QtWidgets
 
@@ -71,6 +71,10 @@ class SeqEltBase(QtCore.QObject, ActionManager):
 
     children_allowed = False
     params = []
+
+    #: Group shown for this element in the "Add Element" menu (e.g. 'Actions', 'Structure').
+    #: Leave None to keep the element as a flat, top-level entry instead of forcing it into a group.
+    elt_category: Optional[str] = None
 
     def __repr__(self):
         return f'{self.id} - {self.elt_name.capitalize()}'
@@ -517,4 +521,23 @@ class SeqEltFactory:
     def elements(self) -> list[str]:
         return [elt for elt in self.elements_registry.keys()]
 
+    def categorized_elt_names(self, exclude: Iterable[str] = ()) -> dict[str, Union[str, list]]:
+        """ Group registered elements by their declared ``elt_category`` for the Add Element menu
 
+        Elements that do not declare a category (``elt_category`` is ``None``) are kept as flat,
+        top-level entries rather than forced into a group.
+
+        Returns
+        -------
+        dict: suitable as the ``add_menu_entries``/``iterables`` of a MenuButton or IterableMenu
+        """
+        categorized: dict[str, Union[str, list]] = {}
+        for name, elt_cls in self.elements_registry.items():
+            if name in exclude:
+                continue
+            label = name.capitalize()
+            if elt_cls.elt_category is None:
+                categorized[label] = []
+            else:
+                categorized.setdefault(elt_cls.elt_category, []).append(label)
+        return categorized

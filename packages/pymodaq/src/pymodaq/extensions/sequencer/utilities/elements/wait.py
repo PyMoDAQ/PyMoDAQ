@@ -18,6 +18,7 @@ ser_factory = SerializableFactory()
 class WaitElt(SeqEltBase):
 
     elt_name = 'wait'
+    elt_category = 'Actions'
     children_allowed = False
 
     def __init__(self, *args, **kwargs):

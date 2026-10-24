@@ -97,6 +97,7 @@ class ActuatorsValuesUnits:
 class MoveElt(SeqEltBase):
 
     elt_name = 'move'
+    elt_category = 'Actions'
     children_allowed = False
 
     def __init__(self, *args, **kwargs):

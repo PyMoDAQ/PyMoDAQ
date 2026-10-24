@@ -36,6 +36,7 @@ class ChoiceElt(SeqEltBase):
     """
 
     elt_name = 'choice'
+    elt_category = 'Logic'
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
