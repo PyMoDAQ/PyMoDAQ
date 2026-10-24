@@ -496,6 +496,16 @@ class Launcher(CustomApp):
 
         return history, history_keys
 
+    def quit_fun(self):
+        # the history file may still change (or be removed) once the widgets are deleted
+        self._history_file_watcher.removePaths(self._history_file_watcher.files())
+        self._history_file_watcher.deleteLater()
+        self.splash_timer.stop()
+        self.splash_sc.deleteLater()
+        for manager in (self.state_manager, self.extension_manager, self.extension_manager_restore):
+            manager.quit_fun()  # the state manager quits its ExperimentManager too
+        return super().quit_fun()
+
     def _on_history_file_modified(self):
         self.history, self.history_keys = self.load_history_in_dict()
         self.history_index = 0

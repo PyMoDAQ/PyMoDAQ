@@ -174,7 +174,7 @@ def linspace_step_N(start, step, Npts):
     return linspace_step(start, stop, step)
 
 
-def find_index(x, threshold: Union[Number, List[Number]]) -> List[tuple]:
+def find_index(x, threshold: Union[float, Number, List[Union[float, Number]]]) -> List[tuple]:
     """find_index finds the index ix such that x(ix) is the closest from threshold
 
     Parameters

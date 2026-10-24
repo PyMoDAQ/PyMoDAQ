@@ -36,7 +36,7 @@ class ControlModuleUI(CustomApp):
 
     See Also
     --------
-    :class:`daq_move_ui.DAQ_Move_UI`, :class:`daq_viewer_ui.DAQ_Viewer_UI`
+    :class:`DAQMoveUI<pymodaq.control_modules.daq_move_ui.ui_base.DAQMoveUI>`, :class:`daq_viewer_ui.DAQ_Viewer_UI`
     """
     command_sig = QtCore.Signal(ThreadCommand)
 
@@ -220,6 +220,8 @@ class ControlModuleUI(CustomApp):
         """Close and clean up the settings widget. Subclasses should call super().close()."""
         if self._settings_widget is not None:
             self._settings_widget.close()
+            self._settings_widget.deleteLater()
+        self.delete_actions()
 
     def do_init(self, do_init=True):
         """Programmatically press the Init button

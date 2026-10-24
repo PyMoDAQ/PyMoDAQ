@@ -48,10 +48,13 @@ def test_manager_without_dashboard(qapp):
     assert not manager.is_dashboard_available
     assert manager.modules_manager is None
     assert not manager.can_execute_entry()
+    manager.quit_fun()
 
 
 def test_base_manager_does_not_execute_entries(qapp):
-    assert not SettingsManager().can_execute_entry()
+    manager = SettingsManager()
+    assert not manager.can_execute_entry()
+    manager.quit_fun()
 
 
 @pytest.fixture
@@ -60,7 +63,7 @@ def dashboard():
     mkQApp('dashboard_mixin_test')
     shared_ui, dashboard = create_load_dashboard(show_dashboard=False)
     yield dashboard
-    dashboard.quit_fun()
+    shared_ui.quit_fun()  # quits the dashboard too, as its Quit action
     for widget in (shared_ui.parent, dashboard.tree):
         widget.close()
         widget.deleteLater()
@@ -92,7 +95,9 @@ def test_managers_only_looking_modules_up_use_the_one_of_the_dashboard(dashboard
 
 
 def test_state_manager_without_dashboard_has_no_modules_manager(qapp):
-    assert StateManager().modules_manager is None
+    manager = StateManager()
+    assert manager.modules_manager is None
+    manager.quit_fun()
 
 
 def test_dashboard_is_available_in_setup_ui(dashboard):
@@ -132,7 +137,7 @@ def test_qt_side_is_initialized_before_the_dashboard_is_set(dashboard, monkeypat
         init_dashboard(self, *args, **kwargs)
 
     monkeypatch.setattr(DashboardMixin, 'init_dashboard', checking_init_dashboard)
-    ExperimentManager(dashboard=dashboard)
+    ExperimentManager(dashboard=dashboard).quit_fun()
     assert seen == [True]
 
 

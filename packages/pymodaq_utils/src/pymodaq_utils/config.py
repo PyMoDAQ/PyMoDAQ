@@ -10,7 +10,7 @@ from os import environ
 import sys
 import datetime
 from pathlib import Path
-from typing import Union, Dict, TypeVar, Any, List, TYPE_CHECKING, Callable, Type
+from typing import Optional, Union, Dict, TypeVar, Any, List, TYPE_CHECKING, Callable, Type
 from typing import Iterable as IterableType
 
 from pymodaq_utils import warnings
@@ -209,8 +209,8 @@ def check_config(config_base: dict, config_local: dict):
         return status
 
 
-def copy_template_config(config_file_name: str = 'config', source_path: Union[Path, str] = None,
-                         dest_path: Union[Path, str] = None):
+def copy_template_config(config_file_name: str = 'config', source_path: Optional[Union[Path, str]] = None,
+                         dest_path: Optional[Union[Path, str]] = None):
     """Get a toml file path and copy it
 
     the destination is made of a given folder path (or the system-wide local path by default) and the config_file_name
@@ -233,6 +233,7 @@ def copy_template_config(config_file_name: str = 'config', source_path: Union[Pa
     """
     if dest_path is None:
         dest_path = get_set_config_dir('config')
+    dest_path = Path(dest_path)
 
     file_name = Path(config_file_name).stem  # remove eventual extensions
     file_name += '.toml'

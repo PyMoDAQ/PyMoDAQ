@@ -42,6 +42,18 @@ class FrameClosing(QtWidgets.QFrame):
 
 
 
+def row_of(parent_elt: SeqEltBase, elt: SeqEltBase) -> int:
+    """ Row of elt within the children of parent_elt, comparing identities
+
+    SeqEltBase.__eq__ compares ids and names so it cannot be used to locate an element: a moved element
+    equals the one it is being moved from.
+    """
+    for row, child in enumerate(parent_elt.children):
+        if child is elt:
+            return row
+    raise ValueError(f'{elt!r} is not a child of {parent_elt!r}')
+
+
 def elt_level(index: QModelIndex) -> int:
     """ Calculate nesting depth of the element with the specified index """
     depth = 0
@@ -165,6 +177,7 @@ class SequenceTreeModel(QtCore.QAbstractItemModel):
         self.insert_data(QtCore.QModelIndex(), 0, AddButtonPlaceholder())
         self._dashboard = dashboard
         self._ind_elt: int = 0
+        self._dragged_elt: SeqEltBase | None = None  # the element being dragged, to refuse impossible drops
         self.parent_sequence = parent_sequence
 
     @property
@@ -196,7 +209,7 @@ class SequenceTreeModel(QtCore.QAbstractItemModel):
             return QModelIndex()
 
         grandparent_elt = parent_elt.parent
-        row = grandparent_elt.children.index(parent_elt)
+        row = row_of(grandparent_elt, parent_elt)
         return self.createIndex(row, 0, parent_elt)
 
     def rowCount(self, parent=QModelIndex()):
@@ -325,7 +338,7 @@ class SequenceTreeModel(QtCore.QAbstractItemModel):
             self.insert_data(parent_index, row, new_object)
 
     def index_from_element(self, elt: SeqEltBase) -> QModelIndex:
-        if elt == self.root_elt:
+        if elt is self.root_elt:
             index = QModelIndex()
         else:
             # To create the index, we need to know which row the parent occupies inside ITS own parent
@@ -333,7 +346,7 @@ class SequenceTreeModel(QtCore.QAbstractItemModel):
             if parent is None:
                 index = QModelIndex()
             else:
-                elt_row = parent.children.index(elt)
+                elt_row = row_of(parent, elt)
                 index = self.createIndex(elt_row, 0, elt)
         return index
 
@@ -402,7 +415,8 @@ class SequenceTreeModel(QtCore.QAbstractItemModel):
 
         # 3) Check if it has children and call the method on them
         if parent_index is not None:
-            this_elt_index = self.index(row, 0, parent_index)
+            # insert_data may have clamped the row (to stay above the AddButton): do not rely on it
+            this_elt_index = self.index_from_element(elt)
         else:
             this_elt_index = QModelIndex()
         for ind_row, child in enumerate(children):
@@ -418,8 +432,10 @@ class SequenceTreeModel(QtCore.QAbstractItemModel):
 
     def mimeData(self, indexes: list[QModelIndex]) -> QMimeData:
         data = QMimeData()
+        self._dragged_elt = None
         if indexes[0].isValid():
             elt: SeqEltBase = indexes[0].internalPointer()
+            self._dragged_elt = elt
             data.setData(MIME_TYPE, ser_factory.get_apply_serializer(elt))
         return data
 
@@ -434,9 +450,10 @@ class SequenceTreeModel(QtCore.QAbstractItemModel):
         if not data.hasFormat(MIME_TYPE):
             return False
 
-        if row == -1:
-            row = parent.row() if parent.isValid() else self.rowCount(parent)
+        if self._is_drop_into_dragged_elt(parent):
+            return False
 
+        # row == -1 (dropped on an element or on the empty area): insert_data appends before the AddButton
 
         elt: SeqEltBase = ser_factory.get_apply_deserializer(data.data(MIME_TYPE).data())
 
@@ -447,6 +464,16 @@ class SequenceTreeModel(QtCore.QAbstractItemModel):
 
         self.recursive_insert(parent, elt, row)
         return True
+
+    def _is_drop_into_dragged_elt(self, parent: QModelIndex) -> bool:
+        """ True if the drop target is the element being dragged or one of its descendants"""
+        dragged = getattr(self, '_dragged_elt', None)
+        elt = self.get_elt_from_index(parent)
+        while dragged is not None and elt is not None:
+            if elt is dragged:
+                return True
+            elt = elt.parent
+        return False
 
     def get_elt_from_index(self, index: QModelIndex) -> SeqEltBase:
         return index.internalPointer() if index.isValid() else self.root_elt

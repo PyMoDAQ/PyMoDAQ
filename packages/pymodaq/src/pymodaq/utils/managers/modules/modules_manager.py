@@ -1,8 +1,7 @@
 from contextlib import contextmanager
 import warnings
-from typing import List, Union, TYPE_CHECKING, Optional, Sequence
 import numpy as np
-from typing import List, Union, TYPE_CHECKING, Optional, Sequence, Callable, Any
+from typing import List, Union, TYPE_CHECKING, Optional, Sequence, Callable, Any, Iterator, cast
 
 from pymodaq.control_modules.enums import MoveType
 from pymodaq.control_modules.viewer_utility_classes import HW_SETTINGS_KEY as DETECTOR_SETTINGS_KEY
@@ -20,6 +19,7 @@ from pymodaq_utils.config import GlobalConfig as Config
 
 from pymodaq_data.data import DataToExport, DataSource, DataDim
 
+from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_gui.utils import Dock
 from pymodaq_gui.messenger import messagebox
@@ -77,16 +77,20 @@ class ModulesManager(QObject, ParameterManager):
                                     # the received responses (see grab_data/move_actuators)
 
     params = [
-        {'title': "Probe detectors", 'name': ModulesManagerParam.PROBE_DETECTORS, 'type': 'action_led', 'value': False},
-        {'title': "Probe actuators", 'name': ModulesManagerParam.PROBE_ACTUATORS, 'type': 'action_led', 'value': False},
+        {'title': "Probe detectors", 'name': ModulesManagerParam.PROBE_DETECTORS.value,
+         'type': 'action_led', 'value': False},
+        {'title': "Probe actuators", 'name': ModulesManagerParam.PROBE_ACTUATORS.value,
+         'type': 'action_led', 'value': False},
 
-        {'title': 'Detectors', 'name': ModulesManagerParam.DETECTORS, 'type': 'itemselect', 'checkbox': True},
-        {'title': 'Actuators', 'name': ModulesManagerParam.ACTUATORS, 'type': 'itemselect', 'checkbox': True},
+        {'title': 'Detectors', 'name': ModulesManagerParam.DETECTORS.value, 'type': 'itemselect', 'checkbox': True},
+        {'title': 'Actuators', 'name': ModulesManagerParam.ACTUATORS.value, 'type': 'itemselect', 'checkbox': True},
 
         # Probe results live in their own group, not nested under the probe buttons above,
         # so they render below the selection lists instead of pushing them out of view.
-        {'title': 'Probed detector data', 'name': ModulesManagerParam.PROBE_DETECTORS_RESULTS, 'type': 'group', 'children': []},
-        {'title': 'Probed actuator positions', 'name': ModulesManagerParam.PROBE_ACTUATORS_RESULTS, 'type': 'group', 'children': []},
+        {'title': 'Probed detector data', 'name': ModulesManagerParam.PROBE_DETECTORS_RESULTS.value,
+         'type': 'group', 'children': []},
+        {'title': 'Probed actuator positions', 'name': ModulesManagerParam.PROBE_ACTUATORS_RESULTS.value,
+         'type': 'group', 'children': []},
     ]
 
     def __init__(self,
@@ -94,9 +98,12 @@ class ModulesManager(QObject, ParameterManager):
                  actuators: Optional[Sequence['DAQ_Move']] = None,
                  selected_detectors: Optional[Sequence['DAQ_Viewer']] = None,
                  selected_actuators: Optional[Sequence['DAQ_Move']] = None,
-                 parent_name='',
-                 **kwargs):
+                 parent_name: str = '',
+                 **kwargs: Any) -> None:
         self.parent_name = parent_name
+        # the self-detaching callback waiting for its move/grab (one per type of module), see _auto_forgetting:
+        # module type -> (wrapper, disconnect_modules)
+        self._pending_auto_forgetting: dict[ModuleType, tuple[Callable[..., Any], bool]] = {}
         QObject.__init__(self)
         ParameterManager.__init__(self)
         if detectors is None:
@@ -114,9 +121,10 @@ class ModulesManager(QObject, ParameterManager):
         for mod in selected_detectors:
             assert mod in detectors
 
-        self.det_done_datas: DataToExport = None
+        # None until the first grab / move, which sets them before they are used
+        self.det_done_datas: DataToExport = None  # type: ignore[assignment]
         self.det_done_flag = False
-        self.move_done_positions: DataToExport = None
+        self.move_done_positions: DataToExport = None  # type: ignore[assignment]
         self.move_done_flag = False
 
         # sigActivated emits the param itself (ActionLedParameter.activate()), but neither
@@ -124,15 +132,15 @@ class ModulesManager(QObject, ParameterManager):
         self.settings.child(ModulesManagerParam.PROBE_DETECTORS).sigActivated.connect(self.probe_detectors)
         self.settings.child(ModulesManagerParam.PROBE_ACTUATORS).sigActivated.connect(self.probe_actuators)
 
-        self._detectors = []
-        self._actuators = []
+        self._detectors: list['DAQ_Viewer'] = []
+        self._actuators: list['DAQ_Move'] = []
 
         self.actuators_connected = False
         self.detectors_connected = False
 
-        self.set_actuators(actuators, selected_actuators)
-        self.set_detectors(detectors, selected_detectors)
-        
+        self.set_actuators(list(actuators), list(selected_actuators))
+        self.set_detectors(list(detectors), list(selected_detectors))
+
         self.detectors_timeout_timer = QTimer()
         self.detectors_timeout_timer.setSingleShot(True)
         self.detectors_timeout_timer.timeout.connect(self._on_detectors_timeout)
@@ -141,13 +149,25 @@ class ModulesManager(QObject, ParameterManager):
         self.actuators_timeout_timer.setSingleShot(True)
         self.actuators_timeout_timer.timeout.connect(self._on_actuators_timeout)
 
-    def on_hardware_initialization(self, do_init: bool, module: Union['DAQ_Move', 'DAQ_Viewer']):
-        """ Bypass method during initialization to assert whether a Master of some slave module already exists"""
+    def on_hardware_initialization(self, do_init: bool, module: Union['DAQ_Move', 'DAQ_Viewer']) -> None:
+        """ Bypass method during initialization to assert whether a Master of some slave module already exists
+
+        If a master module with the same id is already initialized, the slave module shares its controller and
+        thread. The module is then initialized (or closed) according to *do_init*.
+
+        Parameters
+        ----------
+        do_init: bool
+            True to initialize the hardware of the module, False to close it
+        module: DAQ_Move or DAQ_Viewer
+            The control module whose hardware is about to be initialized
+        """
         if not module.master:
             for other_module in self.modules_all:
                 if other_module.initialized_state and other_module.id == module.id and other_module.master:
-                    module.controller_and_thread.controller = other_module.controller_and_thread.controller
-                    module.controller_and_thread.thread = other_module.controller_and_thread.thread
+                    # the controller_and_thread of a control module is always set by its constructor
+                    module.controller_and_thread.controller = other_module.controller_and_thread.controller  # type: ignore[union-attr]
+                    module.controller_and_thread.thread = other_module.controller_and_thread.thread  # type: ignore[union-attr]
                     break
         module.init_hardware(do_init)
 
@@ -160,49 +180,64 @@ class ModulesManager(QObject, ParameterManager):
         return id
 
     @property
-    def actuator_timeout(self):
+    def actuator_timeout(self) -> float:
+        """Timeout (in seconds) while waiting for the actuators to reach their target positions (from the config)"""
         return config('pymodaq', 'actuator', 'polling_timeout_s')
 
     @property
-    def detector_timeout(self):
+    def detector_timeout(self) -> float:
+        """Timeout (in milliseconds) while waiting for the detectors to send their data (from the config)"""
         return config('pymodaq', 'viewer', 'timeout')
 
-    def enable_modules(self, enable=True):
+    def enable_modules(self, enable: bool = True) -> None:
+        """Enable or disable the toolbar of all the control modules"""
         for module in self.modules_all:
-            module.ui.toolbar.setEnabled(enable)
+            module.ui.toolbar.setEnabled(enable)  # type: ignore[union-attr]
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         try:
             return f'ModulesManager of "{self.parent_name}" with control modules: {self.get_names(self.modules_all)}'
         except AttributeError:
             return f'ModulesManager of "{self.parent_name}"'
 
-    def show_only_control_modules(self, show: True):
-        self.settings.child(ModulesManagerParam.PROBE_DETECTORS).show(not show)
-        self.settings.child(ModulesManagerParam.PROBE_ACTUATORS).show(not show)
-        self.settings.child(ModulesManagerParam.PROBE_DETECTORS_RESULTS).show(not show)
-        self.settings.child(ModulesManagerParam.PROBE_ACTUATORS_RESULTS).show(not show)
+    def show_only_control_modules(self, show: bool) -> None:
+        """Hide (True) or show (False) the probing actions and results of the settings"""
+        self.settings.child(ModulesManagerParam.PROBE_DETECTORS.value).show(not show)
+        self.settings.child(ModulesManagerParam.PROBE_ACTUATORS.value).show(not show)
+        self.settings.child(ModulesManagerParam.PROBE_DETECTORS_RESULTS.value).show(not show)
+        self.settings.child(ModulesManagerParam.PROBE_ACTUATORS_RESULTS.value).show(not show)
 
     @classmethod
-    def get_names(cls, modules:  list[Union['DAQ_Move', 'DAQ_Viewer']]):
+    def get_names(cls, modules: Union[Sequence[Union['DAQ_Move', 'DAQ_Viewer']], 'DAQ_Move', 'DAQ_Viewer']
+                  ) -> list[str]:
         """Get the titles of a list of Control Modules
 
         Parameters
         ----------
         modules: list of DAQ_Move and/or DAQ_Viewer
+            A single module is also accepted
+
+        Returns
+        -------
+        list of str
+            The title of each module
         """
         if not hasattr(modules, '__iter__'):
-            modules = [modules]
-        return [mod.title for mod in modules]
+            modules = [modules]  # type: ignore[list-item]
+        return [mod.title for mod in modules]  # type: ignore[union-attr]
 
-    def get_mods_from_names(self, names, mod=ModuleType.Detector) -> List[Union['DAQ_Move', 'DAQ_Viewer']]:
+    def get_mods_from_names(self, names: Sequence[str], mod: Union[ModuleType, str] = ModuleType.Detector
+                            ) -> List[Union['DAQ_Move', 'DAQ_Viewer']]:
         """Getter of a list of given modules from their name (title)
+
+        The names that do not match any module are ignored.
 
         Parameters
         ----------
         names: list of str
-        mod: str
+        mod: ModuleType or str
             either ModuleType.Detector for DAQ_Viewer modules or ModuleType.Actuator for DAQ_Move modules
+            (the 'det' and 'act' strings are also accepted, for backward compatibility)
         """
         mods = []
         for name in names:
@@ -211,7 +246,8 @@ class ModulesManager(QObject, ParameterManager):
                 mods.append(d)
         return mods
 
-    def get_mod_from_name(self, name, mod=ModuleType.Detector) -> Union['DAQ_Move', 'DAQ_Viewer', None]:
+    def get_mod_from_name(self, name: str, mod: Union[ModuleType, str] = ModuleType.Detector
+                          ) -> Union['DAQ_Move', 'DAQ_Viewer', None]:
         """Getter of a given module from its name (title)
 
         Returns None is no control module with this name exists
@@ -219,8 +255,9 @@ class ModulesManager(QObject, ParameterManager):
         Parameters
         ----------
         name: str
-        mod: str
+        mod: ModuleType or str
             either ModuleType.Detector for DAQ_Viewer modules or ModuleType.Actuator for DAQ_Move modules
+            (the 'det' and 'act' strings are also accepted, for backward compatibility)
         """
         if mod == ModuleType.Detector or mod == 'det':  #backcompat when comparing to 'det'
             modules = self._detectors
@@ -237,7 +274,7 @@ class ModulesManager(QObject, ParameterManager):
             logger.warning(f'No detector with this name: {name}')
             return None
 
-    def add_modules(self, modules: list[Union['DAQ_Move', 'DAQ_Viewer']]):
+    def add_modules(self, modules: list[Union['DAQ_Move', 'DAQ_Viewer']]) -> None:
         """ Add new modules to the manager keeping the initial set of selected actuators or detectors"""
         actuators = [act for act in modules if act.__class__.__name__ == 'DAQ_Move']
         detectors = [det for det in modules if det.__class__.__name__ == 'DAQ_Viewer']
@@ -249,12 +286,12 @@ class ModulesManager(QObject, ParameterManager):
         self.modules_added_signal.emit()
 
 
-    def set_actuators(self, actuators: list['DAQ_Move'], selected_actuators: list['DAQ_Move']):
+    def set_actuators(self, actuators: list['DAQ_Move'], selected_actuators: list['DAQ_Move']) -> None:
         """Populates actuators and the subset to be selected in the UI"""
         self._actuators = actuators
         self.settings.child(ModulesManagerParam.ACTUATORS).setValue(dict(all_items=self.get_names(actuators),
                                                        selected=self.get_names(selected_actuators)))
-    def set_actuators_from_names(self, actuators: list[str], selected_actuators: list[str]):
+    def set_actuators_from_names(self, actuators: list[str], selected_actuators: list[str]) -> None:
         """Populates actuators and the subset to be selected in the UI from their names"""
         for act in actuators:
             assert act in self.actuators_name
@@ -263,13 +300,13 @@ class ModulesManager(QObject, ParameterManager):
         self.settings.child(ModulesManagerParam.ACTUATORS).setValue(dict(all_items=actuators,
                                                        selected=selected_actuators))
 
-    def set_detectors(self, detectors: list['DAQ_Viewer'], selected_detectors: list['DAQ_Viewer']):
+    def set_detectors(self, detectors: list['DAQ_Viewer'], selected_detectors: list['DAQ_Viewer']) -> None:
         """Populates detectors and the subset to be selected in the UI"""
         self._detectors = detectors
         self.settings.child(ModulesManagerParam.DETECTORS).setValue(dict(all_items=self.get_names(detectors),
                                                        selected=self.get_names(selected_detectors)))
 
-    def set_detectors_from_names(self, detectors: list[str], selected_detectors: list[str]):
+    def set_detectors_from_names(self, detectors: list[str], selected_detectors: list[str]) -> None:
         """Populates detectors and the subset to be selected in the UI from their names"""
         for det in detectors:
             assert det in self.detectors_name
@@ -289,7 +326,7 @@ class ModulesManager(QObject, ParameterManager):
         return self._detectors
 
     @detectors_all.setter
-    def detectors_all(self, detectors: List['DAQ_Viewer']):
+    def detectors_all(self, detectors: List['DAQ_Viewer']) -> None:
         self.set_detectors(detectors, [])
 
     @property
@@ -303,16 +340,16 @@ class ModulesManager(QObject, ParameterManager):
         return self._actuators
 
     @actuators_all.setter
-    def actuators_all(self, actuators: List['DAQ_Move']):
+    def actuators_all(self, actuators: List['DAQ_Move']) -> None:
         self.set_actuators(actuators, [])
 
     @property
-    def modules(self):
+    def modules(self) -> List[Union['DAQ_Move', 'DAQ_Viewer']]:
         """Get the list of detectors and actuators"""
         return self.detectors + self.actuators
 
     @property
-    def modules_all(self):
+    def modules_all(self) -> List[Union['DAQ_Move', 'DAQ_Viewer']]:
         """Get the list of all detectors and actuators"""
         return self.detectors_all + self.actuators_all
 
@@ -321,33 +358,33 @@ class ModulesManager(QObject, ParameterManager):
         return [mod.title for mod in self.modules_all]
 
     @property
-    def Ndetectors(self):
+    def Ndetectors(self) -> int:
         """Get the number of selected detectors"""
         return len(self.detectors)
 
     @property
-    def Nactuators(self):
+    def Nactuators(self) -> int:
         """Get the number of selected actuators"""
         return len(self.actuators)
 
     @property
-    def detectors_name(self):
+    def detectors_name(self) -> List[str]:
         """Get all the names of the detectors"""
         return self.settings.child(ModulesManagerParam.DETECTORS).value()['all_items']
 
     @property
-    def selected_detectors_name(self):
+    def selected_detectors_name(self) -> List[str]:
         """Get/Set the names of the selected detectors"""
         return self.settings.child(ModulesManagerParam.DETECTORS).value()['selected']
 
     @selected_detectors_name.setter
-    def selected_detectors_name(self, detectors):
+    def selected_detectors_name(self, detectors: Sequence[str]) -> None:
         if set(detectors).issubset(self.detectors_name):
             self.settings.child(ModulesManagerParam.DETECTORS).setValue(dict(all_items=self.detectors_name,
                                                            selected=detectors))
 
     @property
-    def actuators_name(self):
+    def actuators_name(self) -> List[str]:
         """Get all the names of the actuators"""
         return self.settings.child(ModulesManagerParam.ACTUATORS).value()['all_items']
 
@@ -357,12 +394,13 @@ class ModulesManager(QObject, ParameterManager):
         return self.settings.child(ModulesManagerParam.ACTUATORS).value()['selected']
 
     @selected_actuators_name.setter
-    def selected_actuators_name(self, actuators):
+    def selected_actuators_name(self, actuators: Sequence[str]) -> None:
         if set(actuators).issubset(self.actuators_name):
             self.settings.child(ModulesManagerParam.ACTUATORS).setValue(dict(all_items=self.actuators_name,
                                                            selected=actuators))
 
-    def value_changed(self, param):
+    def value_changed(self, param: Parameter) -> None:
+        """Clear the probed results and emit detectors_changed / actuators_changed when a selection changes"""
         if param.name() == 'detectors':
             # Previously probed channels no longer reflect the current selection
             self.settings.child(ModulesManagerParam.PROBE_DETECTORS_RESULTS).clearChildren()
@@ -373,7 +411,7 @@ class ModulesManager(QObject, ParameterManager):
             self.actuators_changed.emit(param.value()['selected'])
 
     @contextmanager
-    def _probing(self, connect, timeout_handler):
+    def _probing(self, connect: Callable[..., Any], timeout_handler: Callable[[List[str]], Any]) -> Iterator[None]:
         """Shared connect/timeout-watch/disconnect scaffold around a probe action.
 
         Both get_det_data_list (grab_data) and probe_actuators (move_actuators) bracket
@@ -400,7 +438,7 @@ class ModulesManager(QObject, ParameterManager):
         (probe_detectors_results) and return the data"""
 
         if len(self.detectors) == 0:
-            return DataToExport(name=__class__.__name__, control_module='DAQ_Viewer')
+            return DataToExport(name=__class__.__name__, control_module='DAQ_Viewer')  # type: ignore[name-defined]
 
         with self._probing(self.connect_detectors, self._on_detector_probe_timeout):
             datas: DataToExport = self.grab_data(Naverage=1)
@@ -429,19 +467,19 @@ class ModulesManager(QObject, ParameterManager):
         )
         return self.probe_detectors()
 
-    def _report_probe_timeout(self, probe_param_name: str, kind: str, missing_modules: List[str]):
+    def _report_probe_timeout(self, probe_param_name: str, kind: str, missing_modules: List[str]) -> None:
         """ Reset the probe button's LED and report which modules failed to answer, by name """
         self.settings.child(probe_param_name).setValue(False)
         messagebox(text=f"The following {kind}(s) did not respond in time:\n"
                         + "\n".join(missing_modules))
 
-    def _on_detector_probe_timeout(self, missing_modules: List[str]):
+    def _on_detector_probe_timeout(self, missing_modules: List[str]) -> None:
         self._report_probe_timeout('probe_detectors', 'detector', missing_modules)
 
-    def _on_actuator_probe_timeout(self, missing_modules: List[str]):
+    def _on_actuator_probe_timeout(self, missing_modules: List[str]) -> None:
         self._report_probe_timeout('probe_actuators', 'actuator', missing_modules)
 
-    def get_probed_data_full_names(self, dim: DataDim | str = None) -> List[str]:
+    def get_probed_data_full_names(self, dim: Optional[Union[DataDim, str]] = None) -> List[str]:
         """Return full names (origin/name) of probed data, optionally filtered by dim.
 
         Parameters
@@ -454,22 +492,21 @@ class ModulesManager(QObject, ParameterManager):
         list of str
         """
         names = []
-        if dim is not None:
-            dim = enum_checker(DataDim, dim)
-        for det_param in self.settings.child(ModulesManagerParam.PROBE_DETECTORS_RESULTS).children():
-            if dim is None or det_param.name() == dim.name:
+        dim_enum = enum_checker(DataDim, dim) if dim is not None else None
+        for det_param in self.settings.child(ModulesManagerParam.PROBE_DETECTORS_RESULTS.value).children():
+            if dim_enum is None or det_param.name() == dim_enum.name:
                 names.extend([child.name() for child in det_param.children()])
         return names
 
-    def _grab_data(self, check_do_override=True, Naverage: Optional[int] = None, **kwargs):
-        self.det_done_datas = DataToExport(name=__class__.__name__, control_module='DAQ_Viewer')
+    def _grab_data(self, check_do_override: bool = True, Naverage: Optional[int] = None, **kwargs: Any) -> None:
+        self.det_done_datas = DataToExport(name=__class__.__name__, control_module='DAQ_Viewer')  # type: ignore[name-defined]
         self._received_data = 0
         self.det_done_flag = False
         self.settings.child(ModulesManagerParam.PROBE_DETECTORS).setValue(self.det_done_flag)
 
         if check_do_override and 'DataMixer' in self.selected_detectors_name:
-            overridden_detectors = self.get_mod_from_name(
-                'DataMixer', ModuleType.Detector).settings.child(
+            overridden_detectors = cast('DAQ_Viewer', self.get_mod_from_name(
+                'DataMixer', ModuleType.Detector)).settings.child(
                 DETECTOR_SETTINGS_KEY, 'overridden_detectors').opts['limits']
         else:
             overridden_detectors = []
@@ -492,30 +529,53 @@ class ModulesManager(QObject, ParameterManager):
 
     def _auto_forgetting(self, callback: Callable[[DataToExport], Any], module_type: ModuleType,
                          disconnect_modules: bool) -> Callable[[DataToExport], Any]:
-        """ Wrap `callback` so forget_callback is called on its behalf, right before it runs. """
+        """ Wrap `callback` so forget_callback is called on its behalf, right before it runs.
+
+        The wrapper, not `callback`, is what is connected to the done signal. It calls forget_callback with its own
+        reference (the connected one), so it disconnects itself right before running `callback`.
+        If the move/grab times out the wrapper never runs: the manager then forgets it itself (see
+        _forget_pending_callback).
+        """
         def _wrapped(dte: DataToExport):
+            self._pending_auto_forgetting.pop(module_type, None)
             self.forget_callback(_wrapped, module_type=module_type,
                                  disconnect_modules=disconnect_modules)
             callback(dte)
+        self._pending_auto_forgetting[module_type] = (_wrapped, disconnect_modules)
         return _wrapped
 
     def grab_data_with_callback(self,
-                                check_do_override=True,
+                                check_do_override: bool = True,
                                 Naverage: Optional[int] = None,
-                                callback: Callable[[DataToExport], Any] = None,
-                                do_connect_modules=True,
-                                detach_after_callback=True,
-                                **kwargs):
-        """ Do a single grab of the selected detectors, calling `callback` with a DataToExport
-        holding the data of all of them when the last one has answered.
+                                callback: Optional[Callable[[DataToExport], Any]] = None,
+                                do_connect_modules: bool = True,
+                                detach_after_callback: bool = True,
+                                **kwargs: Any) -> None:
+        """Do a single grab of the selected detectors and return immediately
 
-        If a detector does not answer in time (config viewer/timeout), the callback is not called
-        and the timeout_signal is emitted.
+        The callback is called with a DataToExport holding the data of all the selected detectors when the last one
+        has answered. If a detector does not answer in time (config viewer/timeout), the callback is not called and
+        the timeout_signal is emitted.
 
-        detach_after_callback: if True (default), forget_callback is called on your behalf right
-        before `callback` runs.
+        Parameters
+        ----------
+        check_do_override: bool
+            See grab_data
+        Naverage: int, optional
+            If provided, overrides each detector's own Naverage setting
+        callback: callable, optional
+            Connected to det_done_signal, it stays connected unless detach_after_callback is True: call
+            forget_callback yourself when it has been called (or on a timeout)
+        do_connect_modules: bool
+            If True the selected detectors are connected to the manager (see connect_detectors), forget_callback
+            disconnects them
+        detach_after_callback: bool
+            If True (default), forget_callback is called on your behalf right before callback runs
+
+        See Also
+        --------
+        forget_callback, grab_data
         """
-
         if callback is not None:
             if detach_after_callback:
                 callback = self._auto_forgetting(callback, ModuleType.Detector, do_connect_modules)
@@ -524,19 +584,29 @@ class ModulesManager(QObject, ParameterManager):
                                do_connect_modules)
         self._grab_data(check_do_override, Naverage, **kwargs)
 
-    def _on_detectors_timeout(self):
+    def _forget_pending_callback(self, module_type: ModuleType) -> None:
+        """ After a timeout, the self-detaching callback (detach_after_callback=True) waiting for this type of
+        modules will never run: disconnect it (and the modules) so that it does not fire on a later grab/move """
+        pending = self._pending_auto_forgetting.pop(module_type, None)
+        if pending is not None:
+            self.forget_callback(pending[0], module_type=module_type, disconnect_modules=pending[1])
+
+    def _on_detectors_timeout(self) -> None:
         missing_detectors = self.get_missing_detectors()
         self.timeout_signal.emit(missing_detectors)
         logger.error('Timeout Fired during waiting for data to be acquired from: '
                      f'{", ".join(missing_detectors)}')
+        self._forget_pending_callback(ModuleType.Detector)
 
-    def _on_actuators_timeout(self):
+    def _on_actuators_timeout(self) -> None:
         missing_actuators = self.get_missing_actuators()
         self.timeout_signal.emit(missing_actuators)
         logger.error('Timeout Fired during waiting for data to be acquired from: '
                      f'{", ".join(missing_actuators)}')
+        self._forget_pending_callback(ModuleType.Actuator)
 
-    def grab_data(self, check_do_override=True, Naverage: Optional[int] = None, **kwargs) -> DataToExport:
+    def grab_data(self, check_do_override: bool = True, Naverage: Optional[int] = None,
+                  **kwargs: Any) -> DataToExport:
         """Do a single grab of connected and selected detectors
 
         Parameter
@@ -581,16 +651,19 @@ class ModulesManager(QObject, ParameterManager):
         return [act_title for act_title in self.selected_actuators_name
                 if act_title not in received_origins]
 
-    def grab_datas(self, **kwargs):
+    def grab_datas(self, **kwargs: Any) -> DataToExport:
         """ For back compatibility but use self.grab_data"""
         return self.grab_data(**kwargs)
 
-    def connect_actuators(self, connect=True, slot=None, signal='move_done'):
+    def connect_actuators(self, connect: bool = True, slot: Optional[Callable[..., Any]] = None,
+                          signal: str = 'move_done') -> None:
         """Connect the selected actuators signal to a given or default slot
 
         Parameters
         ----------
         connect: bool
+            if True, connect the selected actuators, if False disconnect the selected actuators (the ones that are
+            not selected anymore are not touched: disconnect before changing the selection)
         slot: builtin_function_or_method
             method or function the chosen signal will be connected to
             if None, then the default move_done slot is used
@@ -622,17 +695,17 @@ class ModulesManager(QObject, ParameterManager):
 
         self.actuators_connected = connect
 
-    def connect_detectors(self, connect=True, slot=None):
+    def connect_detectors(self, connect: bool = True, slot: Optional[Callable[..., Any]] = None) -> None:
         """
         Connect selected DAQ_Viewers's grab_done_signal to the given slot
 
         Parameters
         ----------
         connect: bool
-            if True, connect to the given slot (or default slot)
-            if False, disconnect all detectors (not only the currently selected ones.
-            This is made because when selected detectors changed if you only disconnect those one,
-            the previously connected ones will stay connected)
+            if True, connect the selected detectors to the given slot (or default slot)
+            if False, disconnect the selected detectors from it. The detectors that are not selected
+            anymore are not touched: if the selection changed since they were connected, they stay connected.
+            Disconnect before changing the selection.
         slot: method
             A method that should be connected, if None self.det_done is connected by default
         """
@@ -654,7 +727,7 @@ class ModulesManager(QObject, ParameterManager):
 
         self.detectors_connected = connect
 
-    def probe_actuators(self):
+    def probe_actuators(self) -> None:
         """Open a single dialog to set target positions for all selected actuators, move them,
         then populate the Actuators panel's result tree (probe_actuators_results)"""
         actuators = self.actuators
@@ -703,7 +776,7 @@ class ModulesManager(QObject, ParameterManager):
                  'type': 'float', 'value': dact.value(), 'readonly': True},
             )
 
-    def test_move_actuators(self):
+    def test_move_actuators(self) -> None:
         """Deprecated alias for probe_actuators(), kept for backward compatibility."""
         warnings.warn(
             "test_move_actuators() is deprecated, use probe_actuators() instead",
@@ -712,12 +785,30 @@ class ModulesManager(QObject, ParameterManager):
         return self.probe_actuators()
 
     def connect_and_move_actuators(self, dte_act: DataToExport,
-                                   mode=MoveType.ABS,
-                                   polling=True,
-                                   slot=None,
-                                   signal='move_done') -> DataToExport:
+                                   mode: Union[MoveType, str] = MoveType.ABS,
+                                   polling: bool = True,
+                                   slot: Optional[Callable] = None,
+                                   signal: str = 'move_done') -> DataToExport:
         """ Connect Actuators specified in the dte object and move them either absolute or relative to the
         given value
+
+        Parameters
+        ----------
+        dte_act: DataToExport
+            One DataActuator per actuator, named like the actuator. The actuators named in it become the selected ones
+        mode: MoveType or str
+            Absolute (default) or relative positioning
+        polling: bool
+            See move_actuators
+        slot: callable, optional
+            See connect_actuators
+        signal: str
+            See connect_actuators
+
+        Returns
+        -------
+        DataToExport
+            The positions reported by the actuators once the moves are done
         """
         self.selected_actuators_name = [dwa.name for dwa in dte_act]
         self.connect_actuators(True, slot=slot, signal=signal)
@@ -727,17 +818,34 @@ class ModulesManager(QObject, ParameterManager):
         return dte
 
     def move_actuators_with_callback(self, dte_act: DataToExport | DataToActuators,
-                                     mode: MoveType = MoveType.REL,
-                                     callback: Callable[[DataToExport], Any] = None,
-                                     do_connect_modules=True,
-                                     detach_after_callback=True):
+                                     mode: Union[MoveType, str] = MoveType.ABS,
+                                     callback: Optional[Callable[[DataToExport], Any]] = None,
+                                     do_connect_modules: bool = True,
+                                     detach_after_callback: bool = True) -> None:
         """ Move actuators defined within a DataToExport to the value included in the DatActuators within
 
-        This method will emit a signal to a given callback with a DataToExport containing
-        DataActuators when the moves are done.
+        The actuators named in dte_act become the selected ones. This method returns immediately and the callback is
+        called with a DataToExport containing DataActuators when all the moves are done. If an actuator does not answer
+        in time (config actuator/polling_timeout_s), the callback is not called and the timeout_signal is emitted.
 
-        detach_after_callback: if True (default), forget_callback is called on your behalf before
-        `callback` runs.
+        Parameters
+        ----------
+        dte_act: DataToExport or DataToActuators
+            One DataActuator per actuator, named like the actuator. For a DataToActuators, its own mode is used.
+        mode: MoveType or str
+            Absolute (default) or relative positioning
+        callback: callable, optional
+            Connected to move_done_signal, it stays connected unless detach_after_callback is True: call
+            forget_callback yourself when it has been called (or on a timeout)
+        do_connect_modules: bool
+            If True the selected actuators are connected to the manager (see connect_actuators), forget_callback
+            disconnects them
+        detach_after_callback: bool
+            If True (default), forget_callback is called on your behalf right before callback runs
+
+        See Also
+        --------
+        forget_callback, move_actuators
         """
 
         if isinstance(dte_act, DataToActuators):
@@ -753,9 +861,9 @@ class ModulesManager(QObject, ParameterManager):
         self._move_actuators(dte_act, mode=mode,)
 
     def forget_callback(self,
-                        callback : Callable,
-                        module_type=ModuleType.Detector,
-                        disconnect_modules=True):
+                        callback: Callable[..., Any],
+                        module_type: ModuleType = ModuleType.Detector,
+                        disconnect_modules: bool = True) -> None:
         """ to be called by the caller of self.move_actuators_with_callback or self.grab_data_with_callback
         in order to disconnect properly the callback
 
@@ -781,8 +889,8 @@ class ModulesManager(QObject, ParameterManager):
 
 
     def _move_actuators(self, dte_act: DataToExport | DataToActuators,
-                        mode: MoveType = MoveType.ABS,):
-        self.move_done_positions = DataToExport(name=__class__.__name__, control_module='DAQ_Move')
+                        mode: Union[MoveType, str] = MoveType.ABS) -> DataToExport:
+        self.move_done_positions = DataToExport(name=__class__.__name__, control_module='DAQ_Move')  # type: ignore[name-defined]
         self.move_done_flag = False
         self.settings.child(ModulesManagerParam.PROBE_ACTUATORS).setValue(self.move_done_flag)
 
@@ -802,14 +910,14 @@ class ModulesManager(QObject, ParameterManager):
                         utils.ThreadCommand(command=command, attribute=[dact, True]))
         else:
             logger.error('Invalid number of positions compared to selected actuators')
-            return self.move_done_positions
+        return self.move_done_positions
 
 
     def move_actuators(self, dte_act: DataToExport,
-                       mode=MoveType.ABS,
-                       polling=True,
+                       mode: Union[MoveType, str] = MoveType.ABS,
+                       polling: bool = True,
                        ) -> DataToExport:
-        """will apply positions to each currently selected actuators. By Default the mode is absolute but can be
+        """Apply positions to each currently selected actuator. By default the mode is absolute.
 
         Deprecated, you should use move_actuators_with_callback to avoid using a polling mechanism which uses Qt event loop
         processevents in a while loop
@@ -818,12 +926,12 @@ class ModulesManager(QObject, ParameterManager):
         ----------
         dte_act: DataToExport
             the DataToExport of position to apply. Its length must be equal to the number of selected actuators
-        mode: str
+        mode: MoveType or str
             either MoveType.ABS ('abs') for absolute positioning or MoveType.REL ('rel') for relative
         polling: bool (should not be used, prefer the callback version)
             if True will wait for the selected actuators to reach their target positions (they have to be
             connected to a method checking for the position and letting the programm know the move is done (default
-            connection is this object `move_done` method)
+            connection is the ``move_done`` method of this object)
 
         Returns
         -------
@@ -848,14 +956,15 @@ class ModulesManager(QObject, ParameterManager):
         self.move_done_signal.emit(self.move_done_positions)
         return self.move_done_positions
 
-    def raise_actuator_timeout(self, module_name: str):
-        pass
+    def raise_actuator_timeout(self, module_name: str) -> None:
+        """Placeholder, does nothing (to be overridden if needed)"""
 
-    def reset_signals(self):
+    def reset_signals(self) -> None:
+        """Set the move and grab done flags so that the polling loops of move_actuators and grab_data end"""
         self.move_done_flag = True
         self.det_done_flag = True
 
-    def order_positions(self, positions: DataToExport):
+    def order_positions(self, positions: DataToExport) -> DataToExport:
         """ Reorder the content of the DataToExport given the order of the selected actuators"""
         actuators = self.selected_actuators_name
         pos = DataToExport('actuators')
@@ -864,7 +973,11 @@ class ModulesManager(QObject, ParameterManager):
         return pos
 
     @Slot(DataActuator)
-    def move_done(self, data_act: DataActuator):
+    def move_done(self, data_act: DataActuator) -> None:
+        """Default slot connected to the move_done_signal of the selected actuators
+
+        Store the position of an actuator and emit move_done_signal once all the selected actuators have answered.
+        """
         try:
             # match on origin, not name, for the same reason as in move_actuators above
             if data_act.origin not in {dact.origin for dact in self.move_done_positions}:
@@ -879,7 +992,11 @@ class ModulesManager(QObject, ParameterManager):
         except Exception as e:
             logger.exception(str(e))
 
-    def det_done(self, data: DataToExport):
+    def det_done(self, data: DataToExport) -> None:
+        """Default slot connected to the grab_done_signal of the selected detectors
+
+        Store the data of a detector and emit det_done_signal once all the selected detectors have answered.
+        """
         if self.det_done_datas is not None:  # means that somehow data are not initialized so no further processing
             self._received_data += 1
             if len(data) != 0:

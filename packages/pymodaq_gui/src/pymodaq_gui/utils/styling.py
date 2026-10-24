@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 import dataclasses
 
 from qt_themes import get_theme
@@ -179,7 +179,7 @@ def create_font(font_name=None, font_size=None, isbold=False, isitalic=False,
     return font
 
 
-def create_color(icon_color: Union[QtGui.QColor, str]) -> Union[QtGui.QColor, None]:
+def create_color(icon_color: Optional[Union[QtGui.QColor, bytes, str]]) -> Union[QtGui.QColor, None]:
     """Return a QColor from a QColor, a theme role name (resolved against the
     theme currently applied, see get_current_theme) or any string QColor accepts."""
     if icon_color is not None:
@@ -190,7 +190,7 @@ def create_color(icon_color: Union[QtGui.QColor, str]) -> Union[QtGui.QColor, No
                 icon_color = QtGui.QColor(icon_color)
                 if not icon_color.isValid():
                     icon_color = None
-    return icon_color
+    return icon_color  # type: ignore[return-value]
 
 def transform_icon(icon: QtGui.QIcon, transform: QtGui.QTransform) -> QtGui.QIcon:
     """Return a new QIcon with all pixmaps transformed by transform.
@@ -298,12 +298,12 @@ def _flip_icon(icon: QtGui.QIcon, flip_h: bool, flip_v: bool) -> QtGui.QIcon:
 
 
 def create_icon(icon_name: Union[QtGui.QIcon, str, Path],
-                icon_color: Union[QtGui.QColor, bytes, str] = None,
-                icon_checked_color: Union[QtGui.QColor, bytes, str] = None,
+                icon_color: Optional[Union[QtGui.QColor, bytes, str]] = None,
+                icon_checked_color: Optional[Union[QtGui.QColor, bytes, str]] = None,
                 flip_h: bool = False,
                 flip_v: bool = False,
                 rotate: int = 0,
-                fill: bool = None):
+                fill: Optional[bool] = None):
     """ Create an icon from various sources by order of preference:
 
     1) icon_name is a MaterialIcon

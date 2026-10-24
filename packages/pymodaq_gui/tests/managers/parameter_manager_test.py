@@ -123,3 +123,21 @@ def test_load(qtbot, tmp_path):
 
     ptree.settings_tree.close()
     ptree.settings_tree.deleteLater()
+
+def test_tree_shown_with_its_window(qtbot):
+    """Settings set before the tree is shown (the usual case) must not leave it hidden when its window is shown"""
+    manager = RealParameterManager()
+    window = manager.settings_tree
+    qtbot.addWidget(window)
+    window.show()
+    assert manager.tree.isVisible()
+
+
+def test_batch_update_keeps_a_visible_tree_visible(qtbot):
+    manager = RealParameterManager()
+    window = manager.settings_tree
+    qtbot.addWidget(window)
+    window.show()
+    with manager.tree_batch_update():
+        manager.settings = manager.create_parameter(RealParameterManager.params)
+    assert manager.tree.isVisible()
