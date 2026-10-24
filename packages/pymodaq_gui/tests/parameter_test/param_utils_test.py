@@ -72,6 +72,32 @@ def test_iter_children_params():
     param_list = putils.iter_children_params(settings,childlist=[],filter_type=['group'],select_filter=True)
     assert all([p.type() == 'group' for p in param_list])
 
+def test_iter_children_params_new_list_each_call():
+    settings = Parameter.create(name='settings', type='group', children=params)
+    first = putils.iter_children_params(settings)
+    second = putils.iter_children_params(settings)
+    assert first is not second
+    assert len(first) == len(second) > 0
+    assert putils.iter_children(settings) is not putils.iter_children(settings)
+
+
+def test_iter_children_filters():
+    settings = Parameter.create(name='settings', type='group', children=params)
+    names = putils.iter_children(settings)
+    assert 'axis' in names
+    names = putils.iter_children(settings, filter_name=['axis'])
+    assert 'axis' not in names
+    names = putils.iter_children(settings, filter_name=['axis'], select_filter=True)
+    assert names and all(name == 'axis' for name in names)
+    types = putils.iter_children_params(settings, output_type='type', filter_type=['group'], select_filter=True)
+    assert types and all(type_ == 'group' for type_ in types)
+
+
+def test_iter_children_params_unknown_attribute_is_skipped():
+    settings = Parameter.create(name='settings', type='group', children=params)
+    assert putils.iter_children_params(settings, output_type='not_an_attribute') == []
+
+
 def test_iter_children_attributes():
     settings = Parameter.create(name='settings', type='group', children=params)
     param_name = putils.iter_children_params(settings, childlist=[], output_type='name')
