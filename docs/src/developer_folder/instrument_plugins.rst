@@ -1034,7 +1034,7 @@ Specifics commands for the :py:class:`DAQ_Move<pymodaq.control_modules.daq_move.
 * **move_done**: update the UI current value and emits the move_done signal
 * **outofbounds**: emits the bounds_signal signal with a True argument
 * **set_allowed_values**: used to change the behaviour of the spinbox controlling absolute values, see
-  :py:meth:`set_abs_spinbox_properties<pymodaq.control_modules.daq_move_ui.DAQ_Move_UI.set_abs_spinbox_properties>`
+  :py:meth:`set_abs_spinbox_properties<pymodaq.control_modules.daq_move_ui.ui_base.DAQMoveUI.set_abs_spinbox_properties>`
 * *stop*: stop the motion
 * *units*: update the UI units. The attribute argument should be a string specifying the new unit.
 
@@ -1046,8 +1046,14 @@ In that case the printed value would show ``12.4 m``.
 
 You can also modify some SpinBox of the UI (the ones used to specify the absolute values) using the *set_allowed_values*
 command. In that case the attribute argument of the ThreadCommand should be a dictionary, see
-:py:meth:`set_abs_spinbox_properties<pymodaq.control_modules.daq_move_ui.DAQ_Move_UI.set_abs_spinbox_properties>`.
+:py:meth:`set_abs_spinbox_properties<pymodaq.control_modules.daq_move_ui.ui_base.DAQMoveUI.set_abs_spinbox_properties>`.
 
+
+The values of the red, green and relative spinboxes of the UI (the *Value Red*, *Value Green* and *Value Relative*
+entries of the main settings of the module) can also be set from the plugin with the
+:py:meth:`set_default_values<pymodaq.control_modules.move_utility_classes.DAQ_Move_base.set_default_values>` helper,
+for instance ``self.set_default_values(red=400., green=800.)``. It relies on the generic *update_main_settings*
+command, whose attribute is ``[['default_value_red'], 400., 'value']``.
 
 DAQ_Viewer specific commands
 ****************************

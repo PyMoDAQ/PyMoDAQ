@@ -95,8 +95,9 @@ Text version:
 #. ``__init__`` calls the base ``__init__`` with ``(parent, dashboard)``, which creates the settings tree, the
    ``H5Manager``, the ``WorkerThreadManager`` and the ``ModulesManager`` of the extension, then calls ``self.setup_ui()``.
 #. ``setup_ui`` builds the user interface by calling the methods listed in the table of :ref:`custom_app_lifecycle`.
-#. ``do_things_after_experiment_set`` is called once at the end of ``CustomExt.__init__`` if an experiment is already
-   applied, and each time the user applies another experiment. This is where the extension adapts to the instruments
+#. ``do_things_after_experiment_set`` is called once at the end of ``setup_ui`` if an experiment is already applied
+   (the extension is opened from a Dashboard where an experiment is loaded), so that it can use the actions and widgets,
+   and each time the user applies another experiment. This is where the extension adapts to the instruments
    that are available (see :ref:`customext_experiment_state`).
 #. While running, the extension reacts to the user (``value_changed`` of the settings tree, actions) and to the signals of
    the control modules. Long work (a scan, a sequence, a ramp) is done by an ``ExtensionWorker`` (see
@@ -184,8 +185,8 @@ instruments of PyMoDAQ it shows, in order:
 * the module variables ``EXTENSION_NAME`` and ``CLASS_NAME``, and the ``main()`` function of this page;
 * the lifecycle methods of :ref:`custom_app_lifecycle`, and the Dashboard toolbar of :ref:`customext_experiment_state`;
 * ``do_things_after_experiment_set`` refreshing the lists of actuators and detectors;
-* the instruments used through ``self.modules_manager`` (``move_actuators_with_callback``, ``grab_data_with_callback`` and
-  ``forget_callback``): the next step is done in a callback when the control module signals the end of the previous
+* the instruments used through ``self.modules_manager`` (``move_actuators_with_callback`` and ``grab_data_with_callback``, whose callbacks are detached
+  automatically): the next step is done in a callback when the control module signals the end of the previous
   one, never by waiting in the GUI thread;
 * a position with units (``DataActuator``), data as ``DataToExport``, shown in a ``ViewerDispatcher`` and saved with
   ``DataToExportSaver`` in the file of the ``H5Manager``;

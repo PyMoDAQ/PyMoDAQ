@@ -43,8 +43,7 @@ Scan Flow
 Selecting detectors and actuators
 +++++++++++++++++++++++++++++++++
 
-The *Actuators* and *Detectors* panels are the user interface of the module manager (see :ref:`module_manager` for
-details). They list the actuators and the detectors declared in the experiment loaded in the Dashboard and allow the
+The *Actuators* and *Detectors* panels are the user interface of the modules manager. They list the actuators and the detectors declared in the experiment loaded in the Dashboard and allow the
 user to select the ones for the next scan by ticking them (see :numref:`list_modules`). The *Probe actuators* and
 *Probe detectors* buttons read the current positions of the selected actuators and do a snap of the selected
 detectors: the results are listed in the *Probed actuator positions* and *Probed detector data* sections below. The LED

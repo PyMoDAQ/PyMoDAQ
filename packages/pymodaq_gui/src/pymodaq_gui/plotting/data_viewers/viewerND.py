@@ -734,18 +734,14 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
         self.update_widget_visibility(nav_indexes=_nav_indexes)
         self.data_displayer.update_nav_indexes(_nav_indexes)
 
+    def _set_data_test_from_param(self, param):
+        self.set_data_test(param.name()[len('set_data_'):])
+
     def connect_things(self):
-        self.settings.child('set_data_1D').sigActivated.connect(lambda: self.set_data_test('1D'))
-        self.settings.child('set_data_2D').sigActivated.connect(lambda: self.set_data_test('2D'))
-        self.settings.child('set_data_3D').sigActivated.connect(lambda: self.set_data_test('3D'))
-        self.settings.child('set_data_4D').sigActivated.connect(lambda: self.set_data_test('4D'))
-        self.settings.child('set_data_spread2D0D').sigActivated.connect(lambda: self.set_data_test('spread2D0D'))
-        self.settings.child('set_data_spread2D1D').sigActivated.connect(lambda: self.set_data_test('spread2D1D'))
-        self.settings.child('set_data_spread2D2D').sigActivated.connect(lambda: self.set_data_test('spread2D2D'))
-        self.settings.child('set_data_spread1D0D').sigActivated.connect(lambda: self.set_data_test('spread1D0D'))
-        self.settings.child('set_data_spread1D1D').sigActivated.connect(lambda: self.set_data_test('spread1D1D'))
-        self.settings.child('set_data_spread1D2D').sigActivated.connect(lambda: self.set_data_test('spread1D2D'))
-        self.settings.child('set_data_spread3D0D').sigActivated.connect(lambda: self.set_data_test('spread3D0D'))
+        # a bound method, not a lambda: a lambda connected to a Parameter would keep this viewer alive
+        for child in self.settings.children():
+            if child.name().startswith('set_data_'):
+                child.sigActivated.connect(self._set_data_test_from_param)
         self.settings.child('data_shape_settings', 'set_nav_axes').sigActivated.connect(self.reshape_data)
 
         self.navigator1D.get_action('crosshair').trigger()

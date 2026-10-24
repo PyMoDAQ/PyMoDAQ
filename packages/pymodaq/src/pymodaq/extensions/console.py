@@ -4,7 +4,7 @@ Created the 25/10/2022
 
 @author: Sebastien Weber
 """
-from typing import TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 import numpy as np
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
@@ -53,6 +53,7 @@ class QtConsole(RichJupyterWidget):
             kernel_client.stop_channels()
             kernel_manager.shutdown_kernel()
         self.exit_requested.connect(stop)
+        self._stop_kernel = stop
 
     def push_variables(self, variable_dict):
         """ Given a dictionary containing name / value pairs, push those
@@ -61,6 +62,18 @@ class QtConsole(RichJupyterWidget):
             console's interactive namespace (```{variable_name: object, …}```)
         """
         self.kernel_manager.kernel.shell.push(variable_dict)
+
+    def release_kernel(self):
+        """ Stop the in-process kernel and forget the variables pushed to its namespace
+
+        The shell of an in-process kernel is a singleton: as long as it holds the dashboard, the whole Dashboard
+        (and all its widgets) stays alive.
+        """
+        shell = self.kernel_manager.kernel.shell
+        shell.user_ns.pop('dashboard', None)
+        shell.user_ns.pop('mods', None)
+        self._stop_kernel()
+        type(shell).clear_instance()
 
 
 class Console(CustomExt):
@@ -84,9 +97,10 @@ class Console(CustomExt):
         self.setup_ui()
 
     def _quit_fun(self) -> bool:
+        self.console.release_kernel()
         return True
 
-    def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: bool = None):
+    def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: Optional[bool] = None):
         super().do_things_after_experiment_set(experiment_name, show_dashboard)
 
         self.console.push_variables(

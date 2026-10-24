@@ -1,4 +1,4 @@
-from typing import Callable, Generator
+from typing import Callable, Generator, Optional
 
 from pathlib import Path
 
@@ -99,7 +99,7 @@ class Sequence(CustomExt):
     def do_things_after_ui_setup(self):
         self.create_dashboard_toolbar(add_break=False)
 
-    def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: bool = None):
+    def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: Optional[bool] = None):
         pass
 
     def setup_actions(self):

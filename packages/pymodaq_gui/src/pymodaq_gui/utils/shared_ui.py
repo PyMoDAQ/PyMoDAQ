@@ -267,6 +267,8 @@ class SharedUI(CustomApp):
 
             if res and self.mainwindow is not None:
                 self.mainwindow.close()
+            if res is not False:  # some apps return None once quit
+                self.delete_actions()
 
         except Exception as e:
             logger.exception(str(e))

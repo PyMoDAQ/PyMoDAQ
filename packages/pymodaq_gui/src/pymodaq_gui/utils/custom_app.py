@@ -1,6 +1,6 @@
 import inspect
 from pathlib import Path
-from typing import Union, TYPE_CHECKING, Dict, Optional, Iterable
+from typing import Any, Union, TYPE_CHECKING, Dict, List, Optional, Iterable
 
 import qt_themes
 from qt_themes import Theme
@@ -30,6 +30,7 @@ config = Config()
 
 
 class WorkFlowActions(StrEnum):
+    """Names of the actions created by :meth:`CustomApp.setup_workflow_actions`"""
     START = 'start'
     STOP = 'stop'
     PAUSE = 'pause'
@@ -124,14 +125,18 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     show_workflow_actions = False
 
     h5_base_group_name = 'AppData'  # rename that in your app/extension to give a meaningful name to your base group
-    params = []
+    params: List[Any] = []  # the parameters (list of dicts) shown in the settings tree
 
-    def __init__(self, parent: Union[DockArea, QtWidgets.QMainWindow, QtWidgets.QWidget] = None,
-                 tree: ParameterTree = None, title: str = None, toolbar: QtWidgets.QToolBar=None,
-                 create_app_toolbar: bool = True, add_toolbar_break=True,
+    parent: Any  # DockArea, QMainWindow or QWidget, as given to __init__
+    mainwindow: QtWidgets.QMainWindow  # None if the parent is not a DockArea or a QMainWindow
+    dockarea: DockArea  # None if the parent is not a DockArea or a QMainWindow
+
+    def __init__(self, parent: Union[DockArea, QtWidgets.QMainWindow, QtWidgets.QWidget, None] = None,
+                 tree: Optional[ParameterTree] = None, title: Optional[str] = None,
+                 toolbar: Optional[QtWidgets.QToolBar] = None,
+                 create_app_toolbar: bool = True, add_toolbar_break: bool = True,
                  create_app_menu: bool = False,
-                 h5_actions_not: Iterable[FileAction] = (FileAction.CLOSE_FILE, FileAction.OPEN_FILE)):
-
+                 h5_actions_not: Iterable[FileAction] = (FileAction.CLOSE_FILE, FileAction.OPEN_FILE)) -> None:
 
         QObject.__init__(self)
         ActionManager.__init__(self)
@@ -144,14 +149,14 @@ class CustomApp(QObject, ActionManager, ParameterManager):
 
         self.parent = parent
         if isinstance(parent, DockArea):
-            self.dockarea: DockArea = parent
-            self.mainwindow: QtWidgets.QMainWindow = parent.parent()
+            self.dockarea = parent
+            self.mainwindow = parent.parent()
         elif isinstance(parent, QtWidgets.QMainWindow):
-            self.dockarea: DockArea = None
-            self.mainwindow: QtWidgets.QMainWindow = parent
+            self.dockarea = None  # type: ignore[assignment]
+            self.mainwindow = parent
         else:
-            self.dockarea: DockArea = None
-            self.mainwindow: QtWidgets.QMainWindow = None
+            self.dockarea = None  # type: ignore[assignment]
+            self.mainwindow = None  # type: ignore[assignment]
 
 
         self._title: str = ''
@@ -160,7 +165,8 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         # then call self.h5saver property
         self.docks: Dict[str, Dock] = dict([])
 
-        self._menubar: QtWidgets.QMenuBar = None
+        self._menubar: QtWidgets.QMenuBar = None  # type: ignore[assignment]  # None without a main window
+        self._statusbar: QtWidgets.QStatusBar = None  # type: ignore[assignment]  # only used without a main window
 
         if toolbar is not None:
             create_app_toolbar = True  # force the app toolbar to be the given one
@@ -168,18 +174,18 @@ class CustomApp(QObject, ActionManager, ParameterManager):
             self.add_toolbar(self.__class__.__name__.lower(),
                              self.__class__.__name__,
                              self.mainwindow,
-                             toolbar,
+                             toolbar,  # type: ignore[arg-type]
                              add_break=add_toolbar_break)
-            self.set_toolbar(toolbar)
+            self.set_toolbar(toolbar)  # type: ignore[arg-type]
 
         if self.mainwindow is not None:
             self.mainwindow.setWindowTitle(self.title)
-            self._menubar = self.mainwindow.menuBar()
+            self._menubar = self.mainwindow.menuBar()  # type: ignore[assignment]
         else:
             parent.setWindowTitle(self.title)
             self._statusbar = QtWidgets.QStatusBar()
 
-        self._status_message_label: QtWidgets.QLabel = None
+        self._status_message_label: QtWidgets.QLabel = None  # type: ignore[assignment]  # set by populate_status_bar
 
         if create_app_menu:
             self.add_menu(self.__class__.__name__.lower(),
@@ -198,10 +204,12 @@ class CustomApp(QObject, ActionManager, ParameterManager):
 
     @property
     def thread_manager(self) -> WorkerThreadManager:
+        """The manager of the worker threads of this app"""
         return self._worker_thread_manager
 
     @property
     def h5_manager(self) -> H5Manager:
+        """The manager of the h5 file and of its related actions and status widgets"""
         return self._h5_manager
 
     @property
@@ -210,19 +218,21 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         return self.h5_manager.h5saver
 
     @classmethod
-    def get_local_folder(cls, user=False) -> Path:
+    def get_local_folder(cls, user: bool = False) -> Path:
         """ Create a local User or system wide folder to store things about this extension"""
         return get_set_path(get_set_local_dir(user=user), cls.__name__)
 
     @property
-    def menubar(self):
+    def menubar(self) -> QtWidgets.QMenuBar:
+        """The menubar of the main window, None if there is no main window"""
         return self._menubar
 
     @property
-    def statusbar(self) -> QtWidgets.QStatusBar | None:
-        return self.mainwindow.statusBar() if self.mainwindow is not None else self._statusbar
+    def statusbar(self) -> QtWidgets.QStatusBar:
+        """The status bar of the main window (or the one of this app if it has no main window)"""
+        return self.mainwindow.statusBar() if self.mainwindow is not None else self._statusbar  # type: ignore[return-value]
 
-    def populate_status_bar(self):
+    def populate_status_bar(self) -> None:
         """Generic method to populate the Status Bar
 
         for customization, reimplement insert_custom_status_widgets method
@@ -235,7 +245,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         if self.show_h5file_statusbar_widgets:
             self.h5_manager.insert_h5stuff_status()
 
-    def set_permanent_status(self, status: str):
+    def set_permanent_status(self, status: str) -> None:
         """ Display a permanent status message
 
         Method populate_status_bar should have been called beforehand
@@ -243,7 +253,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         """
         self._status_message_label.setText(status)
 
-    def insert_custom_status_widgets(self):
+    def insert_custom_status_widgets(self) -> None:
         """ create here Widgets to be added to the StatusBar
         To be reimplemented
 
@@ -254,7 +264,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         """
         pass
 
-    def update_status(self, message: str, wait_time: Optional[int] = None):
+    def update_status(self, message: str, wait_time: Optional[int] = None) -> None:
         """Show the message in the status bar with a delay of wait_time ms.
         """
         if self.statusbar is not None:
@@ -264,22 +274,25 @@ class CustomApp(QObject, ActionManager, ParameterManager):
 
     @property
     def splash_sc(self) -> QtWidgets.QSplashScreen:
+        """The splash screen to display information, created at the first access"""
         if not hasattr(self, "_splash_sc") or self._splash_sc is None:
             self._splash_sc = get_splash_sc()
         return self._splash_sc
 
     @property
     def title(self) -> str:
+        """The title of the app (the name of the class if it has been set to None)"""
         return self._title
 
     @title.setter
-    def title(self, title: str):
+    def title(self, title: Optional[str]) -> None:
         self._title = title if title is not None else self.__class__.__name__
         if self.mainwindow is not None:
             self.mainwindow.setWindowTitle(self._title)
 
     @staticmethod
-    def get_theme(name: str = None) -> Theme:
+    def get_theme(name: Optional[str] = None) -> Theme:
+        """Returns the theme named *name*, or the current one if None (see the qt_themes package)"""
         return qt_themes.get_theme(name)
 
     def _overrides(self, name: str) -> bool:
@@ -287,7 +300,8 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         of CustomApp, used to call the deprecated hooks only for the apps that still define them"""
         return getattr(type(self), name) is not getattr(CustomApp, name)
 
-    def setup_ui(self):
+    def setup_ui(self) -> None:
+        """Build the UI: docks and widgets, menus, toolbars, actions and connections (calls the hooks in order)"""
         self.setup_docks_and_widgets()
 
         self.setup_menus_and_toolbars(self.menubar)  # see ActionManager MixIn class
@@ -309,14 +323,27 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         if self.mainwindow is not None:
             self.mainwindow.close()
         self.disconnect_tree()
+        self.delete_actions()
         return True
 
-    def do_things_after_ui_setup(self):
+    def delete_actions(self) -> None:
+        """Schedule the deletion of the QActions of this app, including the ones of its H5Manager
+
+        See :meth:`ActionManager.delete_actions`
+
+        .. versionadded:: 5.3.9
+        """
+        super().delete_actions()
+        self._h5_manager.delete_actions()
+        self._h5_manager.deleteLater()  # unparented: the slots connected to its signals would keep the app alive
+
+    def do_things_after_ui_setup(self) -> None:
         """ Method to be reimplemented in order to do things after the UI setup
         """
         pass
 
-    def apply_size_hint(self):
+    def apply_size_hint(self) -> None:
+        """Resize the main window (or the parent widget) to the size hint of the app"""
         if self.mainwindow is not None:
             self.mainwindow.resize(self._size_hint)
         else:
@@ -330,7 +357,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         """
         return QtCore.QSize(1200, 800)
 
-    def setup_docks_and_widgets(self):
+    def setup_docks_and_widgets(self) -> None:
         """ Method to be reimplemented to set up the docks layout and/or widgets
 
         Examples
@@ -347,12 +374,12 @@ class CustomApp(QObject, ActionManager, ParameterManager):
             self.setup_docks()  # for backcompatibility
             deprecation_msg('You should not define setup_docks anymore, use `setup_docks_and_widgets` instead')
 
-    def setup_docks(self):
+    def setup_docks(self) -> None:
         """ deprecated, see setup_docks_and_widgets
         """
         pass
 
-    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
+    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None) -> None:  # type: ignore[assignment]
         """Non-mandatory method to be subclassed in order to create menus and toolbars
 
         create menu and toolbar for actions defined in setup_actions, for instance:
@@ -372,13 +399,13 @@ class CustomApp(QObject, ActionManager, ParameterManager):
             self.setup_menu(menubar)  # for back-compatibility
             deprecation_msg('You should not define setup_menu anymore, use `setup_menus_and_toolbars` instead')
 
-    def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
+    def setup_menu(self, menubar: QtWidgets.QMenuBar = None) -> None:  # type: ignore[assignment]
         """ Deprecated, use `setup_menus_and_toolbars`
 
         """
         pass
 
-    def setup_actions(self):
+    def setup_actions(self) -> None:
         """Method where to create actions.
 
         To be reimplemented
@@ -395,7 +422,8 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         """
         pass
 
-    def setup_workflow_actions(self):
+    def setup_workflow_actions(self) -> None:
+        """Create the start, stop, pause and log actions (in the actions menu), see :class:`WorkFlowActions`"""
         if 'actions' not in self.menus:
             self.add_menu('actions', 'Actions', parent_menu=self.menubar)
 
@@ -419,10 +447,10 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         self.toolbar.addSeparator()
 
     def enable_workflow_actions(self,
-                                enable=True,
+                                enable: bool = True,
                                 excepted: Iterable[str | WorkFlowActions] = (),
                                 opposite: Iterable[str | WorkFlowActions] = (),
-                                other_actions: Iterable[str | WorkFlowActions] = ()):
+                                other_actions: Iterable[str | WorkFlowActions] = ()) -> None:
         """ Enable/Disable workflow actions (start, stop, pause) + other specified ones
 
         if an action is specified in excepted, nothing is done on it
@@ -447,7 +475,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
 
         self.set_action_checked(WorkFlowActions.PAUSE, False)
 
-    def connect_things(self):
+    def connect_things(self) -> None:
         """Connect actions and/or other widgets signal to methods
 
         To be reimplemented
@@ -456,4 +484,5 @@ class CustomApp(QObject, ActionManager, ParameterManager):
 
     @property
     def module_and_data_saver(self) -> DataToExportSaver:
+        """A DataToExportSaver using the h5saver of the app"""
         return DataToExportSaver(self.h5_manager.h5saver)

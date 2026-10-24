@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Union, TYPE_CHECKING, Callable
+from typing import Optional, Union, TYPE_CHECKING, Callable
 from pathlib import Path
 import sys
 
@@ -291,7 +291,7 @@ class Overshooter(DashboardMixin, ManagerBase):
         for child in self.settings.child('overshoots').children():
             child.remove()
 
-    def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: bool = None):
+    def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: Optional[bool] = None):
         super().do_things_after_experiment_set(experiment_name, show_dashboard)
 
         self.modules_manager.selected_actuators_name = self.modules_manager.actuators_name

@@ -181,8 +181,16 @@ class ManagerBase(CustomApp):
         self.splash_subentries.show_splash()
 
     def close_subentries_display(self, after_ms=1000):
-        if self.splash_subentries is not None:
-            QtCore.QTimer.singleShot(after_ms, self.splash_subentries.close)
+        splash = self.splash_subentries
+        if splash is not None:
+            QtCore.QTimer.singleShot(after_ms, lambda: self._close_splash(splash))
+
+    @staticmethod
+    def _close_splash(splash: 'SubEntriesSplash'):
+        try:
+            splash.close()
+        except RuntimeError:  # the splash was deleted in the meantime (manager closed before the delay)
+            pass
 
     @property
     def manager_name(self) -> str:
@@ -385,6 +393,7 @@ class ManagerBase(CustomApp):
 
     def quit_fun(self):
         self.entries_sync.unbind_all()
+        self.entries_sync.deleteLater()  # unparented: the slots connected to it would keep this manager alive
         return super().quit_fun()
 
     def create_entry(self, entry: str = None, bypass_dialog=False):

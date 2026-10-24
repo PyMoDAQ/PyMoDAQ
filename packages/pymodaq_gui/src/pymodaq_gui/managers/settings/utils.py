@@ -262,7 +262,7 @@ class SettingsManagerModel(TableModel):
         else:
             for child in entry.setting.parameter.children():
                 if child.opts.get(VALID_FOR_CONFIGURATION, True) :  # only add the ones specifying they are configurable
-                    pwp = ParameterWithPath(parameter=child, path=entry.setting.path + [child.name()])
+                    pwp = ParameterWithPath(parameter=child, path=list(entry.setting.path) + [child.name()])
                     config_entry = SubEntry(entry.entry_type, entry.module_name, pwp)
                     self.split_entry(config_entry, entries)
         return entries
@@ -367,7 +367,7 @@ class SettingsManagerTableView(QtWidgets.QTableView):
 
     def setmenu(self, status):
         if status:
-            self.menu = QtWidgets.QMenu()
+            self.menu = QtWidgets.QMenu(self)  # owned by the table: its slots would keep the table alive
             special_menu = self.menu.addMenu('Add Special Configuration')
 
             for entry in special_entry_factory.entries:

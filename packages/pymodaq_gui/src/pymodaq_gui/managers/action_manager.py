@@ -2,10 +2,11 @@ import warnings
 from collections.abc import Iterable
 from collections import OrderedDict
 from pathlib import Path
-from typing import Callable, Iterable as IterableType, Union, OrderedDict as OrderedDictType
+from typing import Any, Callable, Iterable as IterableType, Optional, Union, OrderedDict as OrderedDictType
 
 import qt_themes
 from multipledispatch import dispatch
+from multipledispatch.dispatcher import MethodDispatcher, str_signature
 from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtWidgets import QAction as QtQAction
 
@@ -39,6 +40,7 @@ TOOLBAR_BUTTON_STYLE_LABELS = {
 
 
 def get_toolbar_button_style() -> QtCore.Qt.ToolButtonStyle | None:
+    """The toolbar button style set in the configuration, None if it is not set or not valid"""
     name = config.get(('gui', 'style', 'toolbar_button_style'), [None])[0]
     return TOOLBAR_BUTTON_STYLES.get(name)
 
@@ -53,13 +55,13 @@ toolbar_style_signaller = ToolbarStyleSignaller()
 class ToolbarStyleChecks(QtCore.QObject):
     """Keeps the checkable toolbar style actions in sync, lives as long as the menu it is parented to"""
 
-    def __init__(self, actions: dict[str, QtGui.QAction], parent: QtCore.QObject):
+    def __init__(self, actions: dict[str, QtGui.QAction], parent: QtCore.QObject) -> None:
         super().__init__(parent)
         self._actions = actions
         toolbar_style_signaller.style_changed.connect(self.sync)
 
     @QtCore.Slot(object)
-    def sync(self, style: QtCore.Qt.ToolButtonStyle):
+    def sync(self, style: QtCore.Qt.ToolButtonStyle) -> None:
         for name, action in self._actions.items():
             action.setChecked(TOOLBAR_BUTTON_STYLES[name] == style)
 
@@ -102,17 +104,17 @@ class QAction(QtQAction):
     QAction subclass to mimic signals as pushbuttons. Done to be sure of backcompatibility
     when I moved from pushbuttons to QAction
     """
-    def __init__(self, icon_unchecked: Union[None, str, QtGui.QIcon],
-                 name='',
-                 icon_checked: Union[str, QtGui.QIcon] = None,
-                 icon_color: Union[QtGui.QColor, bytes, str]=None,
-                 icon_checked_color: Union[QtGui.QColor, bytes, str]=None,
+    def __init__(self, icon_unchecked: Union[None, str, Path, QtGui.QIcon],
+                 name: str = '',
+                 icon_checked: Optional[Union[str, Path, QtGui.QIcon]] = None,
+                 icon_color: Optional[Union[QtGui.QColor, bytes, str]] = None,
+                 icon_checked_color: Optional[Union[QtGui.QColor, bytes, str]] = None,
                  flip_h: bool = False,
                  flip_v: bool = False,
                  rotate: int = 0,
-                 fill: bool = None,
+                 fill: Optional[bool] = None,
                  follow_theme: bool = True,
-                 ):
+                 ) -> None:
         super().__init__(name)
         # What the icon is made of, kept so it can be rebuilt (refresh_icon) when the
         # theme changes: icons bake their colours at construction. With follow_theme,
@@ -174,22 +176,24 @@ class QAction(QtQAction):
         else:
             self.setIcon(self.icon_unchecked)
 
-    def click(self):
+    def click(self) -> None:
         deprecation_msg("click for PyMoDAQ's QAction is deprecated, use *trigger*",
                         stacklevel=3)
         self.trigger()
 
     @property
-    def clicked(self):
+    def clicked(self) -> Any:
         deprecation_msg("clicked for PyMoDAQ's QAction is deprecated, use *trigger*",
                         stacklevel=3)
         return self.triggered
 
-    def connect_to(self, slot):
+    def connect_to(self, slot: Callable[..., Any]) -> None:
+        """Connect the *triggered* signal to a slot"""
         self.triggered.connect(slot)
 
-    def set_icon(self, icon_name: str = None,
-                 icon_color: Union[QtGui.QColor, bytes, str]=None):
+    def set_icon(self, icon_name: Optional[Union[str, Path, QtGui.QIcon]] = None,
+                 icon_color: Optional[Union[QtGui.QColor, bytes, str]] = None) -> None:
+        """Set the icon of the action, by default the one of the current checked state"""
         if icon_name is None:
             if self.isChecked():
                 icon_name = self.icon_checked
@@ -204,7 +208,7 @@ class QAction(QtQAction):
             self._icon_set_explicitly = True
         self.setIcon(create_icon(icon_name, icon_color))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'QAction {self.text()}'
 
 
@@ -216,14 +220,14 @@ class WidgetActionProxy(QtWidgets.QWidget):
     Only the setVisible method is different, as the Action need to be hidden.
     (monkey-patching setVisible on the widget wasn't compatible with PySide6)
     """
-    def __init__(self, widget : QtWidgets.QWidget, action : QtWidgets.QAction):
-        super().__init__(widget.parent())
+    def __init__(self, widget : QtWidgets.QWidget, action : QtWidgets.QAction) -> None:
+        super().__init__(widget.parent())  # type: ignore[arg-type]
         self.setParent(widget)
 
         self._widget = widget
         self._action = action
 
-    def setVisible(self, visible : bool):
+    def setVisible(self, visible : bool) -> None:
         self._action.setVisible(visible)
         self._widget.setVisible(visible)
         super().setVisible(visible)
@@ -239,28 +243,30 @@ class WidgetActionProxy(QtWidgets.QWidget):
     def action(self) -> QtWidgets.QAction:
         return self._action
 
-    def __getattr__(self, name : str):
+    def __getattr__(self, name : str) -> Any:
         return getattr(self._widget, name)
 
-    @property
-    def __class__(self):
+    @property  # type: ignore[misc]
+    def __class__(self):  # no annotation: a runtime type checker would recurse on this very property
         return self._widget.__class__
 
 
-def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip='', checkable=False, checked=False,
-              slot: Callable = None, toolbar: QtWidgets.QToolBar = None,
-              menu: QtWidgets.QMenu = None, visible=True, shortcut: Union[str, QtCore.Qt.Key, QtGui.QKeySequence]=None,
-              enabled=True, icon_checked: Union[str, Path, QtGui.QIcon] = None,
-              icon_color: Union[QtGui.QColor, str] = None,
-              icon_checked_color: Union[QtGui.QColor, str] = None,
+def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon, None] = '', tip: str = '',
+              checkable: bool = False, checked: bool = False,
+              slot: Optional[Callable[..., Any]] = None, toolbar: Optional[QtWidgets.QToolBar] = None,
+              menu: Optional[QtWidgets.QMenu] = None, visible: bool = True,
+              shortcut: Optional[Union[str, QtCore.Qt.Key, QtGui.QKeySequence]] = None,
+              enabled: bool = True, icon_checked: Optional[Union[str, Path, QtGui.QIcon]] = None,
+              icon_color: Optional[Union[QtGui.QColor, bytes, str]] = None,
+              icon_checked_color: Optional[Union[QtGui.QColor, bytes, str]] = None,
               flip_h: bool = False,
               flip_v: bool = False,
-              before: QtQAction = None,
-              action: QtQAction | QtWidgets.QWidgetAction = None,
-              fill: bool = None,
+              before: Optional[QtQAction] = None,
+              action: Optional[QAction] = None,
+              fill: Optional[bool] = None,
               rotate: int = 0,
               follow_theme: bool = True,
-              ):
+              ) -> QAction:
     """Create a new action and add it eventually to a toolbar and a menu
 
     Parameters
@@ -308,7 +314,8 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
     before: QAction, optional
         if set, the action is inserted before this action in the toolbar/menu;
         if None the action is appended at the end
-    action: QAction, QWidgetAction, optional
+    action: pymodaq_gui.managers.action_manager.QAction, optional
+        An existing action to configure instead of creating a new one
     fill: bool, optional
         Fill or not the icon, if None left to the user configuration
     rotate: int, optional
@@ -317,6 +324,11 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
         True (default): colours given as theme colours (:class:`~pymodaq_gui.utils.styling.ThemeColor`,
         their names, or values resolved from the theme) follow theme changes. False: the
         colours are resolved once, here, and kept as they are
+
+    Returns
+    -------
+    QAction
+        The created (or given) action
     """
     if action is None:
         if icon_name is None or icon_name == '':
@@ -347,6 +359,10 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
             menu.insertAction(before, action)
         else:
             menu.addAction(action)
+    if action.parent() is None and (toolbar is not None or menu is not None):
+        # an unparented action is never deleted while a slot connected to it (often a lambda holding the
+        # UI) is alive: it would keep the whole UI alive after it is closed
+        action.setParent(toolbar if toolbar is not None else menu)
     if shortcut is not None:
         action.setShortcut(shortcut)
     action.setVisible(visible)
@@ -354,12 +370,13 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
     return action
 
 
-def addwidget(klass: Union[str, QtWidgets.QWidget, object], *args, tip='',
-              toolbar: QtWidgets.QToolBar = None,
-              visible=True, signal_str=None, slot: Callable=None,
-              setters: dict = None, enabled=True,
-              before: QtQAction = None,
-              **kwargs) -> Union[WidgetActionProxy, QtWidgets.QWidget]:
+def addwidget(klass: Union[str, QtWidgets.QWidget, Callable[..., QtWidgets.QWidget]], *args: Any, tip: str = '',
+              toolbar: Optional[QtWidgets.QToolBar] = None,
+              visible: bool = True, signal_str: Optional[str] = None,
+              slot: Optional[Callable[..., Any]] = None,
+              setters: Optional[dict] = None, enabled: bool = True,
+              before: Optional[QtQAction] = None,
+              **kwargs: Any) -> Optional[Union[WidgetActionProxy, QtWidgets.QWidget]]:
     """Create and eventually add a widget to a toolbar
 
     Parameters
@@ -389,6 +406,7 @@ def addwidget(klass: Union[str, QtWidgets.QWidget, object], *args, tip='',
     Returns
     -------
     QtWidgets.QWidget
+        The widget (wrapped in a WidgetActionProxy if added to a toolbar), None if it could not be created
     """
     if setters is None:
         setters = {}
@@ -406,10 +424,11 @@ def addwidget(klass: Union[str, QtWidgets.QWidget, object], *args, tip='',
             return None
 
     if toolbar is not None:
+        action: QtWidgets.QAction
         if before is None:
-            action: QtWidgets.QAction = toolbar.addWidget(widget)
+            action = toolbar.addWidget(widget)  # type: ignore[assignment]
         else:
-            action: QtWidgets.QAction = toolbar.insertWidget(before, widget)
+            action = toolbar.insertWidget(before, widget)  # type: ignore[assignment]
         action.setVisible(visible)
         widget.setToolTip(tip)
         widget = WidgetActionProxy(widget, action)
@@ -428,6 +447,35 @@ def addwidget(klass: Union[str, QtWidgets.QWidget, object], *args, tip='',
     return widget
 
 
+class _InstanceMethodDispatcher(MethodDispatcher):
+    """ MethodDispatcher that does not store the instance it is accessed from
+
+    multipledispatch's MethodDispatcher, shared by all instances, keeps the last one in an attribute: the last UI
+    that called each method stayed alive after it was closed.
+    """
+    __slots__ = ()
+
+    def __get__(self, instance: Any, owner: Any) -> Any:
+        if instance is None:
+            return self
+        return lambda *args, **kwargs: self._call(instance, *args, **kwargs)
+
+    def _call(self, instance: Any, *args: Any, **kwargs: Any) -> Any:
+        types = tuple([type(arg) for arg in args])
+        func = self.dispatch(*types)
+        if not func:
+            raise NotImplementedError(f'Could not find signature for {self.name}: <{str_signature(types)}>')
+        return func(instance, *args, **kwargs)
+
+
+def _delete_later(obj: QtCore.QObject, only_if_orphan: bool = False) -> None:
+    try:
+        if not only_if_orphan or obj.parent() is None:
+            obj.deleteLater()
+    except RuntimeError:  # the C++ object was already deleted (e.g. with its parent)
+        pass
+
+
 class ActionManager:
     """MixIn Class to be used by all UserInterface to manage their QActions and the action they are connected to
 
@@ -438,14 +486,14 @@ class ActionManager:
     menu: QMenu, option
         The menu to use as default
     """
-    def __init__(self, toolbar: QtWidgets.QToolBar = None, menu: QtWidgets.QMenu = None):
+    def __init__(self, toolbar: Optional[QtWidgets.QToolBar] = None, menu: Optional[QtWidgets.QMenu] = None) -> None:
         self._actions: OrderedDictType[str, QAction] = OrderedDict([])
         self._menus: OrderedDictType[str, QtWidgets.QMenu] = OrderedDict([])
         self._menu_icon_names: dict[str, Union[str, Path]] = {}
         self._toolbars: OrderedDictType[str, QtWidgets.QToolBar] = OrderedDict([])
 
-        self._toolbar: QtWidgets.QToolBar = None
-        self._menu: QtWidgets.QMenu = None
+        self._toolbar: Optional[QtWidgets.QToolBar] = None
+        self._menu: Optional[QtWidgets.QMenu] = None
 
         if toolbar is not None:
             self.reference_toolbar('default', toolbar)
@@ -453,6 +501,23 @@ class ActionManager:
         if menu is not None:
             self.reference_menu('default', menu)
             self.set_menu(menu)
+
+    def delete_actions(self) -> None:
+        """Schedule the deletion of all the QActions referenced in this manager, and of its toolbars and
+        menus that have no parent
+
+        A Qt object keeps the slots connected to its signals (often lambdas holding the manager) alive as
+        long as the C++ object exists. Unparented actions, toolbars or menus therefore keep the whole UI that
+        created them alive after it is closed, out of reach of Python's garbage collector. Call this when the
+        UI is closed for good.
+
+        .. versionadded:: 5.3.9
+        """
+        for action in self._actions.values():
+            _delete_later(action)
+        for widget in list(self._toolbars.values()) + list(self._menus.values()):
+            # the ones with a parent are owned (and deleted) by a window that may not be closed
+            _delete_later(widget, only_if_orphan=True)
 
     def _resolve_toolbar(self, toolbar: Union[str, QtWidgets.QToolBar, None],
                          auto: bool = True) -> Union[QtWidgets.QToolBar, None]:
@@ -494,7 +559,7 @@ class ActionManager:
             return menu
         return self.menu if auto else None
 
-    def _resolve_action(self, action: Union[str, 'QAction', WidgetActionProxy, None]) -> Union['QAction', None]:
+    def _resolve_action(self, action: Union[str, 'QAction', WidgetActionProxy, None]) -> Optional[QtQAction]:
         """Resolve an action reference to a QAction instance.
 
         Parameters
@@ -517,7 +582,7 @@ class ActionManager:
             raise TypeError(f'action must be None, a str, QAction, WidgetActionProxy, or QMenu, got {type(action)}')
         return action
 
-    def setup_actions(self):
+    def setup_actions(self) -> None:
         """Method where to create actions to be subclassed. Mandatory
 
         Examples
@@ -535,24 +600,25 @@ class ActionManager:
                                   f'{self.setup_actions.__doc__}')
 
     def add_action(self, short_name: str = '', name: str = '',
-                   icon_name: Union[str, Path, QtGui.QIcon] = '', tip='',
-                   checkable=False,
-                   checked=False,
-                   toolbar: Union[str, QtWidgets.QToolBar, None]=None,
+                   icon_name: Union[str, Path, QtGui.QIcon] = '', tip: str = '',
+                   checkable: bool = False,
+                   checked: bool = False,
+                   toolbar: Union[str, QtWidgets.QToolBar, None] = None,
                    menu: Union[str, QtWidgets.QMenu, None] = None,
-                   visible=True, shortcut: Union[str, QtCore.Qt.Key, QtGui.QKeySequence]=None,
-                   auto_toolbar=True, auto_menu=False,
-                   enabled=True, icon_checked: Union[str, Path, QtGui.QIcon] = None,
-                   icon_color: Union[QtGui.QColor, bytes, str]=None,
-                   icon_checked_color: Union[QtGui.QColor, bytes, str]=None,
+                   visible: bool = True,
+                   shortcut: Optional[Union[str, QtCore.Qt.Key, QtGui.QKeySequence]] = None,
+                   auto_toolbar: bool = True, auto_menu: bool = False,
+                   enabled: bool = True, icon_checked: Optional[Union[str, Path, QtGui.QIcon]] = None,
+                   icon_color: Optional[Union[QtGui.QColor, bytes, str]] = None,
+                   icon_checked_color: Optional[Union[QtGui.QColor, bytes, str]] = None,
                    flip_h: bool = False,
                    flip_v: bool = False,
                    before: Union[str, 'QAction', WidgetActionProxy, None] = None,
-                   action: QtQAction | QtWidgets.QWidgetAction = None,
-                   fill: bool = None,
+                   action: Optional[QAction] = None,
+                   fill: Optional[bool] = None,
                    rotate: int = 0,
                    follow_theme: bool = True,
-                   ):
+                   ) -> QAction:
         """Create a new action and add it to toolbar and menu
 
         Parameters
@@ -616,7 +682,8 @@ class ActionManager:
         before: str, QAction, WidgetActionProxy, or None, optional
             if set, the action is inserted before this action in the toolbar/menu;
             accepts a short_name str, a QAction instance, or a WidgetActionProxy
-        action: QAction, QWidgetAction, optional
+        action: pymodaq_gui.managers.action_manager.QAction, optional
+            An existing action to register instead of creating a new one
         fill: bool, optional
             Fill or not the icon, if None left to the user configuration
         rotate: int, optional
@@ -626,30 +693,35 @@ class ActionManager:
             their names, or values resolved from the theme) follow theme changes. False: the
             colours are resolved once, here, and kept as they are
 
+        Returns
+        -------
+        QAction
+            The created action, also referenced as *short_name*
+
         See Also
         --------
         affect_to
         """
-        toolbar = self._resolve_toolbar(toolbar, auto=auto_toolbar)
-        menu = self._resolve_menu(menu, auto=auto_menu)
-        before = self._resolve_action(before)
+        toolbar_obj = self._resolve_toolbar(toolbar, auto=auto_toolbar)
+        menu_obj = self._resolve_menu(menu, auto=auto_menu)
+        before_action = self._resolve_action(before)
 
         self._actions[short_name] = addaction(name, icon_name, tip, checkable=checkable,
-                                              checked=checked, toolbar=toolbar, menu=menu,
+                                              checked=checked, toolbar=toolbar_obj, menu=menu_obj,
                                               visible=visible, shortcut=shortcut, enabled=enabled,
                                               icon_checked=icon_checked,
                                               icon_color=icon_color,
                                               icon_checked_color=icon_checked_color,
                                               flip_h=flip_h,
                                               flip_v=flip_v,
-                                              before=before,
+                                              before=before_action,
                                               action=action,
                                               fill=fill,
                                               rotate=rotate,
                                               follow_theme=follow_theme)
         return self._actions[short_name]
 
-    def refresh_icons(self):
+    def refresh_icons(self) -> None:
         """Rebuild the icons of all managed actions and menus with the current theme colours.
 
         Icons bake their colours when created. This is done automatically when
@@ -665,14 +737,23 @@ class ActionManager:
             if menu is not None:
                 menu.setIcon(create_icon(icon_name))
 
-    def remove_action(self, toolbar: QtWidgets.QToolBar | str = None,
-                      action: str | QAction | WidgetActionProxy | None = None,):
-        toolbar = self._resolve_toolbar(toolbar, auto=False)
+    def remove_action(self, toolbar: QtWidgets.QToolBar | str | None = None,
+                      action: str | QAction | WidgetActionProxy | None = None) -> None:
+        """Remove an action from a toolbar and forget it
+
+        Parameters
+        ----------
+        toolbar: QToolBar, str or None
+            The toolbar (or its name) to remove the action from. If None, the action is not removed from a toolbar
+        action: str, QAction, WidgetActionProxy or None
+            The action (or its short_name) to remove
+        """
+        toolbar_obj = self._resolve_toolbar(toolbar, auto=False)
 
         try:
             action_object = self._resolve_action(action)
-            if toolbar is not None and action_object is not None:
-                toolbar.removeAction(action_object)
+            if toolbar_obj is not None and action_object is not None:
+                toolbar_obj.removeAction(action_object)
             if isinstance(action, str):
                 self._actions.pop(action, None)
             else:
@@ -682,11 +763,13 @@ class ActionManager:
         except KeyError:
             pass
 
-    def add_widget(self, short_name, klass: Union[str, QtWidgets.QWidget, object], *args, tip='',
-                   toolbar: Union[str, QtWidgets.QToolBar] = None, visible=True, signal_str=None,
-                   slot: Callable=None, enabled=True, auto_toolbar=True,
+    def add_widget(self, short_name: str,
+                   klass: Union[str, QtWidgets.QWidget, Callable[..., QtWidgets.QWidget]], *args: Any, tip: str = '',
+                   toolbar: Union[str, QtWidgets.QToolBar, None] = None, visible: bool = True,
+                   signal_str: Optional[str] = None,
+                   slot: Optional[Callable[..., Any]] = None, enabled: bool = True, auto_toolbar: bool = True,
                    before: Union[str, 'QAction', WidgetActionProxy, None] = None,
-                   **kwargs) -> Union[WidgetActionProxy, QtWidgets.QWidget]:
+                   **kwargs: Any) -> Union[WidgetActionProxy, QtWidgets.QWidget]:
         """Create and add a widget to a toolbar
 
         Parameters
@@ -720,31 +803,31 @@ class ActionManager:
         -------
         QtWidgets.QWidget
         """
-        toolbar = self._resolve_toolbar(toolbar, auto=auto_toolbar)
-        before = self._resolve_action(before)
+        toolbar_obj = self._resolve_toolbar(toolbar, auto=auto_toolbar)
+        before_action = self._resolve_action(before)
 
-        widget = addwidget(klass, *args, tip=tip, toolbar=toolbar, visible=visible, signal_str=signal_str,
+        widget = addwidget(klass, *args, tip=tip, toolbar=toolbar_obj, visible=visible, signal_str=signal_str,
                            slot=slot, enabled=enabled,
-                           before=before,
+                           before=before_action,
                            **kwargs)
 
         if widget is not None:
             self._actions[short_name] = widget
         else:
             warnings.warn(UserWarning(f'Impossible to add the widget {short_name} and type {klass} to the toolbar'))
-        return widget
+        return widget  # type: ignore[return-value]  # None (with a warning) if the widget could not be created
 
     def add_action_group(self, short_name: str, name: str = '',
-                        icon_name: Union[str, Path, QtGui.QIcon] = '', tip='',
-                        checkable=False, checked=False,
-                        icon_checked: Union[str, Path, QtGui.QIcon] = None,
-                        icon_color: Union[QtGui.QColor, bytes, str] = None,
-                        icon_checked_color: Union[QtGui.QColor, bytes, str] = None,
-                        toolbar: Union[str, QtWidgets.QToolBar, None] = None,
-                        secondary_actions: IterableType[dict] = (),
-                        visible=True, enabled=True,
-                        follow_theme: bool = True,
-                        ) -> QtWidgets.QToolButton:
+                         icon_name: Union[str, Path, QtGui.QIcon] = '', tip: str = '',
+                         checkable: bool = False, checked: bool = False,
+                         icon_checked: Union[str, Path, QtGui.QIcon, None] = None,
+                         icon_color: Union[QtGui.QColor, bytes, str, None] = None,
+                         icon_checked_color: Union[QtGui.QColor, bytes, str, None] = None,
+                         toolbar: Union[str, QtWidgets.QToolBar, None] = None,
+                         secondary_actions: IterableType[dict] = (),
+                         visible: bool = True, enabled: bool = True,
+                         follow_theme: bool = True,
+                         ) -> QtWidgets.QToolButton:
         """Add several related actions to a toolbar under a single button, to avoid
         overloading the toolbar with one slot per action.
 
@@ -814,13 +897,14 @@ class ActionManager:
         else:
             button.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.DelayedPopup)
 
-        toolbar_obj.addWidget(button)
+        if toolbar_obj is not None:
+            toolbar_obj.addWidget(button)
         return button
 
     def add_menu(self, short_name: str, title: str = '',
-                 parent_menu: QtWidgets.QMenuBar | QtWidgets.QMenu | str = None,
-                 icon_name: Union[str, Path, QtGui.QIcon] = '', auto_menu=True,
-                 menu: QtWidgets.QMenu = None,
+                 parent_menu: QtWidgets.QMenuBar | QtWidgets.QMenu | str | None = None,
+                 icon_name: Union[str, Path, QtGui.QIcon] = '', auto_menu: bool = True,
+                 menu: Optional[QtWidgets.QMenu] = None,
                  before: Union[QtWidgets.QMenu, str, None] = None) -> QtWidgets.QMenu:
         """Create and add a menu to a parent menu
 
@@ -854,18 +938,27 @@ class ActionManager:
         --------
         add_action, get_menu
         """
-        if auto_menu and parent_menu is None:
-            parent_menu = self._menu
-        elif isinstance(parent_menu, str):
-            parent_menu = self.get_menu(parent_menu)
+        parent: Union[QtWidgets.QMenuBar, QtWidgets.QMenu, None]
+        if isinstance(parent_menu, str):
+            parent = self.get_menu(parent_menu)
+        elif auto_menu and parent_menu is None:
+            parent = self._menu
+        else:
+            parent = parent_menu
         before = self._resolve_menu(before, auto=False)
 
         if menu is None:
-            new_menu = QtWidgets.QMenu(title, parent=parent_menu)
+            new_menu = QtWidgets.QMenu(title, parent=parent)
         else:
             new_menu = menu
             if title:
                 new_menu.setTitle(title)
+
+        if new_menu.parent() is None:
+            # an unparented menu outlives the UI, and the slots connected to its actions keep the UI alive
+            owner = parent if parent is not None else self if isinstance(self, QtWidgets.QWidget) else None
+            if owner is not None:
+                new_menu.setParent(owner, new_menu.windowFlags())
 
         # Set icon if provided
         if icon_name and icon_name != '':
@@ -877,11 +970,11 @@ class ActionManager:
                 MenuIconRefresher(icon_name, parent=new_menu)
 
         # Add to parent menu if specified
-        if parent_menu is not None:
+        if parent is not None:
             if before is None:
-                parent_menu.addMenu(new_menu)
+                parent.addMenu(new_menu)
             else:
-                parent_menu.insertMenu(before.menuAction(), new_menu)
+                parent.insertMenu(before.menuAction(), new_menu)
 
         # Store reference
         self._menus[short_name] = new_menu
@@ -890,23 +983,23 @@ class ActionManager:
 
         return new_menu
 
-    def reference_toolbar(self, short_name: str, toolbar: QtWidgets.QToolBar):
+    def reference_toolbar(self, short_name: str, toolbar: QtWidgets.QToolBar) -> None:
         """ Add an existing toolbar to the list of managed toolbars"""
         if short_name not in self._toolbars:
             self._toolbars[short_name] = toolbar
         else:
             raise KeyError(f'Toolbar {short_name} is already existing')
 
-    def reference_menu(self, short_name: str, menu: QtWidgets.QMenu):
-        """ Add an existing toolbar to the list of managed toolbars"""
+    def reference_menu(self, short_name: str, menu: QtWidgets.QMenu) -> None:
+        """ Add an existing menu to the list of managed menus"""
         if short_name not in self._menus:
             self._menus[short_name] = menu
         else:
             raise KeyError(f'Menu {short_name} is already existing')
 
-    def add_toolbar(self, short_name: str, title: str = '', parent: QtWidgets.QWidget = None,
-                    toolbar: QtWidgets.QToolBar = None,
-                    area=QtCore.Qt.ToolBarArea.TopToolBarArea, add_break=True,
+    def add_toolbar(self, short_name: str, title: str = '', parent: Optional[QtWidgets.QWidget] = None,
+                    toolbar: Optional[QtWidgets.QToolBar] = None,
+                    area: QtCore.Qt.ToolBarArea = QtCore.Qt.ToolBarArea.TopToolBarArea, add_break: bool = True,
                     before: Union[str, QtWidgets.QToolBar, None] = None) -> QtWidgets.QToolBar:
         """Create and add a toolbar
 
@@ -936,7 +1029,7 @@ class ActionManager:
         --------
         add_action, get_toolbar
         """
-        before = self._resolve_toolbar(before, auto=False)
+        before_toolbar = self._resolve_toolbar(before, auto=False)
 
         if isinstance(parent, QtWidgets.QMainWindow) and add_break:
             parent.addToolBarBreak(area)
@@ -946,10 +1039,10 @@ class ActionManager:
             toolbar.setParent(parent)
 
         if isinstance(parent, QtWidgets.QMainWindow):
-            if before is None:
+            if before_toolbar is None:
                 parent.addToolBar(area, toolbar)
             else:
-                parent.insertToolBar(before, toolbar)
+                parent.insertToolBar(before_toolbar, toolbar)
         style = get_toolbar_button_style()
         if style is not None:
             toolbar.setToolButtonStyle(style)
@@ -957,16 +1050,16 @@ class ActionManager:
         self._toolbars[short_name] = toolbar
         return toolbar
 
-    def setup_toolbar_style_menu(self, parent_menu: QtWidgets.QMenu | str):
+    def setup_toolbar_style_menu(self, parent_menu: QtWidgets.QMenu | str) -> None:
         """Add a 'Toolbar style' submenu choosing how the toolbar buttons of all windows are drawn"""
         style_menu = self.add_menu('toolbar_style', 'Toolbar style', parent_menu=parent_menu)
         group = QtGui.QActionGroup(style_menu)
         group.setExclusive(True)
 
         current_name = config.get(('gui', 'style', 'toolbar_button_style'), ['icon_only'])[0]
-        actions = {}
+        actions: dict[str, QtGui.QAction] = {}
         for name, label in TOOLBAR_BUTTON_STYLE_LABELS.items():
-            action = style_menu.addAction(label)
+            action: QtGui.QAction = style_menu.addAction(label)  # type: ignore[assignment]
             action.setCheckable(True)
             action.setChecked(name == current_name)
             action.setActionGroup(group)
@@ -974,7 +1067,7 @@ class ActionManager:
             actions[name] = action
         ToolbarStyleChecks(actions, parent=style_menu)
 
-    def setup_theme_menu(self, parent_menu: QtWidgets.QMenu | str):
+    def setup_theme_menu(self, parent_menu: QtWidgets.QMenu | str) -> None:
         """Add a 'Theme' submenu choosing the qt_themes theme of the whole application"""
         theme_menu = self.add_menu('theme', 'Theme', parent_menu=parent_menu)
         group = QtGui.QActionGroup(theme_menu)
@@ -992,7 +1085,7 @@ class ActionManager:
             actions[name] = action
         ThemeChecks(actions, themes, parent=theme_menu)
 
-    def apply_qt_theme(self, name: str):
+    def apply_qt_theme(self, name: str) -> None:
         """Apply a qt_themes theme to the whole application and persist it as the default"""
         if apply_theme(name) is None:
             return
@@ -1001,13 +1094,13 @@ class ActionManager:
         config['gui', 'style', 'theme'] = [name] + [t for t in themes if t != name]
         config.save()
 
-    def apply_toolbar_style(self, name: str):
+    def apply_toolbar_style(self, name: str) -> None:
         """Persist the toolbar button style and apply it to all toolbars"""
         config['gui', 'style', 'toolbar_button_style'] = [name]
         config.save()
         toolbar_style_signaller.style_changed.emit(TOOLBAR_BUTTON_STYLES[name])
 
-    def set_toolbar(self, toolbar: Union[QtWidgets.QToolBar, str]):
+    def set_toolbar(self, toolbar: Union[QtWidgets.QToolBar, str]) -> None:
         """Set the default toolbar
 
         Parameters
@@ -1019,7 +1112,7 @@ class ActionManager:
             toolbar = self.get_toolbar(toolbar)
         self._toolbar = toolbar
 
-    def set_menu(self, menu: QtWidgets.QMenu | str):
+    def set_menu(self, menu: QtWidgets.QMenu | str) -> None:
         """Set the default menu
 
         Parameters
@@ -1031,7 +1124,7 @@ class ActionManager:
             menu = self.get_menu(menu)
         self._menu = menu
 
-    def set_action_text(self, action_name: str, text: str):
+    def set_action_text(self, action_name: str, text: str) -> None:
         """Convenience method to set the displayed text on an action
 
         Parameters
@@ -1045,13 +1138,15 @@ class ActionManager:
 
     @property
     def actions(self) -> list[QAction]:
+        """Get all the actions (and widgets added to a toolbar) managed here"""
         return list(self._actions.values())
 
     @property
     def actions_names(self) -> list[str]:
+        """Get all the action names"""
         return list(self._actions.keys())
 
-    def get_action(self, name) -> Union[QAction, WidgetActionProxy]:
+    def get_action(self, name: str) -> Union[QAction, WidgetActionProxy]:
         """Getter of a given action
 
         Parameters
@@ -1069,7 +1164,7 @@ class ActionManager:
             raise KeyError(f'The action with name: {name} is not referenced'
                            f' in the view actions: {self._actions.keys()}')
 
-    def has_action(self, action_name) -> bool:
+    def has_action(self, action_name: str) -> bool:
         """Check if an action has been defined
         Parameters
         ----------
@@ -1186,7 +1281,8 @@ class ActionManager:
                 self._menu = self.add_menu('default', 'Default')
         return self._menu
 
-    def affect_to(self, action_name: Union[str, QAction, WidgetActionProxy], obj: Union[QtWidgets.QToolBar, QtWidgets.QMenu]):
+    def affect_to(self, action_name: Union[str, QAction, WidgetActionProxy],
+                  obj: Union[QtWidgets.QToolBar, QtWidgets.QMenu]) -> None:
         """Affect action to an object either a toolbar or a menu
 
         Parameters
@@ -1204,7 +1300,8 @@ class ActionManager:
             else:
                 obj.addAction(self._actions[action_name])
 
-    def connect_action(self, name, slot=None, connect=True, signal_name=''):
+    def connect_action(self, name: str, slot: Optional[Callable[..., Any]] = None, connect: bool = True,
+                       signal_name: str = '') -> None:
         """Connect (or disconnect) the action referenced by name to the given slot
 
         Parameters
@@ -1237,7 +1334,7 @@ class ActionManager:
                            f' in the view actions: {self._actions.keys()}')
 
     @dispatch(str)
-    def is_action_visible(self, action_name: str):
+    def is_action_visible(self, action_name: str) -> bool:
         """Check the visibility of a given action or the list of an action"""
         if action_name in self._actions:
             return self._actions[action_name].isVisible()
@@ -1245,16 +1342,19 @@ class ActionManager:
             raise KeyError(f'The action with name: {action_name} is not referenced'
                            f' in the actions list: {self._actions}')
 
-    @dispatch(Iterable)
-    def is_action_visible(self, actions_name: IterableType):
-        """Check the visibility of a given action or the list of an action"""
-        isvisible = False
-        for action_name in actions_name:
-            isvisible = isvisible and self.is_action_visible(action_name)
-        return isvisible
+    @dispatch(Iterable)  # type: ignore[no-redef]
+    def is_action_visible(self, actions_name: IterableType) -> bool:
+        """Check the visibility of a list of actions
+
+        Returns
+        -------
+        bool
+            True if all the actions are visible (and for an empty list)
+        """
+        return all(self.is_action_visible(action_name) for action_name in actions_name)
 
     @dispatch(str)
-    def is_action_checked(self, action_name: str):
+    def is_action_checked(self, action_name: str) -> bool:
         """Get the CheckState of a given action or a list of actions"""
         if action_name in self._actions:
             return self._actions[action_name].isChecked()
@@ -1262,16 +1362,19 @@ class ActionManager:
             raise KeyError(f'The action with name: {action_name} is not referenced'
                            f' in the actions list: {self._actions}')
 
-    @dispatch(Iterable)
-    def is_action_checked(self, actions_name: IterableType):
-        """Get the CheckState of a given action or a list of actions"""
-        ischecked = False
-        for action_name in actions_name:
-            ischecked = ischecked and self.is_action_checked(action_name)
-        return ischecked
+    @dispatch(Iterable)  # type: ignore[no-redef]
+    def is_action_checked(self, actions_name: IterableType) -> bool:
+        """Get the CheckState of a list of actions
+
+        Returns
+        -------
+        bool
+            True if all the actions are checked (and for an empty list)
+        """
+        return all(self.is_action_checked(action_name) for action_name in actions_name)
 
     @dispatch(str, bool)
-    def set_action_visible(self, action_name: str, visible=True):
+    def set_action_visible(self, action_name: str, visible: bool = True) -> None:
         """Set the visibility of a given action or a list of an action"""
         if action_name in self._actions:
             self._actions[action_name].setVisible(visible)
@@ -1279,14 +1382,14 @@ class ActionManager:
             raise KeyError(f'The action with name: {action_name} is not referenced'
                            f' in the actions list: {self._actions}')
 
-    @dispatch(Iterable, bool)
-    def set_action_visible(self, actions_name: IterableType, visible=True):
+    @dispatch(Iterable, bool)  # type: ignore[no-redef]
+    def set_action_visible(self, actions_name: IterableType, visible: bool = True) -> None:
         """Set the visibility of a given action or a list of an action"""
         for action_name in actions_name:
             self.set_action_visible(action_name, visible)
 
     @dispatch(str, bool)
-    def set_action_checked(self, action_name: str, checked=True):
+    def set_action_checked(self, action_name: str, checked: bool = True) -> None:
         """Set the CheckedState of a given action or a list of actions"""
         if action_name in self._actions:
             self._actions[action_name].setChecked(checked)
@@ -1296,14 +1399,14 @@ class ActionManager:
             raise KeyError(f'The action with name: {action_name} is not referenced'
                            f' in the actions list: {self._actions}')
 
-    @dispatch(Iterable, bool)
-    def set_action_checked(self, actions_name: IterableType, checked=True):
+    @dispatch(Iterable, bool)  # type: ignore[no-redef]
+    def set_action_checked(self, actions_name: IterableType, checked: bool = True) -> None:
         """Set the CheckedState of a given action or a list of actions"""
         for action_name in actions_name:
             self.set_action_checked(action_name, checked)
 
     @dispatch(str, bool)
-    def set_action_enabled(self, action_name: str, enabled=True):
+    def set_action_enabled(self, action_name: str, enabled: bool = True) -> None:
         """Set the EnabledState of a given action or a list of actions"""
         if action_name in self._actions:
             if hasattr(self._actions[action_name], 'widget'):
@@ -1314,14 +1417,14 @@ class ActionManager:
             raise KeyError(f'The action with name: {action_name} is not referenced'
                            f' in the actions list: {self._actions}')
 
-    @dispatch(Iterable, bool)
-    def set_action_enabled(self, actions_name: IterableType, enabled=True):
+    @dispatch(Iterable, bool)  # type: ignore[no-redef]
+    def set_action_enabled(self, actions_name: IterableType, enabled: bool = True) -> None:
         """Set the EnabledState of a given action or a list of actions"""
         for action_name in actions_name:
             self.set_action_enabled(action_name, enabled)
 
     @dispatch(str)
-    def is_action_enabled(self, action_name: str):
+    def is_action_enabled(self, action_name: str) -> bool:
         """Get the EnabledState of a given action or a list of actions"""
         if action_name in self._actions:
             return self._actions[action_name].isEnabled()
@@ -1329,10 +1432,18 @@ class ActionManager:
             raise KeyError(f'The action with name: {action_name} is not referenced'
                            f' in the actions list: {self._actions}')
 
-    @dispatch(Iterable)
-    def is_action_checked(self, actions_name: IterableType):
-        """Get the EnabledState of a given action or a list of actions"""
-        is_enabled = False
-        for action_name in actions_name:
-            is_enabled = is_enabled and self.is_action_enabled(action_name)
-        return is_enabled
+    @dispatch(Iterable)  # type: ignore[no-redef]
+    def is_action_enabled(self, actions_name: IterableType) -> bool:
+        """Get the EnabledState of a list of actions
+
+        Returns
+        -------
+        bool
+            True if all the actions are enabled (and for an empty list)
+        """
+        return all(self.is_action_enabled(action_name) for action_name in actions_name)
+
+
+for _dispatcher in vars(ActionManager).values():
+    if isinstance(_dispatcher, MethodDispatcher):
+        _dispatcher.__class__ = _InstanceMethodDispatcher

@@ -587,6 +587,35 @@ def test_set_action_enabled_multiple(qtbot):
     assert not action_manager.is_action_enabled('action2')
 
 
+def test_is_action_state_multiple(qtbot):
+    """The state of a list of actions is True only if all the actions have this state"""
+    action_manager = ActionManager()
+
+    action_manager.add_action('action1', 'Action 1', checkable=True)
+    action_manager.add_action('action2', 'Action 2', checkable=True)
+    names = ['action1', 'action2']
+
+    assert action_manager.is_action_visible(names)
+    assert action_manager.is_action_enabled(names)
+    assert not action_manager.is_action_checked(names)
+
+    action_manager.set_action_checked('action1', True)
+    assert not action_manager.is_action_checked(names)
+    action_manager.set_action_checked('action2', True)
+    assert action_manager.is_action_checked(names)
+
+    action_manager.set_action_enabled('action1', False)
+    assert not action_manager.is_action_enabled(names)
+    assert action_manager.is_action_enabled(names[1:])
+
+    action_manager.set_action_visible('action2', False)  # Qt also disables a hidden action
+    assert not action_manager.is_action_visible(names)
+    assert action_manager.is_action_visible(names[:1])
+
+    with pytest.raises(KeyError):
+        action_manager.is_action_checked(['unknown'])
+
+
 def test_set_action_text(qtbot):
     """Test setting action text"""
     action_manager = ActionManager()

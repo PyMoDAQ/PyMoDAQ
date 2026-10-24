@@ -1,10 +1,19 @@
+import gc
 import time
 import threading
+from contextlib import contextmanager
 # -*- coding: utf-8 -*-
 """
 Created the 07/11/2023
 
 @author: Sebastien Weber
+
+Context: the tests asserting that a call returns "at once" (``test_blocking_without_blocking_the_caller``,
+``test_non_blocking``) time it with ``no_garbage_collection``. The state manager windows and their large parameter
+trees are not freed as soon as a test ends: with PySide6 on the CI runners a garbage collection starting inside the
+timed call could take minutes (up to 886 s measured) to free them, and fail the assertion whatever the code does.
+This only keeps the measure reliable, it does not make the collections faster: the leaks themselves are a
+separate matter (see issue #1275).
 """
 import pytest
 from pathlib import Path
@@ -21,6 +30,22 @@ from pymodaq.utils.managers.state.subentries import (
 
 factory = SubEntryHandlerFactory()
 config = GlobalConfig()
+
+
+@contextmanager
+def no_garbage_collection():
+    """ Keep a timed call from being stretched by a garbage collection
+
+    With PySide6 the collections free the large widget trees left by the previous tests, which took minutes on
+    the CI runners.
+    """
+    was_enabled = gc.isenabled()
+    gc.disable()
+    try:
+        yield
+    finally:
+        if was_enabled:
+            gc.enable()
 
 
 @pytest.fixture
@@ -51,11 +76,19 @@ def ini_state_manager(init_qt):
 
     splash = getattr(state_manager, 'splash_subentries', None)  # shown when a state is executed
     if splash is not None:
-        splash.close()
-        splash.deleteLater()
-    state_manager.mainwindow.close()
-    external_ui.close()
-    qtbot.wait(10)  # let the deferred closings and deletions run before the next test
+        try:
+            splash.close()
+            splash.deleteLater()
+        except RuntimeError:  # already deleted by the test
+            pass
+    state_manager.quit_fun()
+    for window in (state_manager.mainwindow, external_ui):
+        window.close()
+        window.deleteLater()
+    # deferred deletions are not run by processEvents: without this the windows (and their large
+    # parameter trees) pile up from test to test and slow down every garbage collection
+    QtWidgets.QApplication.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete)
+    qtbot.wait(10)
 
 
 class TestStateManager:
@@ -351,20 +384,33 @@ class TestWithSubEntries:
         state_manager.set_action_checked('parallel_execution', parallel)
 
         with qtbot.waitSignal(state_manager.applied_entry, timeout=5000):
-            t0 = time.perf_counter()
-            state_manager.execute_entry(blocking=True, block_caller=False)
-            assert time.perf_counter() - t0 < 0.2  # returned at once
+            with no_garbage_collection():
+                t0 = time.perf_counter()
+                state_manager.execute_entry(blocking=True, block_caller=False)
+                duration = time.perf_counter() - t0
+            assert duration < 0.2  # returned at once
             assert not state_manager.entry_applied
         assert state_manager.entry_applied
+
+    def test_splash_deleted_before_it_is_closed(self, state_with_subentries):
+        """ The splash is closed after a delay: deleting it in between must not raise in the event loop """
+        state_manager, qtbot = state_with_subentries
+        state_manager.execute_entry(blocking=False)
+        state_manager.splash_subentries.deleteLater()
+        QtWidgets.QApplication.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete)
+        state_manager.close_subentries_display(50)  # as finalize does, when the splash is gone
+        qtbot.wait(150)
 
     def test_non_blocking(self, state_with_subentries):
         """ In parallel, the modules are only started: everything is over at once, whatever the time they need """
         state_manager, qtbot = state_with_subentries
         state_manager.set_action_checked('parallel_execution', True)
 
-        t0 = time.perf_counter()
-        state_manager.execute_entry(blocking=False)
-        assert time.perf_counter() - t0 < 0.2
+        with no_garbage_collection():
+            t0 = time.perf_counter()
+            state_manager.execute_entry(blocking=False)
+            duration = time.perf_counter() - t0
+        assert duration < 0.2
         assert state_manager.entry_applied
 
 

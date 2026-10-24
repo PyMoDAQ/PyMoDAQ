@@ -29,7 +29,7 @@ class TestGeneral:
 
         dashboard.experiment_manager.execute_entry()
 
-        dashboard.quit_fun()
+        shared_ui.quit_fun()  # quits the dashboard too, as its Quit action
 
     def test_main_preserves_dashboard_visibility_after_loading(
         self, init_qt, monkeypatch
@@ -65,7 +65,7 @@ class TestGeneral:
             assert exit_info.value.code == 0
             assert not shared_ui.mainwindow.isVisible()
         finally:
-            dashboard.quit_fun()
+            shared_ui.quit_fun()  # quits the dashboard too, as its Quit action
 
 
 def test_quit_while_loading_experiment(init_qt):
@@ -81,7 +81,7 @@ def test_quit_while_loading_experiment(init_qt):
     assert not loader._finished  # still loading
     threads = [module.controller_and_thread.thread for module in modules]
 
-    dashboard.quit_fun()
+    shared_ui.quit_fun()  # quits the dashboard too, as its Quit action
 
     for thread in threads:
         assert thread is None or not thread.isRunning()

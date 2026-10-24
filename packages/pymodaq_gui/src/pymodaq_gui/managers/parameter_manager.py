@@ -1,6 +1,7 @@
 import numbers
+from contextlib import contextmanager
 from pathlib import Path
-from typing import List, Union, Dict, Optional, Tuple, Any
+from typing import Iterator, List, Union, Dict, Optional, Tuple, Any
 
 from qtpy import QtWidgets, QtCore, QtGui
 from pymodaq_gui.parameter.utils import filter_parameter_tree
@@ -45,11 +46,12 @@ class ParameterTreeWidget(ActionManager):
     """
 
     def __init__(self, action_list: tuple = ("save", "update", "load"),
-                 tree: ParameterTree = None):
+                 tree: Optional[ParameterTree] = None) -> None:
         super().__init__()
 
         self.widget = QtWidgets.QWidget()
-        self.widget.setLayout(QtWidgets.QVBoxLayout())
+        layout = QtWidgets.QVBoxLayout()
+        self.widget.setLayout(layout)
 
         toolbar = QtWidgets.QToolBar()
         self.set_toolbar(toolbar)
@@ -76,14 +78,14 @@ class ParameterTreeWidget(ActionManager):
 
         # Making the buttons
         self.setup_actions(action_list)
-        self.widget.layout().addWidget(self.collapsible_widget)
-        self.widget.layout().addWidget(self.tree)
-        self.widget.layout().setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.collapsible_widget)
+        layout.addWidget(self.tree)
+        layout.setContentsMargins(0, 0, 0, 0)
         # Setup keyboard shortcuts
         if "search" in action_list:
             self._setup_search_shortcuts()
 
-    def _setup_search_shortcuts(self):
+    def _setup_search_shortcuts(self) -> None:
         """Setup keyboard shortcuts for search functionality.
 
         Creates two keyboard shortcuts:
@@ -100,7 +102,7 @@ class ParameterTreeWidget(ActionManager):
         )
         self.search_escape_shortcut.activated.connect(self.collapse_toolbar)
 
-    def activate_search(self):
+    def activate_search(self) -> None:
         """Show the collapsible widget and focus on the search field.
 
         Expands the toolbar if it's currently collapsed, then sets focus to the
@@ -109,12 +111,12 @@ class ParameterTreeWidget(ActionManager):
         # Expand the collapsible widget if it's collapsed
         self.collapsible_widget.toggle_content()
         # Get the search widget and set focus
-        search_widget: SearchLineEdit = self.get_action("search_settings")
+        search_widget: SearchLineEdit = self.get_action("search_settings")  # type: ignore[assignment]
         if search_widget:
             search_widget.setFocus()
             search_widget.selectAll()  # Optional: select all text for easy replacement
 
-    def collapse_toolbar(self):
+    def collapse_toolbar(self) -> None:
         """Collapse the toolbar and clear search field focus.
 
         If the toolbar is currently expanded, this method collapses it and
@@ -122,11 +124,11 @@ class ParameterTreeWidget(ActionManager):
         """
         if self.collapsible_widget.is_expanded:
             self.collapsible_widget.toggle_content()
-            search_widget: SearchLineEdit = self.get_action("search_settings")
+            search_widget: SearchLineEdit = self.get_action("search_settings")  # type: ignore[assignment]
             if search_widget:
                 search_widget.clearFocus()
 
-    def setup_actions(self, action_list: tuple = ("search", "save", "update", "load")):
+    def setup_actions(self, action_list: tuple = ("search", "save", "update", "load")) -> None:
         """Create and configure toolbar actions based on the provided action list.
 
         Parameters
@@ -235,16 +237,17 @@ class ParameterManager:
     """
 
     settings_name = "custom_settings"
-    params = []
+    params: List[Any] = []  # list of dicts defining the Parameter tree, to be set in subclasses
 
     def __init__(
             self,
             settings_name: Optional[str] = None,
             action_list: tuple = ("search", "save", "update", "load"),
-            tree: ParameterTree = None,
-    ):
+            tree: Optional[ParameterTree] = None,
+    ) -> None:
         self._current_filter_text = ""
-        self._settings: Parameter = None
+        self._building_tree = False
+        self._settings: Parameter = None  # type: ignore[assignment]  # set at the end of __init__
         if settings_name is None:
             settings_name = self.settings_name
         # create a settings tree to be shown eventually in a dock
@@ -267,7 +270,7 @@ class ParameterManager:
 
         # Add this line to connect the search widget
         if "search" in action_list:
-            self._settings_tree.get_action("search_settings").searchTextChanged.connect(
+            self._settings_tree.get_action("search_settings").searchTextChanged.connect(  # type: ignore[union-attr]
                 self.search_settings_slot,
             )
         self._settings_tree.collapsible_widget.toggled_signal.connect(
@@ -282,6 +285,9 @@ class ParameterManager:
             QtWidgets.QHeaderView.Interactive,
         )
         self._settings_tree.tree.resizeColumnToContents(0)
+        # connected once: connecting in set_settings would stack one more slot per call
+        self._settings_tree.tree.itemExpanded.connect(self._resize_first_column)
+        self._settings_tree.tree.itemCollapsed.connect(self._resize_first_column)
 
     @property
     def settings_tree(self) -> QtWidgets.QWidget:
@@ -299,7 +305,7 @@ class ParameterManager:
         return self._settings
 
     @settings.setter
-    def settings(self, settings: Union[Parameter, List[Dict[str, str]], Path]):
+    def settings(self, settings: Union[Parameter, List[Dict[str, str]], Path]) -> None:
         """Set the settings parameter from various input types.
 
         Parameters
@@ -312,7 +318,7 @@ class ParameterManager:
         """
         self.set_settings(settings)
 
-    def set_settings(self, settings: Union[Parameter, List[Dict[str, str]], Path]):
+    def set_settings(self, settings: Union[Parameter, List[Dict[str, str]], Path]) -> None:
         """ similar to the property setter but easier to subclass"""
 
         if hasattr(self, '_settings') and self._settings is not None:
@@ -324,17 +330,46 @@ class ParameterManager:
         settings = self.create_parameter(settings)
         self._settings = settings
 
-        self.tree.setParameters(
-            self._settings, showTop=False,
-        )  # load the tree with this parameter object
+        with self.tree_batch_update():
+            self.tree.setParameters(
+                self._settings, showTop=False,
+            )  # load the tree with this parameter object
         self.connect_tree()
-        self._settings_tree.tree.itemExpanded.connect(lambda: self._settings_tree.tree.resizeColumnToContents(0))
-        self._settings_tree.tree.itemCollapsed.connect(lambda: self._settings_tree.tree.resizeColumnToContents(0))
 
-    def connect_tree(self):
+    def _resize_first_column(self, *args: Any) -> None:
+        if not self._building_tree:
+            self._settings_tree.tree.resizeColumnToContents(0)
+
+    @contextmanager
+    def tree_batch_update(self) -> Iterator[None]:
+        """Context manager to change many settings at once: the tree does not repaint nor resize its first column
+        for each item, it does it once at the end"""
+        tree = self._settings_tree.tree
+        already = self._building_tree
+        self._building_tree = True
+        tree.setUpdatesEnabled(False)
+        # items added to a visible tree trigger layout computations for each of them. A tree that is not visible
+        # (not shown yet) is left alone: setVisible(False) would hide it explicitly, and it would then stay hidden
+        # when its window is shown
+        was_visible = tree.isVisible()
+        if was_visible:
+            tree.setVisible(False)
+        try:
+            yield
+        finally:
+            self._building_tree = already
+            if not already:
+                if was_visible:
+                    tree.setVisible(True)
+                tree.setUpdatesEnabled(True)
+                tree.resizeColumnToContents(0)
+
+    def connect_tree(self) -> None:
+        """Call parameter_tree_changed each time the settings change"""
         self._settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
 
-    def disconnect_tree(self):
+    def disconnect_tree(self) -> None:
+        """Stop calling parameter_tree_changed when the settings change"""
         try:
             self._settings.sigTreeStateChanged.disconnect(self.parameter_tree_changed)
         except TypeError:
@@ -342,7 +377,7 @@ class ParameterManager:
 
     @staticmethod
     def create_parameter(
-            settings: Union[Parameter, List[Dict[str, str]], Path],
+            settings: Union[Parameter, List[Dict[str, str]], Path, str],
     ) -> Parameter:
         """Create a Parameter object from various input types.
 
@@ -397,7 +432,7 @@ class ParameterManager:
             raise TypeError(f"Cannot create Parameter object from {settings}")
         return _settings
 
-    def parameter_tree_changed(self, param, changes):
+    def parameter_tree_changed(self, param: Parameter, changes: List[Tuple[Parameter, str, Any]]) -> None:
         """Handle changes in the parameter tree and dispatch to specific handlers.
 
         This method is called whenever any change occurs in the parameter tree.
@@ -441,7 +476,7 @@ class ParameterManager:
             elif change == 'contextMenu':
                 self.menu_changed(param, data)
 
-    def value_changed(self, param: Parameter):
+    def value_changed(self, param: Parameter) -> None:
         """Non-mandatory method to be subclassed for actions to perform when a parameter value changes.
 
         This method is called automatically when a parameter's value is changed using
@@ -470,7 +505,7 @@ class ParameterManager:
         """
         ...
 
-    def child_added(self, param: Parameter, data: Parameter):
+    def child_added(self, param: Parameter, data: Tuple[Parameter, int]) -> None:
         """Non-mandatory method to be subclassed for actions to perform when a child parameter is added.
 
         This method is called automatically when a new child parameter is added to the
@@ -481,14 +516,14 @@ class ParameterManager:
         ----------
         param : Parameter
             The parent parameter to which the child is being added
-        data : Parameter
-            The child parameter that was added
+        data : tuple of (Parameter, int)
+            The child parameter that was added and its index in the children of *param*
 
         Examples
         --------
         >>> def child_added(self, param, data):
         ...     if param.name() == 'dynamic_list':
-        ...         print(f'New item added: {data.name()}')
+        ...         print(f'New item added: {data[0].name()}')
         ...         self.update_item_count()
 
         Notes
@@ -500,7 +535,7 @@ class ParameterManager:
         """
         pass
 
-    def param_deleted(self, param: Parameter):
+    def param_deleted(self, param: Parameter) -> None:
         """Non-mandatory method to be subclassed for actions to perform when a parameter is deleted.
 
         This method is called automatically when a parameter is removed from the
@@ -525,7 +560,7 @@ class ParameterManager:
         """
         pass
 
-    def options_changed(self, param: Parameter, data: Dict[str, Any]):
+    def options_changed(self, param: Parameter, data: Dict[str, Any]) -> None:
         """Non-mandatory method to be subclassed for actions to perform when parameter options change.
 
         This method is called automatically when options of a parameter are modified
@@ -557,7 +592,7 @@ class ParameterManager:
 
     def limits_changed(
         self, param: Parameter, data: Tuple[numbers.Number, numbers.Number],
-    ):
+    ) -> None:
         """Non-mandatory method to be subclassed for actions to perform when parameter limits change.
 
         This method is called automatically when the limits (min/max bounds) of a
@@ -587,7 +622,7 @@ class ParameterManager:
         """
         pass
 
-    def menu_changed(self, param: Parameter, data: str):
+    def menu_changed(self, param: Parameter, data: str) -> None:
         """Non-mandatory method to be subclassed for actions to perform when context menu changed.
 
         This method is called automatically when the user selects one of the entry of the context menu
@@ -601,7 +636,7 @@ class ParameterManager:
         """
         pass
 
-    def save_settings_slot(self, file_path: Path = None):
+    def save_settings_slot(self, file_path: Union[Path, bool, None] = None) -> None:
         """Save the current settings to an XML file.
 
         Opens a file dialog for the user to select a save location, or uses the
@@ -611,8 +646,8 @@ class ParameterManager:
         Parameters
         ----------
         file_path : Path, optional
-            Path where the settings should be saved. If None or False, opens a
-            file dialog for the user to select a location. The file extension
+            Path where the settings should be saved. If None or False (the value
+            sent by a triggered QAction), opens a file dialog for the user to select a location. The file extension
             must be '.xml'. Default is None.
 
         Notes
@@ -638,14 +673,14 @@ class ParameterManager:
                 force_save_extension=True,
             )
         else:
-            file_path = Path(file_path)
+            file_path = Path(file_path)  # type: ignore[arg-type]  # True is not expected
             if ".xml" != file_path.suffix:
                 return
         if file_path:
             ioxml.parameter_to_xml_file(self.settings, file_path.resolve())
             logger.info(f"The settings have been successfully saved at {file_path}")
 
-    def _get_settings_from_file(self):
+    def _get_settings_from_file(self) -> Optional[Path]:
         """Open a file dialog to select an XML settings file.
 
         Returns
@@ -665,7 +700,7 @@ class ParameterManager:
             force_save_extension=True,
         )
 
-    def load_settings_slot(self, file_path: Path = None):
+    def load_settings_slot(self, file_path: Union[Path, bool, None] = None) -> None:
         """Load settings from an XML file, replacing current settings entirely.
 
         Opens a file dialog for the user to select a file, or uses the provided
@@ -675,8 +710,8 @@ class ParameterManager:
         Parameters
         ----------
         file_path : Path, optional
-            Path to the XML file containing saved settings. If None or False,
-            opens a file dialog for the user to select a file. Default is None.
+            Path to the XML file containing saved settings. If None or False (the value
+            sent by a triggered QAction), opens a file dialog for the user to select a file. Default is None.
 
         Notes
         -----
@@ -705,10 +740,10 @@ class ParameterManager:
         if file_path is None or file_path is False:
             file_path = self._get_settings_from_file()
         if file_path:
-            self.settings = file_path.resolve()
+            self.settings = file_path.resolve()  # type: ignore[union-attr]  # True is not expected
             logger.info(f"The settings from {file_path} have been successfully loaded")
 
-    def update_settings_slot(self, file_path: Path = None):
+    def update_settings_slot(self, file_path: Union[Path, bool, None] = None) -> None:
         """Update settings from an XML file with matching structure validation.
 
         Opens a file dialog for the user to select a file, or uses the provided
@@ -719,8 +754,8 @@ class ParameterManager:
         Parameters
         ----------
         file_path : Path, optional
-            Path to the XML file containing settings to apply. If None or False,
-            opens a file dialog for the user to select a file. Default is None.
+            Path to the XML file containing settings to apply. If None or False (the value
+            sent by a triggered QAction), opens a file dialog for the user to select a file. Default is None.
 
         Notes
         -----
@@ -745,7 +780,7 @@ class ParameterManager:
         if file_path is None or file_path is False:
             file_path = self._get_settings_from_file()
         if file_path:
-            _settings = self.create_parameter(file_path.resolve())
+            _settings = self.create_parameter(file_path.resolve())  # type: ignore[union-attr]
             # Checking if both parameters have the same structure
             sameStruct = utils.compareStructureParameter(self.settings, _settings)
             if sameStruct:  # Update if true
@@ -758,10 +793,11 @@ class ParameterManager:
                     f"The loaded settings from {file_path} do not match the current settings structure and cannot be applied.",
                 )
 
-    def clear_settings_slot(self):
+    def clear_settings_slot(self) -> None:
+        """Remove all the children of the settings (the tree is emptied)"""
         self.settings.clearChildren()
 
-    def _apply_filter(self, text: str):
+    def _apply_filter(self, text: str) -> None:
         """Apply search filter to the parameter tree with optimized updates.
 
         Parameters
@@ -780,7 +816,7 @@ class ParameterManager:
             for child in self.settings.children():
                 filter_parameter_tree(child, text)                            
 
-    def search_settings_slot(self, text: str = ""):
+    def search_settings_slot(self, text: str = "") -> None:
         """Handle search text changes and filter the parameter tree.
 
         This slot is connected to the search widget's text changed signal. It stores
@@ -800,7 +836,7 @@ class ParameterManager:
         self._current_filter_text = text
         self._apply_filter(text)
 
-    def on_toolbar_toggled(self):
+    def on_toolbar_toggled(self) -> None:
         """Handle toolbar expand/collapse events and manage search filter state.
 
         When the toolbar is expanded, restores the previous search filter.
