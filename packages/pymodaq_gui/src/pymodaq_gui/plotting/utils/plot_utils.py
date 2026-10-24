@@ -173,6 +173,33 @@ def get_sub_segmented_positions(spacing: float, points: List[Point]) -> List[np.
     return positions
 
 
+def get_sub_segmented_n_positions(spacing: float, points: List[Point], limit: int = None) -> int:
+    """Number of Points returned by get_sub_segmented_positions, without building them
+
+    Parameters
+    ----------
+    spacing: float
+        Distance between two subpoints
+    points: List[Point]
+        List of Points in arbitrary dimension forming segments one want to sample with a distance equal to spacing
+    limit: int, optional
+        If the raw number of positions (total length / spacing) exceeds this limit, it is returned directly
+        instead of the exact one (the exact count is then not needed and may be huge to compute)
+
+    Returns
+    -------
+    int
+    """
+    norms = [np.linalg.norm((points[ind + 1] - points[ind]).coordinates) for ind in range(len(points) - 1)]
+    if limit is not None and sum(norms) / spacing > limit:
+        return int(sum(norms) / spacing) + 1
+    npts = 1  # the last point
+    for norm in norms:
+        # same comparison as in get_sub_segmented_positions
+        npts += int(np.count_nonzero(np.arange(int(norm / spacing) + 2) * spacing < norm))
+    return npts
+
+
 class QVector(QtCore.QLineF):
     def __init__(self, *elt):
         super().__init__(*elt)
