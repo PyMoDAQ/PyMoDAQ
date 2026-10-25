@@ -91,6 +91,20 @@ class ControlModuleUI(CustomApp):
     def set_init_color(self, color: QtGui.QColor):
         self.get_action('name').widget.set_color(color)
 
+    def set_error_state(self, in_error: bool, message: str = '') -> None:
+        """Show that the module is in error after an exception of its plugin
+
+        Does nothing by default, the UIs having a status LED override it (see
+        :class:`~pymodaq.control_modules.daq_move_ui.ui_base.DAQMoveUI`).
+
+        Parameters
+        ----------
+        in_error: bool
+            True when the plugin raised an exception, False when the module is back to normal
+        message: str
+            The error to show to the user
+        """
+
     def _setup_init_action(self, toolbar: QtWidgets.QToolBar = None,
                            action_name: str = 'init',
                            display_name: str = 'Initialize',
@@ -161,7 +175,7 @@ class ControlModuleUI(CustomApp):
         action.setToolTip(f'{self.CONTINUOUS_SAVE_TIP} (current file: {pathname})'
                           if active and pathname else self.CONTINUOUS_SAVE_TIP)
 
-    def update_init_icon(self, initialized: bool, action_name: str = 'init') -> None:
+    def update_init_icon(self, initialized: bool, action_name: str = 'init', failed: bool = False) -> None:
         """Update the initialization action icon based on state
 
         Parameters
@@ -170,10 +184,13 @@ class ControlModuleUI(CustomApp):
             Whether the module is initialized
         action_name: str
             The name of the init action
+        failed: bool
+            True after an initialization that failed: the icon is orange instead of red
         """
         if self.has_action(action_name):
-            self.get_action(action_name).set_icon(self.INIT_ICON, self.get_theme().green if
-            initialized else self.get_theme().red)
+            color = self.get_theme().green if initialized else (self.get_theme().orange if failed
+                                                                else self.get_theme().red)
+            self.get_action(action_name).set_icon(self.INIT_ICON, color)
 
     def enable_actions(self, status=True, all_except=()):
         """Enable or disable all toolbar actions, optionally excluding some.
