@@ -91,6 +91,20 @@ class ControlModuleUI(CustomApp):
     def set_init_color(self, color: QtGui.QColor):
         self.get_action('name').widget.set_color(color)
 
+    def set_error_state(self, in_error: bool, message: str = '') -> None:
+        """Show that the module is in error after an exception of its plugin
+
+        Does nothing by default, the UIs having a status LED override it (see
+        :class:`~pymodaq.control_modules.daq_move_ui.ui_base.DAQMoveUI`).
+
+        Parameters
+        ----------
+        in_error: bool
+            True when the plugin raised an exception, False when the module is back to normal
+        message: str
+            The error to show to the user
+        """
+
     def _setup_init_action(self, toolbar: QtWidgets.QToolBar = None,
                            action_name: str = 'init',
                            display_name: str = 'Initialize',

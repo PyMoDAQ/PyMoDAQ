@@ -10,6 +10,8 @@ from pymodaq_utils.config import GlobalConfig
 from pymodaq_utils.utils import ThreadCommand
 
 from pymodaq.control_modules.daq_move import DAQ_Move, ActuatorWorker
+from pymodaq.control_modules.daq_move_ui.ui_base import MoveLedState
+from pymodaq_gui.utils.widgets import StatusPalette, Status
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer, DetectorWorker
 from pymodaq.control_modules.thread_commands import (ThreadStatus, ThreadStatusMove, ControlToHardwareMove,
                                                      ControlToHardwareViewer)
@@ -97,30 +99,59 @@ def module(request, qtbot, theme):
     widget.close()
 
 
-def _color_code(color) -> str:
-    return f'color: #{hex(color.rgb())[2:]}'
-
-
-def _name_color(module) -> str:
-    return module.ui.get_action('name').widget.styleSheet()
+def _led_state(module):
+    return module.ui.status_led.get_state() if isinstance(module, DAQ_Move) else None
 
 
 class TestControlModule:
-    def test_error_is_displayed_and_marks_the_module(self, module, theme):
+    def test_error_is_displayed_and_marks_the_module(self, module):
         messages = []
         module.status_sig.connect(messages.append)
         module.thread_status(ThreadCommand(ThreadStatus.ERROR, 'move_abs: position out of range'))
         assert module._in_error
         assert messages == ['Error: move_abs: position out of range']
-        assert _name_color(module) == _color_code(theme.orange)
+
+    def test_name_color_is_not_changed(self, module):
+        before = module.ui.get_action('name').widget.styleSheet()
+        module.thread_status(ThreadCommand(ThreadStatus.ERROR, 'oops'))
+        assert module.ui.get_action('name').widget.styleSheet() == before
 
     def test_a_message_does_not_clear_the_error(self, module):
         module.thread_status(ThreadCommand(ThreadStatus.ERROR, 'oops'))
         module.thread_status(ThreadCommand(ThreadStatus.UPDATE_STATUS, 'just a message'))
         assert module._in_error
 
-    def test_module_is_back_to_normal_when_the_hardware_answers(self, module, theme):
+    def test_module_is_back_to_normal_when_the_hardware_answers(self, module):
         module.thread_status(ThreadCommand(ThreadStatus.ERROR, 'oops'))
         module.thread_status(ThreadCommand(ThreadStatus.CLOSE, ['Hardware closed']))  # any answer of the hardware
         assert not module._in_error
-        assert _name_color(module) == _color_code(module.get_color_from_status())
+
+
+class TestMoveLed:
+    @fixture
+    def move(self, qtbot, theme):
+        widget = QtWidgets.QWidget()
+        qtbot.addWidget(widget)
+        move = DAQ_Move(widget)
+        widget.show()
+        yield move
+        move.quit_fun()
+        widget.close()
+
+    def test_led_is_orange_with_the_error_as_tooltip(self, move):
+        move.thread_status(ThreadCommand(ThreadStatus.ERROR, 'move_abs: position out of range'))
+        led = move.ui.status_led
+        assert led.get_state() == MoveLedState.ERROR
+        assert led.toolTip() == 'move_abs: position out of range'
+        assert dict(led._states)[MoveLedState.ERROR] == StatusPalette.color(Status.ERROR)
+
+    def test_led_goes_back_when_the_hardware_answers(self, move):
+        move.thread_status(ThreadCommand(ThreadStatus.ERROR, 'oops'))
+        move.thread_status(ThreadCommand(ThreadStatus.CLOSE, ['Hardware closed']))
+        assert move.ui.status_led.get_state() == MoveLedState.UNINITIALIZED
+        assert move.ui.status_led.toolTip() == ''
+
+    def test_next_move_order_replaces_the_error(self, move):
+        move.thread_status(ThreadCommand(ThreadStatus.ERROR, 'oops'))
+        move.ui.move_done = False  # what DAQ_Move does when it sends a move order
+        assert move.ui.status_led.get_state() == MoveLedState.MOVING

@@ -373,11 +373,12 @@ class ControlModule(QObject):
     def custom_command(self, command: str, **kwargs):
         self.command_hardware.emit(ThreadCommand(command, kwargs))
 
-    def _set_in_error(self, in_error: bool):
-        """Mark the module in error (orange name) after an exception of the plugin, back to normal when it answers"""
+    def _set_in_error(self, in_error: bool, message: str = ''):
+        """Mark the module in error (status LED of its UI) after an exception of the plugin, back to normal when it
+        answers"""
         self._in_error = in_error
         if self.ui is not None:
-            self.ui.set_init_color(get_theme().orange if in_error else self.get_color_from_status())
+            self.ui.set_error_state(in_error, message)
 
     def raise_timeout(self):
         """Handle a timeout event: display a status message."""
@@ -413,7 +414,7 @@ class ControlModule(QObject):
 
         if status.command == ThreadStatus.ERROR:
             self.update_status(f'Error: {status.attribute}', log=False)  # already logged by the worker
-            self._set_in_error(True)
+            self._set_in_error(True, str(status.attribute))
 
         elif status.command == "Update_Status":
             # legacy
