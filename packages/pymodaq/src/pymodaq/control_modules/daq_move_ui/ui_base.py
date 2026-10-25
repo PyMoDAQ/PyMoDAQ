@@ -113,6 +113,8 @@ class DAQMoveUI(ControlModuleUI):
 
         self.setup_ui()
 
+        self.status_led.state_changed.connect(self._update_init_icon)
+        self._update_init_icon()  # the init button has the colour of the status LED
         self.enable_move_buttons(False)
 
     # -------------------------------------------------------------------------
@@ -128,7 +130,6 @@ class DAQMoveUI(ControlModuleUI):
         self._ini_state = status
         self.status_led.set_state(MoveLedState.IDLE if status else MoveLedState.UNINITIALIZED)
         self.enable_move_buttons(status)
-        self.update_init_icon(status, 'ini_actuator')
         if self.has_action('ini_actuator'):
             self.set_action_checked('ini_actuator', status)
 
@@ -157,6 +158,12 @@ class DAQMoveUI(ControlModuleUI):
     @move_done.setter
     def move_done(self, status):
         self.status_led.set_state(MoveLedState.IDLE if status else MoveLedState.MOVING)
+
+    def _update_init_icon(self, *_) -> None:
+        """Give the init button the colour of the status LED"""
+        if self.has_action('ini_actuator'):
+            color = dict(self.status_led._states)[self.status_led.get_state()]
+            self.get_action('ini_actuator').set_icon(self.INIT_ICON, color)
 
     def set_error_state(self, in_error: bool, message: str = '') -> None:
         """Turn the status LED to ``ERROR`` (orange) with the error as tooltip, or back to idle/uninitialized"""

@@ -126,9 +126,13 @@ def test_move_status_led_follows_the_error(qtbot, theme):
     move = DAQ_Move(widget)
     widget.show()
     led = move.ui.status_led
+    icon_colors = []
+    init_action = move.ui.get_action('ini_actuator')
+    init_action.set_icon = lambda name, color: icon_colors.append(color)  # what the init button is painted with
 
     move.thread_status(ThreadCommand(ThreadStatus.ERROR, 'move_abs: position out of range'))
     assert led.get_state() == MoveLedState.ERROR
+    assert icon_colors[-1] == StatusPalette.color(Status.ERROR)  # the init button follows the LED
     assert led.toolTip() == 'move_abs: position out of range'
     assert dict(led._states)[MoveLedState.ERROR] == StatusPalette.color(Status.ERROR)
 
@@ -145,6 +149,7 @@ def test_move_status_led_follows_the_error(qtbot, theme):
     assert led.toolTip() == 'no device found'
     move.thread_status(ThreadCommand(ThreadStatus.INI_HARDWARE, dict(initialized=True, info='', controller=None)))
     assert led.get_state() == MoveLedState.IDLE
+    assert icon_colors[-1] == StatusPalette.color(Status.IDLE)
 
     move.quit_fun()
     widget.close()
