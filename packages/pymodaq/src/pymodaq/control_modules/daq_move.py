@@ -1042,7 +1042,7 @@ class ActuatorWorker(HardwareWorkerBase):
             else:  # custom commands for particular plugins
                 self._dispatch_custom_command(command)
         except Exception as e:
-            self.logger.exception(str(e))
+            self.report_error(e, str(command.command))
 
     def stop_motion(self):
         """Stop hardware motion."""

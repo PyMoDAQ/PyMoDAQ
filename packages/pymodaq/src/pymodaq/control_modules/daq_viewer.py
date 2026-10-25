@@ -1021,6 +1021,12 @@ class DetectorWorker(HardwareWorkerBase):
         if super().queue_command(command):
             return
 
+        try:
+            self._process_command(command)
+        except Exception as e:
+            self.report_error(e, str(command.command))
+
+    def _process_command(self, command: ThreadCommand):
         # Legacy alias: INI_DETECTOR → ini_hardware (base class already handles INI_HARDWARE)
         if command.command == ControlToHardwareViewer.INI_DETECTOR:
             status = self.ini_hardware(*command.attribute)
@@ -1202,11 +1208,11 @@ class DetectorWorker(HardwareWorkerBase):
                         break  # if live can be done in the plugin breaks the while loop except
                         # if average is asked but not done hardware wise
                 except Exception as e:
-                    self.logger.exception(str(e))
+                    self.report_error(e, 'grab')
             self.status_sig.emit(ThreadCommand('grab_stopped'))
 
         except Exception as e:
-            self.logger.exception(str(e))
+            self.report_error(e, 'grab')
 
     def close(self):
         """Call the close method of the instrument plugin class."""

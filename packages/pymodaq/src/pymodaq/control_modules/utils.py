@@ -85,6 +85,23 @@ class HardwareWorkerBase(QObject):
     def ini_hardware(self, params_state=None, controller=None):
         raise NotImplementedError
 
+    def report_error(self, error: Exception, context: str = '') -> None:
+        """Log an exception raised by the instrument plugin and show it in the control module
+
+        The control module displays the message in its status bar and marks itself in error (see
+        :meth:`ControlModule.thread_status`), so that a refused move or a failed reading is not only visible in the log.
+
+        Parameters
+        ----------
+        error: Exception
+            The exception raised by the plugin
+        context: str
+            What was being done (the command), added in front of the message
+        """
+        getattr(self, 'logger', logger).exception(str(error))
+        message = f'{context}: {error}' if context else str(error)
+        self.status_sig.emit(ThreadCommand(ThreadStatus.ERROR, message))
+
     def update_settings(self, settings_parameter_dict) -> None:
         """Route a settings change to either main_settings or the plugin subtree."""
         path = settings_parameter_dict['path']
@@ -289,6 +306,7 @@ class ControlModule(QObject):
         self.ui: Union['DAQMoveUI', 'DAQ_Viewer_UI'] = None
 
         self._title = title
+        self._in_error = False  # True after an exception raised by the plugin, until the hardware answers again
 
         self._controller_and_thread = ControllerAndThread(name=self._title)
         # the hardware controller instance set after initialization and to be used by other modules if they share the
@@ -355,6 +373,12 @@ class ControlModule(QObject):
     def custom_command(self, command: str, **kwargs):
         self.command_hardware.emit(ThreadCommand(command, kwargs))
 
+    def _set_in_error(self, in_error: bool):
+        """Mark the module in error (orange name) after an exception of the plugin, back to normal when it answers"""
+        self._in_error = in_error
+        if self.ui is not None:
+            self.ui.set_init_color(get_theme().orange if in_error else self.get_color_from_status())
+
     def raise_timeout(self):
         """Handle a timeout event: display a status message."""
         self.update_status("Timeout occurred")
@@ -372,6 +396,7 @@ class ControlModule(QObject):
 
             * Update_Status: display messages and log info (deprecated)
             * update_status: display info on the UI status bar
+            * error: an exception was raised by the plugin, display it on the UI status bar and mark the module in error
             * close: close the current thread and delete corresponding attribute on cascade.
             * update_settings: Update the "detector setting" node in the settings tree.
             * update_main_settings: update the "main setting" node in the settings tree
@@ -381,7 +406,16 @@ class ControlModule(QObject):
             * show_config: display the plugin configuration
         """
 
-        if status.command == "Update_Status":
+        if (self._in_error and status.command not in
+                (ThreadStatus.ERROR, ThreadStatus.UPDATE_STATUS, ThreadStatus.UPDATE_SETTINGS,
+                 ThreadStatus.UPDATE_MAIN_SETTINGS, ThreadStatus.UPDATE_UI, "Update_Status")):
+            self._set_in_error(False)  # the hardware answered: it works again
+
+        if status.command == ThreadStatus.ERROR:
+            self.update_status(f'Error: {status.attribute}', log=False)  # already logged by the worker
+            self._set_in_error(True)
+
+        elif status.command == "Update_Status":
             # legacy
             if len(status.attribute) > 1:
                 self.update_status(status.attribute[0], log=status.attribute[1])
