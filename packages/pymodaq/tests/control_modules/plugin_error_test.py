@@ -127,12 +127,11 @@ def test_move_status_led_follows_the_error(qtbot, theme):
     widget.show()
     led = move.ui.status_led
     icon_colors = []
-    init_action = move.ui.get_action('ini_actuator')
-    init_action.set_icon = lambda name, color: icon_colors.append(color)  # what the init button is painted with
+    move.ui.get_action('ini_actuator').set_icon = lambda name, color: icon_colors.append(color)  # init button colour
 
     move.thread_status(ThreadCommand(ThreadStatus.ERROR, 'move_abs: position out of range'))
+    assert not icon_colors  # an error of a command does not touch the init button
     assert led.get_state() == MoveLedState.ERROR
-    assert icon_colors[-1] == StatusPalette.color(Status.ERROR)  # the init button follows the LED
     assert led.toolTip() == 'move_abs: position out of range'
     assert dict(led._states)[MoveLedState.ERROR] == StatusPalette.color(Status.ERROR)
 
@@ -147,9 +146,10 @@ def test_move_status_led_follows_the_error(qtbot, theme):
     move.thread_status(ThreadCommand(ThreadStatus.INI_HARDWARE, dict(initialized=False, info='no device found')))
     assert led.get_state() == MoveLedState.ERROR  # a failed initialization is shown, not only a grey LED
     assert led.toolTip() == 'no device found'
+    assert icon_colors[-1] == theme.orange  # the init button: orange after a failed initialization
     move.thread_status(ThreadCommand(ThreadStatus.INI_HARDWARE, dict(initialized=True, info='', controller=None)))
     assert led.get_state() == MoveLedState.IDLE
-    assert icon_colors[-1] == StatusPalette.color(Status.IDLE)
+    assert icon_colors[-1] == theme.green
 
     move.quit_fun()
     widget.close()
@@ -182,7 +182,7 @@ class TestPolling:
         assert not plugin.calls.values  # no value is emitted after the failure
 
 
-def test_viewer_init_button_follows_the_status_palette(qtbot, theme):
+def test_viewer_init_button_colours(qtbot, theme):
     widget = QtWidgets.QWidget()
     qtbot.addWidget(widget)
     viewer = DAQ_Viewer(widget)
@@ -190,19 +190,12 @@ def test_viewer_init_button_follows_the_status_palette(qtbot, theme):
     icon_colors = []
     viewer.ui.get_action('ini_detector').set_icon = lambda name, color: icon_colors.append(color)
 
-    viewer.ui.detector_init = True
-    assert icon_colors[-1] == StatusPalette.color(Status.IDLE)
-    viewer.ui.get_action('grab').setChecked(True)
-    assert icon_colors[-1] == StatusPalette.color(Status.RUNNING)
-    viewer.thread_status(ThreadCommand(ThreadStatus.ERROR, 'camera unplugged'))
-    assert icon_colors[-1] == StatusPalette.color(Status.ERROR)
-    assert viewer.ui.get_action('ini_detector').toolTip() == 'camera unplugged'
-    viewer.thread_status(ThreadCommand(ThreadStatus.UPDATE_SETTINGS, [['x'], 1, 'value']))  # not an answer: still in error
-    assert icon_colors[-1] == StatusPalette.color(Status.ERROR)
-    viewer.ui.get_action('grab').setChecked(False)
-    viewer.ui.detector_init = False
+    viewer.thread_status(ThreadCommand(ThreadStatus.INI_HARDWARE, dict(initialized=False, info='no camera')))
+    assert icon_colors[-1] == theme.orange  # failed initialization
     viewer.thread_status(ThreadCommand(ThreadStatus.CLOSE, ['Hardware closed']))
-    assert icon_colors[-1] == StatusPalette.color(Status.OFF)
+    assert icon_colors[-1] == theme.red  # deinitialized
+    viewer.thread_status(ThreadCommand(ThreadStatus.ERROR, 'camera unplugged'))
+    assert icon_colors[-1] == theme.red  # an error of a command does not touch the init button
 
     viewer.quit_fun()
     widget.close()

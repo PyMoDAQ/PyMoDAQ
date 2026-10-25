@@ -22,7 +22,6 @@ from pymodaq.control_modules.instruments import DET_TYPES
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerFactory, ViewerDispatcher
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
 from pymodaq_gui.utils.styling import create_icon
-from pymodaq_gui.utils.widgets import StatusPalette, Status
 from pymodaq.control_modules.thread_commands import UiToMainViewer
 from pymodaq.control_modules.control_module_selector import add_category_layers
 from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule, ViewerSelector
@@ -88,7 +87,6 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
                                   rois_dock=rois_dock)
 
         self._data_ready = False
-        self._in_error = False
         self._detector_widget = None
 
         self.selector = ViewerSelector(add_menu_entries=add_menu_entries)
@@ -100,7 +98,6 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.connect_things()
 
         self.enable_actions(False, all_except=('ini_detector', 'selector', 'show_settings', 'show_graphs'))
-        self._update_init_icon()
         self._settings_widget.setVisible(False)
 
     # -------------------------------------------------------------------------
@@ -125,30 +122,9 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._ini_state = status
         self.enable_actions(status, all_except=('ini_detector', 'selector', 'show_settings', 'show_graphs'))
         self.set_action_enabled('selector', not status)
-        self._update_init_icon()
+        self.update_init_icon(status, action_name='ini_detector')
         if self.has_action('ini_detector'):
             self.set_action_checked('ini_detector', status)
-
-    def _update_init_icon(self, *_) -> None:
-        """Paint the init button with the status palette: off, idle (ready), running (grabbing) or error"""
-        if not self.has_action('ini_detector'):
-            return
-        if self._in_error:
-            status = Status.ERROR
-        elif not self._ini_state:
-            status = Status.OFF
-        elif self.has_action('grab') and self.is_action_checked('grab'):
-            status = Status.RUNNING
-        else:
-            status = Status.IDLE
-        self.get_action('ini_detector').set_icon(self.INIT_ICON, StatusPalette.color(status))
-
-    def set_error_state(self, in_error: bool, message: str = '') -> None:
-        """Turn the init button orange after an exception of the plugin, back to its state otherwise"""
-        self._in_error = in_error
-        self._update_init_icon()
-        if self.has_action('ini_detector'):
-            self.get_action('ini_detector').setToolTip(message if in_error else 'Connect to selected detector')
 
     @property
     def data_ready(self):
@@ -219,7 +195,6 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._connect_common_actions()
 
         self.connect_action('grab', self._grab)
-        self.get_action('grab').toggled.connect(self._update_init_icon)
         self.connect_action('snap', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SNAP, )))
         self.connect_action('reset_live', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.RESET_LIVE)))
         self.connect_action('save_current', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SAVE_CURRENT, )))

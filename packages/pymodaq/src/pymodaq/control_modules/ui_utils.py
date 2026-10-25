@@ -175,7 +175,7 @@ class ControlModuleUI(CustomApp):
         action.setToolTip(f'{self.CONTINUOUS_SAVE_TIP} (current file: {pathname})'
                           if active and pathname else self.CONTINUOUS_SAVE_TIP)
 
-    def update_init_icon(self, initialized: bool, action_name: str = 'init') -> None:
+    def update_init_icon(self, initialized: bool, action_name: str = 'init', failed: bool = False) -> None:
         """Update the initialization action icon based on state
 
         Parameters
@@ -184,10 +184,13 @@ class ControlModuleUI(CustomApp):
             Whether the module is initialized
         action_name: str
             The name of the init action
+        failed: bool
+            True after an initialization that failed: the icon is orange instead of red
         """
         if self.has_action(action_name):
-            self.get_action(action_name).set_icon(self.INIT_ICON, self.get_theme().green if
-            initialized else self.get_theme().red)
+            color = self.get_theme().green if initialized else (self.get_theme().orange if failed
+                                                                else self.get_theme().red)
+            self.get_action(action_name).set_icon(self.INIT_ICON, color)
 
     def enable_actions(self, status=True, all_except=()):
         """Enable or disable all toolbar actions, optionally excluding some.
