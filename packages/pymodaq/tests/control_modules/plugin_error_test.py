@@ -140,5 +140,38 @@ def test_move_status_led_follows_the_error(qtbot, theme):
     move.ui.move_done = False  # what DAQ_Move does when it sends a move order
     assert led.get_state() == MoveLedState.MOVING
 
+    move.thread_status(ThreadCommand(ThreadStatus.INI_HARDWARE, dict(initialized=False, info='no device found')))
+    assert led.get_state() == MoveLedState.ERROR  # a failed initialization is shown, not only a grey LED
+    assert led.toolTip() == 'no device found'
+    move.thread_status(ThreadCommand(ThreadStatus.INI_HARDWARE, dict(initialized=True, info='', controller=None)))
+    assert led.get_state() == MoveLedState.IDLE
+
     move.quit_fun()
     widget.close()
+
+
+class TestPolling:
+    @staticmethod
+    def _plugin(fail_in_loop: bool):
+        calls = SimpleNamespace(timer_stopped=False, statuses=[], values=[])
+
+        def get_actuator_value():
+            raise RuntimeError('encoder lost')
+
+        return SimpleNamespace(
+            calls=calls, settings={'timeout': 100}, move_is_done=False, start_time=0, _current_value=None,
+            _condition_to_reach_target=lambda: not fail_in_loop, get_actuator_value=get_actuator_value,
+            poll_timer=SimpleNamespace(stop=lambda: setattr(calls, 'timer_stopped', True)),
+            emit_status=calls.statuses.append, emit_value=calls.values.append,
+            epsilon=0.1, _target_value=None,
+        )
+
+    @pytest.mark.parametrize('fail_in_loop', [True, False])
+    def test_error_while_polling_is_reported(self, fail_in_loop):
+        from pymodaq.control_modules.move_utility_classes import DAQ_Move_base
+        plugin = self._plugin(fail_in_loop)
+        DAQ_Move_base.check_target_reached(plugin)
+        assert plugin.calls.timer_stopped
+        assert [status.command for status in plugin.calls.statuses] == [ThreadStatus.ERROR]
+        assert 'encoder lost' in plugin.calls.statuses[0].attribute
+        assert not plugin.calls.values  # no value is emitted after the failure

@@ -438,7 +438,8 @@ class ControlModule(QObject):
                 ThreadCommand(
                     ThreadStatus.INI_HARDWARE,
                     attribute={'initialized': False,
-                               'info': 'Hardware has been closed'}))
+                               'info': 'Hardware has been closed',
+                               'closed': True}))  # a deinitialization, not a failed initialization
 
         elif status.command == ThreadStatus.UPDATE_UI:
             try:

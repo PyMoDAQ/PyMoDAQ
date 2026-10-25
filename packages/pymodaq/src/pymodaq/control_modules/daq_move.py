@@ -727,6 +727,8 @@ class DAQ_Move(ParameterControlModule):
                 self._controller_and_thread.initialized = False
                 if self.ui is not None:
                     self.ui.actuator_init = False
+                if not status.attribute.get('closed', False):  # a failed initialization, not a deinitialization
+                    self._set_in_error(True, str(status.attribute['info']) or 'initialization failed')
             if self._controller_and_thread.initialized:
                 self.get_actuator_value()
             self.init_signal.emit(self._controller_and_thread.initialized)
