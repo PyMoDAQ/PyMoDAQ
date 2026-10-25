@@ -9,7 +9,8 @@ from serializall import SerializableFactory
 from pymodaq_data import DataToExport
 
 from pymodaq_gui.utils.widgets.combo import ComboBox
-from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltBase, SeqEltFactory, ElementError
+from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltBase, SeqEltFactory, ElementError, \
+    SeqEltCategory
 from pymodaq.extensions.sequencer.utilities.widget_with_toolbar import WidgetWithToolbar
 from pymodaq_utils.utils import find_objects_in_list_from_attr_name_val
 
@@ -24,7 +25,7 @@ ser_factory = SerializableFactory()
 class SequenceElt(SeqEltBase):
 
     elt_name = 'sequence'
-    elt_category = 'Structure'
+    elt_category = SeqEltCategory.STRUCTURE
     children_allowed = False
     sequences: list['Sequence'] = []
 

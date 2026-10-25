@@ -15,7 +15,8 @@ from pymodaq.utils.scanner.scanner import Orientation
 from pymodaq_data import DataToExport, Q_
 from pymodaq_gui.parameter.pymodaq_ptypes import GroupParameter, registerParameterType
 from pymodaq_gui.parameter import Parameter, ParameterTree
-from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltBase, SeqEltFactory, ElementError
+from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltBase, SeqEltFactory, ElementError, \
+    SeqEltCategory
 
 from pymodaq.extensions.sequencer.utilities.widget_with_toolbar import WidgetWithToolbar
 
@@ -97,7 +98,7 @@ class ActuatorsValuesUnits:
 class MoveElt(SeqEltBase):
 
     elt_name = 'move'
-    elt_category = 'Actions'
+    elt_category = SeqEltCategory.ACTIONS
     children_allowed = False
 
     def __init__(self, *args, **kwargs):

@@ -2,7 +2,7 @@ from typing import Any
 from serializall import SerializableFactory
 
 from pymodaq_data import DataToExport
-from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltFactory, SeqEltBase
+from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltFactory, SeqEltBase, SeqEltCategory
 from pymodaq.extensions.sequencer.utilities.widget_with_toolbar import WidgetWithToolbar
 
 
@@ -16,7 +16,7 @@ class GroupElt(SeqEltBase):
     steps into one named unit" primitive, addable anywhere like any other element.
     """
     elt_name = 'group'
-    elt_category = 'Structure'
+    elt_category = SeqEltCategory.STRUCTURE
     children_allowed = True
 
     def __init__(self, *args, **kwargs):

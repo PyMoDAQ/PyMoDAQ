@@ -19,6 +19,7 @@ from pymodaq_gui.qt_utils import mkQApp
 from pymodaq_gui.utils.widgets import LabelWithFont
 from pymodaq.extensions.sequencer.utilities.widget_with_toolbar import WidgetWithToolbar
 from pymodaq_utils.abstract import abstract_attribute
+from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_gui.utils.styling import Font, ThemeColor
 
@@ -33,6 +34,14 @@ ser_factory = SerializableFactory()
 
 class ElementError(Exception):
     pass
+
+
+class SeqEltCategory(StrEnum):
+    """ Groups shown for elements in the "Add Element" menu """
+    ACTIONS = 'Actions'
+    STRUCTURE = 'Structure'
+    LOGIC = 'Logic'
+    EXPERIMENT = 'Experiment'
 
 
 def register_elements(parent_module_name: str = 'pymodaq.extensions.sequencer.utilities'):
@@ -72,9 +81,9 @@ class SeqEltBase(QtCore.QObject, ActionManager):
     children_allowed = False
     params = []
 
-    #: Group shown for this element in the "Add Element" menu (e.g. 'Actions', 'Structure').
+    #: Group shown for this element in the "Add Element" menu.
     #: Leave None to keep the element as a flat, top-level entry instead of forcing it into a group.
-    elt_category: Optional[str] = None
+    elt_category: Optional[SeqEltCategory] = None
 
     def __repr__(self):
         return f'{self.id} - {self.elt_name.capitalize()}'

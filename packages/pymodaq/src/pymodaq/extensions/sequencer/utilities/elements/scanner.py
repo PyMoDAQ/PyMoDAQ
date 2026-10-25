@@ -12,7 +12,8 @@ from pymodaq.utils.scanner.scanner import Orientation
 from pymodaq_data import DataToExport
 from pymodaq_gui.parameter.pymodaq_ptypes.itemselect import ItemSelect
 from pymodaq_gui.utils.widgets import SpinBox
-from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltBase, SeqEltFactory, ElementError
+from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltBase, SeqEltFactory, ElementError, \
+    SeqEltCategory
 from pymodaq.extensions.sequencer.utilities.elements.repeat import RepeatElt
 from pymodaq.extensions.sequencer.utilities.widget_with_toolbar import WidgetWithToolbar
 from qt_themes import get_theme
@@ -31,7 +32,7 @@ ser_factory = SerializableFactory()
 class ScannerElt(SeqEltBase):
 
     elt_name = 'scanner'
-    elt_category = 'Actions'
+    elt_category = SeqEltCategory.ACTIONS
     children_allowed = True
 
     def __init__(self, *args, **kwargs):

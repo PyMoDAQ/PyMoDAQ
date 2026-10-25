@@ -13,7 +13,7 @@ from pymodaq_data import DataToExport
 from pymodaq_gui.parameter.pymodaq_ptypes.itemselect import ItemSelect
 
 
-from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltBase, SeqEltFactory
+from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltBase, SeqEltFactory, SeqEltCategory
 from pymodaq.extensions.sequencer.utilities.holders.modules_manager_binding import ModulesManagerBinding
 from pymodaq.extensions.sequencer.utilities.widget_with_toolbar import WidgetWithToolbar
 from pymodaq.utils.managers.modules_manager import ModulesManagerParam
@@ -37,7 +37,7 @@ class Status(StrEnum):
 class GrabElt(SeqEltBase):
 
     elt_name = 'grab'
-    elt_category = 'Actions'
+    elt_category = SeqEltCategory.ACTIONS
     children_allowed = False
 
     def __init__(self, *args, **kwargs):
