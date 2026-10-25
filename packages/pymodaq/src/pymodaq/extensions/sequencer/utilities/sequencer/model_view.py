@@ -557,7 +557,7 @@ class SequenceTreeView(QtWidgets.QTreeView, ActionManager):
         self.ind_elt += 1
         new_id = self.get_new_id(self.ind_elt)
         self.ind_elt = new_id
-        element = seq_factory.get_seq_elt(path[0].lower())(new_id,
+        element = seq_factory.get_seq_elt(path[-1].lower())(new_id,
                                                            parent_sequence=self.parent_sequence)
         element.dashboard = self.dashboard
 
@@ -580,9 +580,8 @@ class SequenceTreeView(QtWidgets.QTreeView, ActionManager):
         self.add_menu('add_elements', 'Add Element',
                       parent_menu=self.menu,
                       menu=IterableMenu('Add Element',
-                                        [elt.capitalize() for elt in seq_factory.elements if
-                                         not (elt == AddButtonPlaceholder.elt_name or
-                                              elt == RootElt.elt_name)],
+                                        seq_factory.categorized_elt_names(
+                                            exclude=(AddButtonPlaceholder.elt_name, RootElt.elt_name)),
                                         self.add_element))
         self.menu.addSeparator()
         self.add_action('remove', 'Remove Element', menu=self.menu,

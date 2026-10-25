@@ -7,7 +7,8 @@ from qtpy import QtWidgets, QtCore
 from serializall import SerializableFactory
 from pymodaq_data import DataToExport, DataWithAxes, DataRaw
 from pymodaq_gui.utils.widgets import SpinBox
-from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltBase, SeqEltFactory, ElementError
+from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltBase, SeqEltFactory, ElementError, \
+    SeqEltCategory
 from pymodaq.extensions.sequencer.utilities.widget_with_toolbar import WidgetWithToolbar
 
 
@@ -18,6 +19,7 @@ ser_factory = SerializableFactory()
 class WaitElt(SeqEltBase):
 
     elt_name = 'wait'
+    elt_category = SeqEltCategory.ACTIONS
     children_allowed = False
 
     def __init__(self, *args, **kwargs):

@@ -11,7 +11,7 @@ from pymodaq_utils.warnings import deprecation_msg
 from qt_themes import get_theme
 from pymodaq_gui.utils.styling import color_to_rgba
 from pymodaq_gui.utils.widgets.combo import ComboBox
-from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltBase, SeqEltFactory
+from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltBase, SeqEltFactory, SeqEltCategory
 from pymodaq.extensions.sequencer.utilities.elements.button import AddButtonPlaceholder
 from pymodaq.extensions.sequencer.utilities.holders.branch_holder import BranchHolder
 from pymodaq.extensions.sequencer.utilities.holders.condition_holder import ConditionHolder
@@ -36,6 +36,7 @@ class ChoiceElt(SeqEltBase):
     """
 
     elt_name = 'choice'
+    elt_category = SeqEltCategory.LOGIC
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
