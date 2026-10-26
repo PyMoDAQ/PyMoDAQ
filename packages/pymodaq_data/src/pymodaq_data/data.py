@@ -2397,6 +2397,22 @@ class DataWithAxes(DataBase, SerializableBase):
         See Also
         --------
         average
+
+        Notes
+        -----
+        The update of the sum of squared deviations from the mean is Welford's online algorithm [1]_ [2]_, with
+        ``S_N = S_(N-1) + (x_N - mean_(N-1)) * (x_N - mean_N)`` (complex conjugate on the second factor for complex
+        data). The errors are then ``sqrt(S_N / (N (N - 1)))``, i.e. the sample standard deviation (``ddof=1``)
+        divided by ``sqrt(N)``.
+
+        ``self`` is taken as a single acquisition without errors (weight one). This is not the combination of two
+        measurements that each carry an error (inverse-variance weighting).
+
+        References
+        ----------
+        .. [1] B. P. Welford, "Note on a method for calculating corrected sums of squares and products",
+           Technometrics 4 (1962) 419-420.
+        .. [2] D. E. Knuth, The Art of Computer Programming, vol. 2, section 4.2.2.
         """
         averaged_data = cast(DataWithAxes, self.average(other, weight))
         n_data = weight + 1
