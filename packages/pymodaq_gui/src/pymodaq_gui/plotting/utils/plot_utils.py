@@ -173,6 +173,33 @@ def get_sub_segmented_positions(spacing: float, points: List[Point]) -> List[np.
     return positions
 
 
+def get_sub_segmented_n_positions(spacing: float, points: List[Point], limit: int = None) -> int:
+    """Number of Points returned by get_sub_segmented_positions, without building them
+
+    Parameters
+    ----------
+    spacing: float
+        Distance between two subpoints
+    points: List[Point]
+        List of Points in arbitrary dimension forming segments one want to sample with a distance equal to spacing
+    limit: int, optional
+        If the raw number of positions (total length / spacing) exceeds this limit, it is returned directly
+        instead of the exact one (the exact count is then not needed and may be huge to compute)
+
+    Returns
+    -------
+    int
+    """
+    norms = [np.linalg.norm((points[ind + 1] - points[ind]).coordinates) for ind in range(len(points) - 1)]
+    if limit is not None and sum(norms) / spacing > limit:
+        return int(sum(norms) / spacing) + 1
+    npts = 1  # the last point
+    for norm in norms:
+        # same comparison as in get_sub_segmented_positions
+        npts += int(np.count_nonzero(np.arange(int(norm / spacing) + 2) * spacing < norm))
+    return npts
+
+
 class QVector(QtCore.QLineF):
     def __init__(self, *elt):
         super().__init__(*elt)
@@ -706,12 +733,20 @@ class DetachablePanel:
     is_shown: Callable[[], bool]
         Returns whether the panel is currently supposed to be visible; used to decide
         whether an attach/detach toggle should immediately re-render it
+    owner: QWidget or None
+        If given, `widget` is released from this panel when the owner is destroyed. A floating (or not yet
+        shown) widget has no parent: its signal would keep the panel, and the UI, alive
+
+        .. versionadded:: 5.3.9
     """
     def __init__(self, widget: QtWidgets.QWidget, dock: Union[Dock, None], title: str,
                 detached: bool, orientation=QtCore.Qt.Orientation.Horizontal,
                 layout_config_path: Union[Tuple[str, ...], None] = None,
-                is_shown: Callable[[], bool] = lambda: False):
+                is_shown: Callable[[], bool] = lambda: False,
+                owner: Union[QtWidgets.QWidget, None] = None):
         self.widget = widget
+        if owner is not None:
+            owner.destroyed.connect(self._release_widget)
         self.dock = dock
         self.title = title
         self._orientation = orientation
@@ -733,6 +768,19 @@ class DetachablePanel:
         self._detached = detach
         if self.is_shown():
             self.show(True)
+
+    def _release_widget(self):
+        """Cut what links the widget to the UI: they would keep the panel and the UI alive
+
+        The widget is not deleted here: it is when nothing refers to it any more (deleting it explicitly makes
+        PySide6 free its actions twice in some cases).
+        """
+        try:
+            self.widget.sig_attach_detach.disconnect(self._set_detached)
+            self.widget.sig_close.disconnect()
+        except (TypeError, RuntimeError):  # already disconnected, or deleted with its parent
+            pass
+        self.widget.__dict__.pop('closeEvent', None)  # an override defined by the UI
 
     def show(self, show: bool = True):
         if self._detached or self.dock is None:

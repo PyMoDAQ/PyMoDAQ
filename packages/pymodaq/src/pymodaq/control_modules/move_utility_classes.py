@@ -7,7 +7,7 @@ HW_KIND = 'actuator'
 HW_SETTINGS_KEY = f'{HW_KIND}_settings'
 from abc import abstractmethod
 from time import perf_counter
-from typing import Union, List, Dict, TYPE_CHECKING, Optional, TypeVar
+from typing import Any, Union, List, Dict, TYPE_CHECKING, Optional, TypeVar, cast
 
 
 from easydict import EasyDict as edict
@@ -75,8 +75,24 @@ class DataActuatorType(BaseEnum):
     DataActuator = 1
 
 
-def comon_parameters(epsilon=config('pymodaq', 'actuator', 'epsilon_default'),
-                     epsilons=None):
+def comon_parameters(epsilon: Union[float, List[float], Dict[str, float]] = config('pymodaq', 'actuator',
+                                                                                    'epsilon_default'),
+                     epsilons: Optional[Union[float, List[float], Dict[str, float]]] = None) -> list[dict]:
+    """Common and mandatory parameters of the actuator plugins: units, epsilon, timeout, bounds and scaling
+
+    Parameters
+    ----------
+    epsilon: float
+        Value (or list/dict of values, in which case the first one is used) below which the target
+        position is considered reached.
+    epsilons: float or list or dict, optional
+        Has priority over ``epsilon`` if given.
+
+    Returns
+    -------
+    list of dict
+        The definition of the parameters, to be used to build a ``Parameter``.
+    """
     if epsilons is not None:
         epsilon = epsilons
     if isinstance(epsilon, list):
@@ -117,7 +133,8 @@ class MoveCommand:
 
     """
 
-    def __init__(self, move_type: MoveType | str, value=0):
+    def __init__(self, move_type: MoveType | str, value: float = 0):
+        """Raises a ValueError if ``move_type`` is not one of the :class:`MoveType` names"""
         if move_type not in MoveType.names():
             raise ValueError(f'The allowed move types for an actuator are {MoveType.names()}')
         self.move_type = move_type
@@ -127,7 +144,8 @@ class MoveCommand:
 def comon_parameters_fun(is_multiaxes=False, axes_names=None,
                          axis_names: Union[List, Dict] = [],
                          master=True,
-                         epsilon: float = config('pymodaq', 'actuator', 'epsilon_default')):
+                         epsilon: Union[float, List[float], Dict[str, float]] = config('pymodaq', 'actuator',
+                                                                                        'epsilon_default')):
     """Function returning the common and mandatory parameters that should be on the actuator plugin level
 
     Parameters
@@ -140,7 +158,7 @@ def comon_parameters_fun(is_multiaxes=False, axes_names=None,
         The string identifier of every axis the controller can drive
     master: bool (deprecated useless)
         If True consider this plugin has to init the controller, otherwise use an already initialized instance
-    epsilon: float
+    epsilon: float or list of float or dict of float
         deprecated (< 5.0.0) no more used here
 
     """
@@ -248,14 +266,14 @@ class DAQ_Move_base(PluginBase):
 
     move_done_signal = Signal(DataActuator)
     is_multiaxes = False
-    stage_names = []  # deprecated
+    stage_names: list[str] = []  # deprecated
 
-    _axis_names: Union[list, Dict[str, int]] = None
-    _controller_units: Union[str, List[str], Dict[str, int]] = ''
-    _epsilons: Union[float, List[float], Dict[str, float]] = None
+    _axis_names: Optional[Union[List[str], Dict[str, int]]] = None
+    _controller_units: Union[str, List[str], Dict[str, str]] = ''
+    _epsilons: Optional[Union[float, List[float], Dict[str, float]]] = None
     _epsilon = 1.0  # deprecated
 
-    params = []
+    params: list[dict] = []
 
     data_actuator_type = DataActuatorType.float  # for backcompatibility, but new plugins should have DataActuatorType.DataActuator
     ui_type = UiType.NONE  # should precise (force if possible) what should be the ui type to be used with this
@@ -271,18 +289,30 @@ class DAQ_Move_base(PluginBase):
     data_shape = (1,)  # expected shape of the underlying actuator's value (in general a float so shape = (1, ))
 
     @classmethod
-    def get_class_axis_names(cls, axis_names: list[str] = None,
-                             deprecated_names: list[str] = None) -> list[str]:
+    def get_class_axis_names(cls, axis_names: Optional[Union[List[str], Dict[str, int]]] = None,
+                             deprecated_names: Optional[List[str]] = None) -> Union[List[str], Dict[str, int]]:
         """ Convenience method to access the declared axis in a given plugin
 
         Handles some old declaration style and eventual attribute as None or empty string
+
+        Parameters
+        ----------
+        axis_names: list of str or dict of str to int, optional
+            The names to use instead of the class attribute ``_axis_names`` (default).
+        deprecated_names: list of str, optional
+            The names to use instead of the deprecated class attribute ``stage_names`` (default).
+
+        Returns
+        -------
+        list of str or dict of str to int
+            The axis names, ``['']`` if none is declared.
         """
         if axis_names is None:
             axis_names = cls._axis_names
         if deprecated_names is None:
             deprecated_names = cls.stage_names
 
-        _axis_names = None
+        _axis_names: Optional[Union[List[str], Dict[str, int]]] = None
         if axis_names is not None and len(deprecated_names) != 0:
             #check for old and deprecated plugins
             _axis_names = deprecated_names
@@ -305,7 +335,7 @@ class DAQ_Move_base(PluginBase):
         self.status['stage'] = None
         self._ispolling = True
 
-        self._axis_units: Union[Dict[str, str], List[str]] = None
+        self._axis_units: Union[Dict[str, str], List[str]] = None  # type: ignore[assignment]  # set just below
         if isinstance(self._controller_units, str):
             self.axis_units = self._controller_units
         else:
@@ -336,11 +366,11 @@ class DAQ_Move_base(PluginBase):
 
         New in 4.4.0
         """
-        return self.axis_units[self.axis_index_key]
+        return self.axis_units[self.axis_index_key]  # type: ignore[index]  # int for a list, str for a dict
 
     @axis_unit.setter
     def axis_unit(self, unit: str):
-        self.axis_units[self.axis_index_key] = unit
+        self.axis_units[self.axis_index_key] = unit  # type: ignore[index]  # int for a list, str for a dict
         self.settings.child('units').setValue(unit)
         self.emit_status(ThreadCommand(ThreadStatusMove.UNITS, unit))
 
@@ -355,6 +385,7 @@ class DAQ_Move_base(PluginBase):
     @axis_units.setter
     def axis_units(self, units: Union[str, List[str], Dict[str, str]]):
         if isinstance(units, str):
+            units_tmp: Union[List[str], Dict[str, str]]
             if isinstance(self.axis_names, list):
                 units_tmp = [units for _ in range(len(self.axis_names))]
             else:
@@ -377,11 +408,11 @@ class DAQ_Move_base(PluginBase):
 
         New in 4.4.0
         """
-        return self.epsilons[self.axis_index_key]
+        return self.epsilons[self.axis_index_key]  # type: ignore[index]  # int for a list, str for a dict
 
     @epsilon.setter
     def epsilon(self, eps: float):
-        self.epsilons[self.axis_index_key] = eps
+        self.epsilons[self.axis_index_key] = eps  # type: ignore[index]  # int for a list, str for a dict
 
     @property
     def epsilons(self) -> Union[List[float], Dict[str, float]]:
@@ -389,17 +420,19 @@ class DAQ_Move_base(PluginBase):
 
         New in 4.4.0
         """
-        return self._epsilons
+        return cast(Union[List[float], Dict[str, float]], self._epsilons)
 
     @epsilons.setter
     def epsilons(self, epsilons: Union[float, List[float], Dict[str, float]]):
+        epsilons_tmp: Union[List[float], Dict[str, float]]
         if isinstance(epsilons, numbers.Number):
+            eps = cast(float, epsilons)
             if isinstance(self.axis_names, list):
-                epsilons_tmp = [epsilons for _ in range(len(self.axis_names))]
+                epsilons_tmp = [eps for _ in range(len(self.axis_names))]
             else:
                 epsilons_tmp = {}
                 for key in self.axis_names:
-                    epsilons_tmp[key] = epsilons
+                    epsilons_tmp[key] = eps
         else:
             if not isinstance(epsilons, type(self.axis_names)):
                 raise TypeError('units should be defined just like axis_names: a float, list of '
@@ -427,7 +460,7 @@ class DAQ_Move_base(PluginBase):
     def controller_units(self, units: str = ''):
         deprecation_msg('The property controller_units is deprecated please use the'
                         'axis_unit property.')
-        self._axis_units[self.axis_index_key] = units
+        self._axis_units[self.axis_index_key] = units  # type: ignore[index]  # int for a list, str for a dict
 
     @property
     def axis_name(self) -> Union[str]:
@@ -451,7 +484,7 @@ class DAQ_Move_base(PluginBase):
             self.axis_unit = self.axis_unit
             self.settings.child('epsilon').setValue(self.epsilon)
             if self.controller is not None:
-                self._current_value = self.get_actuator_value()
+                self._current_value = cast(DataActuator, self.get_actuator_value())
 
     @property
     def axis_names(self) -> Union[List, Dict]:
@@ -468,11 +501,11 @@ class DAQ_Move_base(PluginBase):
         self.settings.child('controller', 'axis').setLimits(names)
 
     @property
-    def axis_value(self) -> int:
+    def axis_value(self) -> Any:
         """Get the current value selected from the current axis
 
-        In case axis_names is a list, return the element of the list: self.axis_name
-        In case axis_names is a dict, return the value of the dict self.axis_names[self.axis_name]
+        In case axis_names is a list, return the element of the list: self.axis_name (a str)
+        In case axis_names is a dict, return the value of the dict self.axis_names[self.axis_name] (an int)
         """
         if isinstance(self.axis_names, list):
             return self.axis_name
@@ -523,6 +556,7 @@ class DAQ_Move_base(PluginBase):
             old_controller = slave_controller
 
         self.status.update(edict(info="", controller=None, initialized=False))
+        controller: Optional[HardwareController]
         if not self.is_master:
             if old_controller is None:
                 raise Exception('no controller has been defined externally while this axe '
@@ -535,18 +569,25 @@ class DAQ_Move_base(PluginBase):
         return controller
 
     @property
-    def current_value(self):
+    def current_value(self) -> DataActuator:
+        """ Get/Set the last known value of the actuator
+
+        A DataActuator. For deprecated old style plugins (``data_actuator_type`` is ``DataActuatorType.float``) a
+        float is returned instead. When set with a number or an array, it is converted into a DataActuator
+        using the current axis unit; a DataActuator without units gets the axis unit.
+        """
         if self.data_actuator_type == self.data_actuator_type.float:
-            return self._current_value.value()
+            return self._current_value.value()  # type: ignore[return-value]  # float for the deprecated old style plugins
         else:
             return self._current_value
 
     @current_value.setter
-    def current_value(self, value: Union[float, np.ndarray, DataActuator]):
+    def current_value(self, value: Union[int, float, np.ndarray, DataActuator]):
         if isinstance(value, (numbers.Number, np.ndarray)):
             self._current_value = DataActuator(self._title, data=value,
                                                units=self.axis_unit)
         else:
+            value = cast(DataActuator, value)  # numbers (floats included) are handled above
             if (not Unit(self.axis_unit).is_compatible_with(
                     Unit(value.units)) and
                     value.units == ''):
@@ -554,18 +595,24 @@ class DAQ_Move_base(PluginBase):
             self._current_value = value
 
     @property
-    def target_value(self):
+    def target_value(self) -> DataActuator:
+        """ Get/Set the value the actuator should reach (within epsilon)
+
+        A DataActuator. For deprecated old style plugins (``data_actuator_type`` is ``DataActuatorType.float``) a
+        float is returned instead. Same conversions as :attr:`current_value` when set.
+        """
         if self.data_actuator_type.name == self.data_actuator_type.float:
-            return self._target_value.value()
+            return self._target_value.value()  # type: ignore[return-value]  # float for the deprecated old style plugins
         else:
             return self._target_value
 
     @target_value.setter
-    def target_value(self, value: Union[numbers.Number, DataActuator]):
+    def target_value(self, value: Union[int, float, DataActuator]):
         if isinstance(value, numbers.Number):
             self._target_value = DataActuator(self._title, data=value,
                                               units=self.axis_unit)
         else:
+            value = cast(DataActuator, value)  # numbers (floats included) are handled above
             if (not Unit(self.axis_unit).is_compatible_with(
                     Unit(value.units)) and
                     value.units == ''):
@@ -573,7 +620,8 @@ class DAQ_Move_base(PluginBase):
             self._target_value = value
 
     @property
-    def current_position(self):
+    def current_position(self) -> DataActuator:
+        """Deprecated, use :attr:`current_value`"""
         deprecation_msg('current_position attribute should not be used, use current_value')
         return self.current_value
 
@@ -582,7 +630,8 @@ class DAQ_Move_base(PluginBase):
         self.current_value = value
 
     @property
-    def target_position(self):
+    def target_position(self) -> DataActuator:
+        """Deprecated, use :attr:`target_value`"""
         deprecation_msg('target_position attribute should not be used, use target_value')
         return self.target_value
 
@@ -599,8 +648,12 @@ class DAQ_Move_base(PluginBase):
         return self.settings['controller', 'controller_status'] == ControllerStatus.MASTER
 
     @property
-    def ispolling(self):
-        """ Get/Set the polling status"""
+    def ispolling(self) -> bool:
+        """ Get/Set the polling status
+
+        If True (default), after a move the actuator value is polled until the target is reached (see
+        :meth:`check_target_reached`), otherwise the plugin has to call :meth:`move_done` itself.
+        """
         return self._ispolling
 
     @ispolling.setter
@@ -631,7 +684,15 @@ class DAQ_Move_base(PluginBase):
         return position
 
     @abstractmethod
-    def get_actuator_value(self):
+    def get_actuator_value(self) -> DataActuator:
+        """Read the current value of the actuator from the hardware (to be implemented in the plugin)
+
+        Returns
+        -------
+        DataActuator
+            the value in the axis unit (a float is still accepted for deprecated old style plugins, see
+            ``data_actuator_type``).
+        """
         if hasattr(self, 'check_position'):
             deprecation_msg('check_position method in plugins is deprecated, use get_actuator_value',3)
             return self.check_position()  # type: ignore
@@ -640,16 +701,25 @@ class DAQ_Move_base(PluginBase):
 
     @abstractmethod
     def close(self) -> None:
+        """Terminate the communication with the hardware (to be implemented in the plugin)"""
         raise NotImplementedError
 
-    def move_abs(self, value: Union[float, DataActuator]):
+    def move_abs(self, value: Union[float, DataActuator]) -> None:
+        """Move the actuator to the absolute position ``value`` (to be implemented in the plugin)
+
+        Call :meth:`move_done` when the move is finished if polling is not used (see :attr:`ispolling`).
+        """
         if hasattr(self, 'move_Abs'):
             deprecation_msg('move_Abs method in plugins is deprecated, use move_abs', 3)
             self.move_Abs(value)  # type: ignore
         else:
             raise NotImplementedError
 
-    def move_rel(self, value: Union[float, DataActuator]):
+    def move_rel(self, value: Union[float, DataActuator]) -> None:
+        """Move the actuator by ``value`` relative to its position (to be implemented in the plugin)
+
+        Call :meth:`move_done` when the move is finished if polling is not used (see :attr:`ispolling`).
+        """
         if hasattr(self, 'move_Rel'):
             deprecation_msg('move_Rel method in plugins is deprecated, use move_rel', 3)
             self.move_Rel(value)  # type: ignore
@@ -675,6 +745,24 @@ class DAQ_Move_base(PluginBase):
 
         self.emit_status(ThreadCommand(ThreadStatusMove.GET_ACTUATOR_VALUE, pos))
 
+    def set_default_values(self, red: Optional[float] = None, green: Optional[float] = None,
+                           relative: Optional[float] = None):
+        """Set from the plugin the values of the red, green and relative spinboxes of the UI
+
+        Those are the *Value Red*, *Value Green* and *Value Relative* entries of the main settings of the module, and
+        the values are expressed in the units of the actuator. Only the values that are not None are updated.
+
+        Parameters
+        ----------
+        red: float
+        green: float
+        relative: float
+        """
+        for name, value in (('default_value_red', red), ('default_value_green', green),
+                            ('default_value_relative', relative)):
+            if value is not None:
+                self.emit_status(ThreadCommand(ThreadStatus.UPDATE_MAIN_SETTINGS, [[name], value, 'value']))
+
     def commit_settings(self, param: Parameter):
         """
           to subclass to transfer parameters to hardware
@@ -690,7 +778,7 @@ class DAQ_Move_base(PluginBase):
                 position = DataActuator(self._title, data=self.get_actuator_value(),
                                         units=self.axis_unit)
             else:
-                position = self.get_actuator_value()
+                position = cast(DataActuator, self.get_actuator_value())
         if position.name != self._title:  # make sure the emitted DataActuator has the name of the real implementation
             #of the plugin
             position.name = self._title
@@ -788,7 +876,12 @@ class DAQ_Move_base(PluginBase):
         """
         return True
 
-    def check_target_reached(self):
+    def check_target_reached(self) -> None:
+        """Slot of the polling timer: read the actuator value and check if the target has been reached
+
+        If it has, stop the timer and call :meth:`move_done`. Otherwise emit the new value, and stop and
+        emit a timeout command if the ``timeout`` setting is exceeded.
+        """
         logger.debug(f"epsilon value is {self.epsilon}")
         logger.debug(f"current_value value is {self._current_value}")
         logger.debug(f"target_value value is {self._target_value}")
@@ -802,8 +895,10 @@ class DAQ_Move_base(PluginBase):
             try:
                 self.current_value = self.get_actuator_value()
             except Exception as e:
-                logger.error(str(e))
+                logger.exception(str(e))
                 self.poll_timer.stop()
+                self.emit_status(ThreadCommand(ThreadStatus.ERROR, f'check_target_reached: {e}'))
+                return
 
             self.emit_value(self._current_value)
             logger.debug(f'Current value: {self._current_value}')
@@ -814,7 +909,12 @@ class DAQ_Move_base(PluginBase):
                 logger.info('Timeout activated')
         else:
             self.poll_timer.stop()
-            self.current_value = self.get_actuator_value()
+            try:
+                self.current_value = self.get_actuator_value()
+            except Exception as e:
+                logger.exception(str(e))
+                self.emit_status(ThreadCommand(ThreadStatus.ERROR, f'check_target_reached: {e}'))
+                return
             logger.debug(f'Current value: {self._current_value}')
             self.move_done(self._current_value)
 
@@ -853,11 +953,13 @@ class DAQ_Move_base(PluginBase):
         if settings_parameter_dict['change'] == 'value':
             param = settings_parameter_dict['param']
             if param.name() == 'axis':
-                self.axis_name = param.value()
+                # the value of the parameter is the axis name for a list of names but the value of the dict for named
+                # axes: the axis_name getter always returns the name, setting it updates units and epsilon
+                self.axis_name = self.axis_name
             elif param.name() == 'epsilon':
                 self.epsilon = param.value()
 
-    def ini_stage_init(self, old_controller=None, new_controller=None, slave_controller=None):
+    def ini_stage_init(self, old_controller=None, new_controller=None, slave_controller=None):  # type: ignore[no-redef]
         """Deprecated — use ini_controller_init instead."""
         import warnings
         warnings.warn("'ini_stage_init' is deprecated, use 'ini_controller_init' instead.",
@@ -890,4 +992,4 @@ class DAQ_Move_base(PluginBase):
 
 
 if __name__ == '__main__':
-    test = DAQ_Move_base()
+    test = DAQ_Move_base()  # type: ignore[abstract]

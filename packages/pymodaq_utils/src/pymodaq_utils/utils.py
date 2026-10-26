@@ -9,7 +9,7 @@ import time
 from packaging import version as version_mod
 from pathlib import Path
 import traceback
-from typing import Any, cast, List, Optional, Tuple
+from typing import Any, cast, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -35,7 +35,8 @@ ser_factory = SerializableFactory()
 config = Config()
 
 
-def is_64bits():
+def is_64bits() -> bool:
+    """Return True if the running Python interpreter is a 64 bits one"""
     return sys.maxsize > 2**32
 
 
@@ -59,25 +60,41 @@ def get_version(package_name='pymodaq'):
 
 
 class JsonConverter:
+    """Convert simple python objects to and from a json string
+
+    The json string holds the module, type and ``repr`` of the object. Only the types listed in
+    :meth:`trusted_types` are rebuilt when converting back.
+    """
     def __init__(self):
         super().__init__()
 
     @classmethod
-    def trusted_types(cls):
+    def trusted_types(cls) -> list[str]:
+        """Names of the types :meth:`json2object` is allowed to rebuild"""
         return ['float', 'int', 'str', 'datetime', 'date', 'time', 'tuple', 'list', 'bool', 'bytes',
                 'float64']
 
     @classmethod
-    def istrusted(cls, type_name):
+    def istrusted(cls, type_name: str) -> bool:
+        """Return True if ``type_name`` is one of the :meth:`trusted_types`"""
         return type_name in cls.trusted_types()
 
     @classmethod
-    def object2json(cls, obj):
+    def object2json(cls, obj: Any) -> str:
+        """Return a json string with the module, type name and repr of ``obj``"""
         dic = dict(module=type(obj).__module__, type=type(obj).__name__, data=repr(obj))
         return json.dumps(dic)
 
     @classmethod
-    def json2object(cls, jsonstring):
+    def json2object(cls, jsonstring: Any) -> Any:
+        """Rebuild an object from the json string created by :meth:`object2json`
+
+        Returns
+        -------
+        Any
+            The object if its type is trusted, otherwise the decoded dict. If ``jsonstring`` cannot be
+            decoded, it is returned unchanged.
+        """
         try:
             dic = json.loads(jsonstring)
             if isinstance(dic, dict):
@@ -105,7 +122,8 @@ def capitalize(string, Nfirst=1):
     return string[:Nfirst].upper() + string[Nfirst:]
 
 
-def uncapitalize(string, Nfirst=1):
+def uncapitalize(string: str, Nfirst: int = 1) -> str:
+    """Return the same string but with its first ``Nfirst`` letters in lower case"""
     return string[:Nfirst].lower() + string[Nfirst:]
 
 
@@ -167,6 +185,7 @@ class ThreadCommand(SerializableBase):
 
     @staticmethod
     def serialize(obj: "ThreadCommand") -> bytes:  # type: ignore[override]
+        """Serialize the command, attribute, args and kwargs of a ThreadCommand into bytes"""
         serialize_factory = SerializableFactory()
         byte_string = b""
         byte_string += serialize_factory.get_apply_serializer(obj.command)
@@ -177,6 +196,13 @@ class ThreadCommand(SerializableBase):
 
     @staticmethod
     def deserialize(bytes_str: bytes) -> Tuple["ThreadCommand", bytes]:
+        """Rebuild a ThreadCommand from bytes created by :meth:`serialize`
+
+        Returns
+        -------
+        tuple
+            The ThreadCommand and the remaining bytes that were not consumed.
+        """
         serialize_factory = SerializableFactory()
         command, remaining = cast(
             Tuple[str, bytes],
@@ -219,6 +245,10 @@ def ensure_ndarray(data):
 
 
 def recursive_find_files_extension(ini_path, ext, paths=[]):
+    """Collect the paths of all files with the extension ``ext`` (without dot) below ``ini_path``
+
+    Note that ``paths`` is shared between calls when not given (mutable default): pass a new list.
+    """
     with os.scandir(ini_path) as it:
         for entry in it:
             if os.path.splitext(entry.name)[1][1:] == ext and entry.is_file():
@@ -230,6 +260,11 @@ def recursive_find_files_extension(ini_path, ext, paths=[]):
 
 def recursive_find_files(ini_path, exp='make_enum', paths=[],
                          filters=['build']):
+    """Collect the paths of all files below ``ini_path`` whose name (without extension) contains ``exp``
+
+    Paths containing one of the ``filters`` strings are skipped. As in
+    :func:`recursive_find_files_extension`, pass a new list as ``paths``.
+    """
     for child in Path(ini_path).iterdir():
         if child.is_dir():
             recursive_find_files(child, exp, paths, filters)
@@ -243,7 +278,13 @@ def recursive_find_files(ini_path, exp='make_enum', paths=[],
 def recursive_find_expr_in_files(ini_path, exp='make_enum', paths=[],
                                  filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation', '.tox'],
                                  replace=False, replace_str=''):
+    """Search the text ``exp`` in the files below ``ini_path``
 
+    Each match is appended to ``paths`` as ``[file path, line index, line]``. Paths containing one of the
+    ``filters`` strings are skipped and unreadable files are ignored. If ``replace`` is True the matches
+    are replaced in the files by ``replace_str``. As in :func:`recursive_find_files_extension`, pass a new
+    list as ``paths``.
+    """
     for child in Path(ini_path).iterdir():
         if not any(filt in str(child) for filt in filters):
             if child.is_dir():
@@ -271,6 +312,10 @@ def recursive_find_expr_in_files(ini_path, exp='make_enum', paths=[],
 
 
 def count_lines(ini_path, count=0, filters=['lextab', 'yacctab','pycache', 'pyc']):
+    """Count the lines of the python files below ``ini_path``, starting from ``count``
+
+    The names of the files skipped because of ``filters`` are printed.
+    """
     # if Path(ini_path).is_file():
     #     with Path(ini_path).open('r') as f:
     #         count += len(f.readlines())
@@ -320,6 +365,16 @@ def rint(x):
 
 
 def elt_as_first_element(elt_list, match_word='Mock'):
+    """Return a list of str with the first one containing ``match_word`` moved to the front
+
+    The first element is kept in front if none matches. Note that the matching element is removed from
+    ``elt_list`` itself, which is modified.
+
+    Raises
+    ------
+    TypeError
+        If ``elt_list`` is not an iterable of str.
+    """
     if not hasattr(elt_list, '__iter__'):
         raise TypeError('elt_list must be an iterable')
     if elt_list:
@@ -340,6 +395,13 @@ def elt_as_first_element(elt_list, match_word='Mock'):
 
 
 def elt_as_first_element_dicts(elt_list, match_word='Mock', key='name'):
+    """Same as :func:`elt_as_first_element` for a list of dicts, matching ``match_word`` in ``elt[key]``
+
+    Raises
+    ------
+    TypeError
+        If ``elt_list`` is not an iterable of dict.
+    """
     if not hasattr(elt_list, '__iter__'):
         raise TypeError('elt_list must be an iterable')
     if elt_list:
@@ -386,7 +448,7 @@ def find_object_if_matched_attr_name_val(obj, attr_name, attr_value):
     return False
 
 
-def find_objects_in_list_from_attr_name_val(objects: List[object], attr_name: str,
+def find_objects_in_list_from_attr_name_val(objects: Sequence[Any], attr_name: str,
                                             attr_value: object, return_first=True):
     """ lookup within a list of objects. Look for the objects within the list which has the correct attribute name,
     value pair
@@ -504,13 +566,14 @@ def get_entrypoints(group='pymodaq.plugins') -> List[metadata.EntryPoint]:
     group: str
         the name of the group
     """
+    discovered_entrypoints: Any
     try:
         discovered_entrypoints = metadata.entry_points(group=group)
     except TypeError:
         try:
             discovered_entrypoints = metadata.entry_points().select(group=group)
         except AttributeError:
-            discovered_entrypoints = metadata.entry_points().get(group, [])
+            discovered_entrypoints = metadata.entry_points().get(group, [])  # type: ignore[attr-defined]  # Python < 3.10
     if isinstance(discovered_entrypoints, tuple):  # API for python > 3.8
         discovered_entrypoints = list(discovered_entrypoints)
     if not isinstance(discovered_entrypoints, list):
@@ -518,7 +581,8 @@ def get_entrypoints(group='pymodaq.plugins') -> List[metadata.EntryPoint]:
     return discovered_entrypoints
 
 
-def check_vals_in_iterable(iterable1, iterable2):
+def check_vals_in_iterable(iterable1, iterable2) -> None:
+    """Assert that two iterables (list, tuple, ndarray...) have the same length and equal values"""
     assert len(iterable1) == len(iterable2)
     iterable1 = list(iterable1)  # so the assertion below is valid for any kind of iterable, list, tuple, ndarray...
     iterable2 = list(iterable2)
@@ -582,7 +646,15 @@ def zeros_aligned(n, align, dtype=np.uint32):
 # ########################
 # #File management
 
-def get_new_file_name(base_path: Path, base_name: str = 'tttr_data'):
+def get_new_file_name(base_path: Union[Path, str], base_name: str = 'tttr_data') -> Tuple[str, Path]:
+    """Get the name of a new file in the folder ``<base_path>/<year>/<date>`` (created if needed)
+
+    Returns
+    -------
+    tuple
+        The file name without extension, ``<base_name>_NNN`` with NNN the index following the last existing
+        file starting with ``base_name`` in the folder, and the path of the folder.
+    """
     if isinstance(base_path, str):
         base_path = Path(base_path)
 
@@ -614,16 +686,28 @@ def get_module_path(module_name: str) -> Path:
     """ Get Path of a given module represented by its name
 
     You get the name usually with the dunder __module__ on an object or class
+
+    Raises
+    ------
+    TypeError
+        If the module has no file (namespace package or built-in module)
     """
     module = sys.modules[module_name]
+    if module.__file__ is None:
+        raise TypeError(f'The module {module_name} has no file (namespace package or built-in module)')
     return Path(module.__file__)
 
 def format_dir_path(path: Path) -> str:
-        dir_trailing_symbol = '\\' if sys.platform == 'win32' else '/'
-        return f'{path}{dir_trailing_symbol if path.is_dir() else ""}'
+    """Return ``path`` as a str, with the separator of the OS appended if it is an existing folder"""
+    dir_trailing_symbol = '\\' if sys.platform == 'win32' else '/'
+    return f'{path}{dir_trailing_symbol if path.is_dir() else ""}'
 
 
 def read_binary_and_deserialize(fname: Path) -> list[SerializableBase]:
+    """Deserialize all the objects stored one after the other in a binary file
+
+    Returns an empty list if the file does not exist.
+    """
     if not fname.exists():
         return []
     with open(fname, 'rb') as file:

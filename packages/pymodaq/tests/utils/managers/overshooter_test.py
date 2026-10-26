@@ -11,7 +11,7 @@ def dashboard():
     mkQApp('overshooter_test')
     shared_ui, dashboard = create_load_dashboard(show_dashboard=False)
     yield dashboard
-    dashboard.quit_fun()
+    shared_ui.quit_fun()  # quits the dashboard too, as its Quit action
     for widget in (shared_ui.parent, dashboard.tree):
         widget.close()
         widget.deleteLater()
@@ -27,3 +27,4 @@ def test_experiment_applied_is_handled_once(dashboard, monkeypatch):
     dashboard.experiment_manager.applied_entry.emit('an_experiment')
 
     assert [call for call in calls if call[0] == id(overshooter)] == [(id(overshooter), 'an_experiment')]
+    overshooter.quit_fun()

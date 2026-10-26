@@ -12,6 +12,7 @@ from pymodaq.control_modules.move_utility_classes import HW_SETTINGS_KEY as ACTU
 from pymodaq.control_modules.utils import ControlModule
 from pymodaq.control_modules.thread_commands import ControlToHardwareMove
 
+from pymodaq_data import Q_
 from pymodaq_utils.config import GlobalConfig
 
 from pymodaq.utils.data import DataActuator
@@ -43,6 +44,7 @@ def ini_daq_move_ui(init_qt):
     prog = DAQ_Move(widget)
     widget.show()
     yield prog, qtbot, widget
+    prog.quit_fun()
     widget.close()
 
 
@@ -84,6 +86,26 @@ class TestDAQMove:
             assert commands.count(command) == 1
         daq_move.quit_fun()
 
+    def test_plugin_sets_default_values(self, ini_daq_move_ui):
+        """The plugin can change the red, green and relative values of the UI with set_default_values"""
+        daq_move, qtbot, widget = ini_daq_move_ui
+        daq_move.actuator = 'Mock'
+        with qtbot.waitSignal(daq_move.init_signal, timeout=10000):
+            daq_move.init_hardware_ui(True)
+
+        plugin = daq_move.controller_and_thread.thread._hardwares[daq_move.title].plugin
+        red_value, green_value, relative_value = -3., 7., 0.25
+        plugin.set_default_values(red=red_value, green=green_value, relative=relative_value)
+        qtbot.wait(200)
+
+        assert daq_move.settings['main_settings', 'default_value_red'] == red_value
+        assert daq_move.settings['main_settings', 'default_value_green'] == green_value
+        assert daq_move.settings['main_settings', 'default_value_relative'] == relative_value
+        # the UI shows the values in its own unit
+        assert daq_move.ui.abs_value_sb_red.value() == approx(Q_(red_value, daq_move.units).m_as(daq_move.ui._unit))
+        assert daq_move.ui.abs_value_sb_green.value() == approx(Q_(green_value, daq_move.units).m_as(daq_move.ui._unit))
+        daq_move.quit_fun()
+
     def test_data_emit(self, ini_daq_move_ui):
         daq_move, qtbot, widget = ini_daq_move_ui
         daq_move.actuator = 'Mock'
@@ -119,3 +141,14 @@ class TestDAQMove:
         daq_move, qtbot, widget = ini_daq_move_ui
         daq_move.actuator = 'Mock'
         pass
+
+
+def test_continuous_save_toolbar_group(ini_daq_move_ui):
+    """DAQ_Move gets the same Continuous Save toolbar group as DAQ_Viewer, in one slot"""
+    daq_move, qtbot, widget = ini_daq_move_ui
+    ui = daq_move.ui
+
+    button = next(child for child in ui.toolbar.findChildren(QtWidgets.QToolButton)
+                  if child.defaultAction() is ui.get_action('continuous_save'))
+    assert [action.text() for action in button.menu().actions()] == ['New file', 'Browse file']
+    assert ui.get_action('continuous_save').isCheckable()

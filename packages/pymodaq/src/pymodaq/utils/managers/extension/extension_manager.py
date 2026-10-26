@@ -157,11 +157,15 @@ class ExtensionManager(DashboardMixin, ManagerBase):
             self.connect_action(ExtensionEnum[ext_name],
                                lambda e=ExtensionEnum[ext_name]: self.load_extension(e))
 
+    def _is_quit_by_dashboard(self, extension: CustomExt) -> bool:
+        return self.dashboard is not None and any(extension is ext for ext in self.dashboard.extensions.values())
+
     def quit_fun(self):
         """Clean up extensions and internal dashboard."""
         try:
-            for ext in self.loaded_extensions.values():
-                if hasattr(ext, 'quit_fun'):
+            for ext in list(self.loaded_extensions.values()):
+                # the extensions of the Dashboard are quit by it
+                if hasattr(ext, 'quit_fun') and not self._is_quit_by_dashboard(ext):
                     ext.quit_fun()
         except Exception as e:
             logger.exception(str(e))

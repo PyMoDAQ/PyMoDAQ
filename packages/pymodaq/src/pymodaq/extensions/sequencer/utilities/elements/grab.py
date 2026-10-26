@@ -17,7 +17,7 @@ from pymodaq_gui.parameter.pymodaq_ptypes.itemselect import ItemSelect
 from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltBase, SeqEltFactory
 from pymodaq.extensions.sequencer.utilities.widget_with_toolbar import WidgetWithToolbar
 from qt_themes import get_theme
-from pymodaq.utils.managers.modules_manager import ModulesManager
+from pymodaq.utils.managers.modules_manager import ModulesManager, ModulesManagerParam
 from pymodaq.utils.managers.modules import ModuleType
 
 if TYPE_CHECKING:
@@ -49,7 +49,10 @@ class GrabElt(SeqEltBase):
         self._status = Status.SNAP
 
         self._items: weakref.ref[ItemSelect] = None
-        for child_name in ('actuators', 'probe_data', 'test_actuator'):
+        # GrabElt only deals with detectors, so hide everything actuator-related in the shared
+        # ModulesManager widget
+        for child_name in (ModulesManagerParam.ACTUATORS, ModulesManagerParam.PROBE_ACTUATORS,
+                           ModulesManagerParam.PROBE_ACTUATORS_RESULTS):
             self.modules_manager.settings.child(child_name).show(False)
         self.modules_manager.settings_tree.setVisible(False)
 
@@ -174,6 +177,7 @@ class GrabElt(SeqEltBase):
             self.modules_manager.selected_detectors_name = self.selected
             self.modules_manager.grab_data_with_callback(
                 callback=self._data_snapped,
+                detach_after_callback=True,
             )
         else:
             # trigger a grab and immediately move on to the next state!
@@ -183,9 +187,6 @@ class GrabElt(SeqEltBase):
             self.done_signal.emit()
 
     def _data_snapped(self, dte: DataToExport):
-        self.modules_manager.forget_callback(self._data_snapped,
-                                             module_type=ModuleType.Detector,
-                                             disconnect_modules=True)
         dte.name = dte[0].origin
         self.save_data(dte)  # emits the done_signal
 

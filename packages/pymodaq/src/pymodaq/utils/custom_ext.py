@@ -1,5 +1,5 @@
 
-from typing import Union, TYPE_CHECKING
+from typing import Optional, Union, TYPE_CHECKING
 
 from qtpy import QtCore, QtWidgets
 
@@ -20,6 +20,22 @@ config = GlobalConfig()
 
 
 class CustomExt(DashboardMixin, CustomApp):
+    """Base class of the PyMoDAQ extensions: a CustomApp connected to the DashBoard and its modules
+
+    Parameters
+    ----------
+    parent: DockArea or QWidget or QMainWindow
+        Where the extension user interface is built.
+    dashboard: DashBoard
+        The dashboard giving access to the control modules (``self.modules_manager``) and experiments.
+    module_manager_class: type
+        Class of the modules manager created for the dashboard modules.
+
+    Notes
+    -----
+    Reimplement :meth:`_quit_fun` (and :meth:`stop`), and the ``setup_*`` methods of CustomApp. React to the
+    experiments applied in the dashboard with ``do_things_after_experiment_set``.
+    """
     status_sig = QtCore.Signal(ThreadCommand)
     status_signal = QtCore.Signal(str)  # signal to be used to emit info
     config_changed = QtCore.Signal()  # will be emitted when the user changed anything in the configuration files (emitted from SharedUI)
@@ -34,16 +50,21 @@ class CustomExt(DashboardMixin, CustomApp):
         super().__init__(parent, **kwargs)
 
         self.init_dashboard(dashboard, module_manager_class)
-        self.connect_experiment_manager()
+        # an experiment already applied (extension opened from the Dashboard) is handled at the end of setup_ui:
+        # do_things_after_experiment_set may use the actions and widgets, which do not exist yet
+        self.connect_experiment_manager(apply_now=False)
 
-        self._module_and_data_saver: ModuleSaver = None  # to use only if you want to save data with
+        self._module_and_data_saver: ModuleSaver = None  # type: ignore[assignment]  # to use only if you want to save data with
         #ordered with groups and with control modules, then call self.module_and_data_saver property
         # a bit complex to use but properly save things from control modules
 
     @property
     def module_and_data_saver(self):
         """ Complex but Standardized way to save data from the CustomExt and
-        especially from the ControlModules"""
+        especially from the ControlModules
+
+        Set it first (setter) with a ``ModuleSaver``: getting it before raises an AttributeError.
+        """
         if (self._module_and_data_saver.h5saver is None
                 or not self._module_and_data_saver.h5saver.isopen()):
             self._module_and_data_saver.h5saver = self.h5saver
@@ -55,6 +76,14 @@ class CustomExt(DashboardMixin, CustomApp):
         if self.h5saver is not None:
             self._module_and_data_saver.h5saver = self.h5saver
 
+    def setup_ui(self):
+        """ Set up the UI (see CustomApp), then call do_things_after_experiment_set if an experiment is already
+        applied in the dashboard"""
+        super().setup_ui()
+        if self.dashboard is not None:
+            # opening the extension does not change the visibility of the dashboard
+            self.apply_current_experiment(show_dashboard=self.dashboard.mainwindow.isVisible())
+
     def stop(self):
         """ Programmatic method to stop any action in the extension
 
@@ -62,7 +91,7 @@ class CustomExt(DashboardMixin, CustomApp):
         """
         raise NotImplementedError
 
-    def quit_fun(self, external_call=False) -> bool:
+    def quit_fun(self, external_call=False) -> Optional[bool]:
         """Quit the extension, unless :meth:`_quit_fun` refuses it
 
         This method should not be reimplemented: reimplement :meth:`_quit_fun` to define what has to be done

@@ -22,7 +22,6 @@ from qtpy.QtCore import Signal, QDateTime, QDate, QTime, QTimer
 from pymodaq_gui.managers.h5manager import FileAction
 from pymodaq.control_modules.enums import MoveType
 from pymodaq.utils.custom_ext import CustomExt
-from pymodaq.utils.managers.modules import ModuleType
 from pymodaq_data.plotting.utils import PlotColors
 from pymodaq_gui.utils.styling import color_to_rgba
 
@@ -229,7 +228,6 @@ class DAQScan(CustomExt):
         
         logger.info('Initializing DAQScan')
 
-        self._ui_ready = False  # important to be here before super is called, see do_things_after_experiment_set
         self._naverage_to_restore: Optional[int] = None  # see update_average_option
 
         super().__init__(parent=dockarea,
@@ -281,7 +279,6 @@ class DAQScan(CustomExt):
         self.status_manager = ScanStatusBarManager(self)
 
         self.setup_ui()
-        self._ui_ready = True
 
         self.h5_manager.command_sig.connect(self.process_cmds)
 
@@ -291,8 +288,8 @@ class DAQScan(CustomExt):
 
         self.live_plotter = LoaderPlotter(self.live_plot_dockarea)
 
-        self.settings.child('plot_options', 'prepare_viewers').sigActivated.connect(
-            lambda: self.toggle_live_plots(True))
+        # a method, not a lambda: a lambda connected to a Parameter would keep the extension alive once closed
+        self.settings.child('plot_options', 'prepare_viewers').sigActivated.connect(self._prepare_live_plots)
         # Reuse the Detectors panel's probe button: probing already grabs the data
         # (populating its result tree), so just also refresh the plot selections from it
         self.modules_manager.settings.child('probe_detectors').sigActivated.connect(self.plot_from)
@@ -306,14 +303,6 @@ class DAQScan(CustomExt):
             self._refresh_selection_tree_height)
         self.modules_manager.settings.child('probe_actuators_results').sigChildRemoved.connect(
             self._refresh_selection_tree_height)
-
-        self.scan_manager = ScanManager(self)
-        self.scan_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('scan_manager'),
-                                                    menu=self.get_menu('scan_manager'))
-
-        if self.dashboard.experiment_manager.entry_applied:
-            self.enable_workflow_actions(True, other_actions='ini_positions')
-            self.ini_scan_manager()
 
         logger.info('DAQScan Initialized')
 
@@ -510,7 +499,12 @@ class DAQScan(CustomExt):
         self.enable_workflow_actions(False)
         self.set_action_visible(WorkFlowActions.LOG, False)
 
-    def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: bool = None):
+        # created here, so that it exists when do_things_after_experiment_set is called at the end of setup_ui
+        self.scan_manager = ScanManager(self)
+        self.scan_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('scan_manager'),
+                                                    menu=self.get_menu('scan_manager'))
+
+    def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: Optional[bool] = None):
         """ This method is called whenever a experiment entry has been set.
 
         Its main purpose is to update the list of control modules in the manager and
@@ -524,13 +518,8 @@ class DAQScan(CustomExt):
         # set the module saver type and applies its h5saver to submodules
         self._module_and_data_saver = module_saving.ScanSaver(self)
 
-        try:
-            self.enable_workflow_actions(True, other_actions='ini_positions')
-        except KeyError: #actions may not yet be activated
-            pass
-
-        if hasattr(self, 'scan_manager'):
-            self.ini_scan_manager()
+        self.enable_workflow_actions(True, other_actions='ini_positions')
+        self.ini_scan_manager()
 
     @property
     def module_and_data_saver(self) -> module_saving.ScanSaver:
@@ -572,7 +561,7 @@ class DAQScan(CustomExt):
             except Exception as e:
                 logger.exception(str(e))
 
-
+        self.scan_manager.quit_fun()
         return True
 
     def create_dataset_settings(self):
@@ -1038,6 +1027,9 @@ class DAQScan(CustomExt):
         """
         viewers_enum, data_names, _ = self.check_number_type_viewers()
         self.live_plotter.prepare_viewers(viewers_enum, viewers_name=data_names)
+
+    def _prepare_live_plots(self):
+        self.toggle_live_plots(True)
 
     def toggle_live_plots(self, show: bool = True):
         """ Show/hide the Live Plots panel, keeping the 'show_live_plots' action's checked
@@ -1531,9 +1523,6 @@ class DAQScanAcquisition(ExtensionWorker):
 
     def _on_ini_positions(self, dte: DataToExport):
         self._update_status("Initial values of actuators reached!")
-        self.modules_manager.forget_callback(self._on_ini_positions,
-                                             module_type=ModuleType.Actuator,
-                                             disconnect_modules=True)
         if self._running:
             self.init_things()
             self.advance()
@@ -1604,9 +1593,6 @@ class DAQScanAcquisition(ExtensionWorker):
 
     def _on_move_done(self, move_dte: DataToExport):
         try:
-            self.modules_manager.forget_callback(self._on_move_done,
-                                                 module_type=ModuleType.Actuator,
-                                                 disconnect_modules=False)
             self.modules_manager.order_positions(move_dte)
 
             QTimer.singleShot(int(self.settings['time_flow', 'wait_time_between']),
@@ -1631,9 +1617,6 @@ class DAQScanAcquisition(ExtensionWorker):
 
     def _on_grab_done(self, dte_grabed: DataToExport):
         try:
-            self.modules_manager.forget_callback(self._on_grab_done,
-                                                 module_type=ModuleType.Detector,
-                                                 disconnect_modules=False)
             self.det_done(dte_grabed)
 
         except Exception as e:

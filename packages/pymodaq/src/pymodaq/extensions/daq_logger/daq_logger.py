@@ -6,7 +6,7 @@
 Contains all objects related to the DAQScan module, to do automated scans, saving data...
 """
 
-from typing import TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 from pymodaq.control_modules.enums import ActionIconNames
 from pymodaq.utils.h5modules.module_saving import LoggerSaver
@@ -137,7 +137,7 @@ class DAQLogger(CustomExt):
     def do_things_after_ui_setup(self):
         self.set_action_visible(WorkFlowActions.LOG, False) # hide as it should always be True for this extension
 
-    def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: bool = None):
+    def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: Optional[bool] = None):
         self.enable_workflow_actions(True)
         super().do_things_after_experiment_set(experiment_name, show_dashboard)
 

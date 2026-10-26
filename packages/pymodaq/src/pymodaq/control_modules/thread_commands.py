@@ -21,6 +21,7 @@ class ThreadStatus(StrEnum):
     ControlModule.thread_status
     """
     UPDATE_STATUS = 'update_status'
+    ERROR = 'error'                 # an exception was raised by the plugin: displayed and the module marked in error
     CLOSE = 'close'
     UPDATE_SETTINGS = 'update_settings'
     UPDATE_MAIN_SETTINGS = 'update_main_settings'
@@ -113,7 +114,7 @@ class ControlToHardwareViewer(StrEnum):
 
 
 class UiToMainMove(StrEnum):
-    """ Allowed Commands to be sent from the DAQ_Move_UI to the DAQ_Move
+    """ Allowed Commands to be sent from the DAQMoveUI to the DAQ_Move
     """
     INIT = 'init'
     QUIT = 'quit'
@@ -135,6 +136,14 @@ class UiToMainMove(StrEnum):
     RESET_VALUE = 'reset_value'  # only valid for Relative actuator
 
 
+class UiToMainSaving(StrEnum):
+    """ Continuous-saving commands sent by any ControlModuleUI to its ControlModule
+    """
+    DO_SAVE = 'do_save'
+    SAVE_NEW = 'save_new'
+    OPEN = 'open'
+
+
 class UiToMainViewer(StrEnum):
     """ Allowed Commands to be sent from the DAQ_Viewer_UI to the DAQ_Viewer
     """
@@ -147,8 +156,8 @@ class UiToMainViewer(StrEnum):
     SNAP = 'snap'
     GRAB = 'grab'
     SAVE_CURRENT = 'save_current'
-    SAVE_NEW = 'save_new'
-    OPEN = 'open'
+    SAVE_NEW = 'save_new'  # see UiToMainSaving
+    OPEN = 'open'  # see UiToMainSaving
     RESET_LIVE = 'reset_live'
 
     DETECTOR_CHANGED = 'detector_changed'

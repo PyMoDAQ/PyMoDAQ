@@ -73,6 +73,24 @@ def test_loaded_extension(fake_package):
     assert extension.closed
 
 
+def test_loaded_extension_applies_the_theme_only_once(fake_package, monkeypatch):
+    """ Restyling the application at each call makes every live widget process style events (and crashed Qt) """
+    import qt_themes
+    calls = []
+    original = qt_themes.set_theme
+    monkeypatch.setattr(qt_themes, 'set_theme', lambda *args, **kwargs: (calls.append(1), original(*args, **kwargs))[1])
+    _, klass = find_extension_classes(fake_package)[0]
+    with loaded_extension(klass):
+        pass
+    calls.clear()  # a theme is set now
+    with loaded_extension(klass):
+        pass
+    assert calls == []
+    with loaded_extension(klass, theme=True):
+        pass
+    assert len(calls) >= 1
+
+
 def test_loaded_extension_closes_when_the_body_fails(fake_package):
     _, klass = find_extension_classes(fake_package)[0]
     with pytest.raises(ZeroDivisionError):

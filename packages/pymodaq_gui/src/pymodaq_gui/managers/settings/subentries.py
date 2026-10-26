@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 import time
-from typing import Callable, TYPE_CHECKING, Union, Tuple
+from typing import Callable, TYPE_CHECKING, Union, Tuple, Optional
 
 from qtpy import QtWidgets, QtCore
 from serializall import SerializableFactory
@@ -42,7 +42,7 @@ class SubEntry:
     module_name: str
     setting: ParameterWithPath
 
-    def __eq__(self, other: 'SubEntry'):
+    def __eq__(self, other: 'SubEntry') -> bool:  # type: ignore[override]
         return (self.entry_type == other.entry_type and
                 self.module_name == other.module_name and
                 self.setting == other.setting)
@@ -95,7 +95,7 @@ class SubEntryHandler(QtCore.QObject):
                  model: 'SettingsManagerModel',
                  settings: Parameter,
                  *args,
-                 ind_subentry: int = None,
+                 ind_subentry: Optional[int] = None,
                  **kwargs
                  ):
 
@@ -165,7 +165,7 @@ class SubEntryHandler(QtCore.QObject):
 class SubEntryHandlerFactory:
     """The factory class to get SubEntry handlers"""
 
-    handlers_registry = {}
+    handlers_registry: dict[str, type[SubEntryHandler]] = {}
 
     @classmethod
     def register_handler(cls) -> Callable:
