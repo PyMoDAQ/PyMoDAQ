@@ -2405,8 +2405,8 @@ class DataWithAxes(DataBase, SerializableBase):
         data). The errors are then ``sqrt(S_N / (N (N - 1)))``, i.e. the sample standard deviation (``ddof=1``)
         divided by ``sqrt(N)``.
 
-        ``self`` is taken as a single acquisition without errors (weight one). This is not the combination of two
-        measurements that each carry an error (inverse-variance weighting).
+        ``self`` is taken as a single acquisition without errors (weight one). To combine two measurements that each
+        carry an error (inverse-variance weighting), see :meth:`combine_with_errors`.
 
         References
         ----------
@@ -2430,6 +2430,67 @@ class DataWithAxes(DataBase, SerializableBase):
             errors.append(np.sqrt(sum_sq_dev / (n_data * (n_data - 1))))
         averaged_data.errors = errors
         return averaged_data
+
+    def combine_with_errors(self, other: DataWithAxes) -> DataWithAxes:
+        """ Combine two measurements of the same quantity, each carrying its own ``errors``, with an inverse-variance
+        weighted mean
+
+        With ``w_i = 1 / e_i**2``, the result is, for each point of each array::
+
+            mean = (w_1 * x_1 + w_2 * x_2) / (w_1 + w_2) = (x_1 * e_2**2 + x_2 * e_1**2) / (e_1**2 + e_2**2)
+            error = 1 / sqrt(w_1 + w_2) = e_1 * e_2 / sqrt(e_1**2 + e_2**2)
+
+        Use :meth:`accumulate` instead to average successive acquisitions into a running mean and its standard error.
+
+        Parameters
+        ----------
+        other: DataWithAxes
+            The other measurement, with the same shape, units and number of arrays as ``self``
+
+        Returns
+        -------
+        DataWithAxes: a copy of ``self`` holding the combined data and errors
+
+        Raises
+        ------
+        ValueError
+            If one of the two objects has no ``errors`` or if some of them are not strictly positive
+        DataUnitError
+            If the units of ``self`` and ``other`` differ
+        DataShapeError
+            If the arrays of ``self`` and ``other`` have different shapes
+
+        Notes
+        -----
+        The errors are taken as the standard deviations of independent, normally distributed measurements. The
+        weights are the inverse of their variances, the minimum-variance unbiased estimator [1]_ [2]_.
+
+        References
+        ----------
+        .. [1] P. R. Bevington and D. K. Robinson, Data Reduction and Error Analysis for the Physical Sciences,
+           McGraw-Hill, section on the weighted average.
+        .. [2] J. R. Taylor, An Introduction to Error Analysis, University Science Books, section on the weighted
+           average.
+        """
+        if self.errors is None or other.errors is None:
+            raise ValueError('Both data should carry errors to be combined')
+        if self.units != other.units:
+            raise DataUnitError(f'Cannot combine data in {self.units} with data in {other.units}')
+        if len(self) != len(other) or self.shape != other.shape:
+            raise DataShapeError('Cannot combine data of different shapes')
+
+        arrays = []
+        errors = []
+        for x_1, x_2, e_1, e_2 in zip(self.data, other.data, self.errors, other.errors):
+            if np.any(e_1 <= 0) or np.any(e_2 <= 0):
+                raise ValueError('The errors should be strictly positive to be used as weights')
+            w_1 = 1 / e_1 ** 2
+            w_2 = 1 / e_2 ** 2
+            arrays.append((w_1 * x_1 + w_2 * x_2) / (w_1 + w_2))
+            errors.append(1 / np.sqrt(w_1 + w_2))
+        combined = self.deepcopy_with_new_data(arrays)
+        combined.errors = errors
+        return combined
 
     def mean(self, axis: int = 0) -> DataWithAxes:
         """Process the mean of the data on the specified axis and returns the new data

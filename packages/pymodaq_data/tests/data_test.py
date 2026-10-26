@@ -519,6 +519,44 @@ class TestDataBase:
 
         assert new.accumulate(previous_average, 3).errors is None
 
+    def test_combine_with_errors(self):
+        first = init_data(data=np.array([1., 4.]), Ndata=1)
+        first.errors = [np.array([1., 2.])]
+        second = init_data(data=np.array([3., 4.]), Ndata=1)
+        second.errors = [np.array([1., 1.])]
+
+        combined = first.combine_with_errors(second)
+
+        assert combined.data[0] == approx(np.array([2., 4.]))
+        assert combined.errors[0] == approx(np.array([1 / np.sqrt(2), 2 / np.sqrt(5)]))
+        assert combined.errors[0] == approx(first.errors[0] * second.errors[0]
+                                            / np.sqrt(first.errors[0] ** 2 + second.errors[0] ** 2))
+        assert first.data[0] == approx(np.array([1., 4.]))  # self is left untouched
+
+    def test_combine_with_errors_gives_more_weight_to_the_smaller_error(self):
+        precise = init_data(data=np.array([1.]), Ndata=1)
+        precise.errors = [np.array([0.1])]
+        rough = init_data(data=np.array([2.]), Ndata=1)
+        rough.errors = [np.array([1.])]
+
+        assert precise.combine_with_errors(rough).data[0][0] == approx((100 * 1. + 1 * 2.) / 101)
+
+    def test_combine_with_errors_needs_errors_and_same_units(self):
+        with_errors = init_data(data=np.array([1., 2.]), Ndata=1)
+        with_errors.errors = [np.array([1., 1.])]
+        without_errors = init_data(data=np.array([1., 2.]), Ndata=1)
+        other_units = with_errors.deepcopy()
+        other_units.force_units('mm')
+        zero_error = with_errors.deepcopy()
+        zero_error.errors = [np.array([0., 1.])]
+
+        with pytest.raises(ValueError):
+            with_errors.combine_with_errors(without_errors)
+        with pytest.raises(data_mod.DataUnitError):
+            with_errors.combine_with_errors(other_units)
+        with pytest.raises(ValueError):
+            with_errors.combine_with_errors(zero_error)
+
     def test_average_is_unchanged_by_the_errors(self):
         data = init_data(data=DATA2D, Ndata=2)
         assert data.average(data, 2).errors is None
