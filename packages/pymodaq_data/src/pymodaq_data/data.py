@@ -2372,7 +2372,7 @@ class DataWithAxes(DataBase, SerializableBase):
 
         return self._slicer(slices, False)
 
-    def average_with_errors(self, other: DataWithAxes, weight: int) -> DataWithAxes:
+    def accumulate(self, other: DataWithAxes, weight: int) -> DataWithAxes:
         """ Compute the weighted average as :meth:`average` does, and set the standard error of the mean as the
         ``errors`` of the result
 
@@ -3626,9 +3626,9 @@ class DataToExport(DataLowLevel, SerializableBase):
 
         return self._combine(other, average)
 
-    def average_with_errors(self, other: DataToExport, weight: int) -> DataToExport:
+    def accumulate(self, other: DataToExport, weight: int) -> DataToExport:
         """ Same as :meth:`average` but the standard error of the mean is also set as the ``errors`` of each averaged
-        DataWithAxes, see :meth:`DataWithAxes.average_with_errors`
+        DataWithAxes, see :meth:`DataWithAxes.accumulate`
 
         Parameters
         ----------
@@ -3638,7 +3638,7 @@ class DataToExport(DataLowLevel, SerializableBase):
             The weight the 'other_data' holds with respect to self
         """
         def average(dwa: DataWithAxes, other_dwa: DataWithAxes) -> DataWithAxes:
-            return dwa.average_with_errors(other_dwa, weight)  # type: ignore[return-value]
+            return dwa.accumulate(other_dwa, weight)  # type: ignore[return-value]
 
         return self._combine(other, average)
 

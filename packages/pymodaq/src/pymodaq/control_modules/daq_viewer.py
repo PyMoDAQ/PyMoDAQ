@@ -757,7 +757,7 @@ class DAQ_Viewer(ParameterControlModule):
                         self.update_status(message)
                 else:
                     self._data_to_save_export = \
-                        _current_data.average_with_errors(self._data_to_save_export, self._ind_continuous_grab)
+                        _current_data.accumulate(self._data_to_save_export, self._ind_continuous_grab)
                 self._ind_continuous_grab += 1
             else:
                 for dwa in dte:
@@ -1168,7 +1168,7 @@ class DetectorWorker(HardwareWorkerBase):
                 self.datas = data.deepcopy()
                 self._warn_if_errors_replaced(data)
             else:
-                self.datas = data.average_with_errors(self.datas, self.ind_average - 1)
+                self.datas = data.accumulate(self.datas, self.ind_average - 1)
 
             if self.show_averaging:
                 self.emit_temp_data(self.datas)

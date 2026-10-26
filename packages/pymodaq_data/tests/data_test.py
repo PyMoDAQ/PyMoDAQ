@@ -489,7 +489,7 @@ class TestDataBase:
         assert data_p.abs() == data_p
         assert data_m.abs() == data_p
 
-    def test_average_with_errors(self):
+    def test_accumulate(self):
         n_acquisitions = 12
         rng = np.random.default_rng(5)
         acquisitions = rng.normal(loc=-1., scale=0.8, size=(n_acquisitions, 7))
@@ -498,26 +498,26 @@ class TestDataBase:
         assert averaged.errors is None
         for ind in range(1, n_acquisitions):
             new = init_data(data=acquisitions[ind], Ndata=1)
-            averaged = new.average_with_errors(averaged, ind)
+            averaged = new.accumulate(averaged, ind)
 
         assert averaged.n_averaged == n_acquisitions
         assert averaged.data[0] == approx(acquisitions.mean(axis=0))
         assert averaged.errors[0] == approx(acquisitions.std(axis=0, ddof=1) / np.sqrt(n_acquisitions))
 
-    def test_average_with_errors_ignores_errors_of_the_first_acquisition(self):
+    def test_accumulate_ignores_errors_of_the_first_acquisition(self):
         first = init_data(data=np.array([1., 2.]), Ndata=1)
         first.errors = [np.array([10., 10.])]
         second = init_data(data=np.array([3., 2.]), Ndata=1)
 
-        averaged = second.average_with_errors(first, 1)
+        averaged = second.accumulate(first, 1)
 
         assert averaged.errors[0] == approx(np.array([1., 0.]))
 
-    def test_average_with_errors_needs_the_previous_errors(self):
+    def test_accumulate_needs_the_previous_errors(self):
         previous_average = init_data(data=np.array([1., 2.]), Ndata=1)
         new = init_data(data=np.array([3., 2.]), Ndata=1)
 
-        assert new.average_with_errors(previous_average, 3).errors is None
+        assert new.accumulate(previous_average, 3).errors is None
 
     def test_average_is_unchanged_by_the_errors(self):
         data = init_data(data=DATA2D, Ndata=2)
@@ -1629,7 +1629,7 @@ class TestDataToExport:
         assert data1[0] == dat1.average(dat3, WEIGHT)
         assert data1[1] == dat2.average(dat2, WEIGHT)
 
-    def test_average_with_errors(self):
+    def test_accumulate(self):
         n_acquisitions = 8
         rng = np.random.default_rng(3)
         acquisitions = rng.normal(loc=2., scale=0.3, size=(n_acquisitions, 2, 5))  # two arrays of 5 points
@@ -1639,7 +1639,7 @@ class TestDataToExport:
             dwa = data_mod.DataToExport('toexport', data=[
                 init_data(data=acquisition[0], Ndata=1, name='first'),
                 init_data(data=acquisition[1], Ndata=1, name='second')])
-            averaged = dwa.deepcopy() if ind == 0 else dwa.average_with_errors(averaged, ind)
+            averaged = dwa.deepcopy() if ind == 0 else dwa.accumulate(averaged, ind)
 
         expected_mean = acquisitions.mean(axis=0)
         expected_error = acquisitions.std(axis=0, ddof=1) / np.sqrt(n_acquisitions)
