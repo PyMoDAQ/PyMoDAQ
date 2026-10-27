@@ -785,6 +785,16 @@ controller provides an efficient method to do it (that will save time) then you 
         n_done += 1
         # after Naverage acquisitions, mean.errors is the standard error of the mean: emit mean
 
+    When the instrument or its buffer gives all the acquisitions at once, as the first axis of an array (a navigation
+    axis of the data), :meth:`pymodaq_data.data.DataWithAxes.mean_with_errors` (and
+    :meth:`pymodaq_data.data.DataToExport.mean_with_errors`) does it in one call:
+
+    .. code-block:: python
+
+        # frames: array (Naverage, ny, nx) read from the buffer
+        raw = DataRaw('frames', data=[frames], nav_indexes=(0,))
+        mean = raw.mean_with_errors()  # the mean of the frames, its errors are the standard error of the mean
+
 
 .. _live_mode:
 
