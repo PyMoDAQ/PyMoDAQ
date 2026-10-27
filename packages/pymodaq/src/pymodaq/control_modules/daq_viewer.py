@@ -67,6 +67,26 @@ config = Config()
 local_path = get_set_local_dir()
 
 
+def errors_replaced_message(data: DataToExport, averaging: str) -> Optional[str]:
+    """ Message telling that the errors provided by an instrument plugin are replaced by the standard error of the mean
+
+    Parameters
+    ----------
+    data: DataToExport
+        The first acquisition of an average
+    averaging: str
+        The kind of averaging, to be written in the message
+
+    Returns
+    -------
+    str or None: None if no DataWithAxes of data has errors
+    """
+    if any(dwa.errors is not None for dwa in data):
+        return ('The errors provided by the instrument plugin are replaced by the standard error of the mean '
+                f'({averaging})')
+    return None
+
+
 class DAQ_Viewer(ParameterControlModule):
     """ Main PyMoDAQ class to drive detectors
 
@@ -738,9 +758,12 @@ class DAQ_Viewer(ParameterControlModule):
 
                 if self._ind_continuous_grab == 0:
                     self._data_to_save_export = _current_data
+                    message = errors_replaced_message(_current_data, 'live averaging')
+                    if message is not None:
+                        self.update_status(message)
                 else:
                     self._data_to_save_export = \
-                        _current_data.average(self._data_to_save_export, self._ind_continuous_grab)
+                        _current_data.accumulate(self._data_to_save_export, self._ind_continuous_grab)
                 self._ind_continuous_grab += 1
             else:
                 for dwa in dte:
@@ -1125,7 +1148,10 @@ class DetectorWorker(HardwareWorkerBase):
     def data_ready(self, data: DataToExport):
         """ Process the data received from the instrument plugin class
 
-        Processing here is eventual software averaging if it was not possible in the instrument plugin class
+        Processing here is eventual software averaging if it was not possible in the instrument plugin class. In this
+        case, the standard error of the mean is also computed and attached to the averaged data (``errors`` attribute of
+        each DataWithAxes). With a hardware averaging (``hardware_averaging`` set to ``True`` in the plugin) the
+        statistics are not available here, it is up to the plugin to provide the ``errors`` if wanted.
 
         Parameters
         ----------
@@ -1137,8 +1163,9 @@ class DetectorWorker(HardwareWorkerBase):
             self.ind_average += 1
             if self.ind_average == 1:
                 self.datas = data.deepcopy()
+                self._warn_if_errors_replaced(data)
             else:
-                self.datas = data.average(self.datas, self.ind_average - 1)
+                self.datas = data.accumulate(self.datas, self.ind_average - 1)
 
             if self.show_averaging:
                 self.emit_temp_data(self.datas)
@@ -1151,6 +1178,20 @@ class DetectorWorker(HardwareWorkerBase):
             self.average_done = True  # expected to make sure the single_grab stop by itself
             self.data_detector_sig.emit(data)
         self.waiting_for_data = False
+
+    def _warn_if_errors_replaced(self, data: DataToExport):
+        """ Notify the user (log and status bar) that errors provided by the plugin are replaced by the
+        standard error of the mean when averaging, once per average
+
+        Parameters
+        ----------
+        data: DataToExport
+            The first acquisition of an average
+        """
+        message = errors_replaced_message(data, f'Naverage = {self.Naverage}')
+        if message is not None:
+            self.logger.warning(message)
+            self.status_sig.emit(ThreadCommand(ThreadStatus.UPDATE_STATUS, message))
 
     def single(self, Naverage=1, *args, **kwargs):
         """ Convenience function to grab a single set of data

@@ -754,6 +754,24 @@ controller provides an efficient method to do it (that will save time) then you 
         #is True else averaging is done software wise
 
 
+.. note::
+
+    When the averaging is done by the DAQ_Viewer (``hardware_averaging`` left to ``False``), the DAQ_Viewer also
+    computes the **standard error of the mean** (``sigma / sqrt(N)``, with ``sigma`` the standard
+    deviation of the ``N`` acquisitions) for each point of the data, and attaches it to the averaged data in their
+    ``errors`` attribute (see :meth:`pymodaq_data.data.DataWithAxes.accumulate`). It is then displayed
+    (*errors* action of the 1D viewer) and saved with the data.
+
+    If ``hardware_averaging`` is ``True``, the averaging, hence the statistics, is done by the instrument and the
+    DAQ_Viewer cannot know the dispersion of the acquisitions. It is then the responsibility of the plugin to fill the
+    ``errors`` attribute of the :class:`~pymodaq_data.data.DataWithAxes` it emits, if the instrument provides this
+    information:
+
+    .. code-block:: python
+
+        dwa = DataFromPlugins(name='spectrum', data=[mean_spectrum], errors=[standard_error_spectrum])
+
+
 .. _live_mode:
 
 Live Mode
