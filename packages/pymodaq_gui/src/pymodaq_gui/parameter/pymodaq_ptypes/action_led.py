@@ -51,13 +51,16 @@ class ActionLedParameterItem(WidgetParameterItem):
             limits=opts.get('limits'),
             checkable=opts.get('checkable', False),
         )
-        if opts.get('checkable', False):
-            w.button.setChecked(bool(opts.get('checked', False)))
-            w.button.toggled.connect(self.param.toggle)
-        else:
-            w.button.clicked.connect(self.param.activate)
+        self._wire_checkable(w.button, opts.get('checkable', False))
         self.hideWidget = False
         return w
+
+    def _wire_checkable(self, button, checkable):
+        if checkable:
+            button.setChecked(bool(self.param.opts.get('checked', False)))
+            button.toggled.connect(self.param.toggle)
+        else:
+            button.clicked.connect(self.param.activate)
 
     def limitsChanged(self, param, limits):
         super().limitsChanged(param, limits)
@@ -69,10 +72,21 @@ class ActionLedParameterItem(WidgetParameterItem):
 
     def optsChanged(self, param, opts):
         super().optsChanged(param, opts)
-        if 'checked' in opts and self.widget is not None and self.widget.button.isCheckable():
-            self.widget.button.blockSignals(True)  # the change comes from the parameter: do not activate it again
-            self.widget.button.setChecked(bool(opts['checked']))
-            self.widget.button.blockSignals(False)
+        if self.widget is None:
+            return
+        button = self.widget.button
+        if 'checkable' in opts:
+            checkable = bool(opts['checkable'])
+            if button.isCheckable() != checkable:
+                if button.isCheckable():
+                    button.toggled.disconnect(self.param.toggle)
+                else:
+                    button.clicked.disconnect(self.param.activate)
+                button.setCheckable(checkable)
+                self._wire_checkable(button, checkable)
+        if 'checked' in opts and button.isCheckable():
+            with QtCore.QSignalBlocker(button):  # the change comes from the parameter: do not activate it again
+                button.setChecked(bool(opts['checked']))
 
     def updateDefaultBtn(self):
         self.defaultBtn.setVisible(False)

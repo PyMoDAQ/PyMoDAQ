@@ -182,6 +182,29 @@ class TestActionLedParameter:
         tree.setParameters(p, showTop=False)
         assert not tree.listAllItems()[0].widget.button.isCheckable()
 
+    def test_checkable_option_change_rewires_the_button(self, tree):
+        """Regression: optsChanged ignored a runtime change of 'checkable', leaving the button wired
+        to its creation-time behaviour (plain click -> activate) instead of switching to the toggle
+        wiring (toggled -> toggle)."""
+        p = Parameter.create(name='act', type='action_led', value='false')
+        tree.setParameters(p, showTop=False)
+        button = tree.listAllItems()[0].widget.button
+        assert not button.isCheckable()
+
+        p.setOpts(checkable=True)
+        assert button.isCheckable()
+        activated = []
+        p.sigActivated.connect(lambda param: activated.append(param.opts['checked']))
+        button.click()
+        button.click()
+        assert activated == [True, False]
+
+        p.setOpts(checkable=False)
+        assert not button.isCheckable()
+        activated.clear()
+        button.click()
+        assert len(activated) == 1
+
     def test_states_of_the_status_workflow(self, tree):
         from pymodaq_gui.utils.status_palette import Status, StatusPalette
         p = Parameter.create(name='act', type='action_led', value=Status.OFF, limits='status')
