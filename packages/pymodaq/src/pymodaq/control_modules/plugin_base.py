@@ -161,6 +161,8 @@ class PluginBase(QObject):
                 pass
             if change == 'value':
                 self.settings.child(*path[1:]).setValue(param.value())
+            elif change == 'activated':  # the button of an 'action' parameter has been clicked in the GUI
+                self.settings.child(*path[1:]).activate()
             elif change == 'childAdded':
                 child = Parameter.create(name='tmp')
                 child.restoreState(param.saveState())
