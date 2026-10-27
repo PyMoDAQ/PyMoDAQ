@@ -785,15 +785,20 @@ controller provides an efficient method to do it (that will save time) then you 
         n_done += 1
         # after Naverage acquisitions, mean.errors is the standard error of the mean: emit mean
 
-    When the instrument or its buffer gives all the acquisitions at once, as the first axis of an array (a navigation
-    axis of the data), :meth:`pymodaq_data.data.DataWithAxes.mean_with_errors` (and
-    :meth:`pymodaq_data.data.DataToExport.mean_with_errors`) does it in one call:
+    When the instrument or its buffer gives all the acquisitions at once, stacked in one array,
+    :meth:`pymodaq_data.data.DataWithAxes.mean_with_errors` (and :meth:`pymodaq_data.data.DataToExport.mean_with_errors`)
+    does it in one call. The ``axis`` argument (0 by default) is the index of the axis along which the acquisitions are
+    stacked: it does not have to be the first one. This axis is removed from the result, the other ones are kept. For a
+    ``DataToExport``, the acquisitions have to be stacked along the same ``axis`` in all its ``DataWithAxes``.
 
     .. code-block:: python
 
-        # frames: array (Naverage, ny, nx) read from the buffer
+        # frames: array (Naverage, ny, nx) read from the buffer, the acquisitions being along axis 0
         raw = DataRaw('frames', data=[frames], nav_indexes=(0,))
-        mean = raw.mean_with_errors()  # the mean of the frames, its errors are the standard error of the mean
+        mean = raw.mean_with_errors()  # shape (ny, nx), errors are the standard error of the mean
+
+        # if the buffer is (ny, Naverage, nx), the acquisitions are along axis 1
+        mean = DataRaw('frames', data=[frames_yfx], nav_indexes=(1,)).mean_with_errors(axis=1)
 
 
 .. _live_mode:
