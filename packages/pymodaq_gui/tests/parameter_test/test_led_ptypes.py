@@ -1,6 +1,6 @@
 import warnings
 import pytest
-from qtpy import QtWidgets
+from qtpy import QtWidgets, QtCore
 from pymodaq_gui.parameter import Parameter, ParameterTree
 from pymodaq_gui.utils.widgets import LedState
 
@@ -102,6 +102,30 @@ class TestMultistateLedParameter:
         tree.setParameters(p, showTop=False)
         with qtbot.waitSignal(p.sigValueChanged, timeout=500):
             p.setValue('running')
+
+    def test_click_cycles_through_the_states_by_default(self, tree, qtbot):
+        p = Parameter.create(name='ms', type='multistate_led', value='idle', states=self.STATES)
+        tree.setParameters(p, showTop=False)
+        widget = tree.listAllItems()[0].widget
+
+        qtbot.mouseClick(widget, QtCore.Qt.MouseButton.LeftButton)
+        assert p.value() == 'running'
+        qtbot.mouseClick(widget, QtCore.Qt.MouseButton.LeftButton)
+        assert p.value() == 'error'
+
+    def test_click_toggles_first_and_last_states_without_cycle(self, tree, qtbot):
+        p = Parameter.create(name='ms', type='multistate_led', value='idle', states=self.STATES,
+                             clickable_cycle=False)
+        tree.setParameters(p, showTop=False)
+        widget = tree.listAllItems()[0].widget
+
+        qtbot.mouseClick(widget, QtCore.Qt.MouseButton.LeftButton)
+        assert p.value() == 'error'  # the last state
+        p.setValue('running')  # set by the program
+        qtbot.mouseClick(widget, QtCore.Qt.MouseButton.LeftButton)
+        assert p.value() == 'error'
+        qtbot.mouseClick(widget, QtCore.Qt.MouseButton.LeftButton)
+        assert p.value() == 'idle'  # back to the first one
 
     def test_invalid_state_raises(self, tree):
         p = Parameter.create(name='ms', type='multistate_led',

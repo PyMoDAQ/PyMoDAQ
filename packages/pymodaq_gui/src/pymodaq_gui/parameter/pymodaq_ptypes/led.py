@@ -41,6 +41,7 @@ class MultistateLedParameterItem(WidgetParameterItem):
         opts = self.param.opts
         w = MultistateLED(
             states=opts.get('states', DEFAULT_STATES),
+            clickable_cycle=opts.get('clickable_cycle', True),
             gradient=opts.get('gradient', 'flat'),
             shape=opts.get('shape', 'circle'),
             size=opts.get('size', 20),
@@ -87,6 +88,11 @@ class MultistateLedParameter(SimpleParameter):
     states : list of (str, str | QColor), optional
         Forwarded to :class:`~pymodaq_gui.utils.widgets.MultistateLED`.
         Defaults to the two-state red/green set.
+    clickable_cycle : bool, optional
+        Unless the parameter is ``readonly``, a click on the LED changes its state. If ``True`` (default) it goes to
+        the next state in the order of ``states``, wrapping around. If ``False`` it toggles between the first and the
+        last state, the other ones being only set by the program (for instance 'off' / 'idle' toggled by the user,
+        'running' and 'error' set by the module that handles the change).
     """
 
     itemClass = MultistateLedParameterItem
