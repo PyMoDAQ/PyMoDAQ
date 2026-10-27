@@ -574,7 +574,7 @@ UI like any other change.
 
     params = [
         {'title': 'Calibrate', 'name': 'calibrate', 'type': 'action_led', 'value': Status.OFF, 'label': 'Go',
-         'states': [Status.OFF, Status.RUNNING, Status.IDLE, Status.ERROR], 'checkable': True},
+         'limits': [Status.OFF, Status.RUNNING, Status.IDLE, Status.ERROR], 'checkable': True},
     ]
 
     def ini_attributes(self):

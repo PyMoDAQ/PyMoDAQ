@@ -1,30 +1,9 @@
 import warnings
-from enum import Enum
 from qtpy import QtWidgets, QtCore
 from pyqtgraph.parametertree.parameterTypes.basetypes import WidgetParameterItem, SimpleParameter
 
 from pymodaq_gui.utils.widgets import MultistateLED, DEFAULT_STATES, LedState
-from pymodaq_gui.utils.status_palette import StatusPalette
-
-
-def resolve_states(states):
-    """Turn the ``states`` option of an ``action_led`` parameter into ``(name, color)`` pairs
-
-    ``None`` gives the default two states, ``'status'`` all the states of the
-    :class:`~pymodaq_gui.utils.status_palette.Status` workflow, a list of names (``Status`` members or the
-    equivalent strings) the corresponding subset of it, coloured with the
-    :class:`~pymodaq_gui.utils.status_palette.StatusPalette`; ``(name, color)`` pairs are used as they are.
-    """
-    if states is None:
-        return DEFAULT_STATES
-    if isinstance(states, str):
-        if states != 'status':
-            raise ValueError(f"Unknown states {states!r}: use 'status', a list of names or (name, color) pairs")
-        return StatusPalette.as_states()
-    states = list(states)
-    if states and all(isinstance(state, str) for state in states):
-        return StatusPalette.subset(*states)
-    return states
+from pymodaq_gui.parameter.pymodaq_ptypes.led import resolve_limits, _LedLimitsMixin
 
 
 class ActionLedWidget(QtWidgets.QWidget):
@@ -34,7 +13,7 @@ class ActionLedWidget(QtWidgets.QWidget):
     until it is pressed again.
     """
 
-    def __init__(self, label='▶', states=None, checkable=False):
+    def __init__(self, label='▶', limits=None, checkable=False):
         super().__init__()
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -42,7 +21,7 @@ class ActionLedWidget(QtWidgets.QWidget):
 
         self.button = QtWidgets.QPushButton(label)
         self.button.setCheckable(checkable)
-        self.led = MultistateLED(states=resolve_states(states), readonly=True)
+        self.led = MultistateLED(states=resolve_limits(limits), readonly=True)
 
         layout.addWidget(self.button, stretch=1)
         layout.addWidget(self.led, stretch=0)
@@ -69,7 +48,7 @@ class ActionLedParameterItem(WidgetParameterItem):
         opts = self.param.opts
         w = ActionLedWidget(
             label=opts.get('label', '▶'),
-            states=opts.get('states', None),
+            limits=opts.get('limits'),
             checkable=opts.get('checkable', False),
         )
         if opts.get('checkable', False):
@@ -79,6 +58,14 @@ class ActionLedParameterItem(WidgetParameterItem):
             w.button.clicked.connect(self.param.activate)
         self.hideWidget = False
         return w
+
+    def limitsChanged(self, param, limits):
+        super().limitsChanged(param, limits)
+        self.widget.led.set_states(resolve_limits(limits))
+        try:
+            self.widget.led.set_state(param.value())
+        except ValueError:  # the current state is not one of the new ones
+            pass
 
     def optsChanged(self, param, opts):
         super().optsChanged(param, opts)
@@ -91,7 +78,7 @@ class ActionLedParameterItem(WidgetParameterItem):
         self.defaultBtn.setVisible(False)
 
 
-class ActionLedParameter(SimpleParameter):
+class ActionLedParameter(_LedLimitsMixin, SimpleParameter):
     """Parameter type combining a trigger button and a LED status indicator.
 
     - Clicking the button emits ``sigActivated`` (same as the ``action`` type).
@@ -104,12 +91,15 @@ class ActionLedParameter(SimpleParameter):
     -------
     label : str, optional
         Text shown on the push button. Defaults to ``'▶'``.
-    states : list of (str, str | QColor), list of str or 'status', optional
-        Forwarded to :class:`~pymodaq_gui.utils.widgets.MultistateLED`.
+    limits : list of (str, str | QColor), list of str or 'status', optional
+        The states of the LED, forwarded to :class:`~pymodaq_gui.utils.widgets.MultistateLED`.
         Defaults to the two-state red/green set. Give ``'status'``, or a list of names of the
         :class:`~pymodaq_gui.utils.status_palette.Status` workflow (e.g. ``[Status.OFF, Status.RUNNING,
         Status.IDLE, Status.ERROR]``), to get the colours of the :class:`~pymodaq_gui.utils.status_palette.StatusPalette`
-        and to set the LED with ``param.setValue(Status.RUNNING)``.
+        and to set the LED with ``param.setValue(Status.RUNNING)``. Like the limits of any parameter, they can be
+        changed with ``param.setLimits``.
+    states :
+        Deprecated, former name of ``limits``.
     checkable : bool, optional
         The button stays pressed until it is pressed again. Defaults to ``False``.
     checked : bool, optional
@@ -118,13 +108,6 @@ class ActionLedParameter(SimpleParameter):
 
     itemClass = ActionLedParameterItem
     sigActivated = QtCore.Signal(object)
-
-    def __init__(self, **opts):
-        states = opts.get('states')
-        if isinstance(states, (list, tuple)) and states and all(isinstance(state, str) for state in states):
-            # names of the Status workflow: plain strings, so that the option can be saved in and read from xml
-            opts['states'] = [state.value if isinstance(state, Enum) else str(state) for state in states]
-        super().__init__(**opts)
 
     def _interpretValue(self, v):
         if isinstance(v, bool):

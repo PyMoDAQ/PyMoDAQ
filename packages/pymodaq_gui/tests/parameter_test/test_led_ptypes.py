@@ -89,7 +89,7 @@ class TestMultistateLedParameter:
 
     def test_custom_states_roundtrip(self, tree):
         p = Parameter.create(name='ms', type='multistate_led',
-                             value='idle', states=self.STATES)
+                             value='idle', limits=self.STATES)
         tree.setParameters(p, showTop=False)
         p.setValue('running')
         assert p.value() == 'running'
@@ -98,14 +98,14 @@ class TestMultistateLedParameter:
 
     def test_signal_emitted_on_state_change(self, tree, qtbot):
         p = Parameter.create(name='ms', type='multistate_led',
-                             value='idle', states=self.STATES)
+                             value='idle', limits=self.STATES)
         tree.setParameters(p, showTop=False)
         with qtbot.waitSignal(p.sigValueChanged, timeout=500):
             p.setValue('running')
 
     def test_invalid_state_raises(self, tree):
         p = Parameter.create(name='ms', type='multistate_led',
-                             value='idle', states=self.STATES)
+                             value='idle', limits=self.STATES)
         tree.setParameters(p, showTop=False)
         # pyqtgraph swallows exceptions in its valueChanged event loop,
         # so we test the widget directly.
@@ -184,7 +184,7 @@ class TestActionLedParameter:
 
     def test_states_of_the_status_workflow(self, tree):
         from pymodaq_gui.utils.status_palette import Status, StatusPalette
-        p = Parameter.create(name='act', type='action_led', value=Status.OFF, states='status')
+        p = Parameter.create(name='act', type='action_led', value=Status.OFF, limits='status')
         tree.setParameters(p, showTop=False)
         led = tree.listAllItems()[0].widget.led
         assert led.state_names() == list(Status)
@@ -195,7 +195,7 @@ class TestActionLedParameter:
     def test_subset_of_the_status_workflow_by_names(self, tree):
         from pymodaq_gui.utils.status_palette import Status
         p = Parameter.create(name='act', type='action_led', value=Status.OFF,
-                             states=[Status.OFF, Status.RUNNING, Status.IDLE, Status.ERROR])
+                             limits=[Status.OFF, Status.RUNNING, Status.IDLE, Status.ERROR])
         tree.setParameters(p, showTop=False)
         led = tree.listAllItems()[0].widget.led
         assert led.state_names() == [Status.OFF, Status.RUNNING, Status.IDLE, Status.ERROR]
@@ -205,19 +205,52 @@ class TestActionLedParameter:
         from pymodaq_gui.utils.status_palette import Status
         root = Parameter.create(name='root', type='group', children=[
             dict(name='act', type='action_led', value=Status.OFF, checkable=True,
-                 states=[Status.OFF, Status.RUNNING, Status.IDLE])])
+                 limits=[Status.OFF, Status.RUNNING, Status.IDLE])])
         ioxml.parameter_to_xml_file(root, tmp_path / 'settings.xml')
         loaded = ioxml.XML_file_to_parameter(tmp_path / 'settings.xml')
-        assert loaded[0]['states'] == ['off', 'running', 'idle']
+        assert loaded[0]['limits'] == ['off', 'running', 'idle']
+
+    @pytest.mark.parametrize('ptype', ['multistate_led', 'action_led'])
+    def test_states_option_is_deprecated_but_still_works(self, tree, ptype):
+        with pytest.warns(DeprecationWarning):
+            p = Parameter.create(name='led', type=ptype, value='running',
+                                 states=[('idle', '#888888'), ('running', '#00b400')])
+        assert p.opts['limits'] == [('idle', '#888888'), ('running', '#00b400')]
+        with pytest.warns(DeprecationWarning):
+            p.setOpts(states=[('a', '#888888'), ('b', '#00b400')])
+        assert p.opts['limits'] == [('a', '#888888'), ('b', '#00b400')]
+
+    @pytest.mark.parametrize('ptype', ['multistate_led', 'action_led'])
+    def test_states_follow_the_limits(self, tree, ptype):
+        from pymodaq_gui.utils.status_palette import Status
+        p = Parameter.create(name='led', type=ptype, value=Status.OFF, limits=[Status.OFF, Status.IDLE])
+        tree.setParameters(p, showTop=False)
+        widget = tree.listAllItems()[0].widget
+        led = widget.led if ptype == 'action_led' else widget
+        assert led.state_names() == [Status.OFF, Status.IDLE]
+        p.setLimits([Status.OFF, Status.RUNNING, Status.ERROR])
+        assert led.state_names() == [Status.OFF, Status.RUNNING, Status.ERROR]
+        p.setValue(Status.ERROR)
+        p.setLimits('status')
+        assert led.state_names() == list(Status)
+        assert led.get_state() == Status.ERROR
+
+    def test_status_limits_survive_xml(self, tmp_path):
+        from pymodaq_gui.parameter import ioxml
+        root = Parameter.create(name='root', type='group', children=[
+            dict(name='act', type='action_led', value='off', limits='status')])
+        ioxml.parameter_to_xml_file(root, tmp_path / 'settings.xml')
+        loaded = ioxml.XML_file_to_parameter(tmp_path / 'settings.xml')
+        assert loaded[0]['limits'] == 'status'
 
     def test_unknown_states_option(self, tree):
-        p = Parameter.create(name='act', type='action_led', value='off', states='nope')
+        p = Parameter.create(name='act', type='action_led', value='off', limits='nope')
         with pytest.raises(ValueError):
             tree.setParameters(p, showTop=False)
 
     def test_custom_states(self, tree):
         states = [('idle', '#888888'), ('running', '#00b400'), ('error', '#c80000')]
-        p = Parameter.create(name='act', type='action_led', value='idle', states=states)
+        p = Parameter.create(name='act', type='action_led', value='idle', limits=states)
         tree.setParameters(p, showTop=False)
         p.setValue('running')
         assert p.value() == 'running'
