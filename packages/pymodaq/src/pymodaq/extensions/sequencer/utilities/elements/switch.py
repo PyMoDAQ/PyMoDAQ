@@ -64,7 +64,14 @@ class SwitchElt(SeqEltBase):
     def _new_rule(self, is_fallback: bool = False) -> Rule:
         rule_id = self._next_rule_id
         self._next_rule_id += 1
-        return Rule(self, rule_id, is_fallback=is_fallback)
+        rule = Rule(self, rule_id, is_fallback=is_fallback)
+        if self.dashboard is not None:
+            # do_things_with_dashboard() only binds whatever rules already exist at the
+            # moment self.dashboard is set - a rule created afterward (e.g. via add_rule(),
+            # the normal case once an element is already in a dashboard-attached tree) would
+            # otherwise keep an empty ModulesManager forever, silently showing no detectors.
+            rule.condition.bind_to_dashboard()
+        return rule
 
     def _insert_rule(self) -> Rule:
         """ Internal: insert a new regular rule just before the fallback - no rules_locked

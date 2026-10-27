@@ -25,6 +25,36 @@ from pymodaq.extensions.sequencer.models.composite_choice_model import Composite
 seq_factory = SeqEltFactory()
 
 
+class FakeDetector:
+    def __init__(self, title):
+        self.title = title
+
+
+class FakeModulesManager:
+    def __init__(self, titles):
+        self.detectors_all = [FakeDetector(t) for t in titles]
+        self.actuators_all = []
+
+
+class FakeAppliedEntry:
+    def __init__(self):
+        self._slots = []
+
+    def connect(self, slot):
+        self._slots.append(slot)
+
+
+class FakeExperimentManager:
+    def __init__(self):
+        self.applied_entry = FakeAppliedEntry()
+
+
+class FakeDashboard:
+    def __init__(self, titles):
+        self.modules_manager = FakeModulesManager(titles)
+        self.experiment_manager = FakeExperimentManager()
+
+
 class TestElements:
 
     def test_registered_elements(self, ):
@@ -282,31 +312,6 @@ class TestChoiceElt:
         model = elt.choice_model
         model.settings['detectors'] = dict(all_items=['det1', 'det2'], selected=['det1'])
 
-        class FakeDetector:
-            def __init__(self, title):
-                self.title = title
-
-        class FakeModulesManager:
-            def __init__(self, titles):
-                self.detectors_all = [FakeDetector(t) for t in titles]
-                self.actuators_all = []
-
-        class FakeAppliedEntry:
-            def __init__(self):
-                self._slots = []
-
-            def connect(self, slot):
-                self._slots.append(slot)
-
-        class FakeExperimentManager:
-            def __init__(self):
-                self.applied_entry = FakeAppliedEntry()
-
-        class FakeDashboard:
-            def __init__(self, titles):
-                self.modules_manager = FakeModulesManager(titles)
-                self.experiment_manager = FakeExperimentManager()
-
         elt.dashboard = FakeDashboard(['det1', 'det2'])
         elt.do_things_with_dashboard()
 
@@ -478,6 +483,22 @@ class TestSwitchElt:
             elt.add_rule()
         with pytest.raises(ElementError):
             elt.remove_rule(elt.fallback_rule.id)
+
+    def test_rule_added_after_dashboard_attach_is_bound_to_it(self, qtbot):
+        """ Regression: do_things_with_dashboard() only binds whatever rules exist at the
+        moment self.dashboard is set. ChoiceElt's one rule always exists by then (built in
+        __init__, before any dashboard can be attached), but a SwitchElt's rules are normally
+        added later, via add_rule() - once the element is already sitting in a
+        dashboard-attached tree. A rule created that way used to keep an empty ModulesManager
+        forever, so its threshold condition's detector list silently stayed empty. """
+        elt = SwitchElt(1)
+        elt.dashboard = FakeDashboard(['det1', 'det2'])
+        elt.do_things_with_dashboard()
+
+        rule = elt.add_rule()
+        rule.condition.model = 'threshold'
+
+        assert rule.condition.model.settings['detectors']['all_items'] == ['det1', 'det2']
 
 
 class TestCompositeChoiceModel:
