@@ -200,6 +200,16 @@ class TestActionLedParameter:
         led = tree.listAllItems()[0].widget.led
         assert led.state_names() == [Status.OFF, Status.RUNNING, Status.IDLE, Status.ERROR]
 
+    def test_names_of_the_status_workflow_survive_xml(self, tmp_path):
+        from pymodaq_gui.parameter import ioxml
+        from pymodaq_gui.utils.status_palette import Status
+        root = Parameter.create(name='root', type='group', children=[
+            dict(name='act', type='action_led', value=Status.OFF, checkable=True,
+                 states=[Status.OFF, Status.RUNNING, Status.IDLE])])
+        ioxml.parameter_to_xml_file(root, tmp_path / 'settings.xml')
+        loaded = ioxml.XML_file_to_parameter(tmp_path / 'settings.xml')
+        assert loaded[0]['states'] == ['off', 'running', 'idle']
+
     def test_unknown_states_option(self, tree):
         p = Parameter.create(name='act', type='action_led', value='off', states='nope')
         with pytest.raises(ValueError):

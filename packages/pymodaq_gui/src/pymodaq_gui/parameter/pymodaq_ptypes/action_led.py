@@ -1,4 +1,5 @@
 import warnings
+from enum import Enum
 from qtpy import QtWidgets, QtCore
 from pyqtgraph.parametertree.parameterTypes.basetypes import WidgetParameterItem, SimpleParameter
 
@@ -117,6 +118,13 @@ class ActionLedParameter(SimpleParameter):
 
     itemClass = ActionLedParameterItem
     sigActivated = QtCore.Signal(object)
+
+    def __init__(self, **opts):
+        states = opts.get('states')
+        if isinstance(states, (list, tuple)) and states and all(isinstance(state, str) for state in states):
+            # names of the Status workflow: plain strings, so that the option can be saved in and read from xml
+            opts['states'] = [state.value if isinstance(state, Enum) else str(state) for state in states]
+        super().__init__(**opts)
 
     def _interpretValue(self, v):
         if isinstance(v, bool):
