@@ -16,6 +16,9 @@ elt_scanner.png           Scanner element editor with one or two actuators selec
 elt_choice.png            Choice element editor with the "threshold" model selected so its settings show
                           (detectors, Probe Data, threshold, direction, Data0D), plus the green/red True/False
                           target combo boxes.
+elt_switch.png            Switch element editor with at least two rules (e.g. both "threshold") plus the fallback
+                          row (no condition picker, just its target combo), the Add Rule button, and the manual
+                          override checkbox + target combo.
 elt_sequence.png          Sequence element editor with the combo box listing the other sequences.
 elt_state.png             State element editor with the state combo box and the "Show Manager" button.
 

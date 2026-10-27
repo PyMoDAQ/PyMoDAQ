@@ -282,7 +282,8 @@ The condition is given by a **choice model**, selected in the editor. The models
   detectors, press *Probe Data* to get the list of available 0D data, select one of them, then set the threshold value
   and the direction: *Above* (True if the data is above the threshold) or *Below*
 
-Other models can be written, see :ref:`sequencer_custom_choice_model`.
+Other models can be written, see :ref:`sequencer_custom_choice_model`. For more than two outcomes, see
+:ref:`sequencer_elt_switch`.
 
 As an example, :numref:`sequencer_example_flow_fig` shows a sequence moving an actuator, taking three snapshots, and
 checking a signal: if it is above the threshold, a new State is applied on the Dashboard, otherwise the procedure
@@ -318,6 +319,66 @@ starts again.
       state -> end;
    }
 
+.. _sequencer_elt_switch:
+
+Switch
+------
+
+.. _sequencer_elt_switch_fig:
+
+.. figure:: sequencer_data/elt_switch.png
+   :alt: switch element
+   :width: 50%
+
+   The Switch element editor with two rules: a threshold condition and the mandatory fallback.
+
+The Switch element generalizes Choice to more than two outcomes: instead of a single True/False condition, it holds
+an ordered list of **rules**, each pairing a condition with a target element id. Rules are evaluated top to bottom
+and the first one whose condition is True wins - its target is where the sequence jumps to. A mandatory **fallback**
+rule is always last, has no condition to configure (it always matches), and guarantees the Switch always jumps
+somewhere even if none of the other rules matched.
+
+Use the **Add Rule** button to add a rule above the fallback, and the remove button on a rule's row to delete it.
+Each rule's condition uses the same models as the Choice element (``true``, ``false``, ``user_input``,
+``threshold``...), configured exactly the same way.
+
+As an example, three outcomes based on a signal level can be built with two rules plus the fallback: a ``threshold``
+rule set to *Below 0.5*, a second ``threshold`` rule set to *Above 1*, and the fallback covering everything in
+between:
+
+.. _sequencer_example_switch_fig:
+
+.. graphviz::
+   :caption: A Switch element with two threshold rules and the fallback.
+   :align: center
+
+   digraph sequencer_example_switch {
+      rankdir=TB;
+      node [shape=box, style="rounded,filled", fillcolor="#eef3fb", fontname="Helvetica", fontsize=11];
+      edge [fontname="Helvetica", fontsize=10];
+
+      switch [label="Switch", shape=diamond, fillcolor="#fdf3e1"];
+      low [label="Element A"];
+      high [label="Element B"];
+      mid [label="Element C"];
+
+      switch -> low [label=" rule 1: below 0.5"];
+      switch -> high [label=" rule 2: above 1"];
+      switch -> mid [label=" fallback: otherwise"];
+   }
+
+Two things worth knowing:
+
+* If more than one non-fallback rule could match at the same time (for instance two overlapping thresholds), the
+  sequence still jumps to whichever one is listed first, but a warning is written in the log when the sequence is
+  checked, so overlapping rules don't go unnoticed.
+* A **manual override** toggle (with its own target combo) can force the Switch straight to a chosen target,
+  skipping rule evaluation entirely - useful while building or testing the rest of a sequence before wiring up real
+  conditions.
+
+The Choice element is the fixed two-outcome case of a Switch (one condition rule plus the fallback), with no
+Add/Remove Rule buttons since it can't grow past those two.
+
 .. _sequencer_elt_sequence:
 
 Sequence
@@ -342,9 +403,9 @@ Running a sequence
 ++++++++++++++++++
 
 When a sequence is started (from the main toolbar for the *main* sequence, or from its panel), all its elements are
-first checked. If some are not valid (an actuator or a detector not available in the Dashboard, a missing Choice
-target, no experiment applied...) the errors are written in the log and the status bar displays *Some elements are not
-valid, check the log*: the sequence is not started.
+first checked. If some are not valid (an actuator or a detector not available in the Dashboard, a missing Choice or
+Switch target, no experiment applied...) the errors are written in the log and the status bar displays *Some
+elements are not valid, check the log*: the sequence is not started.
 
 While running, the element being executed is selected in the tree and displayed in the status bar.
 
@@ -432,11 +493,12 @@ Every element is a YAML mapping with at least:
    * - ``elt_name``
      - string
      - the type of the element: ``state``, ``move``, ``grab``, ``wait``, ``repeat``, ``scanner``, ``choice``,
-       ``sequence`` (``root`` for the root element only)
+       ``switch``, ``sequence`` (``root`` for the root element only)
    * - ``id``
      - integer
      - the id of the element, displayed in the tree. Ids must be **unique** within a sequence as they are used as
-       targets by the Choice elements. The root element has the id ``-1``; other elements use positive integers
+       targets by the Choice and Switch elements. The root element has the id ``-1``; other elements use positive
+       integers
    * - ``children``
      - list
      - only for container elements (``root``, ``repeat``, ``scanner``): the list of children elements, executed in
@@ -706,6 +768,59 @@ The ``true``, ``false`` and ``user_input`` models have no settings. The ``thresh
      threshold: 0.5
      directions: [Above, Below]
      direction: Above
+
+switch
+^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 15 65
+
+   * - Field
+     - Type
+     - Description
+   * - ``rules``
+     - list
+     - the non-fallback rules, evaluated in order (first match wins). Each entry is a mapping with ``go_to`` (id of
+       the target element, or ``continue`` to go on as if there were no Switch) plus the same ``choice_model`` and
+       settings fields as a Choice element
+   * - ``fallback``
+     - mapping
+     - the mandatory last rule, always matching: a mapping with only ``go_to`` (no condition settings, its
+       ``choice_model`` is always ``true``)
+   * - ``manual_override_enabled``
+     - boolean
+     - if ``true``, the sequence jumps straight to ``manual_override_target`` and the rules below are not evaluated
+   * - ``manual_override_target``
+     - integer
+     - id of the element to jump to (or ``continue``) when manual override is enabled
+
+.. code-block:: yaml
+
+   - elt_name: switch
+     id: 12
+     rules:
+     - go_to: 13
+       choice_model: threshold
+       detectors: {all_items: [Det 0D], selected: [Det 0D]}
+       data_names: [Det 0D/CH00]
+       data_name: Det 0D/CH00
+       threshold: 0.5
+       directions: [Above, Below]
+       direction: Below
+     - go_to: 14
+       choice_model: threshold
+       detectors: {all_items: [Det 0D], selected: [Det 0D]}
+       data_names: [Det 0D/CH00]
+       data_name: Det 0D/CH00
+       threshold: 1.0
+       directions: [Above, Below]
+       direction: Above
+     fallback:
+       go_to: 15
+       choice_model: true
+     manual_override_enabled: false
+     manual_override_target: 13
 
 sequence
 ^^^^^^^^
