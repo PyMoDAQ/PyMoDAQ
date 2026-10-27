@@ -798,6 +798,20 @@ grab or snap data. The MockCamera plugin illustrates this feature:
                 self.dte_signal.emit(data)
                 QtWidgets.QApplication.processEvents()
 
+In live mode the DAQ_Viewer calls ``grab_data`` **once**: the plugin keeps emitting data until the DAQ_Viewer calls its
+``stop`` method, which ends the loop of ``grab_data``. The DAQ_Viewer then emits the *grab stopped* status by itself. If
+``live_mode_available`` is ``False``, the DAQ_Viewer calls ``grab_data`` again for each data to emit.
+
+.. note::
+
+    ``live_mode_available`` and ``hardware_averaging`` (see :ref:`hardware_averaging`) are independent:
+
+    * ``live_mode_available`` tells **who repeats the acquisition**: the plugin (``True``) or the DAQ_Viewer (``False``).
+    * ``hardware_averaging`` tells **who averages**: if ``True``, each data emitted by the plugin is already the average
+      of the ``Naverage`` acquisitions asked in ``grab_data``; if ``False``, the DAQ_Viewer averages the data it
+      receives, also when the plugin streams. A plugin that streams and cannot average (a camera for instance) leaves
+      ``hardware_averaging`` to ``False`` and does not average the frames itself, otherwise they are averaged twice.
+
 
 
 Hardware needed files
