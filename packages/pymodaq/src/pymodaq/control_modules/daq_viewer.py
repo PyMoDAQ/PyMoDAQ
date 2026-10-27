@@ -993,6 +993,7 @@ class DetectorWorker(HardwareWorkerBase):
         self.Naverage = 1
         self.average_done = False
         self.hardware_averaging = False
+        self._streaming = False  # the plugin streams after a single grab_data call, no loop here
         self.show_averaging = False
         self.wait_time = settings_parameter['main_settings', 'wait_time']
         self.daq_type = detector.daq_type
@@ -1047,6 +1048,9 @@ class DetectorWorker(HardwareWorkerBase):
         elif command.command == ControlToHardwareViewer.STOP_GRAB:
             self.grab_state = False
             self.plugin.stop()
+            if self._streaming:  # no grab loop is running to emit it
+                self._streaming = False
+                self.status_sig.emit(ThreadCommand(ThreadStatusViewer.GRAB_STOPPED))
             self.status_sig.emit(ThreadCommand(ThreadStatus.UPDATE_STATUS, 'Stopping grab'))
 
         elif command.command == ControlToHardwareViewer.UPDATE_SCANNER:  # may be deprecated
@@ -1162,8 +1166,11 @@ class DetectorWorker(HardwareWorkerBase):
     def grab_data(self, Naverage=1, live=True, **kwargs):
         """ General method to grab data from the instrument plugin class
 
-        Will check if the plugin class can do hardware averaging (if NAverage > 1) and and live_mode, otherwise
-        do both software wise here
+        The two attributes of the plugin class are independent. If ``live_mode_available`` is True (and live is True),
+        the plugin streams its data after this single call: the loop below is not used and the grab ends when the
+        plugin is stopped. Otherwise the plugin is called again here for each data. If ``hardware_averaging`` is True
+        each data emitted by the plugin is already the average of Naverage ones, otherwise they are averaged in
+        :meth:`data_ready`.
 
         Parameters
         ----------
@@ -1179,6 +1186,7 @@ class DetectorWorker(HardwareWorkerBase):
             if Naverage > 1:
                 self.average_done = False
             self.waiting_for_data = False
+            self._streaming = False
 
             # for live mode:two possibilities: either snap one data and regrab software wise
             # (while True) or if self.detector.live_mode_available is True all data is continuously
@@ -1193,6 +1201,11 @@ class DetectorWorker(HardwareWorkerBase):
                     if not self.waiting_for_data:
                         self.waiting_for_data = True
                         self.plugin.grab_data(Naverage, live=live, **kwargs)
+                    if live and self.plugin.live_mode_available:
+                        # the plugin emits data until it is stopped (STOP_GRAB), calling it again would start
+                        # another acquisition. data_ready takes care of the software averaging if needed
+                        self._streaming = True
+                        return
                     QtWidgets.QApplication.processEvents()
                     if self.single_grab:
                         if self.hardware_averaging:
@@ -1205,10 +1218,6 @@ class DetectorWorker(HardwareWorkerBase):
                         # after acquisition
                     if not self.grab_state:
                         break   # if not in grab mode  breaks the while loop
-                    if self.plugin.live_mode_available and (not self.hardware_averaging and
-                                                            self.average_done):
-                        break  # if live can be done in the plugin breaks the while loop except
-                        # if average is asked but not done hardware wise
                 except Exception as e:
                     self.report_error(e, 'grab')
             self.status_sig.emit(ThreadCommand('grab_stopped'))
