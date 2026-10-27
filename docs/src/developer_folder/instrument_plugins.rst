@@ -773,7 +773,17 @@ controller provides an efficient method to do it (that will save time) then you 
 
     When the plugin averages acquisitions itself, one after the other, :meth:`pymodaq_data.data.DataWithAxes.accumulate`
     (and :meth:`pymodaq_data.data.DataToExport.accumulate`) computes the running mean and sets its standard error as
-    ``errors``: ``mean = new_acquisition.accumulate(mean, n_previous)``.
+    ``errors``. This is what the DAQ_Viewer does for the software averaging (``DetectorWorker.data_ready``): the first
+    acquisition is kept as it is, then each new one is accumulated with the running mean:
+
+    .. code-block:: python
+
+        if n_done == 0:
+            mean = acquisition.deepcopy()
+        else:  # n_done acquisitions are already averaged in mean
+            mean = acquisition.accumulate(mean, n_done)
+        n_done += 1
+        # after Naverage acquisitions, mean.errors is the standard error of the mean: emit mean
 
 
 .. _live_mode:
