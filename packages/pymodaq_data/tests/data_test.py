@@ -482,6 +482,16 @@ class TestDataBase:
                                data_mod.Q_(data1[ind], data1.units))
         assert data_mod.Unit(data_data.units).is_compatible_with('m * s')
 
+    def test_deepcopy_with_new_data_keeps_errors_of_the_right_shape(self):
+        dwa = init_data(data=DATA1D, Ndata=1)
+        new_data = [2 * DATA1D]
+
+        copy = dwa.deepcopy_with_new_data(new_data, errors=[np.ones_like(DATA1D)])
+        assert copy.errors[0] == approx(np.ones_like(DATA1D))
+
+        copy = dwa.deepcopy_with_new_data(new_data, errors=[np.ones(DATA1D.size + 1)])
+        assert copy.errors is None
+
     def test_abs(self):
         data_p = init_data(data=DATA2D, Ndata=2)
         data_m = init_data(data=-DATA2D, Ndata=2)
