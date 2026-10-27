@@ -771,6 +771,35 @@ controller provides an efficient method to do it (that will save time) then you 
 
         dwa = DataFromPlugins(name='spectrum', data=[mean_spectrum], errors=[standard_error_spectrum])
 
+    When the plugin averages acquisitions itself, one after the other, :meth:`pymodaq_data.data.DataWithAxes.accumulate`
+    (and :meth:`pymodaq_data.data.DataToExport.accumulate`) computes the running mean and sets its standard error as
+    ``errors``. This is what the DAQ_Viewer does for the software averaging (``DetectorWorker.data_ready``): the first
+    acquisition is kept as it is, then each new one is accumulated with the running mean:
+
+    .. code-block:: python
+
+        if n_done == 0:
+            mean = acquisition.deepcopy()
+        else:  # n_done acquisitions are already averaged in mean
+            mean = acquisition.accumulate(mean, n_done)
+        n_done += 1
+        # after Naverage acquisitions, mean.errors is the standard error of the mean: emit mean
+
+    When the instrument or its buffer gives all the acquisitions at once, stacked in one array,
+    :meth:`pymodaq_data.data.DataWithAxes.mean_with_errors` (and :meth:`pymodaq_data.data.DataToExport.mean_with_errors`)
+    does it in one call. The ``axis`` argument (0 by default) is the index of the axis along which the acquisitions are
+    stacked: it does not have to be the first one. This axis is removed from the result, the other ones are kept. For a
+    ``DataToExport``, the acquisitions have to be stacked along the same ``axis`` in all its ``DataWithAxes``.
+
+    .. code-block:: python
+
+        # frames: array (Naverage, ny, nx) read from the buffer, the acquisitions being along axis 0
+        raw = DataRaw('frames', data=[frames], nav_indexes=(0,))
+        mean = raw.mean_with_errors()  # shape (ny, nx), errors are the standard error of the mean
+
+        # if the buffer is (ny, Naverage, nx), the acquisitions are along axis 1
+        mean = DataRaw('frames', data=[frames_yfx], nav_indexes=(1,)).mean_with_errors(axis=1)
+
 
 .. _live_mode:
 
@@ -815,6 +844,25 @@ grab or snap data. The MockCamera plugin illustrates this feature:
                 QThread.msleep(kwargs.get('wait_time', 100))
                 self.dte_signal.emit(data)
                 QtWidgets.QApplication.processEvents()
+
+In live mode the DAQ_Viewer calls ``grab_data`` **once**: the plugin keeps emitting data until the DAQ_Viewer calls its
+``stop`` method, which ends the loop of ``grab_data``. The DAQ_Viewer then emits the *grab stopped* status by itself. If
+``live_mode_available`` is ``False``, the DAQ_Viewer calls ``grab_data`` again for each data to emit.
+
+.. note::
+
+    ``live_mode_available`` and ``hardware_averaging`` (see :ref:`hardware_averaging`) are independent:
+
+    * ``live_mode_available`` tells **who repeats the acquisition**: the plugin (``True``) or the DAQ_Viewer (``False``).
+    * ``hardware_averaging`` tells **who averages**: if ``True``, each data emitted by the plugin is already the average
+      of the ``Naverage`` acquisitions asked in ``grab_data``; if ``False``, the DAQ_Viewer averages the data it
+      receives, also when the plugin streams. A plugin that averages the acquisitions itself (a camera that averages
+      its frames, for instance) must set ``hardware_averaging`` to ``True``, otherwise the DAQ_Viewer averages the
+      already averaged data a second time. The plugin should then add the standard error of the mean to the
+      ``errors`` of the data before emitting it (see :ref:`hardware_averaging`). When it averages successive
+      acquisitions itself, :meth:`pymodaq_data.data.DataWithAxes.accumulate` (or
+      :meth:`pymodaq_data.data.DataToExport.accumulate`) does it step by step: it gives the running mean and sets its
+      standard error as ``errors``, while :meth:`~pymodaq_data.data.DataWithAxes.average` only gives the mean.
 
 
 
