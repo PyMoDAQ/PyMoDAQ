@@ -519,6 +519,39 @@ class TestDataBase:
 
         assert new.accumulate(previous_average, 3).errors is None
 
+    def test_mean_with_errors_of_a_buffer(self):
+        n_acquisitions = 12
+        rng = np.random.default_rng(5)
+        acquisitions = rng.normal(loc=-1., scale=0.8, size=(n_acquisitions, 7))
+        buffer = data_mod.DataRaw('buffer', data=[acquisitions], nav_indexes=(0,),
+                         axes=[data_mod.Axis('frames', data=np.arange(n_acquisitions), index=0),
+                               data_mod.Axis('x', data=np.arange(7), index=1)])
+
+        averaged = buffer.mean_with_errors()
+
+        assert averaged.n_averaged == n_acquisitions
+        assert averaged.shape == (7,)
+        assert averaged.data[0] == approx(acquisitions.mean(axis=0))
+        assert averaged.errors[0] == approx(acquisitions.std(axis=0, ddof=1) / np.sqrt(n_acquisitions))
+
+    def test_mean_with_errors_gives_the_same_as_accumulate(self):
+        rng = np.random.default_rng(3)
+        acquisitions = rng.normal(size=(6, 5))
+        accumulated = init_data(data=acquisitions[0], Ndata=1)
+        for ind in range(1, 6):
+            accumulated = init_data(data=acquisitions[ind], Ndata=1).accumulate(accumulated, ind)
+
+        averaged = data_mod.DataRaw('buffer', data=[acquisitions], nav_indexes=(0,)).mean_with_errors()
+
+        assert averaged.data[0] == approx(accumulated.data[0])
+        assert averaged.errors[0] == approx(accumulated.errors[0])
+
+    def test_mean_with_errors_of_a_single_acquisition(self):
+        averaged = data_mod.DataRaw('buffer', data=[np.arange(4.).reshape((1, 4))], nav_indexes=(0,)).mean_with_errors()
+
+        assert averaged.errors is None
+        assert averaged.data[0] == approx(np.arange(4.))
+
     def test_combine_with_errors(self):
         first = init_data(data=np.array([1., 4.]), Ndata=1)
         first.errors = [np.array([1., 2.])]

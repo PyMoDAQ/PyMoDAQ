@@ -2511,6 +2511,48 @@ class DataWithAxes(DataBase, SerializableBase):
             dat_mean.append(mean)
         return self.deepcopy_with_new_data(dat_mean, remove_axes_index=axis)
 
+    def mean_with_errors(self, axis: int = 0) -> DataWithAxes:
+        """ Process the mean of the data on the specified axis, as :meth:`mean` does, and set the standard error of the
+        mean as the ``errors`` of the result
+
+        It is meant for a buffer that gives a series of N acquisitions at once (as the first axis of the data, a
+        navigation axis for instance), when :meth:`accumulate` which averages them one after the other is not needed.
+        The errors are the sample standard deviation (``ddof=1``) divided by ``sqrt(N)``, as :meth:`accumulate` gives.
+
+        Parameters
+        ----------
+        axis: int
+            The axis of the acquisitions
+
+        Returns
+        -------
+        DataWithAxes: the mean, its ``n_averaged`` being N. Its ``errors`` are None if N is 1
+
+        See Also
+        --------
+        mean, accumulate
+        """
+        means = []
+        errors = []
+        n_data = 1
+        for dat in self.data:
+            n_data = dat.shape[axis]
+            mean = np.mean(dat, axis=axis)
+            if n_data > 1:
+                error = np.sqrt(np.var(dat, axis=axis, ddof=1) / n_data)  # real, also for complex data
+            else:
+                error = None
+            if isinstance(mean, numbers.Number):
+                mean = np.array([mean])
+                if error is not None:
+                    error = np.array([error])
+            means.append(mean)
+            errors.append(error)
+        averaged_data = self.deepcopy_with_new_data(means, remove_axes_index=axis)
+        averaged_data.errors = errors if n_data > 1 else None
+        averaged_data.add_extra_attribute(**{Averaging.AVERAGED: True, Averaging.N_AVERAGED: n_data})
+        return averaged_data
+
     def moment(self) -> Tuple[DataWithAxes, DataWithAxes]:
         """ returns the two first moments of the data over the axis
 
