@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 from pathlib import Path
 
-from pymodaq_data.h5modules import saving
+from pymodaq_data.h5modules import saving, backends
 from pymodaq_data.h5modules.data_saving import (
     DataLoader, AxisSaverLoader, DataSaverLoader, DataToExportSaver,
     DataEnlargeableSaver, DataToExportTimedSaver, SPECIAL_GROUP_NAMES, DataToExportExtendedSaver,
@@ -90,6 +90,18 @@ def init_data_to_export():
 
     data_to_export = DataToExport(name='mybigdata', data=[data2D, data0D, data1D, data0Dbis])
     return data_to_export
+
+@pytest.fixture()
+def h5saver_swmr(tmp_path):
+    """H5SaverLowLevel on a fresh file opened with swmr_mode=True (h5py backend only),
+    with flushing on every write so tick_flush's effect is observable immediately."""
+    h5saver = saving.H5SaverLowLevel(backend='h5py')
+    h5saver.init_file(file_name=tmp_path.joinpath('h5file_swmr.h5'), new_file=True,
+                      swmr_mode=True)
+    h5saver.set_swmr_flush_interval(1)
+    yield h5saver
+    h5saver.close_file()
+
 
 @pytest.fixture()
 def create_h5_with_data_to_export(h5saver_lowlevel, init_data_to_export):
@@ -852,3 +864,53 @@ class TestDataLoader:
                     dwa_loaded = data_loader.load_data_from_name_origin(
                         name='aunknown name', origin='and_origin',
                     )
+
+
+@pytest.mark.skipif('h5py' not in backends.backends_available,
+                    reason='SWMR is only supported with the h5py backend')
+class TestSWMRActivation:
+    """DataToExportEnlargeableSaver/TimedSaver/ExtendedSaver must actually turn on
+    SWMR writer mode (via the shared _activate_swmr_and_tick_flush) once their file
+    was opened with swmr_mode=True, not just leave it 'prepared' - otherwise a
+    concurrent reader opening the file in SWMR mode sees nothing, and periodic
+    flushing (tick_flush) never kicks in since it no-ops while SWMR is inactive."""
+
+    def test_enlargeable_saver_activates_swmr(self, h5saver_swmr, init_data_to_export):
+        h5saver = h5saver_swmr
+        assert not h5saver.is_swmr_active
+
+        det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
+        data_saver = DataToExportEnlargeableSaver(h5saver)
+        data_saver.add_data(det_group, init_data_to_export, axis_value=1.)
+
+        assert h5saver.is_swmr_active
+
+    def test_timed_saver_activates_swmr(self, h5saver_swmr, init_data_to_export):
+        h5saver = h5saver_swmr
+        assert not h5saver.is_swmr_active
+
+        det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
+        data_saver = DataToExportTimedSaver(h5saver)
+        data_saver.add_data(det_group, init_data_to_export)
+
+        assert h5saver.is_swmr_active
+
+    def test_extended_saver_activates_swmr(self, h5saver_swmr, init_data_to_export):
+        h5saver = h5saver_swmr
+        assert not h5saver.is_swmr_active
+
+        det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
+        data_saver = DataToExportExtendedSaver(h5saver, extended_shape=(5,))
+        data_saver.add_data(det_group, init_data_to_export, indexes=(0,))
+
+        assert h5saver.is_swmr_active
+
+    def test_not_activated_without_swmr_mode(self, h5saver_lowlevel, init_data_to_export):
+        """A file not opened with swmr_mode=True must stay untouched: no attempt to
+        enable_swmr (which would raise), tick_flush stays a no-op."""
+        h5saver = h5saver_lowlevel
+        det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
+        data_saver = DataToExportEnlargeableSaver(h5saver)
+        data_saver.add_data(det_group, init_data_to_export, axis_value=1.)
+
+        assert not h5saver.is_swmr_active

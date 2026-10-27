@@ -158,6 +158,15 @@ class DAQMoveUI(ControlModuleUI):
     def move_done(self, status):
         self.status_led.set_state(MoveLedState.IDLE if status else MoveLedState.MOVING)
 
+    def set_error_state(self, in_error: bool, message: str = '') -> None:
+        """Turn the status LED to ``ERROR`` (orange) with the error as tooltip, or back to idle/uninitialized"""
+        if in_error:
+            self.status_led.set_state(MoveLedState.ERROR)
+            self.status_led.setToolTip(message)
+        elif self.status_led.get_state() == MoveLedState.ERROR:
+            self.status_led.set_state(MoveLedState.IDLE if self._ini_state else MoveLedState.UNINITIALIZED)
+            self.status_led.setToolTip('')
+
     def quit_fun(self) -> bool | None:
         return self.app.quit_fun()
 
@@ -196,7 +205,7 @@ class DAQMoveUI(ControlModuleUI):
                 (MoveLedState.UNINITIALIZED, StatusPalette.color(Status.OFF)),
                 (MoveLedState.IDLE,          StatusPalette.color(Status.IDLE)),
                 (MoveLedState.MOVING,        StatusPalette.color(Status.RUNNING)),
-                (MoveLedState.ERROR,         StatusPalette.color(Status.CRITICAL)),
+                (MoveLedState.ERROR,         StatusPalette.color(Status.ERROR)),
             ],
             readonly=True,
         )
@@ -289,6 +298,7 @@ class DAQMoveUI(ControlModuleUI):
                         "Refresh Value Continuously", checkable=True,
                         toolbar=toolbar, icon_checked='repeat_on',
                         icon_checked_color=self.get_theme().green)
+        self._setup_saving_actions(toolbar=toolbar)
         self.add_widget('status', self.statusbar, toolbar=toolbar)
 
     def setup_absolute_spinbox_actions(self, toolbar: QtWidgets.QToolBar = None):

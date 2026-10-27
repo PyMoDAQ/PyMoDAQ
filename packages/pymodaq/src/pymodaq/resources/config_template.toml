@@ -48,6 +48,9 @@ auto_show_live_plots = true  # automatically show the Live Plots dock when a sca
 wait_time = 0
 wait_time_between = 0
 
+[extensions]
+extension_close_all = false  # if true, closing an extension will close the DashBoard and all the other extensions
+
 [optimizer]
     n_iter = 100
 

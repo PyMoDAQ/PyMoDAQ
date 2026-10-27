@@ -178,13 +178,18 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.add_action('show_graphs', 'ShowGraphs', 'bid_landscape', 'Show/Hide the Graphs Area',
                         checkable=True, icon_checked='bid_landscape_disabled',
                         icon_color=self.get_theme().green, icon_checked_color=self.get_theme().red)
-        self.add_action('save_current', 'Save Current Data', 'save_as', "Save Current Data")
+        self._setup_saving_actions(extra_actions=[
+            {'short_name': 'save_current', 'name': 'Save Current Data', 'icon_name': 'save_as',
+             'tip': 'Save Current Data'}])
         self.toolbar.addSeparator()
-        self.add_action('background_snap', 'Snap Background', 'background_replace',
-                        tip='Take a snapshot a set it as background')
-        self.add_action('background_subtract', 'Subtract Background', 'texture_minus', checkable=True,
-                        tip='If checked, apply background substraction',
-                        icon_checked_color=self.get_theme().green)
+        self.add_action_group(
+            'background_subtract', 'Subtract Background', 'texture_minus', checkable=True,
+            tip='If checked, apply background substraction',
+            icon_checked_color=self.get_theme().green,
+            secondary_actions=[
+                {'short_name': 'background_snap', 'name': 'Snap Background', 'icon_name': 'background_replace',
+                 'tip': 'Take a snapshot a set it as background'},
+            ])
 
     def connect_things(self):
         self._connect_common_actions()

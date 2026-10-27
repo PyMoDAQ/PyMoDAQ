@@ -9,6 +9,7 @@ from __future__ import annotations
 from abc import ABC
 from importlib import import_module
 
+import datetime
 import os
 from pathlib import Path
 import sys
@@ -38,7 +39,6 @@ from pymodaq_data.h5modules.backends import Node, SaveType
 from pymodaq_utils.utils import ThreadCommand, find_dict_in_list_from_key_val
 
 from pymodaq_gui.parameter import Parameter
-from pymodaq_gui.parameter import utils as putils
 from pymodaq.control_modules.viewer_utility_classes import params as daq_viewer_params
 from pymodaq_utils import utils
 from pymodaq_utils.warnings import deprecation_msg
@@ -115,6 +115,8 @@ class DAQ_Viewer(ParameterControlModule):
     """
     settings_name = 'daq_viewer_settings'
     _hw_kind = 'detector'
+    _continuous_save_type = 'detector'
+    _continuous_saver_class = module_saving.DetectorTimeSaver
     _ini_hw_cmd = ControlToHardware.INI_HARDWARE
     custom_sig = Signal(ThreadCommand)  # particular case where DAQ_Viewer is used for a custom module
 
@@ -176,10 +178,6 @@ class DAQ_Viewer(ParameterControlModule):
         self.splash_sc = get_splash_sc()
 
 
-        self._module_and_data_saver: Union[None,
-                                          module_saving.DetectorSaver,
-                                          module_saving.DetectorTimeSaver] = None
-        self._h5saver_continuous: Optional[H5Saver] = None
         self._ind_continuous_grab = 0
 
         self.settings.child('main_settings', 'DAQ_type').setValue(self._detector.daq_type.name)
@@ -362,7 +360,10 @@ class DAQ_Viewer(ParameterControlModule):
                 * take_bkg
                 * viewers_changed
                 * quit
+            and the continuous-saving ones, see UiToMainSaving
         """
+        if self._process_saving_ui_cmd(cmd):
+            return
 
         if cmd.command == UiToMainViewer.INIT:
             self.do_init_hardware_signal.emit(cmd.attribute[0])  # usually connected to ini_hardware method, but could be bypassed (see Dashboard)
@@ -531,41 +532,39 @@ class DAQ_Viewer(ParameterControlModule):
         self.update_status("Timeout occurred", log_type="log")
 
     def save_current(self):
-        """Save current data into a h5file"""
+        """Save current data into a h5file.
+
+        Defaults the save dialog to today's dataset folder (``base_path/<year>/<YYYYMMDD>/``,
+        the same dated layout used everywhere else saving happens, instead of the bare
+        base path) with a timestamped filename already filled in, and restricts/forces
+        the .h5 extension.
+        """
         self._do_save_data = True
-        start_path = self._save_file_pathname or config('data', 'data_saving', 'h5file', 'save_path')
-        self._save_file_pathname = select_file(start_path=start_path, save=True, ext='h5')
+        base_path = Path(config('data', 'data_saving', 'h5file', 'save_path'))
+        today = datetime.date.today()
+        year_path = H5Saver.find_part_in_path_and_subpath(base_path, part=str(today.year), create=True)
+        day_path = H5Saver.find_part_in_path_and_subpath(year_path, part=today.strftime('%Y%m%d'), create=True)
+        default_name = datetime.datetime.now().strftime('Data_%Y%m%d_%H_%M_%S.h5')
+
+        pathname = select_file(start_path=day_path / default_name, save=True, ext='h5',
+                               filter='HDF5 files (*.h5)', force_save_extension=True)
+        if not pathname:
+            self._do_save_data = False
+            self.update_status('Save cancelled')
+            return
+        self._save_file_pathname = pathname
 
         self._save_export_data(self._data_to_save_export)
 
 
-    def _init_continuous_save(self):
-        """ Initialize the continuous saving H5Saver object
+    def _continuous_save_started(self):
+        self.grab_done_signal.connect(self.append_data)
 
-        Update the module_and_data_saver attribute as :class:`DetectorTimeSaver` object
-        """
-        if self._h5saver_continuous.settings.child('do_save').value():
-
-            self.settings.child('saver_settings', 'base_name').setValue('Data')
-            self.settings.child('saver_settings', 'N_saved').show()
-            self.settings.child('saver_settings', 'N_saved').setValue(0)
-            self.module_and_data_saver.h5saver = self._h5saver_continuous
-            self._h5saver_continuous.init_file(update_h5=True)
-
-            self.module_and_data_saver = module_saving.DetectorTimeSaver(self)
-            self.module_and_data_saver.h5saver = self._h5saver_continuous
-            self.module_and_data_saver.get_set_node()
-
-            self.grab_done_signal.connect(self.append_data)
-        else:
-            self._do_continuous_save = False
-            self.settings.child('saver_settings', 'N_saved').hide()
+    def _continuous_save_stopped(self):
+        try:
             self.grab_done_signal.disconnect(self.append_data)
-
-            try:
-                self._h5saver_continuous.close()
-            except Exception as e:
-                self.logger.exception(str(e))
+        except (TypeError, RuntimeError):
+            pass  # was not connected
 
     def append_data(self, dte: DataToExport = None,
                     where: Union[Node, str] = None,
@@ -596,8 +595,9 @@ class DAQ_Viewer(ParameterControlModule):
 
         self.settings.child('saver_settings', 'N_saved').setValue(self.settings['saver_settings', 'N_saved'] + 1)
 
-    def _add_data_to_saver(self, dte: DataToExport, init_step=False, where=None, **kwargs):
-        """Adds DataToExport data to the current node using the declared module_and_data_saver
+    def _add_data_to_saver(self, dte: DataToExport, init_step=False, where=None,
+                           saver: module_saving.DetectorSaver = None, **kwargs):
+        """Adds DataToExport data to the current node using the given saver
 
         Filters the data to be saved by DataSource as specified in the current H5Saver (see self.module_and_data_saver)
 
@@ -607,22 +607,26 @@ class DAQ_Viewer(ParameterControlModule):
             The data to be saved
         init_step: bool
             If True, means this is the first step of saving (if multisaving), then save background if any and a png image
+        saver: DetectorSaver, optional
+            defaults to self.module_and_data_saver, the continuous-saving one
         kwargs: dict
-            Other named parameters to be passed as is to the module_and_data_saver
+            Other named parameters to be passed as is to the saver
 
         See Also
         --------
         DetectorSaver, DetectorTimeSaver
 
         """
+        if saver is None:
+            saver = self.module_and_data_saver
         if dte is not None:
-            detector_node = self.module_and_data_saver.get_set_node(where)
-            dte = self.module_and_data_saver.filter_data(dte)
-            self.module_and_data_saver.add_data(detector_node, dte, **kwargs)
+            detector_node = saver.get_set_node(where)
+            dte = saver.filter_data(dte)
+            saver.add_data(detector_node, dte, **kwargs)
 
             if init_step:
                 if self._do_bkg and self._bkg is not None:
-                    self.module_and_data_saver.add_bkg(detector_node, self._bkg)
+                    saver.add_bkg(detector_node, self._bkg)
 
     def _save_data(self, path=None, dte: DataToExport = None):
         """Private. Practical implementation to save data into a h5file altogether with metadata, axes, background...
@@ -641,10 +645,12 @@ class DAQ_Viewer(ParameterControlModule):
             path = Path(path)
         h5saver = H5Saver(save_type='detector')
         h5saver.init_file(update_h5=True, custom_naming=False, addhoc_file_path=path)
-        self.module_and_data_saver = module_saving.DetectorSaver(self)
-        self.module_and_data_saver.h5saver = h5saver
+        # a saver of its own: replacing module_and_data_saver here used to break an
+        # ongoing continuous save, which kept appending to this closed one-shot file
+        saver = module_saving.DetectorSaver(self)
+        saver.h5saver = h5saver
 
-        self._add_data_to_saver(dte, init_step=True)
+        self._add_data_to_saver(dte, init_step=True, saver=saver)
 
         if self.ui is not None:
             (root, filename) = os.path.split(str(path))
@@ -843,19 +849,6 @@ class DAQ_Viewer(ParameterControlModule):
                     self.viewers[ind].show_data(dwa)
 
     # -------------------------------------------------------------------------
-    # Saving
-    # -------------------------------------------------------------------------
-
-    def setup_continuous_saving(self, init: bool = True):
-        """Configure the objects dealing with the continuous saving mode"""
-        if init:
-            self.module_and_data_saver = module_saving.DetectorSaver(self)
-            self._h5saver_continuous = H5Saver(save_type='detector')
-            self._h5saver_continuous.settings.child('do_save').sigValueChanged.connect(self._init_continuous_save)
-        else:
-            self._h5saver_continuous.close_file()
-
-    # -------------------------------------------------------------------------
     # Settings / Plugin management
     # -------------------------------------------------------------------------
 
@@ -896,14 +889,6 @@ class DAQ_Viewer(ParameterControlModule):
             self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.UPDATE_WAIT_TIME,
                                                      [param.value()]))
 
-        elif param.name() in putils.iter_children(self.settings.child('saver_settings'), []):
-            try:
-                if param.name() == 'do_save':
-                    self.setup_continuous_saving(param.value())
-                    self._h5saver_continuous.settings.child(*path[1:]).setValue(param.value())
-            except KeyError:
-                pass
-
     # -------------------------------------------------------------------------
     # Thread status handler
     # -------------------------------------------------------------------------
@@ -933,6 +918,8 @@ class DAQ_Viewer(ParameterControlModule):
             self.update_status("Viewer initialized: " + str(status.attribute['initialized']))
             if self.ui is not None:
                 self.ui.detector_init = status.attribute['initialized']
+                if not status.attribute['initialized'] and not status.attribute.get('closed', False):
+                    self.ui.update_init_icon(False, 'ini_detector', failed=True)  # failed initialization
             if status.attribute['initialized']:
                 self._controller_and_thread.controller = status.attribute["controller"]
 
@@ -1029,6 +1016,7 @@ class DetectorWorker(HardwareWorkerBase):
         self.Naverage = 1
         self.average_done = False
         self.hardware_averaging = False
+        self._streaming = False  # the plugin streams after a single grab_data call, no loop here
         self.show_averaging = False
         self.wait_time = settings_parameter['main_settings', 'wait_time']
         self.daq_type = detector.daq_type
@@ -1059,6 +1047,12 @@ class DetectorWorker(HardwareWorkerBase):
         if super().queue_command(command):
             return
 
+        try:
+            self._process_command(command)
+        except Exception as e:
+            self.report_error(e, str(command.command))
+
+    def _process_command(self, command: ThreadCommand):
         # Legacy alias: INI_DETECTOR → ini_hardware (base class already handles INI_HARDWARE)
         if command.command == ControlToHardwareViewer.INI_DETECTOR:
             status = self.ini_hardware(*command.attribute)
@@ -1077,6 +1071,9 @@ class DetectorWorker(HardwareWorkerBase):
         elif command.command == ControlToHardwareViewer.STOP_GRAB:
             self.grab_state = False
             self.plugin.stop()
+            if self._streaming:  # no grab loop is running to emit it
+                self._streaming = False
+                self.status_sig.emit(ThreadCommand(ThreadStatusViewer.GRAB_STOPPED))
             self.status_sig.emit(ThreadCommand(ThreadStatus.UPDATE_STATUS, 'Stopping grab'))
 
         elif command.command == ControlToHardwareViewer.UPDATE_SCANNER:  # may be deprecated
@@ -1210,8 +1207,11 @@ class DetectorWorker(HardwareWorkerBase):
     def grab_data(self, Naverage=1, live=True, **kwargs):
         """ General method to grab data from the instrument plugin class
 
-        Will check if the plugin class can do hardware averaging (if NAverage > 1) and and live_mode, otherwise
-        do both software wise here
+        The two attributes of the plugin class are independent. If ``live_mode_available`` is True (and live is True),
+        the plugin streams its data after this single call: the loop below is not used and the grab ends when the
+        plugin is stopped. Otherwise the plugin is called again here for each data. If ``hardware_averaging`` is True
+        each data emitted by the plugin is already the average of Naverage ones, otherwise they are averaged in
+        :meth:`data_ready`.
 
         Parameters
         ----------
@@ -1227,6 +1227,7 @@ class DetectorWorker(HardwareWorkerBase):
             if Naverage > 1:
                 self.average_done = False
             self.waiting_for_data = False
+            self._streaming = False
 
             # for live mode:two possibilities: either snap one data and regrab software wise
             # (while True) or if self.detector.live_mode_available is True all data is continuously
@@ -1241,6 +1242,11 @@ class DetectorWorker(HardwareWorkerBase):
                     if not self.waiting_for_data:
                         self.waiting_for_data = True
                         self.plugin.grab_data(Naverage, live=live, **kwargs)
+                    if live and self.plugin.live_mode_available:
+                        # the plugin emits data until it is stopped (STOP_GRAB), calling it again would start
+                        # another acquisition. data_ready takes care of the software averaging if needed
+                        self._streaming = True
+                        return
                     QtWidgets.QApplication.processEvents()
                     if self.single_grab:
                         if self.hardware_averaging:
@@ -1253,16 +1259,12 @@ class DetectorWorker(HardwareWorkerBase):
                         # after acquisition
                     if not self.grab_state:
                         break   # if not in grab mode  breaks the while loop
-                    if self.plugin.live_mode_available and (not self.hardware_averaging and
-                                                            self.average_done):
-                        break  # if live can be done in the plugin breaks the while loop except
-                        # if average is asked but not done hardware wise
                 except Exception as e:
-                    self.logger.exception(str(e))
+                    self.report_error(e, 'grab')
             self.status_sig.emit(ThreadCommand('grab_stopped'))
 
         except Exception as e:
-            self.logger.exception(str(e))
+            self.report_error(e, 'grab')
 
     def close(self):
         """Call the close method of the instrument plugin class."""

@@ -141,3 +141,14 @@ class TestDAQMove:
         daq_move, qtbot, widget = ini_daq_move_ui
         daq_move.actuator = 'Mock'
         pass
+
+
+def test_continuous_save_toolbar_group(ini_daq_move_ui):
+    """DAQ_Move gets the same Continuous Save toolbar group as DAQ_Viewer, in one slot"""
+    daq_move, qtbot, widget = ini_daq_move_ui
+    ui = daq_move.ui
+
+    button = next(child for child in ui.toolbar.findChildren(QtWidgets.QToolButton)
+                  if child.defaultAction() is ui.get_action('continuous_save'))
+    assert [action.text() for action in button.menu().actions()] == ['New file', 'Browse file']
+    assert ui.get_action('continuous_save').isCheckable()

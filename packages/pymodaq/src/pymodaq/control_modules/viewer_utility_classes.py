@@ -95,8 +95,14 @@ class DAQ_Viewer_base(PluginBase):
         --------
         send_param_status
     """
-    hardware_averaging = False  # True if the instrument averages itself: the plugin should then fill the `errors` of
-    # the data it emits, as the DAQ_Viewer only computes the standard error of the mean of its own averaging
+    # The two following attributes are independent:
+    # hardware_averaging: each data emitted by the plugin is already the average of the Naverage ones requested in
+    #   grab_data. If False, the viewer averages them (also when the plugin streams), with the
+    #   standard error of the mean as `errors`. If True, the DAQ_Viewer cannot know the dispersion: the plugin should
+    #   fill the `errors` of the data it emits if the instrument provides them.
+    # live_mode_available: with live=True the viewer calls grab_data once and the plugin emits data until its stop
+    #   method is called. If False, the viewer calls grab_data again for each data.
+    hardware_averaging = False
     supported_platforms: Optional[tuple] = None  # systems the plugin works on, values of sys.platform ('win32', 'linux',
     # 'darwin'). None: all of them. PyMoDAQ refuses to initialize the plugin on another system.
     supported_architectures: Optional[tuple] = None  # processor architectures the plugin works on, values of

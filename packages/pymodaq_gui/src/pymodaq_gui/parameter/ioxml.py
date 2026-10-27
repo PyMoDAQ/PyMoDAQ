@@ -267,7 +267,7 @@ def elt_to_dict(el):
         elif attribute in optional_int_options:
             param[attribute] = int(el.get(attribute))
 
-        elif attribute in optional_str_options:
+        elif attribute in optional_str_options or attribute == 'title':
             param[attribute] = str(el.get(attribute))
 
         elif attribute in optional_eval_options:

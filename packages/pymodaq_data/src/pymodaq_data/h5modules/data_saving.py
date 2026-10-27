@@ -862,6 +862,7 @@ class DataToExportSaver:
         self._h5saver = h5saver
         self._data_saver = DataSaverLoader(self._h5saver)
         self._bkg_saver = BkgSaver(self._h5saver)
+        self._swmr_activated = False
 
     @property
     def h5saver(self) -> H5SaverLowLevel:
@@ -946,6 +947,27 @@ class DataToExportSaver:
                 # dwa_group = self._get_node_from_title(dim_group, dwa.name)
                 if dwa_group is not None:
                     self._bkg_saver.add_data(dwa_group, dwa, save_axes=False)
+
+    def _activate_swmr_and_tick_flush(self):
+        """Turn on SWMR writer mode on the first call once the file structure exists,
+        then perform a periodic flush, so concurrently-opened readers (another
+        process's H5Browser, for instance) see data as it's written instead of only
+        once the file is closed.
+
+        Subclasses used for continuous/ongoing saving (DataToExportEnlargeableSaver,
+        DataToExportExtendedSaver, and their subclasses) must call this at the end of
+        their own add_data, after all data/structure for that write has been created:
+        h5py requires the relevant datasets to already exist before SWMR can be
+        enabled. Not called by the base add_data: a one-shot save that closes its file
+        right after writing has no concurrent reader to serve.
+        """
+        if (self._h5saver._swmr_mode and not self._swmr_activated
+                and self._h5saver.is_swmr_capable):
+            self._h5saver.flush()
+            self._h5saver.enable_swmr()
+            self._swmr_activated = True
+
+        self._h5saver.tick_flush()
 
     def add_error(self, where: Union[Node, str], data: DataToExport):
         dims = data.get_dim_presents()
@@ -1047,6 +1069,8 @@ class DataToExportEnlargeableSaver(DataToExportSaver):
             if not self._h5saver.is_swmr_active:
                 axis_array.attrs['size'] += 1
 
+        self._activate_swmr_and_tick_flush()
+
 
 class DataToExportTimedSaver(DataToExportEnlargeableSaver):
     """Specialized DataToExportEnlargeableSaver to save data as a function of a time axis
@@ -1087,7 +1111,6 @@ class DataToExportExtendedSaver(DataToExportSaver):
         super().__init__(h5saver)
         self._data_saver = DataExtendedSaver(h5saver, extended_shape, fill_value=fill_value)
         self._nav_axis_saver = AxisSaverLoader(h5saver)
-        self._swmr_activated = False
 
     def add_nav_axes(self, where: Union[Node, str], axes: List[Axis]):
         """Used to add navigation axes related to the extended array
@@ -1137,14 +1160,7 @@ class DataToExportExtendedSaver(DataToExportSaver):
                 self._data_saver.add_data(dwa_group, dwa, indexes=indexes,
                                           distribution=distribution)
 
-        # Enable SWMR after first data point created all structure
-        if (self._h5saver._swmr_mode and not self._swmr_activated
-                and self._h5saver.is_swmr_capable):
-            self._h5saver.flush()
-            self._h5saver.enable_swmr()
-            self._swmr_activated = True
-
-        self._h5saver.tick_flush()
+        self._activate_swmr_and_tick_flush()
 
 
 class DataLoader:

@@ -179,6 +179,28 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
         n_steps = self.evaluate_steps()
         return n_steps <= steps_limit
 
+    @staticmethod
+    def n_points_linspace_step(start: float, stop: float, step: float) -> int:
+        """ Number of points of ``mutils.linspace_step(start, stop, step)``
+
+        The array is really built (so the result is exactly the one of the scan calculation) unless the
+        raw ratio already exceeds the steps limit: building it would then be useless (the scan is refused)
+        and potentially huge. In that case the raw ratio is returned.
+        Invalid parameters (null step, wrong sign, start == stop) give a single point, as in the scans.
+        """
+        try:
+            ratio = np.abs((stop - start) / step)
+        except ZeroDivisionError:
+            return 1
+        if not np.isfinite(ratio):
+            return 1
+        if ratio > config('pymodaq', 'scan', 'steps_limit'):
+            return int(ratio) + 1
+        try:
+            return len(mutils.linspace_step(start, stop, step))
+        except ValueError:
+            return 1
+
     def __call__(self, **kwargs):
         return self(**kwargs)
 
