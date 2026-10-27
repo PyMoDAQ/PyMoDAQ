@@ -1685,6 +1685,22 @@ class TestDataToExport:
         assert (N - data1)[0] == N - dat1
         assert (N / data1)[0] == N / dat1
 
+    def test_mean_with_errors(self):
+        rng = np.random.default_rng(11)
+        buffer1 = rng.normal(size=(8, 5))
+        buffer2 = rng.normal(size=(8, 3, 2))
+        dwa1 = data_mod.DataRaw('buffer1', data=[buffer1], nav_indexes=(0,))
+        dwa2 = data_mod.DataRaw('buffer2', data=[buffer2], nav_indexes=(0,))
+        dte = data_mod.DataToExport('toexport', data=[dwa1, dwa2])
+
+        averaged = dte.mean_with_errors()
+
+        assert [dwa.name for dwa in averaged] == ['buffer1', 'buffer2']
+        for dwa, buffer in zip(averaged, (buffer1, buffer2)):
+            assert dwa.n_averaged == 8
+            assert dwa.data[0] == approx(buffer.mean(axis=0))
+            assert dwa.errors[0] == approx(buffer.std(axis=0, ddof=1) / np.sqrt(8))
+
     def test_average(self):
         dat1 = init_data(data=DATA2D, Ndata=2, name='data2D1')
         dat2 = init_data(data=0.2 * DATA2D, Ndata=2, name='data2D2')

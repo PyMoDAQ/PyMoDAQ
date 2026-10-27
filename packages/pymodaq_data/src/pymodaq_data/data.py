@@ -3745,6 +3745,19 @@ class DataToExport(DataLowLevel, SerializableBase):
 
         return self._combine(other, average)
 
+    def mean_with_errors(self, axis: int = 0) -> DataToExport:
+        """ Apply :meth:`DataWithAxes.mean_with_errors` to each DataWithAxes: the mean on ``axis`` of a buffer of
+        acquisitions given at once, with the standard error of the mean as ``errors``
+
+        The acquisitions have to be stacked on the same ``axis`` in all the DataWithAxes.
+
+        Parameters
+        ----------
+        axis: int
+            The axis of the acquisitions
+        """
+        return DataToExport(self.name, data=[dwa.mean_with_errors(axis) for dwa in self.data])
+
     def merge_as_dwa(self, dim: Union[str, DataDim], name: Optional[str] = None) -> Optional[DataWithAxes]:
         """ attempt to merge filtered dwa into one
 
