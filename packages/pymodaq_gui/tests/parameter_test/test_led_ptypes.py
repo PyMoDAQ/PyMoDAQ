@@ -156,6 +156,55 @@ class TestActionLedParameter:
         with qtbot.waitSignal(p.sigActivated, timeout=500):
             widget.button.click()
 
+    def test_checkable_button_tells_if_it_is_pressed_or_released(self, tree):
+        p = Parameter.create(name='act', type='action_led', value='false', checkable=True)
+        tree.setParameters(p, showTop=False)
+        widget = tree.listAllItems()[0].widget
+        checked = []
+        p.sigActivated.connect(lambda param: checked.append(param.opts['checked']))
+        widget.button.click()
+        widget.button.click()
+        assert checked == [True, False]
+
+    def test_checkable_button_follows_the_checked_option(self, tree):
+        p = Parameter.create(name='act', type='action_led', value='false', checkable=True)
+        tree.setParameters(p, showTop=False)
+        widget = tree.listAllItems()[0].widget
+        activated = []
+        p.sigActivated.connect(activated.append)
+        widget.button.click()
+        p.setOpts(checked=False)  # for instance the action failed in the plugin
+        assert not widget.button.isChecked()
+        assert len(activated) == 1  # releasing it from the plugin does not activate the parameter again
+
+    def test_button_is_not_checkable_by_default(self, tree):
+        p = Parameter.create(name='act', type='action_led', value='false')
+        tree.setParameters(p, showTop=False)
+        assert not tree.listAllItems()[0].widget.button.isCheckable()
+
+    def test_states_of_the_status_workflow(self, tree):
+        from pymodaq_gui.utils.status_palette import Status, StatusPalette
+        p = Parameter.create(name='act', type='action_led', value=Status.OFF, states='status')
+        tree.setParameters(p, showTop=False)
+        led = tree.listAllItems()[0].widget.led
+        assert led.state_names() == list(Status)
+        p.setValue(Status.RUNNING)
+        assert led.get_state() == Status.RUNNING
+        assert led._states[led._index][1] == StatusPalette.color(Status.RUNNING)
+
+    def test_subset_of_the_status_workflow_by_names(self, tree):
+        from pymodaq_gui.utils.status_palette import Status
+        p = Parameter.create(name='act', type='action_led', value=Status.OFF,
+                             states=[Status.OFF, Status.RUNNING, Status.IDLE, Status.ERROR])
+        tree.setParameters(p, showTop=False)
+        led = tree.listAllItems()[0].widget.led
+        assert led.state_names() == [Status.OFF, Status.RUNNING, Status.IDLE, Status.ERROR]
+
+    def test_unknown_states_option(self, tree):
+        p = Parameter.create(name='act', type='action_led', value='off', states='nope')
+        with pytest.raises(ValueError):
+            tree.setParameters(p, showTop=False)
+
     def test_custom_states(self, tree):
         states = [('idle', '#888888'), ('running', '#00b400'), ('error', '#c80000')]
         p = Parameter.create(name='act', type='action_led', value='idle', states=states)

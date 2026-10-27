@@ -155,14 +155,20 @@ class PluginBase(QObject):
             path = settings_parameter_dict['path']
             param = settings_parameter_dict['param']
             change = settings_parameter_dict['change']
+            if change == 'activated':  # the button of an 'action' parameter has been clicked in the GUI
+                activated = self.settings.child(*path[1:])
+                if 'checked' in param.opts:  # a checkable button: tell the plugin if it is pressed or released
+                    activated.opts['checked'] = param.opts['checked']
+                # the slots connected to sigActivated change the state of the parameter (LED): the GUI must know
+                activated.activate()
+                self.commit_settings(param)
+                return
             try:
                 self.settings.sigTreeStateChanged.disconnect(self.send_param_status)
             except Exception:
                 pass
             if change == 'value':
                 self.settings.child(*path[1:]).setValue(param.value())
-            elif change == 'activated':  # the button of an 'action' parameter has been clicked in the GUI
-                self.settings.child(*path[1:]).activate()
             elif change == 'childAdded':
                 child = Parameter.create(name='tmp')
                 child.restoreState(param.saveState())

@@ -119,6 +119,37 @@ class TestWithoutUI:
 
         assert len(activated) == 1
 
+    def test_plugin_changes_made_while_activated_are_sent_to_the_gui(self):
+        class Plugin(DAQ_Viewer_base):
+            def ini_detector(self, controller=None):
+                return '', True
+
+            def close(self):
+                pass
+
+        plugin = Plugin()
+        plugin.settings.addChild({'title': 'Go', 'name': 'go', 'type': 'action_led', 'value': 'false',
+                                  'checkable': True})
+        go = plugin.settings.child('go')
+        pressed = []
+
+        def on_activated(param):
+            pressed.append(param.opts['checked'])
+            param.setValue('true')
+            param.setOpts(checked=False)  # the action failed: release the button
+
+        go.sigActivated.connect(on_activated)
+        sent = []
+        plugin.emit_status = lambda status: sent.append(status.attribute[1:])
+        gui_param = Parameter.create(name='go', type='action_led', value='false', checkable=True)
+        gui_param.setOpts(checked=True)
+
+        plugin.update_settings(edict(path=[DETECTOR_SETTINGS_KEY, 'go'], param=gui_param, change='activated'))
+
+        assert pressed == [True]
+        assert ['true', 'value'] in sent
+        assert [{'checked': False}, 'options'] in sent
+
     def test_main_settings_recall_detector(self, ini_daq_viewer_without_ui):
         prog, qtbot = ini_daq_viewer_without_ui
         prog.detector = SelectedModule(DAQTypesEnum['DAQ1D'], 'Mock')
