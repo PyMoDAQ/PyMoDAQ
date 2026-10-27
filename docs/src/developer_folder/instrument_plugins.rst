@@ -809,8 +809,9 @@ In live mode the DAQ_Viewer calls ``grab_data`` **once**: the plugin keeps emitt
     * ``live_mode_available`` tells **who repeats the acquisition**: the plugin (``True``) or the DAQ_Viewer (``False``).
     * ``hardware_averaging`` tells **who averages**: if ``True``, each data emitted by the plugin is already the average
       of the ``Naverage`` acquisitions asked in ``grab_data``; if ``False``, the DAQ_Viewer averages the data it
-      receives, also when the plugin streams. A plugin that streams and cannot average (a camera for instance) leaves
-      ``hardware_averaging`` to ``False`` and does not average the frames itself, otherwise they are averaged twice.
+      receives, also when the plugin streams. A plugin that averages the acquisitions itself (a camera that averages
+      its frames, for instance) must set ``hardware_averaging`` to ``True``, otherwise the DAQ_Viewer averages the
+      already averaged data a second time.
 
 
 
