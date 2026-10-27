@@ -558,8 +558,8 @@ The ``param`` method argument is of the type ``Parameter`` (from ``pyqtgraph``):
                 self.emit_status(ThreadCommand('close_splash'))
 
 Buttons (``action`` and ``action_led`` parameters)
-++++++++++++++++++++++++++++++++++++++++++++++++++
 **************************************************
+
 A click on the button of an ``action`` or ``action_led`` parameter is sent to the plugin, in its thread, like a change
 of value: the ``sigActivated`` signal of the parameter *of the plugin* is emitted, and
 ``commit_settings`` is called with the parameter. A plugin can then connect a method to the signal and show the result
