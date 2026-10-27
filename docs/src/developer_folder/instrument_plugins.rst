@@ -771,6 +771,10 @@ controller provides an efficient method to do it (that will save time) then you 
 
         dwa = DataFromPlugins(name='spectrum', data=[mean_spectrum], errors=[standard_error_spectrum])
 
+    When the plugin averages acquisitions itself, one after the other, :meth:`pymodaq_data.data.DataWithAxes.accumulate`
+    (and :meth:`pymodaq_data.data.DataToExport.accumulate`) computes the running mean and sets its standard error as
+    ``errors``: ``mean = new_acquisition.accumulate(mean, n_previous)``.
+
 
 .. _live_mode:
 
@@ -829,7 +833,11 @@ In live mode the DAQ_Viewer calls ``grab_data`` **once**: the plugin keeps emitt
       of the ``Naverage`` acquisitions asked in ``grab_data``; if ``False``, the DAQ_Viewer averages the data it
       receives, also when the plugin streams. A plugin that averages the acquisitions itself (a camera that averages
       its frames, for instance) must set ``hardware_averaging`` to ``True``, otherwise the DAQ_Viewer averages the
-      already averaged data a second time.
+      already averaged data a second time. The plugin should then add the standard error of the mean to the
+      ``errors`` of the data before emitting it (see :ref:`hardware_averaging`). When it averages successive
+      acquisitions itself, :meth:`pymodaq_data.data.DataWithAxes.accumulate` (or
+      :meth:`pymodaq_data.data.DataToExport.accumulate`) does it step by step: it gives the running mean and sets its
+      standard error as ``errors``, while :meth:`~pymodaq_data.data.DataWithAxes.average` only gives the mean.
 
 
 
