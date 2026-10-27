@@ -3127,7 +3127,7 @@ class DataWithAxes(DataBase, SerializableBase):
                     return False
             return True
         try:
-            if errors is not None and check_errors(data, errors):
+            if errors is not None and not check_errors(data, errors):
                 errors = None
             old_data = self.data
             self._data = None  # type: ignore[assignment]  # restored at the end, avoids copying the old data

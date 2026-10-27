@@ -489,6 +489,16 @@ class TestDataBase:
         assert data_p.abs() == data_p
         assert data_m.abs() == data_p
 
+    def test_deepcopy_with_new_data_keeps_errors_of_the_right_shape(self):
+        dwa = init_data(data=DATA1D, Ndata=1)
+        new_data = [2 * DATA1D]
+
+        copy = dwa.deepcopy_with_new_data(new_data, errors=[np.ones_like(DATA1D)])
+        assert copy.errors[0] == approx(np.ones_like(DATA1D))
+
+        copy = dwa.deepcopy_with_new_data(new_data, errors=[np.ones(DATA1D.size + 1)])
+        assert copy.errors is None
+
     def test_accumulate(self):
         n_acquisitions = 12
         rng = np.random.default_rng(5)
