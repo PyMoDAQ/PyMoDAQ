@@ -1044,6 +1044,12 @@ class ParameterControlModule(ParameterManager, LECOComponentMixin, ControlModule
         self.settings.child(self._hw_settings_name, 'controller', 'controller_ID').setValue(id_value)
         self.controller_and_thread.id = id_value
 
+    def param_activated(self, param):
+        """Propagate the activation of an action parameter (a button) to the hardware thread."""
+        path = self.settings.childPath(param)
+        if path is not None and 'main_settings' not in path and 'saver_settings' not in path:
+            self._update_settings_signal.emit(edict(path=path, param=param, change='activated'))
+
     def param_deleted(self, param):
         """Propagate parameter deletion to the hardware thread."""
         if param.name() not in putils.iter_children(self.settings.child('main_settings'), []):

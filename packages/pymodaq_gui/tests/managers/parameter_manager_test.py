@@ -46,6 +46,34 @@ class RealParameterManager(ParameterManager):
 
 
 
+class ActivationParameterManager(ParameterManager):
+    params = [{'title': 'Go', 'name': 'go', 'type': 'action'},
+              {'title': 'Go with LED', 'name': 'go_led', 'type': 'action_led', 'value': 'false'},
+              {'title': 'A value', 'name': 'value', 'type': 'int', 'value': 1}]
+
+    def __init__(self):
+        super().__init__()
+        self.activated = []
+        self.changed = []
+
+    def param_activated(self, param):
+        self.activated.append(param.name())
+
+    def value_changed(self, param):
+        self.changed.append(param.name())
+
+
+def test_activation_of_an_action_is_given_to_param_activated(qtbot):
+    param_manager = ActivationParameterManager()
+
+    param_manager.settings.child('go').activate()
+    param_manager.settings.child('go_led').activate()
+    param_manager.settings.child('value').setValue(2)
+
+    assert param_manager.activated == ['go', 'go_led']
+    assert param_manager.changed == ['value']  # an activation is not a change of value
+
+
 def test_parameter_manager_trace(qtbot):
     param_manager = RealParameterManager()
     tree = param_manager.settings_tree

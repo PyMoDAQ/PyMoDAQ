@@ -17,6 +17,9 @@ from pymodaq.control_modules import daq_viewer as daqvm
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 from pymodaq.control_modules.viewer_utility_classes import HW_SETTINGS_KEY as DETECTOR_SETTINGS_KEY
 from pymodaq.control_modules.utils import ControlModule
+from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base
+from easydict import EasyDict as edict
+from pymodaq_gui.parameter import Parameter
 from pymodaq.control_modules.instruments import DET_TYPES, get_viewer_plugins
 from pymodaq.control_modules.enums import DAQTypesEnum
 from pymodaq.utils.conftests import qtbotskip, main_modules_skip
@@ -85,6 +88,67 @@ class TestWithoutUI:
         det_params, _class = get_viewer_plugins(prog.detector.daq_type.name, prog.detector.module_name)
         assert putils.iter_children(prog.settings.child(DETECTOR_SETTINGS_KEY), []) == \
             putils.iter_children(det_params, [])
+
+    def test_activation_of_an_action_reaches_the_plugin(self, ini_daq_viewer_without_ui):
+        prog, qtbot = ini_daq_viewer_without_ui
+        prog.detector = SelectedModule(DAQTypesEnum['DAQ1D'], 'Mock')
+        hw_settings = prog.settings.child(DETECTOR_SETTINGS_KEY)
+        hw_settings.addChild({'title': 'Go', 'name': 'go', 'type': 'action_led', 'value': 'false'})
+        sent = []
+        prog._update_settings_signal.connect(sent.append)
+
+        hw_settings.child('go').activate()
+
+        assert [(item['path'], item['change']) for item in sent] == [([DETECTOR_SETTINGS_KEY, 'go'], 'activated')]
+
+    def test_activation_received_by_the_plugin_emits_sigactivated(self):
+        class Plugin(DAQ_Viewer_base):
+            def ini_detector(self, controller=None):
+                return '', True
+
+            def close(self):
+                pass
+
+        plugin = Plugin()
+        plugin.settings.addChild({'title': 'Go', 'name': 'go', 'type': 'action_led', 'value': 'false'})
+        activated = []
+        plugin.settings.child('go').sigActivated.connect(activated.append)
+        gui_param = Parameter.create(name='go', type='action_led', value='false')
+
+        plugin.update_settings(edict(path=[DETECTOR_SETTINGS_KEY, 'go'], param=gui_param, change='activated'))
+
+        assert len(activated) == 1
+
+    def test_plugin_changes_made_while_activated_are_sent_to_the_gui(self):
+        class Plugin(DAQ_Viewer_base):
+            def ini_detector(self, controller=None):
+                return '', True
+
+            def close(self):
+                pass
+
+        plugin = Plugin()
+        plugin.settings.addChild({'title': 'Go', 'name': 'go', 'type': 'action_led', 'value': 'false',
+                                  'checkable': True})
+        go = plugin.settings.child('go')
+        pressed = []
+
+        def on_activated(param):
+            pressed.append(param.opts['checked'])
+            param.setValue('true')
+            param.setOpts(checked=False)  # the action failed: release the button
+
+        go.sigActivated.connect(on_activated)
+        sent = []
+        plugin.emit_status = lambda status: sent.append(status.attribute[1:])
+        gui_param = Parameter.create(name='go', type='action_led', value='false', checkable=True)
+        gui_param.setOpts(checked=True)
+
+        plugin.update_settings(edict(path=[DETECTOR_SETTINGS_KEY, 'go'], param=gui_param, change='activated'))
+
+        assert pressed == [True]
+        assert ['true', 'value'] in sent
+        assert [{'checked': False}, 'options'] in sent
 
     def test_main_settings_recall_detector(self, ini_daq_viewer_without_ui):
         prog, qtbot = ini_daq_viewer_without_ui

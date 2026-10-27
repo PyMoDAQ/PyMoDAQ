@@ -557,6 +557,44 @@ The ``param`` method argument is of the type ``Parameter`` (from ``pyqtgraph``):
                 err = self.controller.SetWavelengthSR(0, self.settings.child('spectro_settings','spectro_wl').value())
                 self.emit_status(ThreadCommand('close_splash'))
 
+Buttons (``action`` and ``action_led`` parameters)
+**************************************************
+
+A click on the button of an ``action`` or ``action_led`` parameter is sent to the plugin, in its thread, like a change
+of value: the ``sigActivated`` signal of the parameter *of the plugin* is emitted, and
+``commit_settings`` is called with the parameter. A plugin can then connect a method to the signal and show the result
+on the LED of an ``action_led`` parameter, with the states of the ``Status`` workflow (see ``StatusPalette`` in
+``pymodaq_gui.utils.status_palette``): grey (``OFF``) not activated, blue (``RUNNING``) in progress, green (``IDLE``)
+done, orange (``ERROR``) failed. What the plugin sets on the parameter during the activation is sent back to the
+UI like any other change.
+
+.. code-block:: python
+
+    from pymodaq_gui.utils.status_palette import Status
+
+    params = [
+        {'title': 'Calibrate', 'name': 'calibrate', 'type': 'action_led', 'value': Status.OFF, 'label': 'Go',
+         'limits': [Status.OFF, Status.RUNNING, Status.IDLE, Status.ERROR], 'checkable': True},
+    ]
+
+    def ini_attributes(self):
+        self.settings.child('calibrate').sigActivated.connect(self.calibrate)
+
+    def calibrate(self, param):
+        if not param.opts['checked']:  # the button has been released
+            param.setValue(Status.OFF)
+            return
+        param.setValue(Status.RUNNING)
+        try:
+            self.controller.calibrate()
+        except Exception:
+            param.setValue(Status.ERROR)
+            param.setOpts(checked=False)  # release the button
+        else:
+            param.setValue(Status.IDLE)
+
+``checkable`` is optional: without it the button is a simple push button and ``param.opts['checked']`` does not exist.
+
 
 
 .. _data_emission:
