@@ -392,7 +392,9 @@ class View0D(ActionManager, QObject):
             self.other_data_displayers[displayer].update_data(data)
         if self.is_action_checked('show_data_as_list'):
             self.values_list.clear()
-            self.values_list.addItems(['{:.03e}'.format(dat[0]) for dat in data])
+            unit_suffix = f' {data.units}' if data.units else ''
+            self.values_list.addItems([f'{label}: {dat[0]:.03e}{unit_suffix}'
+                                       for label, dat in zip(data.labels, data)])
             QtWidgets.QApplication.processEvents()
 
     def show_data_list(self, state=None):
