@@ -268,10 +268,11 @@ Choice
    The Choice element editor using the threshold model.
 
 The Choice element is what makes a sequence more than a list of actions: it evaluates a condition and jumps to one
-element if the result is *True* and to another one if it is *False*. The two target elements are selected by their id
-in the green (*True*) and red (*False*) combo boxes of the editor (:numref:`sequencer_elt_choice_fig`). Any element of
-the sequence can be a target, before or after the Choice element: you can build loops (jump backward), branches
-(jump forward) or early exits.
+element if the result is *True* and to another one if it is *False*. The editor (:numref:`sequencer_elt_choice_fig`)
+shows this as two rows, **True: go to <target> if <condition>** and **False: go to <target>** (the *False* row has
+no condition to pick - it's used whenever *True*'s condition doesn't match). Any element of the sequence can be a
+target, before or after the Choice element: you can build loops (jump backward), branches (jump forward) or early
+exits.
 
 The condition is given by a **choice model**, selected in the editor. The models shipped with PyMoDAQ are:
 
@@ -336,11 +337,18 @@ The Switch element generalizes Choice to more than two outcomes: instead of a si
 an ordered list of **rules**, each pairing a condition with a target element id. Rules are evaluated top to bottom
 and the first one whose condition is True wins - its target is where the sequence jumps to. A mandatory **fallback**
 rule is always last, has no condition to configure (it always matches), and guarantees the Switch always jumps
-somewhere even if none of the other rules matched.
+somewhere even if none of the other rules matched. Each rule is shown as a single-line header, **Rule N: go to
+<target> if <condition>** (just **Fallback: go to <target>** for the fallback), with any settings the chosen
+condition exposes (e.g. the Threshold model's detector list) below it.
 
-Use the **Add Rule** button to add a rule above the fallback, and the remove button on a rule's row to delete it.
+Use the **Add Rule** button to add a rule above the fallback, and the remove icon on a rule's row to delete it.
 Each rule's condition uses the same models as the Choice element (``true``, ``false``, ``user_input``,
 ``threshold``...), configured exactly the same way.
+
+A separate **manual override**, shown highlighted at the bottom of the editor as its own
+**Manual override: go to <target>** row, can force execution straight to its target, bypassing every rule's
+condition - handy while building or testing a sequence. It is not itself a rule and is not evaluated top to bottom
+with the others: when its checkbox is ticked, it always wins.
 
 As an example, three outcomes based on a signal level can be built with two rules plus the fallback: a ``threshold``
 rule set to *Below 0.5*, a second ``threshold`` rule set to *Above 1*, and the fallback covering everything in
