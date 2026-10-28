@@ -1,4 +1,4 @@
-from typing import Any, Optional, TYPE_CHECKING
+from typing import Any, Callable, Optional, TYPE_CHECKING
 import weakref
 
 from qtpy import QtCore, QtWidgets
@@ -6,7 +6,6 @@ from qtpy import QtCore, QtWidgets
 from pymodaq_gui.managers.parameter_manager import ParameterTreeWidget
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.utils.widgets.combo import ComboBox
-from pymodaq_gui.utils.widgets import LabelWithFont
 
 from pymodaq.extensions.sequencer.utilities.holders.modules_manager_binding import ModulesManagerBinding
 from pymodaq.extensions.sequencer.utilities.widget_with_toolbar import WidgetWithToolbar
@@ -73,10 +72,14 @@ class ConditionHolderBase:
                    for child in settings.children())
 
     def create_widget(self, base_widget: WidgetWithToolbar,
-                      label: Optional[str] = None) -> WidgetWithToolbar:
-        """ `label`, if given, is shown as a small caption in front of the model combo (e.g.
-        a SwitchElt Rule row labelling its own condition picker among several in the same
-        editor) - with no label, the combo is inserted bare, as ChoiceElt/WhileLoopElt do. """
+                      place_combo: Optional[Callable[[QtWidgets.QWidget], None]] = None
+                      ) -> WidgetWithToolbar:
+        """ `place_combo`, if given, is called with the model-picker combo instead of
+        appending it to base_widget's own vertical layout - e.g. a SwitchElt Rule row inlines
+        it into its single-line header, alongside the target combo. With no `place_combo`,
+        the combo is appended bare, as ChoiceElt/WhileLoopElt do. Either way, the settings
+        parameter tree always lands in base_widget's vertical layout, full width, below
+        whatever else is already there. """
         combo = ComboBox()
         with QtCore.QSignalBlocker(combo):
             combo.addItems(self.factory.models)
@@ -84,14 +87,8 @@ class ConditionHolderBase:
             combo.currentTextChanged.connect(self.set_model)
             if self.combo_tooltip:
                 combo.setToolTip(self.combo_tooltip)
-        if label is not None:
-            combo_row = QtWidgets.QWidget()
-            combo_row_layout = QtWidgets.QHBoxLayout()
-            combo_row_layout.setContentsMargins(0, 0, 0, 0)
-            combo_row.setLayout(combo_row_layout)
-            combo_row_layout.addWidget(LabelWithFont(label))
-            combo_row_layout.addWidget(combo)
-            base_widget.layout().addWidget(combo_row)
+        if place_combo is not None:
+            place_combo(combo)
         else:
             base_widget.layout().addWidget(combo)
 

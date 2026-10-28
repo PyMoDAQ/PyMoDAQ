@@ -228,42 +228,33 @@ class SwitchElt(SeqEltBase):
             combo.setToolTip(tooltip)
         return combo
 
-    @staticmethod
-    def _labeled_row(label_text: str, widget: QtWidgets.QWidget) -> QtWidgets.QWidget:
-        row = QtWidgets.QWidget()
-        layout = QtWidgets.QHBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        row.setLayout(layout)
-        layout.addWidget(LabelWithFont(label_text))
-        layout.addWidget(widget)
-        return row
+    def _rule_title(self, rule: Rule, display_index: Union[int, None] = None) -> str:
+        """ Hook for the row's leading label - ChoiceElt overrides this to show its rules'
+        own 'True'/'False' labels instead of SwitchElt's generic numbering. """
+        return f'Rule {display_index}' if display_index is not None else 'Fallback'
 
     def _build_rule_row(self, rule: Rule, display_index: Union[int, None] = None) -> WidgetWithToolbar:
-        """ One self-contained row per rule - its own small container, so
-        ConditionHolderBase.create_widget's append-only insertion doesn't collide across
-        rules. `display_index` (1-based, None for the fallback) numbers the Target/Condition
-        labels so several rules stay distinguishable in the same editor. """
+        """ One self-contained row per rule, its header condensed onto a single line:
+        "Rule N: go to <target> if <condition>" (just "Fallback: go to <target>" for the
+        mandatory fallback, which has no condition to pick). Any settings the chosen
+        condition model exposes (e.g. Threshold's detector list) render full-width below the
+        header, via ConditionHolderBase.create_widget. """
         row = WidgetWithToolbar()
-        if rule.is_fallback:
-            row.add_widget_top(LabelWithFont('Fallback', isitalic=True))
         if not rule.is_fallback and not self.rules_locked:
             row.add_action('remove_rule', 'Remove Rule', 'remove', tip='Remove this rule',
                            toolbar=row.toolbar)
             row.connect_action('remove_rule', lambda: self.remove_rule(rule.id))
 
-        separator = QtWidgets.QFrame()
-        separator.setFrameShape(QtWidgets.QFrame.Shape.HLine)
-        separator.setFrameShadow(QtWidgets.QFrame.Shadow.Sunken)
-        row.layout().addWidget(separator)
-
-        target_label = f'Target {display_index}:' if display_index is not None else 'Target:'
-        row.layout().addWidget(self._labeled_row(target_label, self._create_target_combo(
+        row.add_widget_top(LabelWithFont(f'{self._rule_title(rule, display_index)}:', isbold=True))
+        row.add_widget_top(LabelWithFont('go to'))
+        row.add_widget_top(self._create_target_combo(
             rule.target,
             f'Go to this elt if {rule.label} matches' if not rule.is_fallback else
-            'Go to this elt if no other rule matched')))
+            'Go to this elt if no other rule matched'))
 
         if not rule.is_fallback:
-            rule.condition.create_widget(row, label=f'Condition {display_index}:')
+            row.add_widget_top(LabelWithFont('if'))
+            rule.condition.create_widget(row, place_combo=row.add_widget_top)
         return row
 
     def _build_rule_rows(self) -> list[WidgetWithToolbar]:
@@ -327,4 +318,4 @@ class SwitchElt(SeqEltBase):
     def size_hint(self) -> QtCore.QSize:
         total_rows = sum(ConditionHolderBase.count_settings_rows(rule.condition.model.settings)
                          for rule in self._rules if not rule.is_fallback)
-        return QtCore.QSize(220, 150 + total_rows * 25 + 90 * len(self._rules))
+        return QtCore.QSize(220, 150 + total_rows * 25 + 60 * len(self._rules))

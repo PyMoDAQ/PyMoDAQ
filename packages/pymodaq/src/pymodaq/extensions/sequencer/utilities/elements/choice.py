@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Union
 
 from serializall import SerializableFactory
 
@@ -7,6 +7,7 @@ from pymodaq_utils.warnings import deprecation_msg
 from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltFactory, SeqEltCategory
 from pymodaq.extensions.sequencer.utilities.elements.button import AddButtonPlaceholder
 from pymodaq.extensions.sequencer.utilities.elements.switch import SwitchElt
+from pymodaq.extensions.sequencer.utilities.holders.rule import Rule
 
 
 ser_factory = SerializableFactory()
@@ -36,6 +37,9 @@ class ChoiceElt(SwitchElt):
         self._condition_rule = self._insert_rule()
         self._condition_rule.label = 'True'
         self._fallback.label = 'False'
+
+    def _rule_title(self, rule: Rule, display_index: Union[int, None] = None) -> str:
+        return rule.label  # 'True' / 'False'
 
     @property
     def condition(self):
