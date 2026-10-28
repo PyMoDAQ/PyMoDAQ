@@ -1,11 +1,12 @@
 from typing import Any, Optional, TYPE_CHECKING
 import weakref
 
-from qtpy import QtCore
+from qtpy import QtCore, QtWidgets
 
 from pymodaq_gui.managers.parameter_manager import ParameterTreeWidget
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.utils.widgets.combo import ComboBox
+from pymodaq_gui.utils.widgets import LabelWithFont
 
 from pymodaq.extensions.sequencer.utilities.holders.modules_manager_binding import ModulesManagerBinding
 from pymodaq.extensions.sequencer.utilities.widget_with_toolbar import WidgetWithToolbar
@@ -71,7 +72,11 @@ class ConditionHolderBase:
         return sum(1 + ConditionHolderBase.count_settings_rows(child)
                    for child in settings.children())
 
-    def create_widget(self, base_widget: WidgetWithToolbar) -> WidgetWithToolbar:
+    def create_widget(self, base_widget: WidgetWithToolbar,
+                      label: Optional[str] = None) -> WidgetWithToolbar:
+        """ `label`, if given, is shown as a small caption in front of the model combo (e.g.
+        a SwitchElt Rule row labelling its own condition picker among several in the same
+        editor) - with no label, the combo is inserted bare, as ChoiceElt/WhileLoopElt do. """
         combo = ComboBox()
         with QtCore.QSignalBlocker(combo):
             combo.addItems(self.factory.models)
@@ -79,14 +84,23 @@ class ConditionHolderBase:
             combo.currentTextChanged.connect(self.set_model)
             if self.combo_tooltip:
                 combo.setToolTip(self.combo_tooltip)
-        base_widget.insert_widget(combo, 1)
+        if label is not None:
+            combo_row = QtWidgets.QWidget()
+            combo_row_layout = QtWidgets.QHBoxLayout()
+            combo_row_layout.setContentsMargins(0, 0, 0, 0)
+            combo_row.setLayout(combo_row_layout)
+            combo_row_layout.addWidget(LabelWithFont(label))
+            combo_row_layout.addWidget(combo)
+            base_widget.layout().addWidget(combo_row)
+        else:
+            base_widget.layout().addWidget(combo)
 
         parameter_tree = ParameterTreeWidget()
         parameter_tree.tree.setParameters(self.model.settings, showTop=False)
         self._param_tree_widget = weakref.ref(parameter_tree)
         parameter_tree.tree.setMinimumHeight(self.count_settings_rows(self.model.settings) * 25)
         combo.currentTextChanged.connect(lambda: self._update_params(parameter_tree))
-        base_widget.insert_widget(parameter_tree.widget, 2)
+        base_widget.layout().addWidget(parameter_tree.widget)
         base_widget.tree = parameter_tree
         parameter_tree.widget.setVisible(len(self.model.params) != 0)
         return base_widget

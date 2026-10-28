@@ -228,23 +228,56 @@ class SwitchElt(SeqEltBase):
             combo.setToolTip(tooltip)
         return combo
 
-    def _build_rule_row(self, rule: Rule) -> WidgetWithToolbar:
+    @staticmethod
+    def _labeled_row(label_text: str, widget: QtWidgets.QWidget) -> QtWidgets.QWidget:
+        row = QtWidgets.QWidget()
+        layout = QtWidgets.QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        row.setLayout(layout)
+        layout.addWidget(LabelWithFont(label_text))
+        layout.addWidget(widget)
+        return row
+
+    def _build_rule_row(self, rule: Rule, display_index: Union[int, None] = None) -> WidgetWithToolbar:
         """ One self-contained row per rule - its own small container, so
-        ConditionHolder.create_widget's fixed-index insertion doesn't collide across rules. """
+        ConditionHolderBase.create_widget's append-only insertion doesn't collide across
+        rules. `display_index` (1-based, None for the fallback) numbers the Target/Condition
+        labels so several rules stay distinguishable in the same editor. """
         row = WidgetWithToolbar()
         if rule.is_fallback:
             row.add_widget_top(LabelWithFont('Fallback', isitalic=True))
-        else:
-            rule.condition.create_widget(row)
-        row.add_widget_top(self._create_target_combo(
-            rule.target,
-            f'Go to this elt if {rule.label} matches' if not rule.is_fallback else
-            'Go to this elt if no other rule matched'))
         if not rule.is_fallback and not self.rules_locked:
             row.add_action('remove_rule', 'Remove Rule', 'remove', tip='Remove this rule',
                            toolbar=row.toolbar)
             row.connect_action('remove_rule', lambda: self.remove_rule(rule.id))
+
+        separator = QtWidgets.QFrame()
+        separator.setFrameShape(QtWidgets.QFrame.Shape.HLine)
+        separator.setFrameShadow(QtWidgets.QFrame.Shadow.Sunken)
+        row.layout().addWidget(separator)
+
+        target_label = f'Target {display_index}:' if display_index is not None else 'Target:'
+        row.layout().addWidget(self._labeled_row(target_label, self._create_target_combo(
+            rule.target,
+            f'Go to this elt if {rule.label} matches' if not rule.is_fallback else
+            'Go to this elt if no other rule matched')))
+
+        if not rule.is_fallback:
+            rule.condition.create_widget(row, label=f'Condition {display_index}:')
         return row
+
+    def _build_rule_rows(self) -> list[WidgetWithToolbar]:
+        """ One row per entry of self._rules, in order, numbering the non-fallback rules 1..N
+        and leaving the fallback unnumbered. """
+        rows = []
+        rule_index = 0
+        for rule in self._rules:
+            if rule.is_fallback:
+                rows.append(self._build_rule_row(rule))
+            else:
+                rule_index += 1
+                rows.append(self._build_rule_row(rule, rule_index))
+        return rows
 
     def _refresh_live_widget(self):
         """ Keep an already-open editor's rule rows in sync with self._rules - without this,
@@ -258,8 +291,8 @@ class SwitchElt(SeqEltBase):
             item = layout.takeAt(0)
             if item.widget() is not None:
                 item.widget().deleteLater()
-        for rule in self._rules:
-            layout.addWidget(self._build_rule_row(rule))
+        for row in self._build_rule_rows():
+            layout.addWidget(row)
 
     def _on_add_rule_clicked(self):
         self.add_rule()
@@ -272,8 +305,8 @@ class SwitchElt(SeqEltBase):
         rows_layout = QtWidgets.QVBoxLayout()
         rows_layout.setContentsMargins(0, 0, 0, 0)
         rows_widget.setLayout(rows_layout)
-        for rule in self._rules:
-            rows_layout.addWidget(self._build_rule_row(rule))
+        for row in self._build_rule_rows():
+            rows_layout.addWidget(row)
         base_widget.insert_widget(rows_widget, 1)
         self._live_rows_widget = weakref.ref(rows_widget)
 
@@ -294,4 +327,4 @@ class SwitchElt(SeqEltBase):
     def size_hint(self) -> QtCore.QSize:
         total_rows = sum(ConditionHolderBase.count_settings_rows(rule.condition.model.settings)
                          for rule in self._rules if not rule.is_fallback)
-        return QtCore.QSize(220, 150 + total_rows * 25 + 60 * len(self._rules))
+        return QtCore.QSize(220, 150 + total_rows * 25 + 90 * len(self._rules))
