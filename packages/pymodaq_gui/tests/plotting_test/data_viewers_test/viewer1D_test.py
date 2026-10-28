@@ -80,6 +80,44 @@ class TestViewer1D:
         assert use_channel['all_items'] == ['CH00', 'CH01']
         assert use_channel['selected'] == ['CH00', 'CH01']
 
+    def test_do_math_toggle_hides_and_shows_roi_graphics(self, init_viewer1d):
+        """Toggling 'do_math' off must hide the ROI graphic items, not just the panel
+        (regression test for https://github.com/PyMoDAQ/PyMoDAQ/issues/1435)"""
+        prog, data = init_viewer1d
+        prog.show_data(data)
+        prog.get_action('do_math').trigger()
+        roi_manager = prog.view.roi_manager
+        roi_manager.add_roi_programmatically(
+            ROIFactory.get_descriptors_from_dimensionality(ROIDim.ROI1D)[0])
+
+        assert roi_manager.ROIs[0].roi.isVisible()
+
+        prog.get_action('do_math').trigger()  # closing the roi panel also does this
+        assert not roi_manager.ROIs[0].roi.isVisible()
+
+        prog.get_action('do_math').trigger()
+        assert roi_manager.ROIs[0].roi.isVisible()
+
+    def test_show_data_emits_with_roi_present_but_do_math_off(self, init_viewer1d, qtbot):
+        """Once a ROI exists, turning 'do_math' off (as closing the roi panel does) must fall
+        back to a direct data_to_export_signal emission. Before the fix, show_data() kept
+        routing through the (now inactive) roi filter whenever any ROI existed, so the signal
+        silently stopped firing -- which is what makes a DAQ_Viewer's probe_detectors() time
+        out (https://github.com/PyMoDAQ/PyMoDAQ/issues/1435)."""
+        prog, data = init_viewer1d
+        prog.show_data(data)
+        prog.get_action('do_math').trigger()
+        prog.view.roi_manager.add_roi_programmatically(
+            ROIFactory.get_descriptors_from_dimensionality(ROIDim.ROI1D)[0])
+        qtbot.wait(0)
+
+        prog.get_action('do_math').trigger()  # closing the roi panel also does this
+        assert not prog.is_action_checked('do_math')
+        assert len(prog.view.roi_manager.ROIs) == 1  # the ROI itself is still there
+
+        with qtbot.waitSignal(prog.data_to_export_signal, timeout=1000):
+            prog.show_data(data)
+
     def test_scatter(self, init_viewer1d):
         prog, data = init_viewer1d
         prog.show_data(data)
