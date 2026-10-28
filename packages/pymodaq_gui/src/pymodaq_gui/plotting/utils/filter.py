@@ -45,8 +45,18 @@ class Filter:
     def set_active(self, activate=True):
         self._is_active = activate
 
+    @property
+    def is_active(self) -> bool:
+        """Whether filter_data should process and forward data
+
+        Defaults to the state set via register_activation_signal/set_active. Subclasses whose
+        activity should instead follow some other live condition (e.g. "does at least one ROI
+        exist") override this property instead of relying on an activation signal.
+        """
+        return self._is_active
+
     def filter_data(self, data: data_mod.DataRaw):
-        if self._is_active:
+        if self.is_active:
             filtered_data = self._filter_data(data)
             if filtered_data is not None and self._slot_to_send_data is not None:
                 self._slot_to_send_data(filtered_data)
@@ -224,7 +234,21 @@ class Filter2DFromCrosshair(Filter):
         return point.x(), point.y()
 
 
-class Filter1DFromRois(Filter):
+class FilterFromRois(Filter):
+    """Shared base for the 1D/2D filters that process data through the current ROIs
+
+    Active whenever at least one ROI exists, regardless of the roi panel's visibility.
+    """
+    def __init__(self, roi_manager: ROIViewerManager):
+        super().__init__()
+        self._ROIs = roi_manager.ROIs
+
+    @property
+    def is_active(self) -> bool:
+        return len(self._ROIs) > 0
+
+
+class Filter1DFromRois(FilterFromRois):
     """
 
     Parameters
@@ -233,9 +257,7 @@ class Filter1DFromRois(Filter):
     graph_item: PlotItems
     """
     def __init__(self, roi_manager: ROIViewerManager):
-
-        super().__init__()
-        self._ROIs = roi_manager.ROIs
+        super().__init__(roi_manager)
         self._axis: data_mod.Axis = None
 
     def update_axis(self, axis: data_mod.Axis):
@@ -289,7 +311,7 @@ class Filter1DFromRois(Filter):
         return slice(ind_x_min, ind_x_max)
 
 
-class Filter2DFromRois(Filter):
+class Filter2DFromRois(FilterFromRois):
     """Filters 2D data using 2D ROIs
 
     Parameters
@@ -301,12 +323,10 @@ class Filter2DFromRois(Filter):
         _filter_data, datas.data[key] is plotted on graph_items[key] for key in image_keys
     """
     def __init__(self, roi_manager: ROIViewerManager, graph_item: UniformImageItem, image_keys):
-
-        super().__init__()
+        super().__init__(roi_manager)
         self._image_keys = image_keys
         self._graph_item = graph_item
         self.axes = (0, 1)
-        self._ROIs = roi_manager.ROIs
 
     def _filter_data(self, dwa: data_mod.DataRaw) -> DataToExport:
         dte = DataToExport('ROI')
