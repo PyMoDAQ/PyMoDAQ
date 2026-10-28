@@ -24,11 +24,15 @@ from pymodaq_gui.utils import (DockArea, QSpinBoxWithShortcut,
 from pymodaq_gui.utils.widgets import LabelWithFont, MultistateLED, StatusPalette, Status
 from pymodaq_gui.plotting.utils.plot_utils import DetachablePanel
 from pymodaq_utils.enums import StrEnum
+from pymodaq_utils.categorizing import categorize_items, flatten_categories
 
 
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq.control_modules.daq_move_ui.utils import UiType
 config = Config()
+
+
+ACTUATOR_ROLE = QtCore.Qt.ItemDataRole.UserRole  # set on the choices of the actuators combo, not on its banners
 
 
 class MoveLedState(StrEnum):
@@ -142,12 +146,36 @@ class DAQMoveUI(ControlModuleUI):
 
     @property
     def actuators(self):
-        return [self.actuators_combo.itemText(ind) for ind in range(self.actuators_combo.count())]
+        return [self.actuators_combo.itemText(ind) for ind in range(self.actuators_combo.count())
+                if self.actuators_combo.itemData(ind, ACTUATOR_ROLE) is not None]
 
     @actuators.setter
     def actuators(self, actuators: List[str]):
-        self.actuators_combo.clear()
-        self.actuators_combo.addItems(actuators)
+        """Fill the selection, grouped under banners (Remote, Mock, Plugin...) when there is more than one"""
+        groups = {}
+        for path, name in flatten_categories(categorize_items(actuators)):
+            groups.setdefault(path, []).append(name)
+
+        combo = self.actuators_combo
+        combo.blockSignals(True)
+        try:
+            combo.clear()
+            for path, names in groups.items():
+                if len(groups) > 1:
+                    combo.addItem(' / '.join(path))
+                    header = combo.model().item(combo.count() - 1)
+                    header.setFlags(QtCore.Qt.ItemFlag.NoItemFlags)  # a banner, not a choice
+                    font = header.font()
+                    font.setBold(True)
+                    header.setFont(font)
+                for name in names:
+                    combo.addItem(name, name)  # the name is also the user data, which a banner does not have
+        finally:
+            combo.blockSignals(False)
+        for ind in range(combo.count()):
+            if combo.itemData(ind, ACTUATOR_ROLE) is not None:
+                combo.setCurrentIndex(ind)  # the first actuator, as if the list was flat
+                break
 
     @property
     def move_done(self):

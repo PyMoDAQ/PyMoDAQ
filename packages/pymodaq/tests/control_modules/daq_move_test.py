@@ -152,3 +152,35 @@ def test_continuous_save_toolbar_group(ini_daq_move_ui):
                   if child.defaultAction() is ui.get_action('continuous_save'))
     assert [action.text() for action in button.menu().actions()] == ['New file', 'Browse file']
     assert ui.get_action('continuous_save').isCheckable()
+
+
+class TestActuatorSelection:
+    def test_actuators_are_grouped_under_banners_that_cannot_be_selected(self, ini_daq_move_ui):
+        actuator, qtbot, widget = ini_daq_move_ui
+        ui = actuator.ui
+        ui.actuators = ['PI', 'BSPiezoMirror', 'CookbookDll', 'TCPServer', 'Mock']
+
+        combo = ui.actuators_combo
+        texts = [combo.itemText(ind) for ind in range(combo.count())]
+        assert texts == ['Remote', 'TCPServer', 'Mock', 'BSPiezoMirror', 'Mock', 'Mock / Cookbook', 'CookbookDll',
+                         'Plugin', 'PI']
+        banners = [text for ind, text in enumerate(texts) if not combo.model().item(ind).isEnabled()]
+        assert banners == ['Remote', 'Mock', 'Mock / Cookbook', 'Plugin']
+        assert sorted(ui.actuators) == ['BSPiezoMirror', 'CookbookDll', 'Mock', 'PI', 'TCPServer']
+        assert ui.actuator in ui.actuators  # a banner is never the current actuator
+
+    def test_a_single_group_is_a_flat_list(self, ini_daq_move_ui):
+        actuator, qtbot, widget = ini_daq_move_ui
+        ui = actuator.ui
+        ui.actuators = ['PI', 'Thorlabs']
+        assert [ui.actuators_combo.itemText(ind) for ind in range(ui.actuators_combo.count())] == ['PI', 'Thorlabs']
+        assert ui.actuators == ['PI', 'Thorlabs']
+
+    def test_choosing_an_actuator_is_sent_to_the_module(self, ini_daq_move_ui):
+        actuator, qtbot, widget = ini_daq_move_ui
+        ui = actuator.ui
+        ui.actuators = ['PI', 'CookbookDll']
+        assert ui.actuator == 'CookbookDll'  # the first actuator of the list, after the banner
+        with qtbot.waitSignal(ui.command_sig, timeout=1000) as blocker:
+            ui.actuator = 'PI'
+        assert blocker.args[0].attribute == 'PI'
