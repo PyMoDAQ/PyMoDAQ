@@ -67,10 +67,14 @@ The recipes
     the drivers above, so that a simulated version of this class can replace it in the tests.
 
 **A camera**
-    ``daq_2Dviewer_BSCamera`` and ``hardware/beam_steering.py``. What a camera driver gives its plugin: a region of
-    interest and a binning applied by the camera (the image is smaller), an exposure time, and axes calibrated in µm
-    that follow them. ``daq_2Dviewer_RoiStuff`` is the other way to select a region: it is drawn in the viewer, received
-    by the plugin in ``roi_select`` and applied to the data after the grab.
+    ``daq_2Dviewer_CookbookCamera`` and ``hardware/mock_camera.py``: the recipe to copy for a real camera. The plugin is a
+    ``CameraBase`` of ``pymodaq_plugins_utils`` (acquisition in a thread of its own, live and snap, averaging, the ROI
+    drawn in the viewer, binning, FPS) and the driver follows the ``CameraDriverBase`` interface of the same package, with
+    the method names of pylablib. ``daq_2Dviewer_BSCamera`` and ``hardware/beam_steering.py`` are the camera of the beam
+    steering demonstrations, a plain plugin on purpose: what a camera driver gives its plugin, a region of interest and a
+    binning applied by the camera (the image is smaller), an exposure time, and axes calibrated in µm that follow them.
+    ``daq_2Dviewer_RoiStuff`` is the other way to select a region: it is drawn in the viewer, received by the plugin in
+    ``roi_select`` and applied to the data after the grab.
 
 **A spectrometer**
     ``daq_1Dviewer_CookbookSpectrometer``, ``daq_move_CookbookSpectrometer`` and ``hardware/spectrometer.py``. A
