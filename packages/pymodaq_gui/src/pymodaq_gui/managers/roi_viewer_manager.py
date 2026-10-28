@@ -2,7 +2,7 @@ import dataclasses
 from collections import OrderedDict
 from pathlib import Path
 import sys
-from typing import List, Union, Dict
+from typing import List, Union, Dict, Optional, Callable
 
 import numpy as np
 
@@ -47,6 +47,9 @@ class ROIScalableGroup(GroupParameter):
             opts['addList'] = ROI2D_TYPES
         # self.color_list = ROIManager.color_list
         super().__init__(**opts)
+        # set by ROIViewerManager: called with the index of a ROI just created from scratch here
+        # (the "+ Add" button or add_roi_programmatically), never for a copy or a restored one
+        self.on_roi_added: Optional[Callable[[int], None]] = None
 
     def addNew(self, descriptor=''):
         name_prefix = ROI_NAME_PREFIX
@@ -57,6 +60,8 @@ class ROIScalableGroup(GroupParameter):
             newindex = max(child_indexes) + 1
 
         self.addChild(RoiParameter(self.roi_dim, descriptor, newindex))
+        if self.on_roi_added is not None:
+            self.on_roi_added(newindex)
 
 registerParameterType('scalable_roigroup_parameter', ROIScalableGroup)
 
@@ -122,6 +127,8 @@ class ROIViewerManager(ROIParameterManager, QtCore.QObject):
 
         self.view_box: ViewBox = view_box  # a viewbox to add ROI into!
         self._ROIs: list[ROIMeta] = []
+        self.rois_setting.on_roi_added = (
+            lambda index: self._center_roi_on_view(self.get_roi_from_index(index).roi))
 
     @property
     def roiwidget(self):
@@ -166,6 +173,24 @@ class ROIViewerManager(ROIParameterManager, QtCore.QObject):
         roi_meta.roi.sigCopyRequested.connect(lambda: self.copy_ROI(roi_meta))
         self.new_ROI_signal.emit(param.index)
         self.roi_changed.emit()
+
+    def _center_roi_on_view(self, roi: ROI):
+        """Size and center a freshly added ROI on a fraction of the current view range
+
+        Replaces the item's own tiny (0, 0)+(10, 10) default, which is often too small to
+        grab without first zooming in, with something scaled to what is actually on screen.
+        """
+        fraction = config('gui', 'viewer', 'roi_default_size_fraction')
+        (xmin, xmax), (ymin, ymax) = self.view_box.viewRange()
+        if self.roi_dim == ROIDim.ROI1D:
+            xwidth = (xmax - xmin) * fraction
+            xcenter = (xmin + xmax) / 2
+            roi.setPos((xcenter - xwidth / 2, xcenter + xwidth / 2))
+        else:
+            width = (xmax - xmin) * fraction
+            height = (ymax - ymin) * fraction
+            roi.setSize([width, height])
+            roi.setPos([xmin + (xmax - xmin - width) / 2, ymin + (ymax - ymin - height) / 2])
 
     def value_changed(self, param: Parameter):
         if param.name() == 'color':
