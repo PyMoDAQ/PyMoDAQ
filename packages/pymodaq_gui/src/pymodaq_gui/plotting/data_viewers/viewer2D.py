@@ -558,30 +558,36 @@ class View2D(ActionManager, QtCore.QObject):
     def setup_actions(self):
 
         self.add_action('position', '(,)')
+        self.toolbar.addSeparator()
+
         self.add_action('red', 'Red Channel', 'r_icon', tip='Show/Hide Red Channel', checkable=True)
         self.add_action('green', 'Green Channel', 'g_icon', tip='Show/Hide Green Channel', checkable=True)
         self.add_action('blue', 'Blue Channel', 'b_icon', tip='Show/Hide Blue Channel', checkable=True)
         self.get_action('red').setChecked(True)
         self.get_action('green').setChecked(True)
         self.get_action('blue').setChecked(True)
+        self.toolbar.addSeparator()
 
         self.add_action('autolevels', 'AutoLevels', 'expand',
                         tip='Scale Histogram to Min/Max intensity', checkable=True)
         self.add_action('auto_levels_sym', 'AutoLevels Sym.', 'vertical_align_center',
                         tip='Make the autoscale of the histograms symetric with respect to 0', checkable=True)
-
         self.add_action('histo', 'Histogram', 'bar_chart', tip='Show/Hide Histogram', checkable=True)
-        self.add_action('roi', 'ROI', 'calculate', tip='Show/Hide ROI Manager', checkable=True)
+        self.add_action('isocurve', 'IsoCurve', 'altitude', tip='Show/Hide Isocurve', checkable=True)
+        self.toolbar.addSeparator()
 
+        self.add_action('roi', 'ROI', 'calculate', tip='Show/Hide ROI Manager', checkable=True)
+        self.add_action('ROIselect', 'ROI Select', 'select',
+                        tip='Show/Hide ROI selection area', checkable=True)
+        self.add_action('crosshair', 'CrossHair', 'add_2', tip='Show/Hide data Crosshair', checkable=True)
         self.add_action('link_lineouts', 'Link Lineouts', 'link', tip='Link Lineouts',
                         checkable=True, checked=True, visible=False,
                         icon_color=ThemeColor.RED, icon_checked_color=ThemeColor.GREEN)
+        self.add_action('legend', 'Legend', 'RGB',
+                        tip='Show the legend', checkable=True)
+        self.toolbar.addSeparator()
 
-        self.add_action('isocurve', 'IsoCurve', 'altitude', tip='Show/Hide Isocurve', checkable=True)
         self.add_action('aspect_ratio', 'Aspect Ratio', 'aspect_ratio', tip='Fix Aspect Ratio', checkable=True, checked=True)
-        self.add_action('crosshair', 'CrossHair', 'add_2', tip='Show/Hide data Crosshair', checkable=True)
-        self.add_action('ROIselect', 'ROI Select', 'select',
-                        tip='Show/Hide ROI selection area', checkable=True)
         self.add_action('flip_ud', 'Flip UD', 'flip',
                         tip='Flip the image up/down', checkable=True,
                         rotate=90)
@@ -591,8 +597,6 @@ class View2D(ActionManager, QtCore.QObject):
                         tip='Rotate the image', checkable=True)
         self.add_action('opposite', 'Opposite', 'contrast',
                         tip='Take the opposite of the image', checkable=True)
-        self.add_action('legend', 'Legend', 'RGB',
-                        tip='Show the legend', checkable=True)
 
     def update_colors(self, colors: list):
         for ind, roi_meta in enumerate(self.roi_manager.ROIs):
