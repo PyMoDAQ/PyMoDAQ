@@ -33,6 +33,7 @@ toolbar_button_style = ['icon_only', 'text_only', 'text_beside_icon', 'text_unde
 [viewer]
 rois_as_popup = false
 rois_dock_layout = 'horizontal'  # 'horizontal' or 'vertical', also changeable from the ROIs dock's right-click menu
+roi_default_size_fraction = 0.5  # a freshly added or ROI-select ROI is centered on the data's axis extent, sized to this fraction of it (instead of a fixed tiny (0, 0)+(10, 10))
 
     [viewer.viewer0D]
     show_data_as_list = false  # display last values as numbers in a side panel
