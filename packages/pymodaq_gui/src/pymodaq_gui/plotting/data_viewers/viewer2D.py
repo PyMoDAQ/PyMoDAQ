@@ -565,9 +565,9 @@ class View2D(ActionManager, QtCore.QObject):
         self.get_action('green').setChecked(True)
         self.get_action('blue').setChecked(True)
 
-        self.add_action('autolevels', 'AutoLevels', 'fit_page_height',
+        self.add_action('autolevels', 'AutoLevels', 'expand',
                         tip='Scale Histogram to Min/Max intensity', checkable=True)
-        self.add_action('auto_levels_sym', 'AutoLevels Sym.', 'fit_page_height',
+        self.add_action('auto_levels_sym', 'AutoLevels Sym.', 'vertical_align_center',
                         tip='Make the autoscale of the histograms symetric with respect to 0', checkable=True)
 
         self.add_action('histo', 'Histogram', 'bar_chart', tip='Show/Hide Histogram', checkable=True)
@@ -589,7 +589,7 @@ class View2D(ActionManager, QtCore.QObject):
                         tip='Flip the image left/right', checkable=True)
         self.add_action('rotate', 'Rotate', 'rotate_90_degrees_cw',
                         tip='Rotate the image', checkable=True)
-        self.add_action('opposite', 'Opposite', 'remove',
+        self.add_action('opposite', 'Opposite', 'contrast',
                         tip='Take the opposite of the image', checkable=True)
         self.add_action('legend', 'Legend', 'RGB',
                         tip='Show the legend', checkable=True)
