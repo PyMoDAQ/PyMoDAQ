@@ -5,7 +5,10 @@ from qtpy import QtCore, QtWidgets
 
 from serializall import SerializableFactory
 
+from qt_themes import get_theme
+
 from pymodaq_data import DataToExport
+from pymodaq_gui.utils.styling import color_to_rgba
 from pymodaq_gui.utils.widgets import LabelWithFont
 from pymodaq_gui.utils.widgets.combo import ComboBox
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -132,11 +135,17 @@ class SwitchElt(SeqEltBase):
             rule.condition.bind_to_dashboard()
 
     def _execute(self, dte: DataToExport = None):
+        # Logged at info, not debug: the only observable effect of this element is a state
+        # transition, which only actually happens while a sequence is running - pressing the
+        # per-element "Execute" debug button standalone (no sequence running) evaluates the
+        # rules but can't move anywhere, so this is the only feedback that button gives.
         if self._manual_enabled:
+            logger.info(f'Element {self}: manual override -> target {self._manual_target.go_to}')
             self.go_to_signal.emit(MANUAL_OVERRIDE_ID)
             return
         for rule in self._rules:
             if rule.condition.model.evaluate(dte):
+                logger.info(f'Element {self}: {rule.label} matched -> target {rule.target.go_to}')
                 self.go_to_signal.emit(rule.id)
                 return
 
@@ -270,6 +279,25 @@ class SwitchElt(SeqEltBase):
                 rows.append(self._build_rule_row(rule, rule_index))
         return rows
 
+    def _build_manual_override_row(self) -> WidgetWithToolbar:
+        """ A pseudo-rule row, always last: forces execution straight to its own target,
+        bypassing every Rule's condition entirely. Marked in a warning color (unlike the
+        ordinary Rule rows) since enabling it silently overrides whatever the Rules would
+        otherwise have picked. """
+        row = WidgetWithToolbar()
+        checkbox = QtWidgets.QCheckBox('Manual override:')
+        with QtCore.QSignalBlocker(checkbox):
+            checkbox.setChecked(self._manual_enabled)
+        checkbox.toggled.connect(self._on_manual_override_toggled)
+        checkbox.setStyleSheet(
+            f'QCheckBox {{ color: {color_to_rgba(get_theme().orange)}; font-weight: bold; }}')
+        row.add_widget_top(checkbox)
+        row.add_widget_top(LabelWithFont('go to'))
+        row.add_widget_top(self._create_target_combo(
+            self._manual_target,
+            'Target used when manual override is active - bypasses every rule'))
+        return row
+
     def _refresh_live_widget(self):
         """ Keep an already-open editor's rule rows in sync with self._rules - without this,
         a rule added/removed while the editor stayed open would only show up after closing
@@ -284,6 +312,7 @@ class SwitchElt(SeqEltBase):
                 item.widget().deleteLater()
         for row in self._build_rule_rows():
             layout.addWidget(row)
+        layout.addWidget(self._build_manual_override_row())
 
     def _on_add_rule_clicked(self):
         self.add_rule()
@@ -298,6 +327,7 @@ class SwitchElt(SeqEltBase):
         rows_widget.setLayout(rows_layout)
         for row in self._build_rule_rows():
             rows_layout.addWidget(row)
+        rows_layout.addWidget(self._build_manual_override_row())
         base_widget.insert_widget(rows_widget, 1)
         self._live_rows_widget = weakref.ref(rows_widget)
 
@@ -306,16 +336,15 @@ class SwitchElt(SeqEltBase):
                                    toolbar=base_widget.toolbar)
             base_widget.connect_action('add_rule', self._on_add_rule_clicked)
 
-        override_checkbox = QtWidgets.QCheckBox('Manual override')
-        with QtCore.QSignalBlocker(override_checkbox):
-            override_checkbox.setChecked(self._manual_enabled)
-        override_checkbox.toggled.connect(self._on_manual_override_toggled)
-        base_widget.add_widget_top(override_checkbox)
-        base_widget.add_widget_top(self._create_target_combo(
-            self._manual_target, 'Target used when manual override is active'))
+        # The per-element Execute debug button (added by _create_base_widget) only actually
+        # branches while a sequence is running - standalone, it can only evaluate the rules
+        # and log the result (see _execute). Clarify that here so it doesn't look dead.
+        base_widget.get_action('execute').setToolTip(
+            'Evaluate the rules and log which one matched - only actually branches to its '
+            'target while a sequence is running')
         return base_widget
 
     def size_hint(self) -> QtCore.QSize:
         total_rows = sum(ConditionHolderBase.count_settings_rows(rule.condition.model.settings)
                          for rule in self._rules if not rule.is_fallback)
-        return QtCore.QSize(220, 150 + total_rows * 25 + 60 * len(self._rules))
+        return QtCore.QSize(220, 150 + total_rows * 25 + 60 * (len(self._rules) + 1))
