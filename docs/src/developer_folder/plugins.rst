@@ -43,7 +43,6 @@ features section.
    :maxdepth: 2
    :caption: Contents:
 
-   /developer_folder/configuration
    /developer_folder/instrument_plugins
    /developer_folder/plugin_workflow
    /developer_folder/plugin_cookbook
