@@ -88,20 +88,29 @@ Moving an actuator
    :caption: ``move_abs`` of a ``DAQ_Move`` (with polling, the default)
 
    digraph move {
-     rankdir=LR; node [shape=box, fontname="Helvetica", fontsize=10];
-     subgraph cluster_gui { label="GUI thread"; style=dashed;
-       u [label="move button or\nextension: move_abs(value)"];
-       s [label="thread_status\nGET_ACTUATOR_VALUE: display\nMOVE_DONE: display, move_done_signal"]; }
-     subgraph cluster_pl { label="Plugin thread"; style=dashed;
-       q [label="worker.queue_command\nMOVE_ABS -> worker.move_abs\n(units converted to axis_unit)"];
+     rankdir=TB; nodesep=1.2; ranksep=0.4;
+     node [shape=box, fontname="Helvetica", fontsize=10];
+     edge [fontname="Helvetica", fontsize=9];
+     { node [style=filled, fillcolor="#dbe9f6"];
+       u [label="DAQ_Move.move_abs(value)"];
+       s1 [label="GET_ACTUATOR_VALUE:\ndisplay the position"];
+       s2 [label="MOVE_DONE: display,\nemit move_done_signal"]; }
+     { node [style=filled, fillcolor="#fbe5cc"];
+       q [label="worker.move_abs\n(units converted to axis_unit)"];
        m [label="plugin.move_abs(value)"];
-       t [label="poll_moving: poll_timer\ncheck_target_reached\nget_actuator_value every interval"];
-       d [label="plugin.move_done()\nmove_done_signal -> worker.move_done"]; }
-     u -> q [label="RESET_STOP_MOTION,\nMOVE_ABS"];
+       t [label="plugin.poll_moving: every interval,\ncheck_target_reached"];
+       d [label="plugin.move_done()\n(worker forwards it once)"]; }
+     key [shape=plaintext, fontsize=9, label=<<table border="0" cellborder="1" cellspacing="4"><tr><td bgcolor="#dbe9f6">GUI thread</td><td bgcolor="#fbe5cc">Plugin thread</td></tr></table>>];
+     key -> u [style=invis];
+     {rank=same; u; q}
+     {rank=same; s1; t}
+     {rank=same; s2; d}
+     u -> q [label=" RESET_STOP_MOTION,\n MOVE_ABS"];
      q -> m -> t;
-     t -> s [label="GET_ACTUATOR_VALUE\nuntil the target is reached"];
-     t -> d [label="target reached"];
-     d -> s [label="MOVE_DONE (once)"];
+     t -> d [label=" target reached"];
+     t -> s1 [label="status "];
+     d -> s2 [label="status "];
+     u -> s1 -> s2 [style=invis];
    }
 
 Text version:
