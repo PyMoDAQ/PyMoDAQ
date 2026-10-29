@@ -18,6 +18,9 @@ Writing plugins & extensions
    /tutorials/plugin_development
    /tutorials/custom_extension_development/custom_extension
 
+Contributing to PyMoDAQ core
+-----------------------------
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
@@ -26,4 +29,7 @@ Writing plugins & extensions
    /developer_folder/shared_ui
    /developer_folder/managers
    /developer_folder/widget_sync
+   /tutorials/write_documentation
+   /tutorials/git_github
+   /tutorials/contribute_to_pymodaq_code
 
