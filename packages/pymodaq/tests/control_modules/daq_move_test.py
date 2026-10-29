@@ -152,3 +152,54 @@ def test_continuous_save_toolbar_group(ini_daq_move_ui):
                   if child.defaultAction() is ui.get_action('continuous_save'))
     assert [action.text() for action in button.menu().actions()] == ['New file', 'Browse file']
     assert ui.get_action('continuous_save').isCheckable()
+
+
+class TestActuatorSelection:
+    @staticmethod
+    def menu_tree(menu):
+        """The menu as nested lists: the name of an action, or {submenu: [...]}"""
+        tree = []
+        for action in menu.actions():
+            if action.menu() is not None:
+                tree.append({action.text(): TestActuatorSelection.menu_tree(action.menu())})
+            else:
+                tree.append(action.text())
+        return tree
+
+    def test_actuators_are_grouped_in_the_menu_as_the_add_menus(self, ini_daq_move_ui):
+        actuator, qtbot, widget = ini_daq_move_ui
+        ui = actuator.ui
+        ui.actuators = ['PI', 'BSPiezoMirror', 'CookbookDll', 'TCPServer', 'Mock']
+
+        assert self.menu_tree(ui.actuator_selector.menu) == [
+            {'Remote': ['TCPServer']},
+            {'Mock': ['BSPiezoMirror', 'Mock', {'Cookbook': ['CookbookDll']}]},
+            {'Plugin': ['PI']},
+        ]
+        assert sorted(ui.actuators) == ['BSPiezoMirror', 'CookbookDll', 'Mock', 'PI', 'TCPServer']
+
+    def test_the_first_actuator_is_selected_and_shown_by_its_name(self, ini_daq_move_ui):
+        actuator, qtbot, widget = ini_daq_move_ui
+        ui = actuator.ui
+        ui.actuators = ['PI', 'CookbookDll']
+        assert ui.actuator == 'CookbookDll'  # the first one of the groups, as the menu shows them
+        assert ui.actuator_selector.text() == 'CookbookDll'
+
+    def test_choosing_an_actuator_is_sent_to_the_module(self, ini_daq_move_ui):
+        actuator, qtbot, widget = ini_daq_move_ui
+        ui = actuator.ui
+        ui.actuators = ['PI', 'CookbookDll']
+        with qtbot.waitSignal(ui.command_sig, timeout=1000) as blocker:
+            ui.actuator = 'PI'
+        assert blocker.args[0].attribute == 'PI'
+
+    def test_a_click_in_the_menu_chooses_the_actuator(self, ini_daq_move_ui):
+        actuator, qtbot, widget = ini_daq_move_ui
+        ui = actuator.ui
+        ui.actuators = ['PI', 'CookbookDll']
+        plugin_menu = next(action.menu() for action in ui.actuator_selector.menu.actions()
+                           if action.text() == 'Plugin')
+        with qtbot.waitSignal(ui.command_sig, timeout=1000) as blocker:
+            plugin_menu.actions()[0].trigger()
+        assert blocker.args[0].attribute == 'PI'
+        assert ui.actuator == 'PI'

@@ -95,7 +95,7 @@ class SharedUI(CustomApp):
 
     _help_dialog: QtWidgets.QDialog | None = None
 
-    def __init__(self, widget: Union[QtWidgets.QWidget, DockArea],
+    def __init__(self, widget: Union[QtWidgets.QMainWindow, QtWidgets.QWidget, DockArea],
                  show=True, title: str = None):
 
         if isinstance(widget, QtWidgets.QMainWindow):

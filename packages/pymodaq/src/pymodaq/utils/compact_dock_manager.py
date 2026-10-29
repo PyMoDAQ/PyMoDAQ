@@ -557,8 +557,8 @@ class ActuatorCompactDock(ModuleCompactDock):
         ui = module.ui
         if ui.has_action('name'):
             widgets['name'] = ui.get_action('name').widget
-        if hasattr(ui, 'actuators_combo'):
-            widgets['selector'] = ui.actuators_combo
+        if hasattr(ui, 'actuator_selector'):
+            widgets['selector'] = ui.actuator_selector
         return widgets
 
     def _create_actions(self):

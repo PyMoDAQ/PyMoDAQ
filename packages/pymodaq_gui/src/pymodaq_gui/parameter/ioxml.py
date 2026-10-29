@@ -278,7 +278,10 @@ def elt_to_dict(el):
 
     if 'limits' in el.attrib.keys():
         try:
-            limits = eval(el.get('limits'))
+            try:
+                limits = eval(el.get('limits'))
+            except (NameError, SyntaxError):  # a plain string, such as the 'status' limits of the LED parameters
+                limits = el.get('limits')
             if isinstance(limits, dict):
                 for key, val in limits.items():
                     try:
