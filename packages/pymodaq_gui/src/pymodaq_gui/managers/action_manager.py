@@ -787,8 +787,7 @@ class ActionManager:
         ----------
         short_name: str
             the name of the primary action, as referenced in self._actions
-        name, icon_name, tip, checkable, checked, icon_checked, icon_color,
-        icon_checked_color, follow_theme:
+        name, icon_name, tip, checkable, checked, icon_checked, icon_color, icon_checked_color, follow_theme:
             forwarded to :meth:`add_action` for the primary action
         toolbar: str or QToolBar or None
             the toolbar the button is added to (defaults to the default toolbar)

@@ -924,8 +924,7 @@ The detectors have to be *connected* to the manager for it to count their answer
 ``grab_done_signal`` of the selected detectors to the manager, ``connect_detectors(False)`` disconnects them. The
 ``*_with_callback`` methods do it for you.
 
-``grab_data_with_callback(callback=..., Naverage=None, check_do_override=True, do_connect_modules=True,
-detach_after_callback=True)``
+``grab_data_with_callback(callback=..., Naverage=None, check_do_override=True, do_connect_modules=True, detach_after_callback=True)``
     Asks each selected detector for a snap and returns immediately. ``callback(dte)`` is called with the data of all of
     them when the last one has answered. It is connected to ``det_done_signal``. With ``detach_after_callback=True``
     (the default) the manager calls ``forget_callback`` on your behalf right before running the callback, which
@@ -950,8 +949,7 @@ Moving actuators
 The positions are given in a ``DataToExport`` holding one ``DataActuator`` per actuator, **named like the actuator**
 (a ``DataToActuators`` also carries the mode). Their number has to be the number of selected actuators.
 
-``move_actuators_with_callback(dte_act, mode=MoveType.ABS, callback=None, do_connect_modules=True,
-detach_after_callback=True)``
+``move_actuators_with_callback(dte_act, mode=MoveType.ABS, callback=None, do_connect_modules=True, detach_after_callback=True)``
     Selects the actuators named in ``dte_act``, starts the moves and returns immediately. ``callback(dte)`` is called with
     the positions reached when all the actuators have told they are done. Same rule as for the grab: with
     ``detach_after_callback=False`` call ``forget_callback(callback, module_type=ModuleType.Actuator)`` yourself. The

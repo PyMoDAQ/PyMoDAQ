@@ -1,3 +1,5 @@
+:orphan:
+
 Work in Progress Watching a photochemical reaction
 ==================================================
 
@@ -88,7 +90,7 @@ the simulation of the kinetics gives the following result
 
 We realise that the back reaction in the dark does not influence the speed of the light-induced forward reaction. the following graphic shows the corresponding absorption spectra with a stepping of 10 seconds.
 
-.. figure:: absorption-reaction.png
+.. figure:: /image/tutorial_extension/absorption-reaction.png
    :align: center
 
    Absorption of 10 µmol/l of azobenzene in methanol when exposed to
