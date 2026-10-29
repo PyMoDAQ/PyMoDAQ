@@ -22,6 +22,8 @@ to be added to PyMoDAQ
     Entry points python mechanism is used to let know PyMoDAQ of installed Instrument, PID models or extensions plugins
 
 The best way to start creating a PyMoDAQ plugin is to use the template one on `github`__ and read this `tutorial`__.
+To write the communication with your instrument (serial line, VISA, DLL, .NET assembly...), start from the matching
+recipe of the :ref:`plugin cookbook <plugin_cookbook>`.
 
 
 __ https://github.com/PyMoDAQ/pymodaq_plugins_template
@@ -43,5 +45,7 @@ features section.
 
    /developer_folder/configuration
    /developer_folder/instrument_plugins
+   /developer_folder/plugin_workflow
+   /developer_folder/plugin_cookbook
    /developer_folder/extension_plugins
    /developer_folder/legacy_to_current

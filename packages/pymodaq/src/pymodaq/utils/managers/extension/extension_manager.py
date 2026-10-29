@@ -25,7 +25,7 @@ class ExtensionManager(DashboardMixin, ManagerBase):
 
     def __init__(self, dashboard: 'DashBoard' = None):
         self.extension_catalog = get_extensions()
-        self.loaded_extensions: dict[ExtensionEnum, CustomExt] = {}
+        self.loaded_extensions: dict[ExtensionEnum | str, CustomExt] = {}
         self._internal_dashboard_ui = None
 
         super().__init__(dashboard=dashboard)
@@ -85,6 +85,26 @@ class ExtensionManager(DashboardMixin, ManagerBase):
 
         super().execute_entry(entry_path, **kwargs)
 
+    def register_extension(self, extension: CustomExt) -> None:
+        """Keep track of an extension, however it has been created (from the Dashboard, a script, the command line)
+
+        The Dashboard then quits it with itself. The key is the :class:`ExtensionEnum` of the extension if it is
+        a known one, else the name of its class.
+        """
+        self.loaded_extensions[self._key_of(extension)] = extension
+
+    def unregister_extension(self, extension: CustomExt) -> None:
+        """Forget an extension, to be called when it has quit"""
+        for key, ext in list(self.loaded_extensions.items()):
+            if ext is extension:
+                self.loaded_extensions.pop(key)
+
+    def _key_of(self, extension: CustomExt) -> ExtensionEnum | str:
+        for ext_enum, info in self.extension_catalog.items():
+            if type(extension) is info.klass:
+                return ext_enum
+        return type(extension).__name__
+
     def load_extension(self, ext_enum: ExtensionEnum,
                       win: QtWidgets.QMainWindow = None) -> CustomExt | None:
         """Load and display an extension."""
@@ -95,7 +115,6 @@ class ExtensionManager(DashboardMixin, ManagerBase):
                 window=win,
             )
 
-            self.loaded_extensions[ext_enum] = ext_module
             ext_module.shared_ui = shared_ui
             ext_module.status_signal.connect(self.update_status)
             shared_ui.show()

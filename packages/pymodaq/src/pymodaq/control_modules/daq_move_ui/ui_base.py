@@ -1,7 +1,6 @@
 from abc import abstractmethod
 from typing import TYPE_CHECKING
 
-from qtpy.QtWidgets import QComboBox
 from pint import DimensionalityError
 from qtpy import QtWidgets, QtCore, QtGui
 from typing import Union, List
@@ -29,6 +28,7 @@ from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq.control_modules.daq_move_ui.utils import UiType
 from pymodaq_gui.utils.styling import ThemeColor
+from pymodaq.control_modules.daq_move_ui.actuator_selector import ActuatorSelector
 config = Config()
 
 
@@ -91,7 +91,7 @@ class DAQMoveUI(ControlModuleUI):
         self.title = title
         self._unit = ''
 
-        self.actuators_combo: QComboBox = None
+        self.actuator_selector: ActuatorSelector = None
         self.abs_value_sb: QSpinBoxWithShortcut = None
         self.abs_value_sb_green: QSpinBoxWithShortcut = None
         self.abs_value_sb_2: QSpinBoxWithShortcut = None
@@ -135,20 +135,20 @@ class DAQMoveUI(ControlModuleUI):
 
     @property
     def actuator(self):
-        return self.actuators_combo.currentText()
+        return self.actuator_selector.actuator
 
     @actuator.setter
     def actuator(self, act_name: str):
-       self.actuators_combo.setCurrentText(act_name)
+        self.actuator_selector.actuator = act_name
 
     @property
     def actuators(self):
-        return [self.actuators_combo.itemText(ind) for ind in range(self.actuators_combo.count())]
+        return self.actuator_selector.actuators
 
     @actuators.setter
     def actuators(self, actuators: List[str]):
-        self.actuators_combo.clear()
-        self.actuators_combo.addItems(actuators)
+        """Fill the selection, grouped as in the add menus (Remote, Mock, Plugin...)"""
+        self.actuator_selector.actuators = actuators
 
     @property
     def move_done(self):
@@ -158,6 +158,15 @@ class DAQMoveUI(ControlModuleUI):
     @move_done.setter
     def move_done(self, status):
         self.status_led.set_state(MoveLedState.IDLE if status else MoveLedState.MOVING)
+
+    def set_error_state(self, in_error: bool, message: str = '') -> None:
+        """Turn the status LED to ``ERROR`` (orange) with the error as tooltip, or back to idle/uninitialized"""
+        if in_error:
+            self.status_led.set_state(MoveLedState.ERROR)
+            self.status_led.setToolTip(message)
+        elif self.status_led.get_state() == MoveLedState.ERROR:
+            self.status_led.set_state(MoveLedState.IDLE if self._ini_state else MoveLedState.UNINITIALIZED)
+            self.status_led.setToolTip('')
 
     def quit_fun(self) -> bool | None:
         return self.app.quit_fun()
@@ -180,7 +189,7 @@ class DAQMoveUI(ControlModuleUI):
             is_shown=lambda: self.is_action_checked('show_controls'))
         self.parent.layout().setContentsMargins(0, 0, 0, 0)
 
-        self.actuators_combo = QComboBox()
+        self.actuator_selector = ActuatorSelector()
         self.abs_value_sb = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('pymodaq', 'actuator', 'siprefix'))
         self.abs_value_sb.setStyleSheet("background-color : lightgreen; color: black")
         self.abs_value_sb.setValue(config('pymodaq', 'actuator', 'default_value_green'))
@@ -197,7 +206,7 @@ class DAQMoveUI(ControlModuleUI):
                 (MoveLedState.UNINITIALIZED, StatusPalette.color(Status.OFF)),
                 (MoveLedState.IDLE,          StatusPalette.color(Status.IDLE)),
                 (MoveLedState.MOVING,        StatusPalette.color(Status.RUNNING)),
-                (MoveLedState.ERROR,         StatusPalette.color(Status.CRITICAL)),
+                (MoveLedState.ERROR,         StatusPalette.color(Status.ERROR)),
             ],
             readonly=True,
         )
@@ -266,7 +275,7 @@ class DAQMoveUI(ControlModuleUI):
         if toolbar is None:
             toolbar = self.toolbar
         self._setup_name_widget(toolbar=toolbar)
-        self.add_widget('actuators_combo', self.actuators_combo, toolbar=toolbar)
+        self.add_widget('actuators_combo', self.actuator_selector, toolbar=toolbar)
         self._setup_init_action(toolbar=toolbar, action_name='ini_actuator',
                                 display_name='Ini. Actuator', tip='Connect to selected actuator')
         self._setup_settings_action(toolbar=toolbar)
@@ -362,7 +371,7 @@ class DAQMoveUI(ControlModuleUI):
 
     def cleanup_ui(self):
         try:
-            self.actuators_combo.currentTextChanged.disconnect()
+            self.actuator_selector.actuator_changed.disconnect()
         except TypeError:
             pass
         if 'move_abs_green' in self.actions_names:
@@ -433,7 +442,7 @@ class DAQMoveUI(ControlModuleUI):
         self.stop_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.STOP, )))
         self.get_value_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.GET_VALUE, )))
 
-        self.actuators_combo.currentTextChanged.connect(
+        self.actuator_selector.actuator_changed.connect(
             lambda act: self.command_sig.emit(ThreadCommand(UiToMainMove.ACTUATOR_CHANGED, act)))
 
     # -------------------------------------------------------------------------
@@ -541,9 +550,9 @@ class DAQMoveUI(ControlModuleUI):
     # -------------------------------------------------------------------------
 
     def send_init(self, checked: bool):
-        self.actuators_combo.setEnabled(not checked)
+        self.actuator_selector.setEnabled(not checked)
         self.command_sig.emit(ThreadCommand(UiToMainMove.INIT, [checked,
-                                                                self.actuators_combo.currentText()]))
+                                                                self.actuator_selector.actuator]))
 
     def emit_move_abs(self, spinbox):
         spinbox.editingFinished.emit()

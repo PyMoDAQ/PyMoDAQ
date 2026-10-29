@@ -97,7 +97,9 @@ class DAQ_Viewer_base(PluginBase):
     """
     # The two following attributes are independent:
     # hardware_averaging: each data emitted by the plugin is already the average of the Naverage ones requested in
-    #   grab_data. If False, the viewer averages them (also when the plugin streams).
+    #   grab_data. If False, the viewer averages them (also when the plugin streams), with the
+    #   standard error of the mean as `errors`. If True, the DAQ_Viewer cannot know the dispersion: the plugin should
+    #   fill the `errors` of the data it emits if the instrument provides them.
     # live_mode_available: with live=True the viewer calls grab_data once and the plugin emits data until its stop
     #   method is called. If False, the viewer calls grab_data again for each data.
     hardware_averaging = False

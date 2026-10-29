@@ -21,6 +21,7 @@ class ThreadStatus(StrEnum):
     ControlModule.thread_status
     """
     UPDATE_STATUS = 'update_status'
+    ERROR = 'error'                 # an exception was raised by the plugin: displayed and the module marked in error
     CLOSE = 'close'
     UPDATE_SETTINGS = 'update_settings'
     UPDATE_MAIN_SETTINGS = 'update_main_settings'
