@@ -22,22 +22,6 @@ below for the PyMoDAQ installation itself.
 
        For more details about the installation, see :ref:`installation_tips`
 
-      .. rubric:: Check the installation
-
-      To check that the installation went well, we can execute a PyMoDAQ’s *control module* called
-      :ref:`DAQ_Move <DAQ_Move_module>`, using the
-      command
-
-      ``daq_move``
-
-      This prompts the following user interface. In the *Actuator* drop-down list, choose *Mock* and click
-      *Initialization*. This will simulate numerically the behavior of a simple actuator, with the reading of its position.
-
-      .. figure:: /image/quick_start/mock_actuator.png
-         :width: 300
-
-         The DAQ_Move module.
-
    .. tab-item:: Ubuntu
 
       .. rubric:: Install PyMoDAQ
@@ -64,21 +48,21 @@ below for the PyMoDAQ installation itself.
       suggested to delete/remake the folder (or empty its content) when setting up a new environment with a different pymodaq
       version.
 
-      .. rubric:: Check the installation
+Check the installation
+-----------------------
 
-      To check that the installation went well, we can execute a PyMoDAQ’s *control module* called
-      :ref:`DAQ_Move <DAQ_Move_module>`, using the
-      command
+To check that the installation went well, we can execute a PyMoDAQ’s *control module* called
+:ref:`DAQ_Move <DAQ_Move_module>`, using the command
 
-      ``daq_move``
+``daq_move``
 
-      This prompts the following user interface. In the *Actuator* drop-down list, choose *Mock* and click
-      *Initialization*. This will simulate numerically the behavior of a simple actuator, with the reading of its position.
+This prompts the following user interface. In the *Actuator* drop-down list, choose *Mock* and click
+*Initialization*. This will simulate numerically the behavior of a simple actuator, with the reading of its position.
 
-      .. figure:: /image/quick_start/daq_move_interface.png
-         :width: 800
+.. figure:: /image/DAQ_Move/daq_move_gui_base.PNG
+   :alt: daq_move_gui_base
 
-         The DAQ_Move module.
+   The DAQ_Move module.
 
 The basic installation is now complete! :)
 
