@@ -14,6 +14,3 @@ Tutorials
    tutorials/plugin_development
    tutorials/custom_extension_development/custom_extension
    tutorials/write_documentation
-   tutorials/data_analysis_tutorial
-   tutorials/jupyter_lab
-   tutorials/pluginless_leco_communication.rst
