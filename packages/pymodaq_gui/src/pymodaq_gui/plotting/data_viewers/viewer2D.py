@@ -361,7 +361,10 @@ class View2D(ActionManager, QtCore.QObject):
                                                closable=True, attachable=True,
                                                expand_subwidget=True)
         self.roi_widget.sig_close.connect(lambda: self.get_action('roi').trigger())
-        self.roi_widget.closeEvent = lambda event: self.set_action_checked('roi', False)
+        # trigger() (not set_action_checked()) so the native window close runs the same
+        # roi_clicked()/filter cascade as the panel's own close button
+        self.roi_widget.closeEvent = (
+            lambda event: self.get_action('roi').trigger() if self.is_action_checked('roi') else None)
         self._rois_panel = DetachablePanel(
             self.roi_widget, self.rois_dock, f'{self.title} ROIs',
             detached=config('gui', 'viewer', 'rois_as_popup'),
@@ -571,7 +574,7 @@ class View2D(ActionManager, QtCore.QObject):
                         tip='Make the autoscale of the histograms symetric with respect to 0', checkable=True)
 
         self.add_action('histo', 'Histogram', 'bar_chart', tip='Show/Hide Histogram', checkable=True)
-        self.add_action('roi', 'ROI', 'calculate', tip='Show/Hide ROI Manager', checkable=True)
+        self.add_action('roi', 'ROI', 'calculate', tip='Show/Hide ROI panel', checkable=True)
 
         self.add_action('link_lineouts', 'Link Lineouts', 'link', tip='Link Lineouts',
                         checkable=True, checked=True, visible=False,
@@ -879,7 +882,6 @@ class Viewer2D(ViewerBase):
                                    rois_dock = rois_dock)
         self.filter_from_rois = Filter2DFromRois(self.view.roi_manager, self.view.data_displayer.get_image('red'),
                                                  IMAGE_TYPES)
-        self.filter_from_rois.register_activation_signal(self.view.get_action('roi').triggered)
         self.filter_from_rois.register_target_slot(self.process_roi_lineouts)
 
         self.filter_from_crosshair = Filter2DFromCrosshair(self.view.crosshair, self.view.data_displayer.get_images(),
@@ -957,7 +959,7 @@ class Viewer2D(ViewerBase):
             self.view.lock_aspect_ratio()
 
         self.set_visible_items()
-        if not self.view.is_action_checked('roi'):
+        if len(self.view.roi_manager.ROIs) == 0:
             self.data_to_export_signal.emit(self.data_to_export)
 
         self.autolevels_first()
@@ -1003,7 +1005,7 @@ class Viewer2D(ViewerBase):
                 self.x_axis = self._datas.get_axis_from_index(0)[0]
                 self.y_axis = self._datas.get_axis_from_index(0)[1]
 
-            if self.view.is_action_checked('roi'):
+            if len(self.view.roi_manager.ROIs) > 0:
                 self.roi_changed()
 
             if self.view.is_action_checked('crosshair'):
