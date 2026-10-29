@@ -125,7 +125,6 @@ If you would like to get updated with the evolutions of the project, please subs
    :caption: User Guide
 
    user
-   tutorials
 
 .. toctree::
    :maxdepth: 2
@@ -143,14 +142,4 @@ If you would like to get updated with the evolutions of the project, please subs
    :maxdepth: 1
    :caption: About/Community
 
-   about
-   changelogs
-   lab_story
-   PyMoDAQ Femto <https://pymodaq-femto.readthedocs.io/en/latest/>
-   PyMoDAQ Plugins DAQmx <https://pymodaq.github.io/pymodaq_plugins_daqmx/>
-   PyMoDAQ BeamShaping <https://pymodaq-plugins-beam-shaping.readthedocs.io/en/latest//>
-
-.. toctree::
-   :hidden:
-
-   glossary
+   about_community
