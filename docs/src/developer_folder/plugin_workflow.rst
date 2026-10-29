@@ -24,10 +24,10 @@ with ``emit_status``, which emits ``status_sig`` of its worker (see :ref:`instru
 
    digraph layers {
      rankdir=LR; node [shape=box, fontname="Helvetica", fontsize=10];
-     subgraph cluster_gui { label="GUI thread"; style=dashed;
+     subgraph cluster_gui { label="GUI thread"; style=dashed; node [style=filled, fillcolor="#dbe9f6"];
        ui [label="DAQ_Move / DAQ_Viewer\nuser interface"];
        cm [label="control module\nprocess_ui_cmds\nthread_status"]; }
-     subgraph cluster_pl { label="Plugin thread (one per controller)"; style=dashed;
+     subgraph cluster_pl { label="Plugin thread (one per controller)"; style=dashed; node [style=filled, fillcolor="#fbe5cc"];
        w [label="worker\nActuatorWorker / DetectorWorker\nqueue_command"];
        p [label="your plugin\nDAQ_Move_xxx / DAQ_xDViewer_xxx"];
        c [label="controller\nthe driver object", shape=ellipse]; }
@@ -55,7 +55,9 @@ Initialization and closing
    :caption: Initialization of an instrument, with a master and a slave
 
    digraph init {
-     rankdir=TB; node [shape=box, fontname="Helvetica", fontsize=10];
+     rankdir=TB; node [shape=box, style=filled, fillcolor="#dbe9f6", fontname="Helvetica", fontsize=10];
+     key [shape=plaintext, style=solid, fontsize=9, label=<<table border="0" cellborder="1" cellspacing="4"><tr><td bgcolor="#dbe9f6">GUI thread</td><td bgcolor="#fbe5cc">Plugin thread</td></tr></table>>];
+     f [fillcolor="#fbe5cc"]; g [fillcolor="#fbe5cc"];
      a [label="the user checks Init (or the Dashboard applies an experiment)\nDAQ_Move / DAQ_Viewer: init_hardware"];
      b [label="the control module creates the worker\nmaster: a new QThreadProxy\nslave: the thread of its master (an error if there is none)"];
      c [label="worker.moveToThread(thread)\nthe thread is started by the master only"];
@@ -100,7 +102,7 @@ Moving an actuator
        m [label="plugin.move_abs(value)"];
        t [label="plugin.poll_moving: every interval,\ncheck_target_reached"];
        d [label="plugin.move_done()\n(worker forwards it once)"]; }
-     key [shape=plaintext, fontsize=9, label=<<table border="0" cellborder="1" cellspacing="4"><tr><td bgcolor="#dbe9f6">GUI thread</td><td bgcolor="#fbe5cc">Plugin thread</td></tr></table>>];
+     key [shape=plaintext, style=solid, fontsize=9, label=<<table border="0" cellborder="1" cellspacing="4"><tr><td bgcolor="#dbe9f6">GUI thread</td><td bgcolor="#fbe5cc">Plugin thread</td></tr></table>>];
      key -> u [style=invis];
      {rank=same; u; q}
      {rank=same; s1; t}
@@ -142,19 +144,26 @@ Grabbing data
    :caption: ``grab_data`` of a ``DAQ_Viewer``
 
    digraph grab {
-     rankdir=LR; node [shape=box, fontname="Helvetica", fontsize=10];
-     subgraph cluster_gui { label="GUI thread"; style=dashed;
+     rankdir=TB; nodesep=1.2; ranksep=0.4;
+     node [shape=box, style=filled, fontname="Helvetica", fontsize=10];
+     edge [fontname="Helvetica", fontsize=9];
+     key [shape=plaintext, style=solid, fontsize=9, label=<<table border="0" cellborder="1" cellspacing="4"><tr><td bgcolor="#dbe9f6">GUI thread</td><td bgcolor="#fbe5cc">Plugin thread</td></tr></table>>];
+     { node [fillcolor="#dbe9f6"];
        u [label="Snap or Grab button:\nDAQ_Viewer.grab_data"];
        sd [label="show_data\nviewers, then grab_done_signal"]; }
-     subgraph cluster_pl { label="Plugin thread"; style=dashed;
+     { node [fillcolor="#fbe5cc"];
        q [label="worker.queue_command\nSINGLE / GRAB -> worker.grab_data"];
        g [label="plugin.grab_data(Naverage, live, ...)\nthe controller acquires"];
        r [label="data_ready\nsoftware averaging if\nNaverage > 1 and no hardware_averaging"]; }
-     u -> q [label="SINGLE or GRAB\n(Naverage)"];
+     key -> u [style=invis];
+     {rank=same; u; q}
+     {rank=same; sd; r}
+     u -> q [label=" SINGLE or GRAB (Naverage)"];
+     u -> q [label=" STOP_GRAB ", style=dashed];
      q -> g;
-     g -> r [label="dte_signal\n(DataToExport)"];
-     r -> sd [label="data_detector_sig"];
-     u -> q [label="STOP_GRAB", style=dashed];
+     g -> r [label=" dte_signal (DataToExport)"];
+     r -> sd [label=" data_detector_sig "];
+     u -> sd [style=invis];
    }
 
 Text version:
