@@ -230,7 +230,7 @@ Install PyMoDAQ and the Arduino plugin
 
 Let's start by installing PyMoDAQ in our environment
 
-``(arduino_ubuntu) $ pip install pymodaq pyqt5``
+``(arduino_ubuntu) $ pip install pymodaq pyqt6``
 
 .. note::
    Version 4.4 at the time of writing.
