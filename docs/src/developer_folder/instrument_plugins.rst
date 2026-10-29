@@ -1004,22 +1004,9 @@ Modifying the UI from the instrument plugin class
 -------------------------------------------------
 
 The user interface control module and the instrument plugin class are not in the same thread, moreover, the plugin
-class is not aware of the UI object (``DAQ_Move`` or ``DAQ_Viewer``).
-The following shows, how the instrument plugin class ``DAQ_Move_MyPluginClass`` relates to ``DAQ_Move``:
-
-.. code-block:: python
-
-   class DAQ_Move:
-      def init_hardware(self...):
-         hardware: DAQ_Move_Hardware
-         hardware.moveToThread()
-
-   class DAQ_Move_Hardware:
-      hardware: DAQ_Move_Base
-
-   class DAQ_Move_MyPluginClass(DAQ_Move_Base):
-      """Plugin class defined in a plugins repository."""
-
+class is not aware of the UI object (``DAQ_Move`` or ``DAQ_Viewer``). The control module creates a worker
+(``ActuatorWorker`` or ``DetectorWorker``) that is moved to the plugin thread and creates the plugin instance
+``DAQ_Move_MyPluginClass``. The diagrams of :ref:`plugin_workflow` show who calls what, and in which thread.
 
 Therefore, you'll find below ways to interact with the UI from the plugin class.
 
