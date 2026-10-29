@@ -38,9 +38,8 @@ class _LedLimitsMixin:
             if opts.get('limits') is None:
                 opts['limits'] = states
         limits = opts.get('limits')
-        if isinstance(limits, (list, tuple)) and limits and all(isinstance(state, str) for state in limits):
-            # names of the Status workflow: plain strings, so that the option can be saved in and read from xml
-            opts['limits'] = [state.value if isinstance(state, StrEnum) else str(state) for state in limits]
+        if limits is not None:
+            opts['limits'] = self._normalize_limits(limits)
         super().__init__(**opts)
 
     def setOpts(self, **opts):
@@ -50,6 +49,22 @@ class _LedLimitsMixin:
             if 'limits' not in opts:
                 opts['limits'] = states
         super().setOpts(**opts)
+
+    def setLimits(self, limits):
+        """Normalize Status/StrEnum members before delegating.
+
+        ``Parameter.setLimits`` writes ``opts['limits']`` directly, and it's also what
+        ``Parameter.setOpts(limits=...)`` dispatches to internally, so overriding it here (rather than only
+        ``setOpts``) covers both ``param.setLimits(...)`` and ``param.setOpts(limits=...)``, not just construction.
+        """
+        return super().setLimits(self._normalize_limits(limits))
+
+    @staticmethod
+    def _normalize_limits(limits):
+        # names of the Status workflow: plain strings, so that the option can be saved in and read from xml
+        if isinstance(limits, (list, tuple)) and limits and all(isinstance(state, str) for state in limits):
+            return [state.value if isinstance(state, StrEnum) else str(state) for state in limits]
+        return limits
 
     @staticmethod
     def _warn_states():

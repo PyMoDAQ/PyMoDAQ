@@ -182,6 +182,29 @@ class TestActionLedParameter:
         tree.setParameters(p, showTop=False)
         assert not tree.listAllItems()[0].widget.button.isCheckable()
 
+    def test_checkable_option_change_rewires_the_button(self, tree):
+        """Regression: optsChanged ignored a runtime change of 'checkable', leaving the button wired
+        to its creation-time behaviour (plain click -> activate) instead of switching to the toggle
+        wiring (toggled -> toggle)."""
+        p = Parameter.create(name='act', type='action_led', value='false')
+        tree.setParameters(p, showTop=False)
+        button = tree.listAllItems()[0].widget.button
+        assert not button.isCheckable()
+
+        p.setOpts(checkable=True)
+        assert button.isCheckable()
+        activated = []
+        p.sigActivated.connect(lambda param: activated.append(param.opts['checked']))
+        button.click()
+        button.click()
+        assert activated == [True, False]
+
+        p.setOpts(checkable=False)
+        assert not button.isCheckable()
+        activated.clear()
+        button.click()
+        assert len(activated) == 1
+
     def test_states_of_the_status_workflow(self, tree):
         from pymodaq_gui.utils.status_palette import Status, StatusPalette
         p = Parameter.create(name='act', type='action_led', value=Status.OFF, limits='status')
@@ -234,6 +257,28 @@ class TestActionLedParameter:
         p.setLimits('status')
         assert led.state_names() == list(Status)
         assert led.get_state() == Status.ERROR
+
+    @pytest.mark.parametrize('ptype', ['multistate_led', 'action_led'])
+    def test_setlimits_normalizes_status_members_like_construction(self, tree, ptype):
+        """Regression: Parameter.setLimits writes opts['limits'] directly and bypasses setOpts, so the
+        StrEnum-to-str normalization done at construction time must also apply there, or opts['limits']
+        keeps raw enum objects and XML serialization produces invalid Python syntax."""
+        from pymodaq_gui.utils.status_palette import Status
+        p = Parameter.create(name='led', type=ptype, value=Status.OFF, limits=[Status.OFF, Status.IDLE])
+        tree.setParameters(p, showTop=False)
+        p.setLimits([Status.OFF, Status.RUNNING, Status.ERROR])
+        assert p.opts['limits'] == ['off', 'running', 'error']
+        assert all(type(state) is str for state in p.opts['limits'])
+
+    def test_setlimits_survives_xml_roundtrip(self, tmp_path):
+        from pymodaq_gui.parameter import ioxml
+        from pymodaq_gui.utils.status_palette import Status
+        root = Parameter.create(name='root', type='group', children=[
+            dict(name='act', type='action_led', value=Status.OFF, limits=[Status.OFF, Status.IDLE])])
+        root.child('act').setLimits([Status.OFF, Status.RUNNING, Status.ERROR])
+        ioxml.parameter_to_xml_file(root, tmp_path / 'settings.xml')
+        loaded = ioxml.XML_file_to_parameter(tmp_path / 'settings.xml')
+        assert loaded[0]['limits'] == ['off', 'running', 'error']
 
     def test_status_limits_survive_xml(self, tmp_path):
         from pymodaq_gui.parameter import ioxml
