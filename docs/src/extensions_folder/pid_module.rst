@@ -81,7 +81,7 @@ Demonstration with a virtual beam steering system
 
 **Lucky you, you do not need a real system to test the PID module!** A computer and an internet connection are enough. For our demonstration, we will install some mock plugins that simulate a beam steering system.
 
-Let us start from scratch, we follow the installation procedure of PyMoDAQ that you can find in the installation page: https://pymodaq.cnrs.fr/en/latest/usage/Installation.html
+Let us start from scratch, we follow the installation procedure of PyMoDAQ that you can find in the :ref:`installation page <quick_start>`.
 
 We suppose that you have Miniforge/Miniconda3/Anaconda3 installed.
 
@@ -340,20 +340,14 @@ In the beam steering example, this corresponds to one actuator plugin (if you us
 
 The first thing to do is to check the `list of readily available plugins`__.
 
-The easy scenario is that you found that the plugins for your hardware are already developped. You then just have to test if they properly move or make an acquisition with the `DAQ Move`__ and `DAQ Viewer`__ modules. That's it!
+The easy scenario is that you found that the plugins for your hardware are already developped. You then just have to test if they properly move or make an acquisition with the :ref:`DAQ Move <DAQ_Move_module>` and :ref:`DAQ Viewer <DAQ_Viewer_module>` modules. That's it!
 
-If there is no plugin developped for the hardware you want to use, you will have to develop your own. Don't panic, that's quite simple! Everything is explained in the `Plugins`__ section of the documentation, and in `this video`__. Moreover, you can find a lot of examples for any kind of plugins in the list given above and in the `GitHub repository of PyMoDAQ`__. If at some point, you stick on a problem, do not hesite to raise an issue in the GitHub repository or address your question to the mailing list pymodaq@services.cnrs.fr.
+If there is no plugin developped for the hardware you want to use, you will have to develop your own. Don't panic, that's quite simple! Everything is explained in the :ref:`Plugins <plugins>` section of the documentation, and in `this video`__. Moreover, you can find a lot of examples for any kind of plugins in the list given above and in the `GitHub repository of PyMoDAQ`__. If at some point, you stick on a problem, do not hesite to raise an issue in the GitHub repository or address your question to the mailing list pymodaq@services.cnrs.fr.
 
 .. note::
     It is not necessary that the plugins you use are declared in the same package as your model. Actually a model is in principle independent of the hardware. If you use plugins that are declared in other packages, you just need them to be installed in your python environment.
 
 __ https://github.com/CEMES-CNRS/pymodaq_plugin_manager/blob/main/doc/PluginList.md
-
-__ https://pymodaq.cnrs.fr/en/latest/usage/modules/DAQ_Move.html
-
-__ https://pymodaq.cnrs.fr/en/latest/usage/modules/DAQ_Viewer.html
-
-__ https://pymodaq.cnrs.fr/en/latest/usage/modules/Plugins.html
 
 __ https://www.youtube.com/watch?v=9O6pqz89UT8
 
@@ -365,12 +359,10 @@ How to write a PID model?
 
 **Naming convention**
 
-Similarly to `plugins`__, there exist naming conventions that you should follow, so that PyMoDAQ will be able to parse correctly and find the classes and the files that are involved.
+Similarly to :ref:`plugins <instrument_plugin_naming_convention>`, there exist naming conventions that you should follow, so that PyMoDAQ will be able to parse correctly and find the classes and the files that are involved.
 
 * The name of the file declaring the PID model should be named **PIDModelXxxx.py**
 * The class declared in the file should be named **PIDModelXxxx**
-
-__ https://pymodaq.cnrs.fr/en/latest/usage/modules/Plugins.html#naming-convention
 
 **Number of setpoints and naming of the control modules**
 
