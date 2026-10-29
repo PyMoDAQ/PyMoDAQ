@@ -155,32 +155,51 @@ def test_continuous_save_toolbar_group(ini_daq_move_ui):
 
 
 class TestActuatorSelection:
-    def test_actuators_are_grouped_under_banners_that_cannot_be_selected(self, ini_daq_move_ui):
+    @staticmethod
+    def menu_tree(menu):
+        """The menu as nested lists: the name of an action, or {submenu: [...]}"""
+        tree = []
+        for action in menu.actions():
+            if action.menu() is not None:
+                tree.append({action.text(): TestActuatorSelection.menu_tree(action.menu())})
+            else:
+                tree.append(action.text())
+        return tree
+
+    def test_actuators_are_grouped_in_the_menu_as_the_add_menus(self, ini_daq_move_ui):
         actuator, qtbot, widget = ini_daq_move_ui
         ui = actuator.ui
         ui.actuators = ['PI', 'BSPiezoMirror', 'CookbookDll', 'TCPServer', 'Mock']
 
-        combo = ui.actuators_combo
-        texts = [combo.itemText(ind) for ind in range(combo.count())]
-        assert texts == ['Remote', 'TCPServer', 'Mock', 'BSPiezoMirror', 'Mock', 'Mock / Cookbook', 'CookbookDll',
-                         'Plugin', 'PI']
-        banners = [text for ind, text in enumerate(texts) if not combo.model().item(ind).isEnabled()]
-        assert banners == ['Remote', 'Mock', 'Mock / Cookbook', 'Plugin']
+        assert self.menu_tree(ui.actuator_selector.add_menu) == [
+            {'Remote': ['TCPServer']},
+            {'Mock': ['BSPiezoMirror', 'Mock', {'Cookbook': ['CookbookDll']}]},
+            {'Plugin': ['PI']},
+        ]
         assert sorted(ui.actuators) == ['BSPiezoMirror', 'CookbookDll', 'Mock', 'PI', 'TCPServer']
-        assert ui.actuator in ui.actuators  # a banner is never the current actuator
 
-    def test_a_single_group_is_a_flat_list(self, ini_daq_move_ui):
+    def test_the_first_actuator_is_selected_and_shown_by_its_name(self, ini_daq_move_ui):
         actuator, qtbot, widget = ini_daq_move_ui
         ui = actuator.ui
-        ui.actuators = ['PI', 'Thorlabs']
-        assert [ui.actuators_combo.itemText(ind) for ind in range(ui.actuators_combo.count())] == ['PI', 'Thorlabs']
-        assert ui.actuators == ['PI', 'Thorlabs']
+        ui.actuators = ['PI', 'CookbookDll']
+        assert ui.actuator == 'CookbookDll'  # the first one of the groups, as the menu shows them
+        assert ui.actuator_selector.add_widget.text() == 'CookbookDll'
 
     def test_choosing_an_actuator_is_sent_to_the_module(self, ini_daq_move_ui):
         actuator, qtbot, widget = ini_daq_move_ui
         ui = actuator.ui
         ui.actuators = ['PI', 'CookbookDll']
-        assert ui.actuator == 'CookbookDll'  # the first actuator of the list, after the banner
         with qtbot.waitSignal(ui.command_sig, timeout=1000) as blocker:
             ui.actuator = 'PI'
         assert blocker.args[0].attribute == 'PI'
+
+    def test_a_click_in_the_menu_chooses_the_actuator(self, ini_daq_move_ui):
+        actuator, qtbot, widget = ini_daq_move_ui
+        ui = actuator.ui
+        ui.actuators = ['PI', 'CookbookDll']
+        plugin_menu = next(action.menu() for action in ui.actuator_selector.add_menu.actions()
+                           if action.text() == 'Plugin')
+        with qtbot.waitSignal(ui.command_sig, timeout=1000) as blocker:
+            plugin_menu.actions()[0].trigger()
+        assert blocker.args[0].attribute == 'PI'
+        assert ui.actuator == 'PI'
