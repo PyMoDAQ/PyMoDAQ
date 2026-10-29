@@ -45,6 +45,7 @@ features section.
 
    /developer_folder/configuration
    /developer_folder/instrument_plugins
+   /developer_folder/plugin_workflow
    /developer_folder/plugin_cookbook
    /developer_folder/extension_plugins
    /developer_folder/legacy_to_current
