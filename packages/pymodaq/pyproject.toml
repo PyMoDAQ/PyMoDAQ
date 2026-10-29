@@ -63,7 +63,7 @@ pyside6 = [
 ]
 
 pyqt6 = [
-    "pyqt6"
+    "pyqt6!=6.12.0",  # no PyQt6-WebEngine matches 6.12.0 yet: QtWebEngineCore fails to load
 ]
 
 pyqt5= [
