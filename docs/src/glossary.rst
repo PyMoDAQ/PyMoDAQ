@@ -1,4 +1,6 @@
-  .. _glossary:
+:orphan:
+
+.. _glossary:
 
 Glossary Terms
 ==============

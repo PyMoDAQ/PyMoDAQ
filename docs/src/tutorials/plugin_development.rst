@@ -1050,3 +1050,6 @@ We have also introduce a software toolbox for Python development in general, tha
 +------------------------------------+---------------------------------------+
 
 Finally, remember that while purchasing an instrument, it is important to check what your supplier provides as a software solution (Python wrapper, Linux drivers...). This can save you a lot of time!
+
+For other concrete, real-world plugin stories, have a look at the :ref:`Lab Stories <lab_story>`, for instance
+:ref:`Read a Basler camera <basler>` or :ref:`Read an Arduino board <arduino_ubuntu>`.

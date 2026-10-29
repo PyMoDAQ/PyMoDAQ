@@ -351,11 +351,12 @@ Organization of the documentation
 
 The basic use of PyMoDAQ, that do not need any coding, is documentated in the :ref:`User’s Guide <user_guide>`.
 
-The :ref:`Tutorials <tutorials>` address specific questions about PyMoDAQ, but also about the Python ecosystem and
-useful tools for open-source development. As PyMoDAQ is not a library for developers but for experimental physicists
-and teachers, we find relevant to introduce those tools from scratch. The tutorials are of various difficulties that
-are indicated
-at the beginning of the page.
+Tutorials address specific questions about PyMoDAQ, but also about the Python ecosystem and useful tools for
+open-source development. As PyMoDAQ is not a library for developers but for experimental physicists and
+teachers, we find relevant to introduce those tools from scratch. The tutorials are of various difficulties
+that are indicated at the beginning of the page, and are grouped alongside the usage, plugin-authoring, or
+contribution pages they each relate to, in the :ref:`User’s Guide <user_guide>` and the :doc:`Developer’s
+Guide </developer>`.
 
 The :ref:`Lab stories <lab_story>` section is dedicated to concrete examples of use in the lab or for educational
 purposes.
