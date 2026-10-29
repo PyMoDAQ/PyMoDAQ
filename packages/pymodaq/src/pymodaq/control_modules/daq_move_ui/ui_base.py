@@ -274,7 +274,7 @@ class DAQMoveUI(ControlModuleUI):
         if toolbar is None:
             toolbar = self.toolbar
         self._setup_name_widget(toolbar=toolbar)
-        self.add_widget('actuators_combo', self.actuator_selector.add_widget, toolbar=toolbar)
+        self.add_widget('actuators_combo', self.actuator_selector, toolbar=toolbar)
         self._setup_init_action(toolbar=toolbar, action_name='ini_actuator',
                                 display_name='Ini. Actuator', tip='Connect to selected actuator')
         self._setup_settings_action(toolbar=toolbar)
@@ -370,7 +370,7 @@ class DAQMoveUI(ControlModuleUI):
 
     def cleanup_ui(self):
         try:
-            self.actuator_selector.module_changed.disconnect()
+            self.actuator_selector.actuator_changed.disconnect()
         except TypeError:
             pass
         if 'move_abs_green' in self.actions_names:
@@ -441,7 +441,7 @@ class DAQMoveUI(ControlModuleUI):
         self.stop_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.STOP, )))
         self.get_value_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.GET_VALUE, )))
 
-        self.actuator_selector.module_changed.connect(
+        self.actuator_selector.actuator_changed.connect(
             lambda act: self.command_sig.emit(ThreadCommand(UiToMainMove.ACTUATOR_CHANGED, act)))
 
     # -------------------------------------------------------------------------
@@ -549,7 +549,7 @@ class DAQMoveUI(ControlModuleUI):
     # -------------------------------------------------------------------------
 
     def send_init(self, checked: bool):
-        self.actuator_selector.add_widget.setEnabled(not checked)
+        self.actuator_selector.setEnabled(not checked)
         self.command_sig.emit(ThreadCommand(UiToMainMove.INIT, [checked,
                                                                 self.actuator_selector.actuator]))
 

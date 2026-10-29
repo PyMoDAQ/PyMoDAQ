@@ -171,7 +171,7 @@ class TestActuatorSelection:
         ui = actuator.ui
         ui.actuators = ['PI', 'BSPiezoMirror', 'CookbookDll', 'TCPServer', 'Mock']
 
-        assert self.menu_tree(ui.actuator_selector.add_menu) == [
+        assert self.menu_tree(ui.actuator_selector.menu) == [
             {'Remote': ['TCPServer']},
             {'Mock': ['BSPiezoMirror', 'Mock', {'Cookbook': ['CookbookDll']}]},
             {'Plugin': ['PI']},
@@ -183,7 +183,7 @@ class TestActuatorSelection:
         ui = actuator.ui
         ui.actuators = ['PI', 'CookbookDll']
         assert ui.actuator == 'CookbookDll'  # the first one of the groups, as the menu shows them
-        assert ui.actuator_selector.add_widget.text() == 'CookbookDll'
+        assert ui.actuator_selector.text() == 'CookbookDll'
 
     def test_choosing_an_actuator_is_sent_to_the_module(self, ini_daq_move_ui):
         actuator, qtbot, widget = ini_daq_move_ui
@@ -197,7 +197,7 @@ class TestActuatorSelection:
         actuator, qtbot, widget = ini_daq_move_ui
         ui = actuator.ui
         ui.actuators = ['PI', 'CookbookDll']
-        plugin_menu = next(action.menu() for action in ui.actuator_selector.add_menu.actions()
+        plugin_menu = next(action.menu() for action in ui.actuator_selector.menu.actions()
                            if action.text() == 'Plugin')
         with qtbot.waitSignal(ui.command_sig, timeout=1000) as blocker:
             plugin_menu.actions()[0].trigger()
