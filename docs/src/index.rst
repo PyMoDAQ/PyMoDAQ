@@ -125,9 +125,7 @@ If you would like to get updated with the evolutions of the project, please subs
    :caption: User Guide
 
    user
-   data_management
    tutorials
-   Supported instruments <https://github.com/PyMoDAQ/pymodaq_plugin_manager/blob/main/README.md>
 
 .. toctree::
    :maxdepth: 2
