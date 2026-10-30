@@ -1,7 +1,7 @@
-from typing import Any, Optional, TYPE_CHECKING
+from typing import Any, Callable, Optional, TYPE_CHECKING
 import weakref
 
-from qtpy import QtCore
+from qtpy import QtCore, QtWidgets
 
 from pymodaq_gui.managers.parameter_manager import ParameterTreeWidget
 from pymodaq_gui.parameter import Parameter
@@ -17,24 +17,22 @@ if TYPE_CHECKING:
 class ConditionHolderBase:
     """ Base for a holder that builds up an element with one pluggable model, picked via a
     combo + nested settings tree, with detector/actuator refresh delegated to
-    ModulesManagerBinding. Used today by ConditionHolder (ChoiceModelBase/ChoiceModelFactory),
-    and designed to be shared by a planned SwitchConditionHolder (SwitchModelBase/
-    SwitchModelFactory) once that lands.
+    ModulesManagerBinding. Used by ConditionHolder (ChoiceModelBase/ChoiceModelFactory) - one
+    instance per ChoiceElt, and one per Rule of a SwitchElt's rule list (see
+    `holders/rule.py`).
 
     Ordinary single inheritance between holders: a concrete subclass only needs to specialize
-    `factory` and `dict_key` (SwitchConditionHolder's planned shape additionally overrides the
-    `model` setter to wire up `outcomes_changed`) - no cooperative super() across siblings to
-    coordinate.
+    `factory` and `dict_key` - no cooperative super() across siblings to coordinate.
     """
 
-    #: the ChoiceModelFactory/SwitchModelFactory instance to pick registered models from
+    #: the ChoiceModelFactory instance to pick registered models from
     factory = None
     #: the key this condition's chosen model name is saved under in to_dict/from_dict
     dict_key: str = None
     #: model_name a brand new instance resolves its lazy default to. None falls back to
     #: factory.models[0] (whichever model happened to be discovered/registered first) - leave
-    #: unset only when that's harmless (e.g. ConditionHolder's true/false are both trivial);
-    #: set explicitly whenever the default actually matters (see SwitchConditionHolder).
+    #: unset only when that's harmless; set explicitly whenever the default actually matters
+    #: (see ConditionHolder.default_model_name).
     default_model_name: str = None
 
     def __init__(self, elt: 'SeqEltBase', combo_tooltip: Optional[str] = None):
@@ -73,7 +71,15 @@ class ConditionHolderBase:
         return sum(1 + ConditionHolderBase.count_settings_rows(child)
                    for child in settings.children())
 
-    def create_widget(self, base_widget: WidgetWithToolbar) -> WidgetWithToolbar:
+    def create_widget(self, base_widget: WidgetWithToolbar,
+                      place_combo: Optional[Callable[[QtWidgets.QWidget], None]] = None
+                      ) -> WidgetWithToolbar:
+        """ `place_combo`, if given, is called with the model-picker combo instead of
+        appending it to base_widget's own vertical layout - e.g. a SwitchElt Rule row inlines
+        it into its single-line header, alongside the target combo. With no `place_combo`,
+        the combo is appended bare, as ChoiceElt/WhileLoopElt do. Either way, the settings
+        parameter tree always lands in base_widget's vertical layout, full width, below
+        whatever else is already there. """
         combo = ComboBox()
         with QtCore.QSignalBlocker(combo):
             combo.addItems(self.factory.models)
@@ -81,14 +87,17 @@ class ConditionHolderBase:
             combo.currentTextChanged.connect(self.set_model)
             if self.combo_tooltip:
                 combo.setToolTip(self.combo_tooltip)
-        base_widget.insert_widget(combo, 1)
+        if place_combo is not None:
+            place_combo(combo)
+        else:
+            base_widget.layout().addWidget(combo)
 
         parameter_tree = ParameterTreeWidget()
         parameter_tree.tree.setParameters(self.model.settings, showTop=False)
         self._param_tree_widget = weakref.ref(parameter_tree)
         parameter_tree.tree.setMinimumHeight(self.count_settings_rows(self.model.settings) * 25)
         combo.currentTextChanged.connect(lambda: self._update_params(parameter_tree))
-        base_widget.insert_widget(parameter_tree.widget, 2)
+        base_widget.layout().addWidget(parameter_tree.widget)
         base_widget.tree = parameter_tree
         parameter_tree.widget.setVisible(len(self.model.params) != 0)
         return base_widget

@@ -94,8 +94,8 @@ class CompositeState(MyState):
 
         #: whatever Sequence.recursive_connect_elts() wires this element's own forward
         #: progress to (next sibling, or the parent's execute_state if it's last) - stashed
-        #: there each run so anything else that needs "what comes after me" (BranchHolder's
-        #: CONTINUE branches) doesn't have to recompute sibling/parent lookups itself.
+        #: there each run so anything else that needs "what comes after me" (a SwitchElt
+        #: Rule's CONTINUE target) doesn't have to recompute sibling/parent lookups itself.
         self.next_state: Union['CompositeState', MyQFinalState, None] = None
 
         self._elt_ref = weakref.ref(elt)  # the states are held by C++ (their parent): a strong reference to the
@@ -144,7 +144,7 @@ class CompositeState(MyState):
         by whoever set it up in the first place (Sequence.recursive_connect_elts).
 
         Everything *not* routed through here - any transition an element or a composed holder
-        (BranchHolder...) adds directly via addTransition() - is permanent by construction: it
+        (a SwitchElt Rule...) adds directly via addTransition() - is permanent by construction: it
         survives clear_transitions() with no extra bookkeeping needed, because clear_transitions()
         only ever touches what was registered here.
         """
