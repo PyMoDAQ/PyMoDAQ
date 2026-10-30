@@ -495,6 +495,9 @@ class ActionManager:
         self._toolbar: Optional[QtWidgets.QToolBar] = None
         self._menu: Optional[QtWidgets.QMenu] = None
 
+        self._action_group_buttons: dict[str, QtWidgets.QToolButton] = {}
+        self._action_group_secondary: dict[str, list[str]] = {}
+
         if toolbar is not None:
             self.reference_toolbar('default', toolbar)
             self.set_toolbar(toolbar)
@@ -839,8 +842,9 @@ class ActionManager:
         :meth:`add_action` would from its spec dict, but added only to the dropdown,
         never to a toolbar directly.
 
-        If there are no secondary actions, the button behaves like a plain toolbar
-        action (no dropdown arrow).
+        If there are no secondary actions, or none of them is currently visible, the button
+        behaves like a plain toolbar action (no dropdown arrow). The arrow reappears as soon as
+        a secondary action becomes visible again (e.g. through :meth:`set_action_visible`).
 
         Parameters
         ----------
@@ -880,12 +884,16 @@ class ActionManager:
 
         button = QtWidgets.QToolButton(toolbar_obj)
         button.setDefaultAction(primary)
-        # Let the button pick up the toolbar's icon/text style (and keep following it
-        # on later changes) instead of freezing its style at creation time.
-        button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonFollowStyle)
+        # Unlike actions added via addAction(), this standalone widget is not kept in sync with
+        # the toolbar's own toolButtonStyle automatically: apply the current global style now,
+        # and keep following later changes, exactly as add_toolbar() does for the toolbar itself.
+        style = get_toolbar_button_style()
+        button.setToolButtonStyle(style if style is not None
+                                  else QtCore.Qt.ToolButtonStyle.ToolButtonFollowStyle)
+        toolbar_style_signaller.style_changed.connect(button.setToolButtonStyle)
 
+        secondary_names = []
         if secondary_actions:
-            button.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.MenuButtonPopup)
             dropdown = QtWidgets.QMenu(button)
             for spec in secondary_actions:
                 spec = dict(spec)
@@ -893,13 +901,33 @@ class ActionManager:
                 self.add_action(spec_short_name, toolbar=None, menu=None,
                                 auto_toolbar=False, auto_menu=False, **spec)
                 dropdown.addAction(self._actions[spec_short_name])
+                secondary_names.append(spec_short_name)
             button.setMenu(dropdown)
-        else:
-            button.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.DelayedPopup)
+
+        self._action_group_buttons[short_name] = button
+        self._action_group_secondary[short_name] = secondary_names
+        self._refresh_action_group_popup(short_name)
 
         if toolbar_obj is not None:
             toolbar_obj.addWidget(button)
         return button
+
+    def _refresh_action_group_popup(self, group_name: str) -> None:
+        """Show the dropdown arrow of an add_action_group toolbutton only while at least one
+        of its secondary actions is visible; hide it (and fall back to a plain button) otherwise.
+
+        Called automatically by :meth:`add_action_group` and by :meth:`set_action_visible` on any
+        action that belongs to a group, so toolbars built from dynamically shown/hidden actions
+        stay tidy without extra bookkeeping from the caller.
+        """
+        button = self._action_group_buttons.get(group_name)
+        if button is None:
+            return
+        secondary_names = self._action_group_secondary.get(group_name, [])
+        if any(self._actions[name].isVisible() for name in secondary_names):
+            button.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.MenuButtonPopup)
+        else:
+            button.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.DelayedPopup)
 
     def add_menu(self, short_name: str, title: str = '',
                  parent_menu: QtWidgets.QMenuBar | QtWidgets.QMenu | str | None = None,
@@ -1378,6 +1406,9 @@ class ActionManager:
         """Set the visibility of a given action or a list of an action"""
         if action_name in self._actions:
             self._actions[action_name].setVisible(visible)
+            for group_name, secondary_names in self._action_group_secondary.items():
+                if action_name in secondary_names:
+                    self._refresh_action_group_popup(group_name)
         else:
             raise KeyError(f'The action with name: {action_name} is not referenced'
                            f' in the actions list: {self._actions}')

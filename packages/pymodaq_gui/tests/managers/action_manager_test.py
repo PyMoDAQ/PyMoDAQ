@@ -164,6 +164,26 @@ def test_action_group_with_secondary_actions(qtbot):
     assert len(action_manager.toolbar.actions()) == 1
 
 
+def test_action_group_arrow_hides_when_no_secondary_action_visible(qtbot):
+    """The dropdown arrow tracks the *visible* secondary actions dynamically, not just
+    whether any were declared: it disappears once they are all hidden, and comes back as
+    soon as one becomes visible again (e.g. a detector-dependent action)."""
+    action_manager = ActionManager(toolbar=QtWidgets.QToolBar())
+    qtbot.addWidget(action_manager.toolbar)
+
+    button = action_manager.add_action_group(
+        'primary', 'Primary', '',
+        secondary_actions=[{'short_name': 'secondary', 'name': 'Secondary', 'visible': False}])
+
+    assert button.popupMode() == QtWidgets.QToolButton.ToolButtonPopupMode.DelayedPopup
+
+    action_manager.set_action_visible('secondary', True)
+    assert button.popupMode() == QtWidgets.QToolButton.ToolButtonPopupMode.MenuButtonPopup
+
+    action_manager.set_action_visible('secondary', False)
+    assert button.popupMode() == QtWidgets.QToolButton.ToolButtonPopupMode.DelayedPopup
+
+
 def test_action_group_primary_and_secondary_in_separate_toolbars(qtbot):
     """Several groups can share one toolbar without their secondary actions leaking into it"""
     action_manager = ActionManager(toolbar=QtWidgets.QToolBar())
