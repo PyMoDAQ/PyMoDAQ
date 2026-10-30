@@ -78,7 +78,7 @@ Text version:
    plugin thread. A slave gets the controller of its master as argument; the master creates it.
 #. The result (``initialized``, ``info``, the controller) comes back as an ``INI_HARDWARE`` status. The control module
    stores the controller, emits ``init_signal`` and colours its init button (green for a master, magenta for a slave). A
-   failed initialization marks the module in error.
+   failed initialization turns the status LED of the module orange (``DAQ_Move`` and ``DAQ_Viewer``), with the reason as tooltip.
 #. Closing: the ``CLOSE`` command makes the worker call the ``close`` method of the plugin. When the master is closed,
    the workers of its slaves are closed too and the thread is stopped (``quit`` then ``wait``, up to 5 s before it is
    terminated with a warning).
@@ -132,7 +132,8 @@ Text version:
    ``move_abs`` returned, with the target value or, if the plugin has an encoder, the value it reads. A plugin whose move
    only ends later (a homing, a callback of the driver) calls ``move_done`` itself when it ends.
 #. An exception raised by a plugin method is caught by the worker and sent as an ``ERROR`` status: the control module
-   writes it in its status bar and is marked in error until the next status coming from the hardware.
+   writes it in its status bar and its status LED turns orange (``DAQ_Move`` and ``DAQ_Viewer``), with the error as
+   tooltip, until the next status coming from the hardware.
 
 ``move_rel`` follows the same path, and ``move_home`` calls ``plugin.move_home``, which must call ``move_done`` when the
 homing is over. ``stop_motion`` sets ``motion_stopped``, calls ``plugin.stop_motion`` and stops the timer.

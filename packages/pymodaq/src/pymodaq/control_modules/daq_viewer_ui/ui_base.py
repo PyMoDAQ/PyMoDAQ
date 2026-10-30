@@ -17,6 +17,8 @@ from pymodaq.utils.daq_utils import ThreadCommand
 from pymodaq.control_modules.ui_utils import ControlModuleUI
 
 from pymodaq_gui.utils import DockArea, Dock
+from pymodaq_gui.utils.widgets import MultistateLED, StatusPalette, Status
+from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq.control_modules.instruments import DET_TYPES
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerFactory, ViewerDispatcher
@@ -37,6 +39,14 @@ options = {
     'DAQND': [name for name in [plugin['name'] for plugin in DET_TYPES['DAQND']]],
 }
 add_menu_entries = add_category_layers(options)
+
+
+class ViewerLedState(StrEnum):
+    """States of the DAQ_Viewer status LED."""
+    UNINITIALIZED = 'uninitialized'
+    IDLE = 'idle'
+    GRABBING = 'grabbing'
+    ERROR = 'error'
 
 
 class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
@@ -88,6 +98,16 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
         self._data_ready = False
         self._detector_widget = None
+        self._in_error = False
+        self.status_led: MultistateLED = MultistateLED(
+            states=[
+                (ViewerLedState.UNINITIALIZED, StatusPalette.color(Status.OFF)),
+                (ViewerLedState.IDLE,          StatusPalette.color(Status.IDLE)),
+                (ViewerLedState.GRABBING,      StatusPalette.color(Status.RUNNING)),
+                (ViewerLedState.ERROR,         StatusPalette.color(Status.ERROR)),
+            ],
+            readonly=True,
+        )
 
         self.selector = ViewerSelector(add_menu_entries=add_menu_entries)
 
@@ -125,6 +145,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.update_init_icon(status, action_name='ini_detector')
         if self.has_action('ini_detector'):
             self.set_action_checked('ini_detector', status)
+        self._update_status_led()
 
     @property
     def data_ready(self):
@@ -165,6 +186,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._setup_init_action(action_name='ini_detector', display_name='Ini. Detector',
                                 tip='Connect to selected detector')
         self._setup_settings_action()
+        self.add_widget('status_led', self.status_led, toolbar=self.toolbar)
         self.toolbar.addSeparator()
 
         # Detector-specific actions
@@ -195,6 +217,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._connect_common_actions()
 
         self.connect_action('grab', self._grab)
+        self.connect_action('grab', self._update_status_led, signal_name='toggled')
         self.connect_action('snap', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SNAP, )))
         self.connect_action('reset_live', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.RESET_LIVE)))
         self.connect_action('save_current', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SAVE_CURRENT, )))
@@ -264,6 +287,24 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.command_sig.emit(ThreadCommand(UiToMainViewer.INIT,
                                             [checked,
                                              self.selector.selected_module]))
+
+    def set_error_state(self, in_error: bool, message: str = '') -> None:
+        """Turn the status LED to ``ERROR`` (orange) with the error as tooltip, or back to its normal state"""
+        self._in_error = in_error
+        self._update_status_led()
+        self.status_led.setToolTip(message if in_error else '')
+
+    def _update_status_led(self, *_):
+        """Show the state of the module: error, not initialized, grabbing or idle"""
+        if self._in_error:
+            state = ViewerLedState.ERROR
+        elif not self._ini_state:
+            state = ViewerLedState.UNINITIALIZED
+        elif self.is_action_checked('grab'):
+            state = ViewerLedState.GRABBING
+        else:
+            state = ViewerLedState.IDLE
+        self.status_led.set_state(state)
 
     def quit_fun(self):
         return self.app.quit_fun()
