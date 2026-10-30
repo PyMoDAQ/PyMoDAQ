@@ -138,3 +138,32 @@ def test_update_viewers(ini_daq_viewer_ui):
 
     daq_viewer.update_viewers([])
     assert len(daq_viewer.viewers) == 0
+
+
+def test_close_closes_detached_roi_widget(qtbot):
+    """A detached (floating) ROI widget has no parent: regression test for
+    https://github.com/PyMoDAQ/PyMoDAQ/issues/1435 where it stayed open and visible
+    after closing the DAQ_Viewer, blocking the application from quitting.
+    """
+    win = QtWidgets.QMainWindow()
+    qtbot.addWidget(win)
+    roi_dock = Dock('Rois')
+    qtbot.addWidget(roi_dock)
+    widget = QtWidgets.QWidget()
+    win.setCentralWidget(widget)
+    daq_viewer = DAQ_Viewer_UI(app=None, parent=widget, rois_dock=roi_dock)
+    win.show()
+
+    daq_viewer.update_viewers(['Viewer2D'])
+    view = daq_viewer.viewers[0].view
+    view._rois_panel._detached = True
+    view._rois_panel.show(True)
+    assert view.roi_widget.isVisible()
+
+    daq_viewer.close()
+
+    assert not view.roi_widget.isVisible()
+
+    widget.close()
+    roi_dock.close()
+    QtWidgets.QApplication.processEvents()
