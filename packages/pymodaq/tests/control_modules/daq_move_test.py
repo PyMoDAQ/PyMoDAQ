@@ -137,6 +137,31 @@ class TestDAQMove:
                 thread.join(timeout=5.0)
         QtWidgets.QApplication.processEvents()
 
+    def test_axis_change_reads_the_position_of_the_new_axis(self, ini_daq_move_ui):
+        """The position of the new axis is asked after the axis was sent to the plugin thread, without a move
+
+        The hardware thread is not started: the commands are recorded where the module emits them (a real thread
+        sends a Parameter through a signal, and PySide6 6.11 aborts at random when its wrapper is deleted there).
+        """
+        daq_move, qtbot, widget = ini_daq_move_ui
+        daq_move.actuator = 'Mock'
+        sent = []
+        daq_move._update_settings_signal.connect(lambda change: sent.append(('update', change['param'].name())))
+        daq_move.command_hardware.connect(lambda cmd: sent.append((cmd.command,)))
+        second_axis = daq_move.axis_names[1]
+
+        daq_move.axis_name = second_axis  # not initialized: nothing to read
+        assert ('update', 'axis') in sent
+        assert (ControlToHardwareMove.GET_ACTUATOR_VALUE,) not in sent
+
+        sent.clear()
+        daq_move._controller_and_thread.initialized = True
+        try:
+            daq_move.axis_name = daq_move.axis_names[0]
+        finally:
+            daq_move._controller_and_thread.initialized = False
+        assert sent == [('update', 'axis'), (ControlToHardwareMove.GET_ACTUATOR_VALUE,)]
+
     def test_axis_management(self, ini_daq_move_ui):
         daq_move, qtbot, widget = ini_daq_move_ui
         daq_move.actuator = 'Mock'
