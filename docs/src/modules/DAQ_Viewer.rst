@@ -116,7 +116,8 @@ Hardware choice and initialization
 The *DAQ type/plugin* drop-down list (:numref:`figure_DAQ_Viewer_choice`) lists the instrument plugins of
 type detector. They are sorted by the dimensionality of the data they are generating (``DAQ2D`` for cameras,
 ``DAQ1D`` for waveforms, timeseries... and ``DAQ0D`` for detectors generating scalars such as powermeter,
-voltmeter...). Once a plugin is selected, the |ini_det_off| button starts the initialization using the values
+voltmeter...). Within each dimensionality the plugins are grouped in submenus (for instance *Mock* for the
+simulated instruments, *Remote* for the LECO ones and one submenu per plugin package). Once a plugin is selected, the |ini_det_off| button starts the initialization using the values
 currently set in the *Settings* dock (so, if needed, set them before initializing). If the initialization
 is successful the name of the module and the initialization icon turn green and the other actions of the
 toolbar become available. Changing the detector is only possible while the module is not initialized.
