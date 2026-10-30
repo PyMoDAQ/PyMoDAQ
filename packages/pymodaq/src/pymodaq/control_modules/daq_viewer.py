@@ -920,6 +920,7 @@ class DAQ_Viewer(ParameterControlModule):
                 self.ui.detector_init = status.attribute['initialized']
                 if not status.attribute['initialized'] and not status.attribute.get('closed', False):
                     self.ui.update_init_icon(False, 'ini_detector', failed=True)  # failed initialization
+                    self._set_in_error(True, str(status.attribute.get('info', '')) or 'initialization failed')
             if status.attribute['initialized']:
                 self._controller_and_thread.controller = status.attribute["controller"]
 
