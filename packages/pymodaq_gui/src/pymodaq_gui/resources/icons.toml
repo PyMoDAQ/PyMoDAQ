@@ -64,6 +64,7 @@ names = [
     'folder_data',
     'folder_open',
     'format_list_numbered',
+    'format_text_wrap',
     'function',
     'gesture',
     'graphic_eq',
