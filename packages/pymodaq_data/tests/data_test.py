@@ -544,6 +544,22 @@ class TestDataBase:
         assert averaged.data[0] == approx(acquisitions.mean(axis=0))
         assert averaged.errors[0] == approx(acquisitions.std(axis=0, ddof=1) / np.sqrt(n_acquisitions))
 
+    def test_mean_with_errors_of_a_buffer_whose_acquisitions_are_on_the_second_axis(self):
+        n_acquisitions = 9
+        rng = np.random.default_rng(11)
+        acquisitions = rng.normal(loc=2., scale=0.5, size=(7, n_acquisitions))
+        buffer = data_mod.DataRaw('buffer', data=[acquisitions], nav_indexes=(1,),
+                         axes=[data_mod.Axis('x', data=np.arange(7), index=0),
+                               data_mod.Axis('frames', data=np.arange(n_acquisitions), index=1)])
+
+        averaged = buffer.mean_with_errors(axis=1)
+
+        assert averaged.n_averaged == n_acquisitions
+        assert averaged.shape == (7,)
+        assert [axis.label for axis in averaged.axes] == ['x']  # the axis of the acquisitions is removed
+        assert averaged.data[0] == approx(acquisitions.mean(axis=1))
+        assert averaged.errors[0] == approx(acquisitions.std(axis=1, ddof=1) / np.sqrt(n_acquisitions))
+
     def test_mean_with_errors_gives_the_same_as_accumulate(self):
         rng = np.random.default_rng(3)
         acquisitions = rng.normal(size=(6, 5))
