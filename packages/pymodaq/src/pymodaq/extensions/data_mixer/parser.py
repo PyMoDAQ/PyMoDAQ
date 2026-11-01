@@ -6,6 +6,8 @@ from typing import Any, List
 
 import numpy as np
 
+from pymodaq_data.data import DataWithAxes, DataToExport
+
 
 data_name_regexp = re.compile(r"({.*?})+")  # first occurrences of things between {}
 
@@ -120,6 +122,19 @@ def _numpy_member(node: ast.AST) -> Any:
     return member
 
 
+def _data_method(node: ast.Attribute, dte) -> Any:
+    """Get the method of a PyMoDAQ data object (DataWithAxes, DataToExport) called in a formula, such as the
+    mean in {det/a}.mean()"""
+    base = _evaluate(node.value, dte)
+    if not isinstance(base, (DataWithAxes, DataToExport)) or node.attr.startswith('_'):
+        raise UnsafeFormulaError(f'{node.attr} cannot be used in a formula: only the public methods of '
+                                 f'PyMoDAQ data can be called')
+    method = getattr(base, node.attr, None)
+    if not (callable(method) and hasattr(type(base), node.attr)):
+        raise UnsafeFormulaError(f'{node.attr} is not a method of PyMoDAQ data')
+    return method
+
+
 def _evaluate(node: ast.AST, dte) -> Any:
     if isinstance(node, ast.Constant):
         if isinstance(node.value, (int, float, complex, str, bool, type(None))):
@@ -145,6 +160,8 @@ def _evaluate(node: ast.AST, dte) -> Any:
             return dte.get_data_from_full_name(args[0])
         if isinstance(node.func, ast.Name) and node.func.id in _ALLOWED_BUILTINS:
             return _ALLOWED_BUILTINS[node.func.id](*args, **kwargs)
+        if isinstance(node.func, ast.Attribute) and _dotted_parts(node.func)[:1] != ['np']:
+            return _data_method(node.func, dte)(*args, **kwargs)
         return _numpy_member(node.func)(*args, **kwargs)
     raise UnsafeFormulaError(f'{type(node).__name__} cannot be used in a formula')
 
@@ -164,7 +181,7 @@ def evaluate_formula(formula: str, dte) -> Any:
     ------
     UnsafeFormulaError
         if the formula contains anything else than arithmetic, numpy functions (np.xxx), a few builtins
-        (abs, min, max, ...) and the data
+        (abs, min, max, ...), the data and the public methods of the data
     """
     try:
         tree = ast.parse(formula.strip(), mode='eval')

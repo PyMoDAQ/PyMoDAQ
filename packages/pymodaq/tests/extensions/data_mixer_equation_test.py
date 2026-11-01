@@ -26,6 +26,18 @@ def dte():
     ])
 
 
+def test_methods_of_the_data_can_be_used(model, dte):
+    result = compute(model, dte, '{det/b}.mean() - {det/a}.sum()')
+
+    assert np.allclose(result[0], [20. - 6.])
+
+
+def test_methods_of_the_data_change_the_result_as_expected(model, dte):
+    result = compute(model, dte, 'np.sqrt({det/a}.mean() ** 2) + {det/b}.mean() * 0')
+
+    assert np.allclose(result[0], [2.])
+
+
 def compute(model, dte, formula):
     return model.compute_formula(formula, dte, name='result')
 
@@ -42,6 +54,8 @@ def compute(model, dte, formula):
     ('{det/a} * np.pi / np.pi', [1., 2., 3.]),
     ('np.add({det/a}, {det/b})', [11., 22., 33.]),
     ('np.abs({det/a} - 2.5 * 1e0)', [1.5, 0.5, 0.5]),
+    ('-{det/a}.abs()', [-1., -2., -3.]),
+    ('{det/a}.deepcopy() + {det/b}.abs()', [11., 22., 33.]),
 ])
 def test_formulas_are_computed(model, dte, formula, expected):
     result = compute(model, dte, formula)
@@ -64,6 +78,15 @@ def test_formulas_are_computed(model, dte, formula, expected):
     "np.savetxt('a_file_that_should_not_be_created', [1])",
     "dte.__class__",
     "dte.data",
+    "{det/a}.__class__",
+    "{det/a}._data",
+    "{det/a}.data",
+    "{det/a}.mean().__class__",
+    "{det/a}.mean().data[0].tofile('a_file_that_should_not_be_created')",
+    "np.array([1, 2]).tofile('a_file_that_should_not_be_created')",
+    "np.array([1, 2]).dump('a_file_that_should_not_be_created')",
+    "np.array([1, 2]).tolist()",
+    "(1).bit_length()",
     "np.__dict__",
     "{det/a} if True else 1",
 ])
