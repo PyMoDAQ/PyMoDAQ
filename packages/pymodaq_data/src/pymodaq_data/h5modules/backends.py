@@ -10,11 +10,11 @@ from pathlib import Path
 import numpy as np
 import importlib
 from importlib import metadata
-import pickle
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.utils import capitalize, JsonConverter
+from pymodaq_utils.safe_pickle import restricted_loads
 from pymodaq_utils import utils
 from pymodaq_utils.enums import BaseEnum, enum_checker
 
@@ -476,10 +476,19 @@ class StringARRAY(VLARRAY):
         super().append(data)
 
     def array_to_string(self, array):
-        return pickle.loads(array)
+        """Decode a stored string
+
+        New files hold the plain UTF-8 bytes of the string. Files written by older versions hold a pickle
+        (always starting with the 0x80 protocol byte, which can never start a valid UTF-8 text): these are
+        read by a restricted loader that only rebuilds plain data and never runs code.
+        """
+        raw = bytes(array)
+        if raw[:1] == b'\x80':
+            return restricted_loads(raw)
+        return raw.decode('utf-8')
 
     def string_to_array(self, string):
-        return np.frombuffer(pickle.dumps(string), np.uint8)
+        return np.frombuffer(string.encode('utf-8'), np.uint8)
 
 
 class Attributes(object):
