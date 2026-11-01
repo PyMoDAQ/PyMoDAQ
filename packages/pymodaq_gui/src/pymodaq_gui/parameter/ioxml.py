@@ -18,6 +18,7 @@ from qtpy import QtGui
 from qtpy.QtCore import QDateTime, QTime
 
 from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_utils.utils import safe_literal_eval, UnsafeExpressionError
 
 from pymodaq_gui.parameter import Parameter
 
@@ -272,27 +273,27 @@ def elt_to_dict(el):
 
         elif attribute in optional_eval_options:
             try:
-                param[attribute] = eval(el.get(attribute))
+                param[attribute] = safe_literal_eval(el.get(attribute))
             except Exception as e:
                 logger.warning(f'could not restore setting option {attribute}')
 
     if 'limits' in el.attrib.keys():
         try:
             try:
-                limits = eval(el.get('limits'))
-            except (NameError, SyntaxError):  # a plain string, such as the 'status' limits of the LED parameters
+                limits = safe_literal_eval(el.get('limits'))
+            except UnsafeExpressionError:  # a plain string, such as the 'status' limits of the LED parameters
                 limits = el.get('limits')
             if isinstance(limits, dict):
                 for key, val in limits.items():
                     try:
-                        limits[key] = eval(val)
-                    except NameError:
+                        limits[key] = safe_literal_eval(val)
+                    except UnsafeExpressionError:
                         limits[key] = val
             param.update(dict(limits=limits))
         except Exception as e:
             logger.exception(e)
     if 'states' in el.attrib.keys():
-        states = eval(el.get('states'))
+        states = safe_literal_eval(el.get('states'))
         param.update(dict(states=states))
     return param
 
@@ -354,6 +355,23 @@ def parameter_to_xml_file(param, filename: Union[str, Path], overwrite=True):
     if not overwrite and fname.exists() and fname.is_file():
         raise FileExistsError
     tree.write(str(fname))
+
+
+def get_table_model_class(module_name: str, class_name: str) -> type:
+    """Get the table model class named in a stored 'table_view' parameter
+
+    Only table models defined in PyMoDAQ or its plugins can be rebuilt, so that a stored parameter cannot
+    make PyMoDAQ import or call something else.
+    """
+    from pymodaq_gui.utils.widgets.table import TableModel
+
+    if not (isinstance(module_name, str) and isinstance(class_name, str)
+            and module_name.split('.')[0].startswith('pymodaq')):
+        raise UnsafeExpressionError(f'Refused to load {module_name}.{class_name} as a table model')
+    _cls = getattr(importlib.import_module(module_name), class_name, None)
+    if not (isinstance(_cls, type) and issubclass(_cls, TableModel)):
+        raise UnsafeExpressionError(f'Refused to load {module_name}.{class_name} as a table model')
+    return _cls
 
 
 def walk_xml_to_parameter(params=[], XML_elt=None):
@@ -447,7 +465,8 @@ def set_txt_from_elt(el, param_dict):
             if val_text == 'None':
                 param_value = dict(all_items=[], selected=[])
             else:
-                param_value = dict(all_items=eval(el.get('all_items', val_text)), selected=eval(val_text))
+                param_value = dict(all_items=safe_literal_eval(el.get('all_items', val_text)),
+                                   selected=safe_literal_eval(val_text))
         elif 'bool' in param_type or 'led' in param_type:  # covers 'bool' 'bool_push',  'led' and 'led_push'types
             if param_type == 'multistate_led':
                 param_value = val_text
@@ -460,26 +479,25 @@ def set_txt_from_elt(el, param_dict):
         elif param_type == 'date':
             param_value = QDateTime.fromMSecsSinceEpoch(int(val_text)).date()
         elif param_type == 'table':
-            param_value = eval(val_text)
+            param_value = safe_literal_eval(val_text)
         elif param_type == 'color':
-            param_value = QtGui.QColor(*eval(val_text))
+            param_value = QtGui.QColor(*safe_literal_eval(val_text))
         elif param_type == 'list':
             try:
-                param_value = eval(val_text)
+                param_value = safe_literal_eval(val_text)
             except Exception:
                 param_value = val_text  # for back compatibility
         elif param_type == 'progress':
             param_value = int(val_text)
         elif param_type == 'table_view':
             data_dict = json.loads(val_text)
-            mod = importlib.import_module(data_dict['module'])
-            _cls = getattr(mod, data_dict['classname'])
+            _cls = get_table_model_class(data_dict['module'], data_dict['classname'])
             param_value = _cls(data_dict['data'], header=data_dict['header'])
         elif param_type == 'action':
             if val_text == 'None':
                 param_value = None
             else:
-                param_value = eval(val_text)
+                param_value = safe_literal_eval(val_text)
         else:
             param_value = val_text
         param_dict.update(dict(value=param_value))
