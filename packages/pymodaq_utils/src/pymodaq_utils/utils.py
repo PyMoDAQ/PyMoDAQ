@@ -5,6 +5,7 @@ import inspect
 import json
 import ast
 import functools
+from collections import OrderedDict
 import platform
 import time
 from packaging import version as version_mod
@@ -67,8 +68,9 @@ class UnsafeExpressionError(ValueError):
 def _literal_value(node: ast.AST) -> Any:
     """Rebuild a value from the ast of its ``repr`` without ever evaluating code
 
-    Only numbers, strings, bytes, booleans, None, signed numbers, tuples and lists of these, and the
-    datetime, date, time and numpy.float64 constructors given plain arguments are accepted.
+    Only numbers, strings, bytes, booleans, None, signed numbers, tuples, lists, dicts and sets of these,
+    and the str, int, float, datetime, date, time and numpy.float64 constructors given plain arguments are
+    accepted.
     """
     if isinstance(node, ast.Constant):
         if isinstance(node.value, (str, bytes, int, float, bool, type(None))):
@@ -79,6 +81,14 @@ def _literal_value(node: ast.AST) -> Any:
             return -operand if isinstance(node.op, ast.USub) else +operand
     elif isinstance(node, ast.Name) and node.id in ('nan', 'inf'):
         return float(node.id)
+    elif isinstance(node, ast.Attribute) and _dotted_name(node) in ('np.nan', 'numpy.nan'):
+        return np.nan
+    elif isinstance(node, ast.Dict):
+        if any(key is None for key in node.keys):
+            raise UnsafeExpressionError('Unexpected unpacking in stored value')
+        return {_literal_value(key): _literal_value(value) for key, value in zip(node.keys, node.values)}
+    elif isinstance(node, ast.Set):
+        return {_literal_value(elt) for elt in node.elts}
     elif isinstance(node, ast.Tuple):
         return tuple(_literal_value(elt) for elt in node.elts)
     elif isinstance(node, ast.List):
@@ -115,6 +125,16 @@ _SAFE_CONSTRUCTORS = {
     'datetime.time': datetime.time,
     'np.float64': np.float64,
     'numpy.float64': np.float64,
+    'str': str,
+    'int': int,
+    'float': float,
+    'OrderedDict': OrderedDict,
+    'collections.OrderedDict': OrderedDict,
+    'np.array': np.array,
+    'array': np.array,
+    'np.int64': np.int64,
+    'np.int32': np.int32,
+    'np.float32': np.float32,
 }
 
 
