@@ -8,7 +8,9 @@ from pathlib import Path
 import pytest
 
 from pymodaq_gui.editor.monaco import read_files_cache, write_files_cache
-from pymodaq_utils.safe_pickle import UnsafePickleError
+import warnings
+
+from pymodaq_utils.safe_pickle import UnsafePickleError, LegacyFormatWarning
 
 TRIGGERED = []
 
@@ -63,3 +65,20 @@ def test_new_cache_is_plain_json(tmp_path):
 
     with open(cache, 'rb') as f:
         assert json.load(f) == ['a.py']
+
+
+def test_reading_a_legacy_cache_warns_that_the_file_should_be_migrated(tmp_path):
+    cache = tmp_path / 'monaco_files'
+    cache.write_bytes(pickle.dumps([Path('a.py')]))
+
+    with pytest.warns(LegacyFormatWarning, match='migrate'):
+        read_files_cache(cache)
+
+
+def test_reading_a_new_cache_does_not_warn(tmp_path):
+    cache = tmp_path / 'monaco_files'
+    write_files_cache([Path('a.py')], cache)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', LegacyFormatWarning)
+        read_files_cache(cache)

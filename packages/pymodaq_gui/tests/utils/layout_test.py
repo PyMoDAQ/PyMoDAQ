@@ -9,7 +9,9 @@ import pytest
 from pyqtgraph.dockarea import DockArea, Dock
 
 from pymodaq_gui.utils import layout
-from pymodaq_utils.safe_pickle import UnsafePickleError
+import warnings
+
+from pymodaq_utils.safe_pickle import UnsafePickleError, LegacyFormatWarning
 
 TRIGGERED = []
 
@@ -79,3 +81,21 @@ def test_new_layout_files_are_plain_json(qtbot, tmp_path):
         content = json.load(f)
 
     assert 'main' in content
+
+
+def test_loading_a_legacy_layout_warns_that_the_file_should_be_migrated(qtbot, tmp_path):
+    file = tmp_path / 'legacy.dock'
+    with open(file, 'wb') as f:
+        pickle.dump(make_dockarea(qtbot).saveState(), f, pickle.HIGHEST_PROTOCOL)
+
+    with pytest.warns(LegacyFormatWarning, match='migrate'):
+        layout.load_layout_state(make_dockarea(qtbot), file)
+
+
+def test_loading_a_new_layout_does_not_warn(qtbot, tmp_path):
+    file = tmp_path / 'new.dock'
+    layout.save_layout_state(make_dockarea(qtbot), file)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', LegacyFormatWarning)
+        layout.load_layout_state(make_dockarea(qtbot), file)

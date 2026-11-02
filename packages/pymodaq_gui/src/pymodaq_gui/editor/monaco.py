@@ -13,7 +13,7 @@ from qtpy.QtCore import Qt, QFileSystemWatcher, Signal, QThread, QObject
 
 from pymodaq_utils.config import get_set_local_dir, GlobalConfig, get_set_path
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_utils.safe_pickle import restricted_loads
+from pymodaq_utils.safe_pickle import restricted_loads, warn_legacy_format
 
 from pymodaq_gui.messenger import dialog
 from pymodaq_gui.utils import CustomApp
@@ -37,6 +37,7 @@ def read_files_cache(file_path: Path) -> list[Path]:
     with open(file_path, 'rb') as f:
         content = f.read()
     if content[:1] == b'\x80':
+        warn_legacy_format(f'The editor cache file {file_path}')
         return [Path(file) for file in restricted_loads(content, _LEGACY_CACHE_ALLOWED)]
     return [Path(file) for file in json.loads(content.decode('utf-8'))]
 
