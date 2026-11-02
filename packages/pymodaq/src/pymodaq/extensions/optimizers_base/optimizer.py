@@ -280,7 +280,10 @@ class OptimizationRunner(QtCore.QObject):
                     break
 
                 self.current_time = time.perf_counter()
-                QtWidgets.QApplication.processEvents()
+                # This loop runs on its own thread (self.runner_thread) and never returns to
+                # that thread's own event loop between iterations, so without this, a queued
+                # command from the GUI thread (STOP, BOUNDS, RESTART...) would never be
+                # delivered to process_commands() until the loop exits on its own.
                 QtWidgets.QApplication.processEvents()
             logger.info('Optimisation loop exiting')
             self.modules_manager.connect_actuators(False)
