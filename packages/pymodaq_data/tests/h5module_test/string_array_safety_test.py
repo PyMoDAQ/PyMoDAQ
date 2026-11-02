@@ -8,7 +8,9 @@ import numpy as np
 import pytest
 
 from pymodaq_data.h5modules import backends
-from pymodaq_utils.safe_pickle import UnsafePickleError
+import warnings
+
+from pymodaq_utils.safe_pickle import UnsafePickleError, LegacyFormatWarning
 
 tested_backend = [b for b in ['tables', 'h5py'] if b in backends.backends_available]
 
@@ -73,3 +75,18 @@ def test_new_strings_are_stored_as_plain_utf8(string_array):
 
     raw = bytes(backends.VLARRAY.read(string_array)[0])
     assert raw == 'héllo'.encode('utf-8')
+
+
+def test_reading_a_legacy_string_warns_that_the_file_should_be_migrated(string_array):
+    _append_raw(string_array, pickle.dumps('a legacy string'))
+
+    with pytest.warns(LegacyFormatWarning, match='migrate'):
+        string_array.read()
+
+
+def test_reading_new_strings_does_not_warn(string_array):
+    string_array.append('a new string')
+
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', LegacyFormatWarning)
+        assert string_array.read() == ['a new string']
