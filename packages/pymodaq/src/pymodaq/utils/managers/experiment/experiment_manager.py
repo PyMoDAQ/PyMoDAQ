@@ -127,7 +127,6 @@ class ExperimentManager(DashboardMixin, ManagerBase):
             for area in self.dashboard.dockarea.tempAreas:
                 area.window().setVisible(False)
 
-            QtWidgets.QApplication.processEvents()
             logger.info(f"Loading {self.entry_type.capitalize()} file: {entry}")
 
             self.load_control_modules(plugins_sorted)
