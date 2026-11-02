@@ -10,8 +10,11 @@ from multipledispatch.dispatcher import MethodDispatcher, str_signature
 from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtWidgets import QAction as QtQAction
 
-from pymodaq_gui.qt_utils import apply_theme, theme_signaller
+from pymodaq_gui.qt_utils import (apply_theme, theme_signaller, get_toolbar_button_style,
+                                  toolbar_style_signaller, TOOLBAR_BUTTON_STYLES,
+                                  ToolbarStyleChecks, ThemeChecks, MenuIconRefresher)
 from pymodaq_gui.utils.styling import create_icon, create_color, as_theme_role, get_current_theme
+from pymodaq_gui.utils.widgets.push import ToolButtonIcon
 from pymodaq_utils.utils import find_keys_from_val
 from pymodaq_utils.warnings import deprecation_msg
 from pymodaq_utils.config import GlobalConfig as Config
@@ -23,13 +26,6 @@ except ImportError:
 
 config = Config()
 
-TOOLBAR_BUTTON_STYLES = {
-    'icon_only': QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly,
-    'text_only': QtCore.Qt.ToolButtonStyle.ToolButtonTextOnly,
-    'text_beside_icon': QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
-    'text_under_icon': QtCore.Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
-    'follow_style': QtCore.Qt.ToolButtonStyle.ToolButtonFollowStyle,
-}
 TOOLBAR_BUTTON_STYLE_LABELS = {
     'icon_only': 'Icons only',
     'text_only': 'Text only',
@@ -37,62 +33,6 @@ TOOLBAR_BUTTON_STYLE_LABELS = {
     'text_under_icon': 'Text under icons',
     'follow_style': 'Follow system style',
 }
-
-
-def get_toolbar_button_style() -> QtCore.Qt.ToolButtonStyle | None:
-    """The toolbar button style set in the configuration, None if it is not set or not valid"""
-    name = config.get(('gui', 'style', 'toolbar_button_style'), [None])[0]
-    return TOOLBAR_BUTTON_STYLES.get(name)
-
-
-class ToolbarStyleSignaller(QtCore.QObject):
-    style_changed = QtCore.Signal(object)
-
-
-toolbar_style_signaller = ToolbarStyleSignaller()
-
-
-class ToolbarStyleChecks(QtCore.QObject):
-    """Keeps the checkable toolbar style actions in sync, lives as long as the menu it is parented to"""
-
-    def __init__(self, actions: dict[str, QtGui.QAction], parent: QtCore.QObject) -> None:
-        super().__init__(parent)
-        self._actions = actions
-        toolbar_style_signaller.style_changed.connect(self.sync)
-
-    @QtCore.Slot(object)
-    def sync(self, style: QtCore.Qt.ToolButtonStyle) -> None:
-        for name, action in self._actions.items():
-            action.setChecked(TOOLBAR_BUTTON_STYLES[name] == style)
-
-
-class ThemeChecks(QtCore.QObject):
-    """Keeps the checkable theme actions in sync, lives as long as the menu it is parented to"""
-
-    def __init__(self, actions: dict[str, QtGui.QAction], themes: dict[str, qt_themes.Theme],
-                 parent: QtCore.QObject):
-        super().__init__(parent)
-        self._actions = actions
-        self._themes = themes
-        theme_signaller.theme_changed.connect(self.sync)
-
-    @QtCore.Slot(object)
-    def sync(self, theme: qt_themes.Theme):
-        for name, action in self._actions.items():
-            action.setChecked(self._themes[name] == theme)
-
-
-class MenuIconRefresher(QtCore.QObject):
-    """Rebuilds a menu icon on theme change, lives as long as the menu it is parented to"""
-
-    def __init__(self, icon_name: Union[str, Path], parent: QtWidgets.QMenu):
-        super().__init__(parent)
-        self._icon_name = icon_name
-        theme_signaller.theme_changed.connect(self.refresh)
-
-    @QtCore.Slot(object)
-    def refresh(self, _theme=None):
-        self.parent().setIcon(create_icon(self._icon_name))
 
 
 resource_folder = Path(__file__).parent.parent.joinpath('resources')
@@ -495,9 +435,6 @@ class ActionManager:
         self._toolbar: Optional[QtWidgets.QToolBar] = None
         self._menu: Optional[QtWidgets.QMenu] = None
 
-        self._action_group_buttons: dict[str, QtWidgets.QToolButton] = {}
-        self._action_group_secondary: dict[str, list[str]] = {}
-
         if toolbar is not None:
             self.reference_toolbar('default', toolbar)
             self.set_toolbar(toolbar)
@@ -882,52 +819,20 @@ class ActionManager:
                                   icon_checked_color=icon_checked_color,
                                   follow_theme=follow_theme)
 
-        button = QtWidgets.QToolButton(toolbar_obj)
+        button = ToolButtonIcon(parent=toolbar_obj, follow_toolbar_style=True)
         button.setDefaultAction(primary)
-        # Unlike actions added via addAction(), this standalone widget is not kept in sync with
-        # the toolbar's own toolButtonStyle automatically: apply the current global style now,
-        # and keep following later changes, exactly as add_toolbar() does for the toolbar itself.
-        style = get_toolbar_button_style()
-        button.setToolButtonStyle(style if style is not None
-                                  else QtCore.Qt.ToolButtonStyle.ToolButtonFollowStyle)
-        toolbar_style_signaller.style_changed.connect(button.setToolButtonStyle)
 
-        secondary_names = []
         if secondary_actions:
-            dropdown = QtWidgets.QMenu(button)
             for spec in secondary_actions:
                 spec = dict(spec)
                 spec_short_name = spec.pop('short_name')
                 self.add_action(spec_short_name, toolbar=None, menu=None,
                                 auto_toolbar=False, auto_menu=False, **spec)
-                dropdown.addAction(self._actions[spec_short_name])
-                secondary_names.append(spec_short_name)
-            button.setMenu(dropdown)
-
-        self._action_group_buttons[short_name] = button
-        self._action_group_secondary[short_name] = secondary_names
-        self._refresh_action_group_popup(short_name)
+                button.add_menu_action(self._actions[spec_short_name])
 
         if toolbar_obj is not None:
             toolbar_obj.addWidget(button)
         return button
-
-    def _refresh_action_group_popup(self, group_name: str) -> None:
-        """Show the dropdown arrow of an add_action_group toolbutton only while at least one
-        of its secondary actions is visible; hide it (and fall back to a plain button) otherwise.
-
-        Called automatically by :meth:`add_action_group` and by :meth:`set_action_visible` on any
-        action that belongs to a group, so toolbars built from dynamically shown/hidden actions
-        stay tidy without extra bookkeeping from the caller.
-        """
-        button = self._action_group_buttons.get(group_name)
-        if button is None:
-            return
-        secondary_names = self._action_group_secondary.get(group_name, [])
-        if any(self._actions[name].isVisible() for name in secondary_names):
-            button.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.MenuButtonPopup)
-        else:
-            button.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.DelayedPopup)
 
     def add_menu(self, short_name: str, title: str = '',
                  parent_menu: QtWidgets.QMenuBar | QtWidgets.QMenu | str | None = None,
@@ -1406,9 +1311,6 @@ class ActionManager:
         """Set the visibility of a given action or a list of an action"""
         if action_name in self._actions:
             self._actions[action_name].setVisible(visible)
-            for group_name, secondary_names in self._action_group_secondary.items():
-                if action_name in secondary_names:
-                    self._refresh_action_group_popup(group_name)
         else:
             raise KeyError(f'The action with name: {action_name} is not referenced'
                            f' in the actions list: {self._actions}')

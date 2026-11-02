@@ -1,8 +1,10 @@
 from pathlib import Path
+from typing import Optional, Union
 
 from qtpy import QtWidgets, QtCore, QtGui
 from qtpy.QtWidgets import QWidget
 
+from pymodaq_gui.qt_utils import get_toolbar_button_style, toolbar_style_signaller
 from pymodaq_gui.utils.styling import create_icon
 from pymodaq_gui.utils.widgets.spinbox import SpinBox
 
@@ -33,15 +35,47 @@ class ToolButtonIcon(QtWidgets.QToolButton):
     Unlike a flat QPushButton, QToolButton with autoRaise reacts to hover the same
     way toolbar action buttons do, since that's what Qt uses under the hood for those.
     """
-    def __init__(self, icon_name: str, checkable=False, tip="", icon_color=None,
-                 icon_size: QtCore.QSize = None):
-        super().__init__()
-        self.setIcon(create_icon(icon_name, icon_color))
+    def __init__(self, icon_name: Union[str, Path, QtGui.QIcon, None] = None,
+                 checkable: bool = False, tip: str = "",
+                 icon_color: Optional[Union[QtGui.QColor, bytes, str]] = None,
+                 icon_size: Optional[QtCore.QSize] = None,
+                 parent: Optional[QtWidgets.QWidget] = None,
+                 follow_toolbar_style: bool = False) -> None:
+        super().__init__(parent)
+        if isinstance(icon_name, QtGui.QIcon):
+            self.setIcon(icon_name)
+        elif icon_name:
+            self.setIcon(create_icon(icon_name, icon_color))
         self.setCheckable(checkable)
         self.setToolTip(tip)
         self.setAutoRaise(True)
         if icon_size is not None:
             self.setIconSize(icon_size)
+
+        if follow_toolbar_style:
+            # Unlike a QAction added via addAction(), this button is not a widget the
+            # toolbar creates for itself, so it does not pick up the toolbar's own
+            # toolButtonStyle: apply the current global style now, and keep following
+            # later changes, exactly as add_toolbar() does for the toolbar itself.
+            style = get_toolbar_button_style()
+            self.setToolButtonStyle(style if style is not None
+                                    else QtCore.Qt.ToolButtonStyle.ToolButtonFollowStyle)
+            toolbar_style_signaller.style_changed.connect(self.setToolButtonStyle)
+
+    def add_menu_action(self, action: QtGui.QAction) -> None:
+        """Add one action to the dropdown menu (created on first call), and keep the
+        dropdown arrow shown only while at least one menu action is visible"""
+        if self.menu() is None:
+            self.setMenu(QtWidgets.QMenu(self))
+        self.menu().addAction(action)
+        action.visibleChanged.connect(self._refresh_popup_mode)
+        self._refresh_popup_mode()
+
+    def _refresh_popup_mode(self) -> None:
+        if self.menu() and any(action.isVisible() for action in self.menu().actions()):
+            self.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.MenuButtonPopup)
+        else:
+            self.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.DelayedPopup)
 
 
 class EditPushInfo:
