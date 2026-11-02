@@ -56,6 +56,7 @@ from pymodaq_gui.utils.app_worker import ExtensionWorker, SaverWorker
 from pymodaq_gui.utils.widgets import MultistateLED, StatusPalette, Status
 from pymodaq_utils.enums import StrEnum
 from pymodaq_gui.utils.custom_app import WorkFlowActions
+from pymodaq_gui.utils.utils import clear_layout
 
 
 if TYPE_CHECKING:
@@ -613,7 +614,6 @@ class DAQScan(CustomExt):
     def set_scan_batch(self, actuators, detectors):
         self.modules_manager.selected_detectors_name = detectors
         self.modules_manager.selected_actuators_name = actuators
-        QtWidgets.QApplication.processEvents()
 
     def override_popups(self, override=True):
         self._show_popups = override
@@ -761,13 +761,7 @@ class DAQScan(CustomExt):
         self.detectors_settings_tree.setFixedHeight(selection_tree_height)
 
     def set_scanner_settings(self, settings_tree: QtWidgets.QWidget):
-        while True:
-            child = self.scanner_widget.layout().takeAt(0)
-            if not child:
-                break
-            child.widget().deleteLater()
-            QtWidgets.QApplication.processEvents()
-
+        clear_layout(self.scanner_widget.layout())
         self.scanner_widget.layout().addWidget(settings_tree)
 
     def populate_status_bar(self):

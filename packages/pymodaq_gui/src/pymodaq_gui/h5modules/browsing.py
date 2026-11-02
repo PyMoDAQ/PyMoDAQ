@@ -30,7 +30,7 @@ from pymodaq_data.h5modules.browsing import H5BrowserUtil
 
 from pymodaq_gui.parameter import ioxml
 from pymodaq_gui.utils.widgets.tree_layout import TreeLayout
-from pymodaq_gui.utils.utils import h5tree_to_QTree, pngbinary2Qlabel
+from pymodaq_gui.utils.utils import h5tree_to_QTree, pngbinary2Qlabel, clear_layout
 from pymodaq_gui.utils.file_io import select_file, select_file_filter
 from pymodaq_gui.plotting.data_viewers.viewerND import ViewerND
 from pymodaq_gui.managers.action_manager import ActionManager
@@ -442,12 +442,7 @@ class H5Browser(CustomApp):
     def show_pixmaps(self, pixmaps=[]):
         if self.view.pixmap_widget.layout() is None:
             self.view.pixmap_widget.setLayout(QtWidgets.QHBoxLayout())
-        while 1:
-            child = self.view.pixmap_widget.layout().takeAt(0)
-            if not child:
-                break
-            child.widget().deleteLater()
-            QtWidgets.QApplication.processEvents()
+        clear_layout(self.view.pixmap_widget.layout())
         labs = []
         for pix in pixmaps:
             labs.append(pngbinary2Qlabel(pix))
