@@ -9,8 +9,26 @@ from collections import OrderedDict
 from qtpy import QtGui
 from qtpy.QtCore import QDateTime
 from pymodaq.utils.parameter import Parameter
+from pymodaq.utils.safe_eval import safe_literal_eval, UnsafeExpressionError
 
 from pyqtgraph.parametertree.Parameter import PARAM_TYPES, PARAM_NAMES
+
+def get_table_model_class(module_name: str, class_name: str) -> type:
+    """Get the table model class named in a stored 'table_view' parameter
+
+    Only table models defined in PyMoDAQ or its plugins can be rebuilt, so that a stored parameter cannot
+    make PyMoDAQ import or call something else.
+    """
+    from pymodaq.utils.gui_utils.widgets.table import TableModel
+
+    if not (isinstance(module_name, str) and isinstance(class_name, str)
+            and module_name.split('.')[0].startswith('pymodaq')):
+        raise UnsafeExpressionError(f'Refused to load {module_name}.{class_name} as a table model')
+    _cls = getattr(importlib.import_module(module_name), class_name, None)
+    if not (isinstance(_cls, type) and issubclass(_cls, TableModel)):
+        raise UnsafeExpressionError(f'Refused to load {module_name}.{class_name} as a table model')
+    return _cls
+
 
 def walk_parameters_to_xml(parent_elt=None, param=None):
     """
@@ -262,15 +280,15 @@ def elt_to_dict(el):
         param.update(dict(filetype=filetype))
 
     if 'detlist' in el.attrib.keys():
-        detlist = eval(el.get('detlist'))
+        detlist = safe_literal_eval(el.get('detlist'))
         param.update(dict(detlist=detlist))
 
     if 'movelist' in el.attrib.keys():
-        movelist = eval(el.get('movelist'))
+        movelist = safe_literal_eval(el.get('movelist'))
         param.update(dict(movelist=movelist))
 
     if 'addList' in el.attrib.keys():
-        addList = eval(el.get('addList'))
+        addList = safe_literal_eval(el.get('addList'))
         param.update(dict(addList=addList))
 
     if 'addText' in el.attrib.keys():
@@ -287,9 +305,9 @@ def elt_to_dict(el):
 
     if 'limits' in el.attrib.keys():
         try:
-            limits = eval(el.get('limits'))
+            limits = safe_literal_eval(el.get('limits'))
             param.update(dict(limits=limits))
-        except:
+        except UnsafeExpressionError:
             pass
 
     return param
@@ -442,7 +460,8 @@ def set_txt_from_elt(el, param_dict):
             if val_text == 'None':
                 param_value = dict(all_items=[], selected=[])
             else:
-                param_value = dict(all_items=eval(el.get('all_items', val_text)), selected=eval(val_text))
+                param_value = dict(all_items=safe_literal_eval(el.get('all_items', val_text)),
+                                   selected=safe_literal_eval(val_text))
         elif 'bool' in param_type or 'led' in param_type: # covers 'bool' 'bool_push',  'led' and 'led_push'types
             param_value = bool(int(val_text))
         elif param_type == 'date_time':
@@ -450,18 +469,17 @@ def set_txt_from_elt(el, param_dict):
         elif param_type == 'date':
             param_value = QDateTime.fromMSecsSinceEpoch(int(val_text)).date()
         elif param_type == 'table':
-            param_value = eval(val_text)
+            param_value = safe_literal_eval(val_text)
         elif param_type == 'color':
-            param_value = QtGui.QColor(*eval(val_text))
+            param_value = QtGui.QColor(*safe_literal_eval(val_text))
         elif param_type == 'list':
             try:
-                param_value = eval(val_text)
+                param_value = safe_literal_eval(val_text)
             except Exception:
                 param_value = val_text  # for back compatibility
         elif param_type == 'table_view':
             data_dict = json.loads(val_text)
-            mod = importlib.import_module(data_dict['module'])
-            _cls = getattr(mod, data_dict['classname'])
+            _cls = get_table_model_class(data_dict['module'], data_dict['classname'])
             param_value = _cls(data_dict['data'], header=data_dict['header'])
         elif param_type == 'action':
             if val_text == 'None':

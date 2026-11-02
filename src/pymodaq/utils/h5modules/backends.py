@@ -6,9 +6,9 @@ Created the 15/11/2022
 """
 import numpy as np
 import importlib
-import pickle
 from typing import Dict
 
+from pymodaq.utils.safe_pickle import restricted_loads, warn_legacy_format
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.config import Config
 from pymodaq.utils.daq_utils import capitalize, JsonConverter
@@ -446,10 +446,28 @@ class StringARRAY(VLARRAY):
         super().append(data)
 
     def array_to_string(self, array):
-        return pickle.loads(array)
+        """Decode a stored string
+
+        New files hold the plain UTF-8 bytes of the string. Files written by older versions hold a pickle
+        (always starting with the 0x80 protocol byte, which can never start a valid UTF-8 text): these are
+        read by a restricted loader that only rebuilds plain data and never runs code.
+        """
+        raw = bytes(array)
+        if raw[:1] == b'\x80':
+            warn_legacy_format(f'The string node {self.path} of the file {self._file_name()}')
+            return restricted_loads(raw)
+        return raw.decode('utf-8')
 
     def string_to_array(self, string):
-        return np.frombuffer(pickle.dumps(string), np.uint8)
+        return np.frombuffer(string.encode('utf-8'), np.uint8)
+
+    def _file_name(self) -> str:
+        try:
+            if self.backend == 'tables':
+                return str(self.node._v_file.filename)
+            return str(self.node.file.filename)
+        except Exception:
+            return '(unknown)'
 
 
 class Attributes(object):
