@@ -422,7 +422,6 @@ class H5Browser(CustomApp):
             if len(settings) > 0:
                 for child in self.settings.children():
                     child.remove()
-                QtWidgets.QApplication.processEvents()  # so that the tree associated with settings updates
                 for setting in settings:
                     param = ioxml.xml_string_to_parameter_dict(setting)
                     self.settings.addChild(param)
