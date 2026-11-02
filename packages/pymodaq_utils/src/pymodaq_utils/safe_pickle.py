@@ -7,6 +7,7 @@ attempt to reference another object is refused.
 """
 import io
 import pickle
+import warnings
 from typing import Any
 
 # The few non-primitive builtins/stdlib objects a legitimate legacy file may contain
@@ -17,6 +18,21 @@ _ALLOWED_GLOBALS = {
     ('builtins', 'complex'),
     ('builtins', 'bytearray'),
 }
+
+
+class LegacyFormatWarning(UserWarning):
+    """Emitted when a file is read in a legacy format that should be migrated"""
+
+
+def warn_legacy_format(what: str):
+    """Tell the user that what is read uses a legacy format and how to migrate it
+
+    Python shows a given warning once, so the user is not flooded when a file holds many legacy values
+    """
+    warnings.warn(LegacyFormatWarning(f'{what} was written in a legacy format (pickle) by an older version of '
+                                      f'PyMoDAQ. It is still read, but you should migrate it with the '
+                                      f'pymodaq_migrate command, and only keep files from sources you trust.'),
+                  stacklevel=3)
 
 
 class UnsafePickleError(pickle.UnpicklingError):
