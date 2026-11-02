@@ -24,8 +24,12 @@ class UnsafePickleError(pickle.UnpicklingError):
 
 
 class _RestrictedUnpickler(pickle.Unpickler):
+    def __init__(self, file, extra_allowed=()):
+        super().__init__(file)
+        self._allowed = _ALLOWED_GLOBALS | set(extra_allowed)
+
     def find_class(self, module: str, name: str):
-        if (module, name) in _ALLOWED_GLOBALS:
+        if (module, name) in self._allowed:
             return super().find_class(module, name)
         raise UnsafePickleError(f'Refused to load {module}.{name} from legacy content: only plain data '
                                 f'is allowed')
@@ -34,11 +38,18 @@ class _RestrictedUnpickler(pickle.Unpickler):
         raise UnsafePickleError('Refused to load an external object reference from legacy content')
 
 
-def restricted_loads(data: bytes) -> Any:
-    """Equivalent of pickle.loads restricted to plain data, raises UnsafePickleError otherwise"""
-    return _RestrictedUnpickler(io.BytesIO(data)).load()
+def restricted_loads(data: bytes, extra_allowed=()) -> Any:
+    """Equivalent of pickle.loads restricted to plain data, raises UnsafePickleError otherwise
+
+    Parameters
+    ----------
+    data: bytes
+    extra_allowed: iterable of (module name, object name)
+        Other harmless objects that the content may refer to
+    """
+    return _RestrictedUnpickler(io.BytesIO(data), extra_allowed).load()
 
 
-def restricted_load(file) -> Any:
+def restricted_load(file, extra_allowed=()) -> Any:
     """Equivalent of pickle.load restricted to plain data, raises UnsafePickleError otherwise"""
-    return _RestrictedUnpickler(file).load()
+    return _RestrictedUnpickler(file, extra_allowed).load()
