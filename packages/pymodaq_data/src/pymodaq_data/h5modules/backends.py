@@ -14,7 +14,7 @@ from typing import Dict
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import Config
 from pymodaq_utils.utils import capitalize, JsonConverter
-from pymodaq_utils.safe_pickle import restricted_loads
+from pymodaq_utils.safe_pickle import restricted_loads, warn_legacy_format
 from pymodaq_utils import utils
 from pymodaq_utils.enums import BaseEnum, enum_checker
 
@@ -458,11 +458,20 @@ class StringARRAY(VLARRAY):
         """
         raw = bytes(array)
         if raw[:1] == b'\x80':
+            warn_legacy_format(f'The string node {self.path} of the file {self._file_name()}')
             return restricted_loads(raw)
         return raw.decode('utf-8')
 
     def string_to_array(self, string):
         return np.frombuffer(string.encode('utf-8'), np.uint8)
+
+    def _file_name(self) -> str:
+        try:
+            if self.backend == 'tables':
+                return str(self.node._v_file.filename)
+            return str(self.node.file.filename)
+        except Exception:
+            return '(unknown)'
 
 
 class Attributes(object):
