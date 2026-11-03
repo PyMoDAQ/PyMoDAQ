@@ -80,6 +80,7 @@ daq_scan = "pymodaq.extensions.scan.daq_scan:main"
 daq_viewer = "pymodaq.control_modules.daq_viewer:main"
 dashboard = "pymodaq.dashboard:main"
 pymodaq = "pymodaq.launcher.launcher:main"
+pymodaq_migrate = "pymodaq.utils.migrate:main"
 ramping = "pymodaq.extensions.ramping.ramping:main"
 sequencer = "pymodaq.extensions.sequencer.sequencer:main"
 
