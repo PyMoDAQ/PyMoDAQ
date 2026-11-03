@@ -11,7 +11,7 @@ import time
 from packaging import version as version_mod
 from pathlib import Path
 import traceback
-from typing import Any, cast, List, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, cast, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -84,9 +84,12 @@ def _literal_value(node: ast.AST) -> Any:
     elif isinstance(node, ast.Attribute) and _dotted_name(node) in ('np.nan', 'numpy.nan'):
         return np.nan
     elif isinstance(node, ast.Dict):
-        if any(key is None for key in node.keys):
-            raise UnsafeExpressionError('Unexpected unpacking in stored value')
-        return {_literal_value(key): _literal_value(value) for key, value in zip(node.keys, node.values)}
+        items = {}
+        for key, value in zip(node.keys, node.values):
+            if key is None:
+                raise UnsafeExpressionError('Unexpected unpacking in stored value')
+            items[_literal_value(key)] = _literal_value(value)
+        return items
     elif isinstance(node, ast.Set):
         return {_literal_value(elt) for elt in node.elts}
     elif isinstance(node, ast.Tuple):
@@ -95,7 +98,7 @@ def _literal_value(node: ast.AST) -> Any:
         return [_literal_value(elt) for elt in node.elts]
     elif isinstance(node, ast.Call):
         name = _dotted_name(node.func)
-        constructor = _SAFE_CONSTRUCTORS.get(name)
+        constructor = _SAFE_CONSTRUCTORS.get(name) if name is not None else None
         if constructor is not None:
             args = [_literal_value(arg) for arg in node.args]
             kwargs = {}
@@ -119,7 +122,7 @@ def _dotted_name(node: ast.AST) -> Optional[str]:
     return None
 
 
-_SAFE_CONSTRUCTORS = {
+_SAFE_CONSTRUCTORS: Dict[str, Callable[..., Any]] = {
     'datetime.datetime': datetime.datetime,
     'datetime.date': datetime.date,
     'datetime.time': datetime.time,
