@@ -27,6 +27,7 @@ from pymodaq.utils import logger as logger_module
 from pymodaq.utils.config import get_set_preset_path, Config
 from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.qvariant import QVariant
+from pymodaq.utils.safe_eval import safe_literal_eval, UnsafeExpressionError
 
 if version_mod.parse(platform.python_version()) >= version_mod.parse('3.8'):  # from version 3.8 this feature is included in the
     # standard lib
@@ -187,7 +188,10 @@ class JsonConverter:
             dic = json.loads(jsonstring)
             if isinstance(dic, dict):
                 if dic['type'] in cls.trusted_types():
-                    return eval(dic['data'])
+                    try:
+                        return safe_literal_eval(dic['data'])
+                    except UnsafeExpressionError:
+                        return dic
                 else:
                     return dic
             else:                                               # pragma: no cover
