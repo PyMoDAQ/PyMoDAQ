@@ -3,6 +3,7 @@ from pyqtgraph import functions as fn
 from pyqtgraph.parametertree.parameterTypes.basetypes import WidgetParameterItem, SimpleParameter
 from pyqtgraph.parametertree import Parameter, ParameterItem
 import numpy as np
+from pymodaq_utils.utils import safe_literal_eval
 
 
 class WidgetParameterItem(WidgetParameterItem):
@@ -123,4 +124,4 @@ class TimeParameter(SimpleParameter):
         if isinstance(v, QtCore.QTime):
             return v
         elif isinstance(v, str):
-            return QtCore.QTime(*eval(v.split('QTime')[1]))
+            return QtCore.QTime(*safe_literal_eval(v.split('QTime')[1]))
