@@ -556,7 +556,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
     def save_layout_state(self, file=None):
         """
         Save the current layout state in the select_file obtained pathname file.
-        Once done dump the pickle.
+        The layout is saved as json.
 
         See Also
         --------

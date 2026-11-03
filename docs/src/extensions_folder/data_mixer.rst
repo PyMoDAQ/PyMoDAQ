@@ -83,7 +83,9 @@ You can then copy/paste them in the
 ``Edit Formula`` area. You'll have to write them between curly brackets for the parser to interpret them as the full dwa
 object. Dwa can handle operations between them such as regular addition, substraction... but are also compatible with
 most of the numpy functions such as ``np.sum``, ``np.abs``, ... If you find an error while trying to use a numpy
-function, it's probably because it is not yet possible to use it, open an issue and it will be done! Finally each
+function, it's probably because it is not yet possible to use it, open an issue and it will be done! You can also call the public methods of the data, such as ``{det/a}.mean()``. For safety, a formula can only
+contain arithmetic, numpy functions (``np.xxx``), a few builtins (``abs``, ``min``, ``max``, ``sum``, ...), the data and
+their public methods. Finally each
 line/operation in the edit area, will be interpreted as a Dwa and every time you press the snap button the resulting dwa
 will be plotted in dedicated viewer panel (they are three of them in the case of figure :numref:`equation_model_fig`.
 
