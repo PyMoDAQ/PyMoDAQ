@@ -22,6 +22,13 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install hatch hatchling
+    - name: Check that the version is the one of the release
+      run: |
+        version=$(hatch version)
+        if [[ "${version}" != "${GITHUB_REF_NAME}" ]]; then
+          echo "::error::src/pymodaq/resources/VERSION is ${version} but the release is ${GITHUB_REF_NAME}: bump it before releasing"
+          exit 1
+        fi
     - name: Build
       run: hatch build
     - name: publish
