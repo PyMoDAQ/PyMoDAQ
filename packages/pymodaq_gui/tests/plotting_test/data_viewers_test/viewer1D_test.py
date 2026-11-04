@@ -13,6 +13,8 @@ from pymodaq_utils import math_utils as mutils
 
 from pymodaq_gui.plotting.data_viewers.viewer1D import Viewer1D
 from pymodaq_gui.managers.roi_viewer_manager import ROIFactory, ROIDim
+import pymodaq_gui.plotting.utils.plot_utils as plot_utils
+from pytest import approx
 
 from pymodaq_utils.math_utils import gauss1D
 
@@ -79,6 +81,30 @@ class TestViewer1D:
         use_channel = roi_manager.get_roi_from_index(0).param['use_channel']
         assert use_channel['all_items'] == ['CH00', 'CH01']
         assert use_channel['selected'] == ['CH00', 'CH01']
+
+    def test_add_roi_centers_on_view(self, init_viewer1d):
+        """A freshly added ROI is centered on the current x-view and scaled to a fraction of
+        it (config 'gui', 'viewer', 'roi_default_size_fraction'), instead of a fixed tiny
+        region that is hard to grab without zooming in first."""
+        prog, data = init_viewer1d
+        prog.show_data(data)
+        prog.get_action('roi').trigger()
+
+        view_box = prog.view.roi_manager.view_box
+        view_box.enableAutoRange(enable=False)
+        view_box.setRange(xRange=(0, 200), padding=0)
+
+        fraction = plot_utils.config('gui', 'viewer', 'roi_default_size_fraction')
+        (xmin, xmax), _ = view_box.viewRange()
+        expected_width = (xmax - xmin) * fraction
+
+        roi_manager = prog.view.roi_manager
+        roi_manager.add_roi_programmatically(
+            ROIFactory.get_descriptors_from_dimensionality(ROIDim.ROI1D)[0])
+
+        region_min, region_max = roi_manager.ROIs[0].roi.getRegion()
+        assert region_max - region_min == approx(expected_width)
+        assert (region_min + region_max) / 2 == approx((xmin + xmax) / 2)
 
     def test_scatter(self, init_viewer1d):
         prog, data = init_viewer1d
