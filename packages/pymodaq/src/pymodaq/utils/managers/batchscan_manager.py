@@ -10,6 +10,7 @@ from pymodaq_utils.logger import set_logger, get_module_name
 
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_gui.utils import Dock, file_io, DockArea
+from pymodaq_gui.utils.utils import clear_layout
 from pymodaq_gui.parameter import ioxml
 from pymodaq_gui.messenger import messagebox
 
@@ -191,13 +192,7 @@ class BatchManager(ParameterManager):
         return res == QDialog.DialogCode.Accepted
 
     def set_scanner_settings(self, settings_tree: QtWidgets.QWidget):
-        while True:
-            child = self.scanner_widget.layout().takeAt(0)
-            if not child:
-                break
-            child.widget().deleteLater()
-            QtWidgets.QApplication.processEvents()
-
+        clear_layout(self.scanner_widget.layout())
         self.scanner_widget.layout().addWidget(settings_tree)
 
     def update_actuators(self, actuators: List[str]):

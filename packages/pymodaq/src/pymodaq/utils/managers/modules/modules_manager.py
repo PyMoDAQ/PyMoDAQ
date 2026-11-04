@@ -6,10 +6,8 @@ from typing import List, Union, TYPE_CHECKING, Optional, Sequence, Callable, Any
 from pymodaq.control_modules.enums import MoveType
 from pymodaq.control_modules.viewer_utility_classes import HW_SETTINGS_KEY as DETECTOR_SETTINGS_KEY
 
-from qtpy.QtCore import QObject, Signal, Slot, QThread, QTimer
+from qtpy.QtCore import QObject, Signal, Slot, QTimer, QEventLoop
 from qtpy import QtWidgets
-
-import time
 
 from pymodaq.utils.managers.modules.utils import ModuleType
 from pymodaq_utils.enums import enum_checker, StrEnum
@@ -605,6 +603,28 @@ class ModulesManager(QObject, ParameterManager):
                      f'{", ".join(missing_actuators)}')
         self._forget_pending_callback(ModuleType.Actuator)
 
+    @staticmethod
+    def _wait_for_signal(done_signal: Signal, timeout_ms: float) -> bool:
+        """Block, reentering the Qt event loop, until `done_signal` fires or `timeout_ms` elapses.
+
+        Returns True if `done_signal` fired before the timeout. Used instead of polling a flag
+        with `QApplication.processEvents()`: `done_signal` is only ever emitted once the flag it
+        corresponds to has actually been set, so waiting on it directly is immediate (no 10ms
+        polling granularity) and doesn't reenter the event loop on a timer tick when nothing has
+        changed.
+        """
+        loop = QEventLoop()
+        timer = QTimer()
+        timer.setSingleShot(True)
+        done_signal.connect(loop.quit)
+        timer.timeout.connect(loop.quit)
+        timer.start(int(timeout_ms))
+        loop.exec()
+        timed_out = not timer.isActive()
+        timer.stop()
+        done_signal.disconnect(loop.quit)
+        return not timed_out
+
     def grab_data(self, check_do_override: bool = True, Naverage: Optional[int] = None,
                   **kwargs: Any) -> DataToExport:
         """Do a single grab of connected and selected detectors
@@ -620,17 +640,12 @@ class ModulesManager(QObject, ParameterManager):
 
         self._grab_data(check_do_override=check_do_override, Naverage=Naverage, **kwargs)
 
-        tzero = time.perf_counter()
-        while not self.det_done_flag:
-            # wait for grab done signals to end
-            QtWidgets.QApplication.processEvents()  # mandatory for the det_done_flag boolean to be modified in the corresponding method
-            if time.perf_counter() - tzero > self.detector_timeout / 1000:
+        if not self.det_done_flag:
+            if not self._wait_for_signal(self.det_done_signal, self.detector_timeout):
                 missing_detectors = self.get_missing_detectors()
-                self.timeout_signal.emit(self.get_missing_detectors())
+                self.timeout_signal.emit(missing_detectors)
                 logger.error('Timeout Fired during waiting for data to be acquired from: '
                               f'{", ".join(missing_detectors)}')
-                break
-            QThread.msleep(10)
 
         return self.det_done_datas
 
@@ -919,8 +934,8 @@ class ModulesManager(QObject, ParameterManager):
                        ) -> DataToExport:
         """Apply positions to each currently selected actuator. By default the mode is absolute.
 
-        Deprecated, you should use move_actuators_with_callback to avoid using a polling mechanism which uses Qt event loop
-        processevents in a while loop
+        Deprecated, prefer move_actuators_with_callback: this blocks the caller until the move
+        finishes (or times out), reentering the Qt event loop to do so.
 
         Parameters
         ----------
@@ -940,18 +955,12 @@ class ModulesManager(QObject, ParameterManager):
 
         self._move_actuators(dte_act, mode)
 
-        if polling:
-            tzero = time.perf_counter()
-            while not self.move_done_flag:  # polling move done
-
-                QtWidgets.QApplication.processEvents()  # mandatory for the det_done_flag boolean to be modified in the corresponding method
-                if time.perf_counter() - tzero > self.actuator_timeout:  # timeout in seconds
-                    missing_actuators = self.get_missing_actuators()
-                    self.timeout_signal.emit(missing_actuators)
-                    logger.error('Timeout Fired during waiting for actuators to be moved: '
-                                  f'{", ".join(missing_actuators)}')
-                    break
-                QThread.msleep(10)
+        if polling and not self.move_done_flag:
+            if not self._wait_for_signal(self.move_done_signal, self.actuator_timeout * 1000):
+                missing_actuators = self.get_missing_actuators()
+                self.timeout_signal.emit(missing_actuators)
+                logger.error('Timeout Fired during waiting for actuators to be moved: '
+                              f'{", ".join(missing_actuators)}')
 
         self.move_done_signal.emit(self.move_done_positions)
         return self.move_done_positions

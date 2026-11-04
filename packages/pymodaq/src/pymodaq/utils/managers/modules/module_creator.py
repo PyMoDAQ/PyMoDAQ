@@ -199,8 +199,6 @@ class ModuleCreator:
             else:
                 self.dashboard.compact_actuator_manager.show("top")
 
-        QtWidgets.QApplication.processEvents()
-
         self.dashboard.compact_actuator_manager.add_module(actuator)
         return actuator
 

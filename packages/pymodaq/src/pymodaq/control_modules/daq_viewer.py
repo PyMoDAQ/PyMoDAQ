@@ -169,7 +169,9 @@ class DAQ_Viewer(ParameterControlModule):
             self.ui = None
 
         if self.ui is not None:
-            QtWidgets.QApplication.processEvents()
+            # No processEvents() here: this runs during construction, and processing events
+            # reentrantly at that point can dispatch unrelated pending events synchronously,
+            # right in the middle of construction.
             self.ui.add_setting_tree(self.settings_tree)
             self.ui.command_sig.connect(self.process_ui_cmds)
             self.viewers = self.ui.viewers

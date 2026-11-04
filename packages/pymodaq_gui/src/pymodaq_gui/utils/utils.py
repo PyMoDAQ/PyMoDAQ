@@ -206,6 +206,24 @@ def set_dark_palette(app):
         }
         """)
 
+def clear_layout(layout: QtWidgets.QLayout) -> None:
+    """Remove every item from `layout`, deleting each item's widget (if any).
+
+    Widgets are scheduled for deletion with `deleteLater()`, then the pending DeferredDelete
+    events are flushed once so they are actually gone by the time this returns, rather than
+    merely detached - before the caller repopulates the (now empty) layout.
+    """
+    while True:
+        item = layout.takeAt(0)
+        if item is None:
+            break
+        widget = item.widget()
+        if widget is not None:
+            widget.deleteLater()
+    QtCore.QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    QtWidgets.QApplication.processEvents()
+
+
 def clickable(widget):
     class Filter(QObject):
         clicked = Signal()
