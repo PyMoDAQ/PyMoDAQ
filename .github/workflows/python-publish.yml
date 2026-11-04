@@ -30,13 +30,27 @@ jobs:
         HATCH_INDEX_USER: ${{ secrets.PYPI_USERNAME }}
         HATCH_INDEX_AUTH: ${{ secrets.PYPI_PASSWORD }}
       run: |
-        git fetch --tags 
-        last_tag=$(git tag --sort=-creatordate | head -n 1) 
+        git fetch --tags
+        release_tag="${GITHUB_REF_NAME}"
+        published=0
+        failed=0
         for package in pymodaq_utils pymodaq_data pymodaq_gui pymodaq_scripting pymodaq; do
           cd packages/${package}
           current_version=$(hatch version)
-          if [[ "${current_version}" == "${last_tag}" ]]; then
-            hatch build && hatch publish || true # Continue even if one build/publish fails
-          fi;
+          if [[ "${current_version}" == "${release_tag}" ]]; then
+            if hatch build && hatch publish; then
+              published=$((published+1))
+            else
+              echo "::error::${package} ${current_version} could not be built or published"
+              failed=1
+            fi
+          else
+            echo "::notice::${package} is at ${current_version}, not at the release ${release_tag}: skipped"
+          fi
           cd ../../
         done
+        if [[ ${published} -eq 0 ]]; then
+          echo "::error::no package has the version of the release ${release_tag}: nothing was published"
+          exit 1
+        fi
+        exit ${failed}
