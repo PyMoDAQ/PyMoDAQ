@@ -63,8 +63,8 @@ PyMoDAQ
 | Python 3.13 | |313-windows-pyqt6|      | |313-windows-pyside6|    |
 +-------------+--------------------------+--------------------------+
 
-.. [*] Combinations marked with a star are tested at each push and pull request. All the others are tested only
-   weekly (every Sunday) and on manual dispatch, so their badges can be up to a week old. PyQt5 is no longer tested.
+\* Combinations marked with a star are tested at each push and pull request. All the others are tested only
+weekly (every Sunday) and on manual dispatch, so their badges can be up to a week old. PyQt5 is no longer tested.
 
 
 .. |310-windows-pyqt6| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq/{{BRANCH_NAME}}/tests_Windows_3.10_pyqt6.svg
