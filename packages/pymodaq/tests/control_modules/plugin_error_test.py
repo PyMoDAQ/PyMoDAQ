@@ -208,6 +208,11 @@ def test_viewer_status_led_follows_initialization_grab_and_errors(qtbot, theme):
     viewer = DAQ_Viewer(widget)
     widget.show()
     led = viewer.ui.status_led
+    toolbar = viewer.ui.toolbar
+    order = [w for w in (toolbar.widgetForAction(act) for act in toolbar.actions()) if w is not None]
+    name_widget = viewer.ui.get_action('name').widget
+    assert order.index(viewer.ui.status_led.widget if hasattr(led, 'widget') else led) == order.index(name_widget) + 1  # right after the name
+    assert led.isEnabled()  # also before the initialization
     assert led.get_state() == ViewerLedState.UNINITIALIZED
     assert dict(led._states)[ViewerLedState.GRABBING] == StatusPalette.color(Status.RUNNING)
     assert dict(led._states)[ViewerLedState.ERROR] == StatusPalette.color(Status.ERROR)
@@ -216,6 +221,7 @@ def test_viewer_status_led_follows_initialization_grab_and_errors(qtbot, theme):
     assert led.get_state() == ViewerLedState.IDLE
     viewer.ui.get_action('grab').setChecked(True)  # the grab button, also set from the module itself
     assert led.get_state() == ViewerLedState.GRABBING
+    assert led.isEnabled()  # grabbing disables the other actions, not the LED
 
     viewer.thread_status(ThreadCommand(ThreadStatus.ERROR, 'camera unplugged'))
     assert led.get_state() == ViewerLedState.ERROR

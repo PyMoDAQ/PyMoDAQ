@@ -274,13 +274,13 @@ class DAQMoveUI(ControlModuleUI):
         if toolbar is None:
             toolbar = self.toolbar
         self._setup_name_widget(toolbar=toolbar)
+        self.add_widget('move_done', self.status_led, toolbar=toolbar)
         self.add_widget('actuators_combo', self.actuator_selector, toolbar=toolbar)
         self._setup_init_action(toolbar=toolbar, action_name='ini_actuator',
                                 display_name='Ini. Actuator', tip='Connect to selected actuator')
         self._setup_settings_action(toolbar=toolbar)
         toolbar.addSeparator()
         self.add_widget('current', self.current_value_sb, toolbar=toolbar)
-        self.add_widget('move_done', self.status_led, toolbar=toolbar)
 
         self.add_action('stop', 'Stop', 'stop_circle', "Stop Motion",
                         toolbar=toolbar, icon_color=self.get_theme().red)
