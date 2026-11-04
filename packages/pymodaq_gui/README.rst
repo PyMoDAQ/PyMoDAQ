@@ -19,28 +19,30 @@ PyMoDAQ GUI
  :target: https://codecov.io/gh/PyMoDAQ/PyMoDAQ
 
 
-Tests run on every push and pull request for a reduced set of combinations (Linux: Python 3.10 and 3.13 with PyQt6,
-Python 3.12 with PySide6; Windows: Python 3.12 with PyQt6). The full matrix below runs every Sunday and on manual
-dispatch, so the other badges can be up to a week old. PyQt5 is no longer tested.
-
-+-------------+---------------------+---------------------+
-|  Linux      | PyQt6               | PySide6             |
-+=============+=====================+=====================+
-| Python 3.10 | |310-linux-pyqt6|   | |310-linux-pyside6| |
-+-------------+---------------------+---------------------+
-| Python 3.11 | |311-linux-pyqt6|   | |311-linux-pyside6| |
-+-------------+---------------------+---------------------+
-| Python 3.12 | |312-linux-pyqt6|   | |312-linux-pyside6| |
-+-------------+---------------------+---------------------+
-| Python 3.13 | |313-linux-pyqt6|   | |313-linux-pyside6| |
-+-------------+---------------------+---------------------+
++-------------+--------------------------+--------------------------+
+|  Linux      | PyQt6                    | PySide6                  |
++=============+==========================+==========================+
+| Python 3.10 | |310-linux-pyqt6| \*     | |310-linux-pyside6|      |
++-------------+--------------------------+--------------------------+
+| Python 3.11 | |311-linux-pyqt6|        | |311-linux-pyside6|      |
++-------------+--------------------------+--------------------------+
+| Python 3.12 | |312-linux-pyqt6|        | |312-linux-pyside6| \*   |
++-------------+--------------------------+--------------------------+
+| Python 3.13 | |313-linux-pyqt6| \*     | |313-linux-pyside6|      |
++-------------+--------------------------+--------------------------+
 
 
+
+.. |310-linux-pyqt5| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/dev/tests_Linux_3.10_pyqt5.svg
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 .. |310-linux-pyqt6| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/dev/tests_Linux_3.10_pyqt6.svg
     :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 .. |310-linux-pyside6| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/dev/tests_Linux_3.10_pyside6.svg
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
+
+.. |311-linux-pyqt5| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/dev/tests_Linux_3.11_pyqt5.svg
     :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 .. |311-linux-pyqt6| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/dev/tests_Linux_3.11_pyqt6.svg
@@ -49,10 +51,16 @@ dispatch, so the other badges can be up to a week old. PyQt5 is no longer tested
 .. |311-linux-pyside6| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/dev/tests_Linux_3.11_pyside6.svg
     :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
+.. |312-linux-pyqt5| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/dev/tests_Linux_3.12_pyqt5.svg
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
+
 .. |312-linux-pyqt6| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/dev/tests_Linux_3.12_pyqt6.svg
     :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 .. |312-linux-pyside6| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/dev/tests_Linux_3.12_pyside6.svg
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
+
+.. |313-linux-pyqt5| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/dev/tests_Linux_3.13_pyqt5.svg
     :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 .. |313-linux-pyqt6| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/dev/tests_Linux_3.13_pyqt6.svg
@@ -61,23 +69,32 @@ dispatch, so the other badges can be up to a week old. PyQt5 is no longer tested
 .. |313-linux-pyside6| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/dev/tests_Linux_3.13_pyside6.svg
     :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
-+-------------+-----------------------+-----------------------+
-|  Windows    | PyQt6                 | PySide6               |
-+=============+=======================+=======================+
-| Python 3.10 | |310-windows-pyqt6|   | |310-windows-pyside6| |
-+-------------+-----------------------+-----------------------+
-| Python 3.11 | |311-windows-pyqt6|   | |311-windows-pyside6| |
-+-------------+-----------------------+-----------------------+
-| Python 3.12 | |312-windows-pyqt6|   | |312-windows-pyside6| |
-+-------------+-----------------------+-----------------------+
-| Python 3.13 | |313-windows-pyqt6|   | |313-windows-pyside6| |
-+-------------+-----------------------+-----------------------+
++-------------+--------------------------+--------------------------+
+|  Windows    | PyQt6                    | PySide6                  |
++=============+==========================+==========================+
+| Python 3.10 | |310-windows-pyqt6|      | |310-windows-pyside6|    |
++-------------+--------------------------+--------------------------+
+| Python 3.11 | |311-windows-pyqt6|      | |311-windows-pyside6|    |
++-------------+--------------------------+--------------------------+
+| Python 3.12 | |312-windows-pyqt6| \*   | |312-windows-pyside6|    |
++-------------+--------------------------+--------------------------+
+| Python 3.13 | |313-windows-pyqt6|      | |313-windows-pyside6|    |
++-------------+--------------------------+--------------------------+
 
+\* Combinations marked with a star are tested at each push and pull request. All the others are tested only
+weekly (every Sunday) and on manual dispatch, so their badges can be up to a week old. PyQt5 is no longer tested.
+
+
+.. |310-windows-pyqt5| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/dev/tests_Windows_3.10_pyqt5.svg
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 .. |310-windows-pyqt6| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/dev/tests_Windows_3.10_pyqt6.svg
     :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 .. |310-windows-pyside6| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/dev/tests_Windows_3.10_pyside6.svg
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
+
+.. |311-windows-pyqt5| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/dev/tests_Windows_3.11_pyqt5.svg
     :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 .. |311-windows-pyqt6| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/dev/tests_Windows_3.11_pyqt6.svg
@@ -86,10 +103,16 @@ dispatch, so the other badges can be up to a week old. PyQt5 is no longer tested
 .. |311-windows-pyside6| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/dev/tests_Windows_3.11_pyside6.svg
     :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
+.. |312-windows-pyqt5| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/dev/tests_Windows_3.12_pyqt5.svg
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
+
 .. |312-windows-pyqt6| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/dev/tests_Windows_3.12_pyqt6.svg
     :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 .. |312-windows-pyside6| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/dev/tests_Windows_3.12_pyside6.svg
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
+
+.. |313-windows-pyqt5| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/dev/tests_Windows_3.13_pyqt5.svg
     :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 .. |313-windows-pyqt6| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/dev/tests_Windows_3.13_pyqt6.svg
