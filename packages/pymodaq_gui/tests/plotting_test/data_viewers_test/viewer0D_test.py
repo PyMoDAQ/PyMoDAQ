@@ -161,6 +161,21 @@ class TestViewer0D:
         assert not prog.view.values_list.isVisible()
         prog.parent.deleteLater()
 
+    def test_show_datalist_includes_label_and_units(self, init_viewer0d):
+        """The numbers list shows each channel's label and unit, not just the bare value
+        (see issue #1420)."""
+        prog, qtbot = init_viewer0d
+
+        prog.view.get_action('show_data_as_list').trigger()
+
+        prog.show_data(data_mod.DataRaw('data0D', data=[np.array([1.23e-6]), np.array([42.0])],
+                                        labels=['Pressure', 'Temperature'], units='mbar'))
+
+        assert prog.view.values_list.count() == 2
+        assert prog.view.values_list.item(0).text() == 'Pressure: 1.230e-06 mbar'
+        assert prog.view.values_list.item(1).text() == 'Temperature: 4.200e+01 mbar'
+        prog.parent.deleteLater()
+
     def test_clear_data(self, init_viewer0d):
         prog, qtbot = init_viewer0d
 

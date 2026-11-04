@@ -1,5 +1,5 @@
 import copy
-import pickle
+import json
 from pathlib import Path
 import dataclasses
 
@@ -13,6 +13,7 @@ from qtpy.QtCore import Qt, QFileSystemWatcher, Signal, QThread, QObject
 
 from pymodaq_utils.config import get_set_local_dir, GlobalConfig, get_set_path
 from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_utils.safe_pickle import restricted_loads, warn_legacy_format
 
 from pymodaq_gui.messenger import dialog
 from pymodaq_gui.utils import CustomApp
@@ -21,6 +22,30 @@ from pymodaq_gui.utils.file_io import select_file
 
 
 logger = set_logger(get_module_name(__file__))
+
+# the paths a cache written by an older version (a pickle) can contain
+_LEGACY_CACHE_ALLOWED = [(module, name) for module in ('pathlib', 'pathlib._local') for name in
+                         ('Path', 'PosixPath', 'WindowsPath', 'PurePath', 'PurePosixPath', 'PureWindowsPath')]
+
+
+def read_files_cache(file_path: Path) -> list[Path]:
+    """Read the list of the files opened in the editor stored in the cache file
+
+    The cache is json. A cache written by an older version is a pickle (it starts with the 0x80 protocol
+    byte), read by a restricted loader that never runs code.
+    """
+    with open(file_path, 'rb') as f:
+        content = f.read()
+    if content[:1] == b'\x80':
+        warn_legacy_format(f'The editor cache file {file_path}')
+        return [Path(file) for file in restricted_loads(content, _LEGACY_CACHE_ALLOWED)]
+    return [Path(file) for file in json.loads(content.decode('utf-8'))]
+
+
+def write_files_cache(files: list[Path], file_path: Path):
+    """Store the list of the files opened in the editor in the cache file, as json"""
+    with open(file_path, 'w', encoding='utf-8') as f:
+        json.dump([str(file) for file in files], f)
 
 try:
     import qtpy.QtWebEngineCore
@@ -145,9 +170,7 @@ class MonacoApp(CustomApp):
         self.highlight_tab(self.tab_widget.currentIndex())
 
     def get_files_cache(self) -> list[Path]:
-        with open(self.local_files_path, 'rb') as f:
-            _files = pickle.load(f)
-        return _files
+        return read_files_cache(self.local_files_path)
 
     def setup_docks_and_widgets(self):
         self.main_widget = QtWidgets.QSplitter(Qt.Orientation.Vertical)
@@ -424,8 +447,7 @@ class MonacoApp(CustomApp):
     def _create_files_file(self, files: list[Path], file_path: Path = None):
         if file_path is None:
             file_path = self.local_files_path
-        with open(file_path, 'wb') as f:
-            pickle.dump(files, f)
+        write_files_cache(files, file_path)
 
     @property
     def local_path(self) -> Path:
