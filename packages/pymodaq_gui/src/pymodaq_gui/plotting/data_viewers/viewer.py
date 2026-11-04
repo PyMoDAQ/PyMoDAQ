@@ -88,6 +88,16 @@ def _delete_dock(dock: Dock):
     dock.deleteLater()
 
 
+def _close_roi_panel(viewer: ViewerBase):
+    """Close a viewer's detachable roi panel, if it has one (e.g. not Viewer0D/ViewerND)
+
+    See :meth:`DetachablePanel.close` for why this is needed on top of closing the dock.
+    """
+    rois_panel = getattr(viewer.view, '_rois_panel', None)
+    if rois_panel is not None:
+        rois_panel.close()
+
+
 class ViewerDispatcher:
     """MixIn class to add easy control for adding multiple data viewers in docks depending on
     data to be plotted
@@ -172,9 +182,7 @@ class ViewerDispatcher:
             dock = self.viewer_docks.pop()
             dock.close()
             viewer = self.viewers.pop()
-            if hasattr(viewer.view, 'roi_widget') and viewer.view.roi_widget is not None:
-                self.rois_dock.removeWidget(viewer.view.roi_widget)
-                viewer.view.roi_widget.deleteLater()
+            _close_roi_panel(viewer)
             _delete_dock(dock)
             self.viewer_types.pop()
             QtWidgets.QApplication.processEvents()
@@ -243,6 +251,8 @@ class ViewerDispatcher:
                 viewer_dock.showTitleBar()
 
     def close(self):
+        for viewer in self.viewers:
+            _close_roi_panel(viewer)
         for dock in self.viewer_docks:
             dock.close()
             _delete_dock(dock)

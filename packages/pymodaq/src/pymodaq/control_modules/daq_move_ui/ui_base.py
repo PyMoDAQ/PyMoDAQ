@@ -579,9 +579,9 @@ class DAQMoveUI(ControlModuleUI):
 
     def close(self):
         self.parent.close()
-        for widget in (self.graph_widget, self.control_widget):  # floating windows: no parent to delete them
-            widget.close()
-            widget.deleteLater()
+        self._controls_panel.close()
+        self.graph_widget.close()  # floating window: no parent to delete it
+        self.graph_widget.deleteLater()
         super().close()
 
 
