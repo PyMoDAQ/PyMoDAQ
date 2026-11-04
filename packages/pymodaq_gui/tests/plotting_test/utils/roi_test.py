@@ -100,3 +100,26 @@ class TestInfoFromROI:
         roi_info = RoiInfo.info_from_rect_roi(roi)
 
         print(roi_info)
+
+
+class TestRemoveAndCopyRequests:
+    """pgROI (RectROI/EllipseROI's base) happens to define _emitRemoveRequest natively, but
+    pgLinearRegionItem (LinearROI's base) does not: LinearROI's context menu called
+    self._emitRemoveRequest, which only worked for 2D ROIs by that accident of inheritance
+    and raised AttributeError for LinearROI, silently dropping "Remove ROI" from its menu
+    after the first (failed) build. Regression test for that gap, now closed by defining
+    _emitRemoveRequest on the shared ROIBase."""
+
+    @pytest.mark.parametrize('roi_factory', [lambda: LinearROI(), lambda: RectROI()])
+    def test_emit_remove_request(self, qtbot, roi_factory):
+        roi = roi_factory()
+        with qtbot.waitSignal(roi.sigRemoveRequested, timeout=1000) as blocker:
+            roi._emitRemoveRequest()
+        assert blocker.args == [roi]
+
+    @pytest.mark.parametrize('roi_factory', [lambda: LinearROI(), lambda: RectROI()])
+    def test_emit_copy_request(self, qtbot, roi_factory):
+        roi = roi_factory()
+        with qtbot.waitSignal(roi.sigCopyRequested, timeout=1000) as blocker:
+            roi._emitCopyRequest()
+        assert blocker.args == [roi]
