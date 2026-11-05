@@ -240,14 +240,24 @@ class H5SaverLowLevel(H5Backend):
         init_file, used by every saver as the root to resolve nodes from) would
         otherwise keep pointing at a now-closed file and break the next get_set_node.
 
+        Only read raw_group at all when a refresh will actually be needed
+        (keep_open and SWMR was active, checked *before* the base implementation
+        runs, since it always clears _swmr_enabled): close_file/finalize_swmr are
+        routinely called on an already-closed file (e.g. init_file calls
+        close_file defensively first) or with a backend that never activates SWMR
+        (tables), and raw_group would then be a stale reference from a previous
+        session - reading .path off of it raises on tables (ClosedNodeError)
+        instead of returning None the way h5py does.
+
         Parameters
         ----------
         keep_open : bool
             Passed through to H5Backend.finalize_swmr; see there.
         """
-        raw_group_path = snapshot_path(getattr(self, '_raw_group', None))
+        needs_refresh = keep_open and self._swmr_enabled
+        raw_group_path = snapshot_path(getattr(self, '_raw_group', None)) if needs_refresh else None
         super().finalize_swmr(keep_open=keep_open)
-        if keep_open and raw_group_path is not None:
+        if needs_refresh and raw_group_path is not None:
             self._raw_group = self.get_node(raw_group_path)
 
     def save_file(self, filename=None):

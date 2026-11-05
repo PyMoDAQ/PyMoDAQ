@@ -310,6 +310,32 @@ class TestSWMRCloseFileReconciles:
         assert found_data and found_axis
         saver.close_file()
 
+    def test_close_file_never_reads_raw_group_path_without_swmr(self, tmp_path, monkeypatch):
+        """Regression for a real CI failure (tables backend): close_file/finalize_swmr
+        used to read raw_group.path unconditionally to decide whether to refresh it,
+        even when there was nothing to refresh (SWMR never active) and raw_group was
+        a stale reference from a previous close (e.g. init_file calls close_file
+        defensively on an already-closed file). h5py's .path on such a stale node
+        returns None, masking the bug; pytables raises ClosedNodeError instead - make
+        .path always raise here to catch a regression under any backend.
+        """
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+        from pymodaq_data.h5modules.backends import GROUP
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'no_swmr_double_close.h5'
+        saver.init_file(file_name=filepath, new_file=True)
+        saver.close_file()  # first close: raw_group now stale, as it would be on tables too
+
+        def raise_if_read(self):
+            raise AssertionError('raw_group.path read without SWMR ever being active')
+
+        monkeypatch.setattr(GROUP, 'path', property(raise_if_read))
+
+        # init_file calls close_file defensively first: must not touch raw_group.path
+        saver.init_file(file_name=filepath, new_file=False)
+        saver.close_file()
+
     def test_finalize_keep_open_refreshes_raw_group(self, tmp_path):
         """GH issue #1477's beam_shaping workaround needed this exact capability:
         pause SWMR (finalize_swmr(keep_open=True)) and keep writing to the same
