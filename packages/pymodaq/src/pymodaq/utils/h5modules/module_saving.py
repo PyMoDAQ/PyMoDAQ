@@ -547,6 +547,13 @@ class ExtensionSaver(ModuleSaver):
         refreshes raw_group, or the next add_data/add_time would reuse a Node tied
         to the file instance finalize_swmr just closed and reopened.
 
+        Only read those cached nodes at all when a refresh will actually be needed
+        (keep_open and SWMR was active, checked *before* finalize runs, since it
+        always ends up inactive afterward): finalize can be called with nothing to
+        reconcile (SWMR never active, e.g. the tables backend) while a cached node
+        is a stale reference from a previous session - reading .path off of it
+        raises on tables (ClosedNodeError) instead of returning None like h5py.
+
         Parameters
         ----------
         keep_open: bool
@@ -554,14 +561,16 @@ class ExtensionSaver(ModuleSaver):
             this extension can keep writing to it; if False (default), closes the
             file after reconciling
         """
-        module_group_path = snapshot_path(self._module_group)
-        current_paths = {name: snapshot_path(node) for name, node in self.current_nodes.items()}
-        time_group_path = (snapshot_path(self._time_saver._module_group)
-                           if self._time_saver is not None else None)
+        needs_refresh = keep_open and self._h5saver.is_swmr_active
+        if needs_refresh:
+            module_group_path = snapshot_path(self._module_group)
+            current_paths = {name: snapshot_path(node) for name, node in self.current_nodes.items()}
+            time_group_path = (snapshot_path(self._time_saver._module_group)
+                               if self._time_saver is not None else None)
 
         super().finalize(keep_open=keep_open)
 
-        if keep_open:
+        if needs_refresh:
             if module_group_path is not None:
                 self._module_group = self._h5saver.get_node(module_group_path)
             self.current_nodes = {name: self._h5saver.get_node(path)

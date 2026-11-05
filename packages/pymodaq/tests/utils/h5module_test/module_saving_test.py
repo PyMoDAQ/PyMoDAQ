@@ -91,6 +91,29 @@ class TestExtensionSaverFinalize:
     add_data reuses a Node tied to the file instance that was just closed and
     reopened."""
 
+    def test_finalize_never_reads_cached_nodes_without_swmr(self, h5saver_with_settings, monkeypatch):
+        """Regression for a real CI failure (tables backend): finalize() used to
+        read current_nodes/module_group/time_saver paths unconditionally to decide
+        whether to refresh them, even when there was nothing to refresh (SWMR never
+        active, e.g. the tables backend never activates it). On tables, reading
+        .path off a node from a closed/previous session raises ClosedNodeError;
+        h5py returns None instead, masking the bug - make .path always raise here
+        to catch a regression under either backend.
+        """
+        h5saver = h5saver_with_settings
+        mock_scan_module = MockScan(h5saver)
+        scan_saver = ScanSaver(module=mock_scan_module)
+        scan_saver.h5saver = h5saver
+        scan_saver.get_set_node()
+
+        def raise_if_read(self):
+            raise AssertionError('a cached node path was read without SWMR ever being active')
+
+        monkeypatch.setattr(backends.GROUP, 'path', property(raise_if_read))
+
+        scan_saver.finalize(keep_open=True)  # no SWMR ever enabled: nothing to refresh
+        scan_saver.finalize(keep_open=False)
+
     @pytest.mark.skipif('h5py' not in tested_backend, reason='h5py not available')
     def test_current_nodes_refreshed_after_finalize_keep_open(self, tmp_path):
         h5saver = H5SaverLowLevel(backend='h5py')
