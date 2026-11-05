@@ -28,7 +28,7 @@ from pymodaq_utils.warnings import deprecation_msg
 
 from .backends import (H5Backend, backends_available, SaveType, InvalidSave, InvalidExport,
                        Node, GroupType, InvalidDataDimension, InvalidScanType,
-                       GROUP, VLARRAY)
+                       GROUP, VLARRAY, snapshot_path)
 from . import browsing
 
 
@@ -233,6 +233,22 @@ class H5SaverLowLevel(H5Backend):
             if metadata is not None:
                 for metadata_key in metadata:
                     self._raw_group.attrs[metadata_key] = metadata[metadata_key]
+
+    def finalize_swmr(self, keep_open=False):
+        """Extends H5Backend.finalize_swmr: when keep_open, the file reopened by the
+        base implementation is a new h5py file object, so raw_group (cached by
+        init_file, used by every saver as the root to resolve nodes from) would
+        otherwise keep pointing at a now-closed file and break the next get_set_node.
+
+        Parameters
+        ----------
+        keep_open : bool
+            Passed through to H5Backend.finalize_swmr; see there.
+        """
+        raw_group_path = snapshot_path(getattr(self, '_raw_group', None))
+        super().finalize_swmr(keep_open=keep_open)
+        if keep_open and raw_group_path is not None:
+            self._raw_group = self.get_node(raw_group_path)
 
     def save_file(self, filename=None):
         if isinstance(filename, str) or isinstance(filename, Path) and filename != '':
