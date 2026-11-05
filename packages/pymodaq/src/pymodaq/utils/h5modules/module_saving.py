@@ -21,7 +21,7 @@ from pymodaq_data.data import Axis, DataToExport, DataDistribution, DataRaw, Dat
 from pymodaq_data.h5modules.data_saving import (
     DataToExportSaver, DataToExportEnlargeableSaver,
     DataToExportTimedSaver, DataToExportExtendedSaver, DataBundle)
-from pymodaq_data.h5modules.backends import GROUP, Node
+from pymodaq_data.h5modules.backends import GROUP, Node, snapshot_path
 
 from pymodaq_gui.h5modules.saving import H5SaverBase
 from pymodaq_gui.parameter import ioxml
@@ -55,6 +55,22 @@ class ModuleSaver(metaclass=ABCMeta):
     def flush(self):
         """Flush the underlying file"""
         self._h5saver.flush()
+
+    def finalize(self, keep_open=False):
+        """ End this module's saving session: a counterpart to flush() for SWMR.
+
+        Delegates to H5Backend.finalize_swmr, which reconciles any attrs an
+        enlargeable array deferred while SWMR was active (see EARRAY.append) and
+        then closes the file, unless keep_open is True to pause saving and write
+        more to the same file later. A no-op flush+close if SWMR was never active.
+
+        Parameters
+        ----------
+        keep_open: bool
+            if True, leaves the file open so this module can keep writing to it;
+            if False (default), closes the file after reconciling
+        """
+        self._h5saver.finalize_swmr(keep_open=keep_open)
 
     def get_set_node(self, where: Union[Node, str] = None, name: str = None) -> GROUP:
         """Get or create the node corresponding to this particular Module instance
@@ -521,6 +537,46 @@ class ExtensionSaver(ModuleSaver):
             self.current_nodes[det_name] = self.detectors[det_name].get_set_node(where)
         for act_name in self.actuators:
             self.current_nodes[act_name] = self.actuators[act_name].get_set_node(where)
+
+    def finalize(self, keep_open=False):
+        """ Extends ModuleSaver.finalize: unlike DetectorSaver/ActuatorSaver, which
+        refetch their node on every add_data, module_group, current_nodes and
+        _time_saver's own module_group are all fetched once and reused on every
+        add_data/add_time call afterward. If kept open to write more, they must all
+        be refreshed with snapshot_path, the same way H5SaverLowLevel.finalize_swmr
+        refreshes raw_group, or the next add_data/add_time would reuse a Node tied
+        to the file instance finalize_swmr just closed and reopened.
+
+        Only read those cached nodes at all when a refresh will actually be needed
+        (keep_open and SWMR was active, checked *before* finalize runs, since it
+        always ends up inactive afterward): finalize can be called with nothing to
+        reconcile (SWMR never active, e.g. the tables backend) while a cached node
+        is a stale reference from a previous session - reading .path off of it
+        raises on tables (ClosedNodeError) instead of returning None like h5py.
+
+        Parameters
+        ----------
+        keep_open: bool
+            if True, leaves the file open and refreshes the cached nodes above so
+            this extension can keep writing to it; if False (default), closes the
+            file after reconciling
+        """
+        needs_refresh = keep_open and self._h5saver.is_swmr_active
+        if needs_refresh:
+            module_group_path = snapshot_path(self._module_group)
+            current_paths = {name: snapshot_path(node) for name, node in self.current_nodes.items()}
+            time_group_path = (snapshot_path(self._time_saver._module_group)
+                               if self._time_saver is not None else None)
+
+        super().finalize(keep_open=keep_open)
+
+        if needs_refresh:
+            if module_group_path is not None:
+                self._module_group = self._h5saver.get_node(module_group_path)
+            self.current_nodes = {name: self._h5saver.get_node(path)
+                                  for name, path in current_paths.items() if path is not None}
+            if self._time_saver is not None and time_group_path is not None:
+                self._time_saver._module_group = self._h5saver.get_node(time_group_path)
 
     def get_set_node(self, where: Union[Node, str] = None, new=False) -> GROUP:
         """Get the last group scan node

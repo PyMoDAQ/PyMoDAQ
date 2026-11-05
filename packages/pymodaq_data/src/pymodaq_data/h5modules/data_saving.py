@@ -255,7 +255,7 @@ class AxisSaverLoader(DataManagement):
         array = self._h5saver.add_array(where, self._get_next_node_name(where), self.data_type, title=axis.label,
                                         array_to_save=axis.get_data(), data_dimension=DataDim['Data1D'],
                                         enlargeable=enlargeable,
-                                        metadata=dict(size=axis.size, label=axis.label, units=axis.units,
+                                        metadata=dict(label=axis.label, units=axis.units,
                                                       index=axis.index, offset=axis.offset, scaling=axis.scaling,
                                                       distribution='uniform' if axis.is_axis_linear() else 'spread',
                                                       spread_order=axis.spread_order))
@@ -722,8 +722,6 @@ class DataEnlargeableSaver(DataSaverLoader):
                     axis_array.append(np.array([axis_values[ind_axis]]))
                 else:
                     axis_array.append(axis_values[ind_axis], expand=False)
-                if not self._h5saver.is_swmr_active:
-                    axis_array.attrs['size'] += 1
 
 
 class DataExtendedSaver(DataSaverLoader):
@@ -1059,15 +1057,12 @@ class DataToExportEnlargeableSaver(DataToExportSaver):
                 axis = Axis(label=self._enl_axis_names[ind],
                             units=self._enl_axis_units[ind], data=np.array([0., 1.]),
                             index=0, spread_order=ind)
-                axis_array = self._nav_axis_saver.add_axis(nav_group, axis, enlargeable=True)
-                axis_array.attrs['size'] = 0
+                self._nav_axis_saver.add_axis(nav_group, axis, enlargeable=True)
 
         for ind in range(self._n_enl):
             axis_array: EARRAY = self._nav_axis_saver.get_node_from_index(nav_group, ind)
             axis_array.append(squeeze(np.array([axis_values[ind]])),
                               expand=False)
-            if not self._h5saver.is_swmr_active:
-                axis_array.attrs['size'] += 1
 
         self._activate_swmr_and_tick_flush()
 

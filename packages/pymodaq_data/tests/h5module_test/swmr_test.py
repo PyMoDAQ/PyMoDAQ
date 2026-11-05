@@ -235,6 +235,145 @@ class TestSWMRSaving:
         saver.close_file()
 
 
+class TestSWMRCloseFileReconciles:
+    """Regression tests for GH issue #1477: enlargeable arrays saved in SWMR mode
+    kept stale 'shape' attrs (and a 'size' attr that was never reconciled) because
+    nothing in production ever called finalize_swmr; only tests did. close_file()
+    must now reconcile on its own, without the caller having to know about
+    finalize_swmr, and the dead 'size' attribute must no longer be written at all.
+    """
+
+    def test_close_file_reconciles_shape_without_explicit_finalize(self, tmp_path):
+        """A plain close_file() after a SWMR session must leave correct 'shape'
+        attrs on disk, with no call to finalize_swmr needed by the caller."""
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'close_reconciles.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        earr = saver.create_earray(saver.root(), 'test_earray',
+                                   dtype=np.float64, data_shape=(3,))
+        saver.flush()
+        saver.enable_swmr()
+
+        earr.append(np.array([1.0, 2.0, 3.0]))
+        earr.append(np.array([4.0, 5.0, 6.0]))
+        earr.append(np.array([7.0, 8.0, 9.0]))
+
+        # Plain close, as every real call site in pymodaq/pymodaq_gui does today
+        saver.close_file()
+
+        saver.open_file(filepath, mode='r')
+        node = saver.get_node('/test_earray')
+        assert node.attrs['shape'] == node.node.shape == (3, 3)
+        saver.close_file()
+
+    def test_enlargeable_data_and_axis_reconciled_on_plain_close(self, tmp_path):
+        """Full reproduction of the reported issue: an enlargeable data array and
+        its enlargeable navigation axis both end up with correct 'shape' after a
+        plain close_file(), and neither has a stale (nor any) 'size' attribute."""
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+        from pymodaq_data.h5modules.data_saving import DataToExportEnlargeableSaver
+        from pymodaq_data.data import DataToExport, DataRaw
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'enlargeable_reconcile.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        group = saver.add_generic_group(saver.raw_group, title='Test',
+                                        group_type='DATALOGGER')
+        data_saver = DataToExportEnlargeableSaver(saver, enl_axis_names=('step',),
+                                                  enl_axis_units=('',))
+        for step in range(3):
+            dte = DataToExport('dte', data=[DataRaw('img', data=[np.random.rand(8, 8)],
+                                                     labels=['L'])])
+            data_saver.add_data(group, dte, axis_values=[step])
+
+        assert saver.is_swmr_active
+
+        saver.close_file()  # no explicit finalize_swmr call
+
+        saver.open_file(filepath, mode='r')
+        found_data = found_axis = False
+        for node in saver.walk_nodes('/'):
+            if 'CLASS' not in node.attrs or node.attrs['CLASS'] not in ('EARRAY', 'VLARRAY'):
+                continue
+            assert node.attrs['shape'] == node.node.shape
+            assert 'size' not in node.attrs.attrs_name
+            if node.attrs.get('data_type') == 'data_enlargeable':
+                assert node.node.shape == (3, 8, 8)
+                found_data = True
+            elif node.attrs.get('data_type') == 'axis':
+                assert node.node.shape == (3,)
+                found_axis = True
+        assert found_data and found_axis
+        saver.close_file()
+
+    def test_close_file_never_reads_raw_group_path_without_swmr(self, tmp_path, monkeypatch):
+        """Regression for a real CI failure (tables backend): close_file/finalize_swmr
+        used to read raw_group.path unconditionally to decide whether to refresh it,
+        even when there was nothing to refresh (SWMR never active) and raw_group was
+        a stale reference from a previous close (e.g. init_file calls close_file
+        defensively on an already-closed file). h5py's .path on such a stale node
+        returns None, masking the bug; pytables raises ClosedNodeError instead - make
+        .path always raise here to catch a regression under any backend.
+        """
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+        from pymodaq_data.h5modules.backends import GROUP
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'no_swmr_double_close.h5'
+        saver.init_file(file_name=filepath, new_file=True)
+        saver.close_file()  # first close: raw_group now stale, as it would be on tables too
+
+        def raise_if_read(self):
+            raise AssertionError('raw_group.path read without SWMR ever being active')
+
+        monkeypatch.setattr(GROUP, 'path', property(raise_if_read))
+
+        # init_file calls close_file defensively first: must not touch raw_group.path
+        saver.init_file(file_name=filepath, new_file=False)
+        saver.close_file()
+
+    def test_finalize_keep_open_refreshes_raw_group(self, tmp_path):
+        """GH issue #1477's beam_shaping workaround needed this exact capability:
+        pause SWMR (finalize_swmr(keep_open=True)) and keep writing to the same
+        session afterward. Before the raw_group refresh, the reopened file held a
+        new h5py File object while raw_group still wrapped a node from the closed
+        one, so the next get_set_group/create_earray would fail on a closed file.
+        """
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'keep_open_refresh.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        earr = saver.create_earray(saver.raw_group, 'test_earray',
+                                   dtype=np.float64, data_shape=(3,))
+        saver.flush()
+        saver.enable_swmr()
+        earr.append(np.array([1.0, 2.0, 3.0]))
+
+        saver.finalize_swmr(keep_open=True)
+        assert saver.isopen()
+        assert not saver.is_swmr_active
+
+        # raw_group must still be usable afterwards: resolving/creating a node from
+        # it must not raise on a closed/invalid h5py object. 'earr', fetched before
+        # the pause, is expected to be stale now (same as any Node a caller held
+        # onto): production code never reuses one across a pause, it always
+        # refetches from raw_group, which is exactly what must keep working.
+        new_group = saver.get_set_group(saver.raw_group, 'after_pause', 'After pause')
+        saver.create_carray(new_group, 'more_data', obj=np.array([9.0]))
+        saver.flush()
+        saver.close_file()
+
+        saver.open_file(filepath, mode='r')
+        assert saver.get_node('/RawData/after_pause/more_data').read() == [9.0]
+        saver.close_file()
+
+
 class TestSWMRExtendedSaver:
     """Tests for SWMR with DataToExportExtendedSaver."""
 
