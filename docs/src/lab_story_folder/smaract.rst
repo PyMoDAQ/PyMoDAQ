@@ -25,7 +25,11 @@ The cost for a controller and a stage with encoder would be about 4000€, but a
 The SLC stages are the simplest actuators of SmarAct. The plugin may be able to control other kinds of actuators like
 rotations for examples, but it is not guaranteed at the time of writing ;)
 
-GIVE THE EXACT CONTROLLER + SENSOR MODULE + STAGE WE USE.
+For this demonstration we used an MCS-6CC-USB-TAB controller (old version MCS1, now SmarAct sells MCS2 version),
+an MCS-3S-EP-SDS15-TAB sensor module, and an SLC1740s
+translation stage.
+
+We suppose that the controller has already been configured.
 
 .. figure:: /image/lab_story/smaract/smaract_slc_stage.png
    :width: 300
@@ -97,6 +101,55 @@ library.
 
    The .so file points towards the lastest version.
 
+System configuration
+--------------------
+
+Let's continue with the installation instructions. We still have two system files to create. Let's open the
+file manager (*nautilus* in our case) with administrative privileges, so that we have the authorization on those files:
+
+.. code-block:: bash
+
+   sudo nautilus
+
+The instructions say that "When an MCS controller is connected to the computer or switched on,
+it is possible that the ftdi_sio driver is automatically loaded
+for that device. In this case the application cannot connect to
+the MCS. The kernel modules ftdi_sio and usbserial
+must be unloaded before launching your application or blocked from
+loading, e.g. by blacklisting them in /etc/modprobe.d/."
+
+We thus create a blacklist-smaract.conf file in /etc/modprobe.d/, write those two lines and save:
+
+.. code-block::
+
+    blacklist ftdi_sio
+    blacklist usbserial
+
+.. figure:: /image/lab_story/smaract/modprobe.png
+   :width: 600
+
+Finally, we follow the last installation instruction: "The MCS Control library needs write access to the USB port the
+MCS device is connected to. To automatically set r/w permissions when
+an MCS is connected, a udev rule can be added to /etc/udev/rules.d/:
+ATTR{idVendor}=="0403", ATTR{idProduct}=="6001", MODE="666" "
+
+We thus create a smaract.rules file in /etc/udev/rules.d directory, write the following line and save:
+
+.. code-block::
+
+    ATTR{idVendor}=="0403", ATTR{idProduct}=="6001", MODE="666"
+
+The *idVendor* and *idProduct* numbers correspond to the ones that are displayed with the *lsusb* command.
+
+.. note::
+   Be careful, it is important to use *curly brackets*!
+
+.. figure:: /image/lab_story/smaract/rules.png
+   :width: 600
+
+.. note::
+   It may be useful to restart the computer and the controller at this point.
+
 Install PyMoDAQ
 ---------------
 
@@ -136,5 +189,3 @@ and follow those steps:
    DAQ_Move interface.
 
 That's it! :)
-
-WHAT HAPPENS IF MY CONTROLLER HAS MORE THAN 3 AXIS??
