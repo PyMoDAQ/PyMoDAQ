@@ -143,6 +143,9 @@ class TestAxisSaverLoader:
             else:
                 assert axis_node.attrs[attr] == attrs_values[ind]
         assert axis_node.read() == pytest.approx(axis.get_data())
+        # 'size' (GH #1477): redundant with the axis array's own shape and never
+        # read back, so a non-enlargeable axis must not carry it either
+        assert 'size' not in axis_node.attrs.attrs_name
 
     def test_load_axis(self, h5saver_lowlevel):
         h5saver = h5saver_lowlevel

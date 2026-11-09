@@ -256,6 +256,20 @@ class Node(object):
             return self._node.name
 
 
+def snapshot_path(node: Union[Node, None]) -> Union[str, None]:
+    """Capture a Node's h5 path so it can be re-resolved later with get_node.
+
+    Call this *before* an operation that closes and reopens the underlying h5
+    file (see H5Backend.finalize_swmr(keep_open=True)): node itself keeps
+    wrapping the old, now-invalid file object afterward, and by then its own
+    ``.path`` returns None. Only a path captured beforehand lets a caller fetch
+    a fresh, equivalent Node once the file is open again.
+
+    Returns None unchanged if node is None (nothing cached yet).
+    """
+    return node.path if isinstance(node, Node) else None
+
+
 class GROUP(Node):
     def __init__(self, node, backend):
         super().__init__(node, backend)
@@ -653,18 +667,13 @@ class H5Backend:
             return self._h5file.id.http_conn is not None
 
     def close_file(self):
-        """Flush data and close the h5file
+        """Flush data, ending SWMR first if active, then close the h5file
+
+        Equivalent to ``finalize_swmr(keep_open=False)``: see that method for why
+        this is needed. Every caller of ``close_file`` gets correct attrs for free,
+        with no need to remember to call ``finalize_swmr`` explicitly.
         """
-        try:
-            if self._h5file is not None:
-                self.flush()
-                if self.isopen():
-                    self._h5file.close()
-        except Exception as e:
-            logger.warning(f"Error closing h5file: {e}")
-        finally:
-            self._swmr_enabled = False
-            self._h5file = None  # Release the file handle reference
+        self.finalize_swmr(keep_open=False)
 
     def open_file(self, fullpathname, mode='r', title='PyMoDAQ file', swmr_mode=False, **kwargs):
         self.file_path = fullpathname
@@ -787,24 +796,49 @@ class H5Backend:
                     node.attrs['shape'] = actual_shape
 
     def finalize_swmr(self, keep_open=False):
-        """End SWMR by closing the file, reopening in 'a' mode, and reconciling deferred attrs.
+        """End an active SWMR session, reconciling the attrs it deferred, then close
+        the file unless told to keep it open.
 
-        After SWMR mode, attrs['shape'] on EARRAY/VLARRAY nodes may be stale.
-        This method closes the file (ending SWMR), reopens it in append mode,
-        and updates all deferred attributes.
+        A no-op flush+close if SWMR was never active: this is the single place
+        :meth:`close_file` and any caller that needs to pause/resume writing (keeping
+        the file open across the call) both go through.
+
+        Steps when SWMR is active:
+
+        1. close the file, which ends SWMR, then reopen it in append mode
+        2. :meth:`reconcile_swmr_attrs` to fix the attrs deferred while writing
+        3. close again, unless ``keep_open``
 
         Parameters
         ----------
         keep_open : bool
-            If True, leaves the file open in 'a' mode after reconciling.
-            If False (default), closes the file after reconciling.
+            If True, leaves the file open in 'a' mode after reconciling, e.g. for a
+            caller that wants to pause SWMR writing and keep adding data to the same
+            file afterward. If False (default), closes the file after reconciling.
         """
-        file_path = Path(self.file_path)
-        self.close_file()
-        self.open_file(file_path, mode='a')
-        self.reconcile_swmr_attrs()
+        if self._swmr_enabled:
+            file_path = Path(self.file_path)
+            self._flush_and_close()
+            self.open_file(file_path, mode='a')
+            self.reconcile_swmr_attrs()
         if not keep_open:
-            self.close_file()
+            self._flush_and_close()
+
+    def _flush_and_close(self):
+        """Flush and close the h5file, with no SWMR handling: the raw primitive
+        :meth:`finalize_swmr` builds on, used both mid-reconciliation and for the
+        final close.
+        """
+        try:
+            if self._h5file is not None:
+                self.flush()
+                if self.isopen():
+                    self._h5file.close()
+        except Exception as e:
+            logger.warning(f"Error closing h5file: {e}")
+        finally:
+            self._swmr_enabled = False
+            self._h5file = None  # Release the file handle reference
 
     def define_compression(self, compression, compression_opts):
         """Define cmpression library and level of compression
