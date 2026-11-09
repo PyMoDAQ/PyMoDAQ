@@ -63,11 +63,10 @@ def loaded_extension(extension_class: type, *ext_args, show: bool = False, theme
     from pymodaq.dashboard import create_load_dashboard
     from pymodaq.utils.gui_utils.loader_utils import create_extension
 
-    import qt_themes
     from pymodaq_gui.qt_utils import apply_styling_rules
 
-    app = mkQApp('extension_test')  # a bare QApplication: the Dashboard needs a theme, applied only once (or on demand)
-    if theme or qt_themes.get_theme() is None:  # restyling an application with many live widgets can even crash Qt
+    app = mkQApp('extension_test')  # the Dashboard needs a theme: mkQApp applies it only once per application
+    if theme:  # restyling an application with many live widgets can even crash Qt
         apply_styling_rules(app)
 
     shared_ui, dashboard = create_load_dashboard(show_dashboard=show)
