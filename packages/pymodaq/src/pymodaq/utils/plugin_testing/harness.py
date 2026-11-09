@@ -27,6 +27,7 @@ from pyqtgraph import mkQApp
 from qtpy.QtWidgets import QApplication
 
 from pymodaq_data.data import DataToExport
+from pymodaq_gui.parameter.utils import set_param_values
 
 from pymodaq.control_modules.thread_commands import ControllerStatus
 from pymodaq.utils.data import DataActuator
@@ -77,8 +78,7 @@ def _instantiate(plugin_class, controller, settings):
     if controller is not None:
         # a plugin is given an existing controller only as a slave axis of a multi-axes controller
         plugin.settings.child('controller', 'controller_status').setValue(ControllerStatus.SLAVE)
-    for name, value in settings.items():
-        plugin.settings.child(name).setValue(value)
+    set_param_values(plugin.settings, settings)
     return plugin
 
 
@@ -86,7 +86,9 @@ def make_actuator(plugin_class, controller=None, **settings):
     """Instantiate an actuator plugin and initialize it, as the Dashboard does.
 
     ``controller`` is only given for a slave axis of a multi-axes plugin (it is then set as ``Slave``), a master
-    creates its own. The keyword arguments set top level settings before the initialization. Returns the plugin, with
+    creates its own. The keyword arguments set settings before the initialization, with ``set_param_values``: a top
+    level setting by its name, a group by a dict of the values of its children (``bounds={'is_bounds': True}``); an
+    unknown name raises a ``KeyError`` listing the valid ones. Returns the plugin, with
     ``initialized`` and ``init_info`` set from the return of ``ini_stage``.
     """
     plugin = _instantiate(plugin_class, controller, settings)
