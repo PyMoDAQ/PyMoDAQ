@@ -107,20 +107,34 @@ def center_widget_on_screen_and_show(widget: QtWidgets.QWidget):
 def start_qapplication(name='default_app') -> QtWidgets.QApplication:
     return mkQApp(name=name)
 
-def apply_styling_rules(app : QtWidgets.QApplication):
+#: dynamic property set on the QApplication once :func:`apply_styling_rules` has styled it
+STYLED_PROPERTY = 'pymodaq_styled'
+
+
+def apply_styling_rules(app: QtWidgets.QApplication):
+    """Apply the theme and style of the configuration to the application
+
+    Restyling an application repolishes every live widget and replaces the application style (deleting the previous
+    one): call it only to (re)apply the theme on purpose, :func:`mkQApp` does it once per application.
+    """
     theme = cast(qt_themes.Theme, qt_themes.get_theme(config('gui', 'style', 'theme')[0]))
     style = config('gui', 'style', 'style')[0]
     qt_themes.set_theme(theme=theme, style=style)
 
-    if theme.is_dark_theme():
-        #Custom rules
+    if theme.is_dark_theme() and not isinstance(app.style(), WhiteCheckboxStyle):
+        # Custom rules (the isinstance check avoids wrapping the proxy into another one if no style was set above)
         app.setStyle(WhiteCheckboxStyle(app.style()))
+    app.setProperty(STYLED_PROPERTY, True)
 
 
-def mkQApp(name: str):
+def mkQApp(name: str) -> QtWidgets.QApplication:
+    """Return the QApplication, creating it if needed, styled with the PyMoDAQ theme
+
+    Idempotent: the styling is applied only the first time it is called for a given application (also if the
+    application was created by someone else, like pytest-qt), later calls just return the existing application. Use
+    :func:`apply_styling_rules` to apply the theme again on purpose.
+    """
     app = mkQApppg(name)
-    apply_styling_rules(app)
-
+    if not app.property(STYLED_PROPERTY):
+        apply_styling_rules(app)
     return app
-
-
