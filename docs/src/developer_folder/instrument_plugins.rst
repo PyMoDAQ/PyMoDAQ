@@ -288,7 +288,11 @@ In this example ``XxxxWrapper`` stands for the wrapper of your instrument that `
 
 ``move_rel_and_wait``, ``move_home_and_wait`` and ``make_detector`` / ``grab_and_wait`` / ``assert_units`` work the
 same way, and a slave axis of a multi-axes controller is created with ``make_actuator(plugin_class,
-controller=master.controller)``. The helpers reproduce what the Dashboard does around the plugin: the target is
+controller=master.controller)``. The other keyword arguments of ``make_actuator`` / ``make_detector`` set settings
+before the initialization: a top level setting by its name and, from PyMoDAQ 5.3.11, a group by a dict of the values
+of its children, as in ``make_actuator(plugin_class, epsilon=0.1, bounds={'is_bounds': True, 'max_bound': 5.})``
+(``pymodaq_gui.parameter.utils.set_param_values`` does it, and an unknown name raises a ``KeyError`` listing the valid
+ones). The helpers reproduce what the Dashboard does around the plugin: the target is
 expressed in the axis unit before reaching ``move_abs``, and the end of a move is signalled once ``poll_moving`` has
 run. After a ``move_home`` the position is not polled (as in PyMoDAQ): ``move_home_and_wait`` waits for the plugin to
 call ``self.move_done()`` and raises a ``SignalTimeout`` if it never does, see :ref:`move_home`. The tests of the helpers themselves (*tests/utils/plugin_harness_test.py* in the PyMoDAQ repository) contain
