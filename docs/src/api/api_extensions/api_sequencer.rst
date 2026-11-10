@@ -70,7 +70,18 @@ The elements shipped with PyMoDAQ:
 .. autoclass:: pymodaq.extensions.sequencer.utilities.elements.choice.ChoiceElt
    :members:
 
+.. autoclass:: pymodaq.extensions.sequencer.utilities.elements.switch.SwitchElt
+   :members:
+
 .. autoclass:: pymodaq.extensions.sequencer.utilities.elements.sequence.SequenceElt
+   :members:
+
+.. currentmodule:: pymodaq.extensions.sequencer.utilities.holders.rule
+
+.. autoclass:: Rule
+   :members:
+
+.. autoclass:: Target
    :members:
 
 
