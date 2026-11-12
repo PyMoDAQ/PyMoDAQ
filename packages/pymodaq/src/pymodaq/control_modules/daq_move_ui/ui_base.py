@@ -20,24 +20,14 @@ from pymodaq_gui.plotting.data_viewers import ViewerDispatcher
 from pymodaq_gui.utils import (DockArea, QSpinBoxWithShortcut,
                                PushButtonIcon, QSpinBox_ro,
                                Dock)
-from pymodaq_gui.utils.widgets import LabelWithFont, MultistateLED, StatusPalette, Status
+from pymodaq_gui.utils.widgets import LabelWithFont
 from pymodaq_gui.plotting.utils.plot_utils import DetachablePanel
-from pymodaq_utils.enums import StrEnum
 
 
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq.control_modules.daq_move_ui.utils import UiType
 from pymodaq.control_modules.daq_move_ui.actuator_selector import ActuatorSelector
 config = Config()
-
-
-class MoveLedState(StrEnum):
-    """States of the DAQ_Move status LED."""
-    UNINITIALIZED = 'uninitialized'
-    IDLE = 'idle'
-    MOVING = 'moving'
-    ERROR = 'error'
-
 
 
 class DAQMoveUI(ControlModuleUI):
@@ -89,6 +79,7 @@ class DAQMoveUI(ControlModuleUI):
         self.controls_dock = controls_dock
         self.title = title
         self._unit = ''
+        self._moving = False
 
         self.actuator_selector: ActuatorSelector = None
         self.abs_value_sb: QSpinBoxWithShortcut = None
@@ -96,7 +87,6 @@ class DAQMoveUI(ControlModuleUI):
         self.abs_value_sb_2: QSpinBoxWithShortcut = None
         self.abs_value_sb_red: QSpinBoxWithShortcut = None
         self.abs_value_sb_bis: QSpinBoxWithShortcut = None
-        self.status_led: MultistateLED = None
         self.current_value_sb: QSpinBox_ro = None
         self.find_home_pb: PushButtonIcon = None
         self.move_rel_plus_pb: PushButtonIcon = None
@@ -126,7 +116,9 @@ class DAQMoveUI(ControlModuleUI):
     @actuator_init.setter
     def actuator_init(self, status):
         self._ini_state = status
-        self.status_led.set_state(MoveLedState.IDLE if status else MoveLedState.UNINITIALIZED)
+        if not status:
+            self._moving = False  # a closed actuator is not moving
+        self.update_status_led()
         self.enable_move_buttons(status)
         self.update_init_icon(status, 'ini_actuator')
         if self.has_action('ini_actuator'):
@@ -152,20 +144,15 @@ class DAQMoveUI(ControlModuleUI):
     @property
     def move_done(self):
         """bool: True when the actuator is idle (not moving)."""
-        return self.status_led.get_state() != MoveLedState.MOVING
+        return not self._moving
 
     @move_done.setter
     def move_done(self, status):
-        self.status_led.set_state(MoveLedState.IDLE if status else MoveLedState.MOVING)
+        self._moving = not status
+        self.set_error_state(False)  # a move order or the end of a move clears the error of a previous command
 
-    def set_error_state(self, in_error: bool, message: str = '') -> None:
-        """Turn the status LED to ``ERROR`` (orange) with the error as tooltip, or back to idle/uninitialized"""
-        if in_error:
-            self.status_led.set_state(MoveLedState.ERROR)
-            self.status_led.setToolTip(message)
-        elif self.status_led.get_state() == MoveLedState.ERROR:
-            self.status_led.set_state(MoveLedState.IDLE if self._ini_state else MoveLedState.UNINITIALIZED)
-            self.status_led.setToolTip('')
+    def _is_busy(self) -> bool:
+        return self._moving
 
     def quit_fun(self) -> bool | None:
         return self.app.quit_fun()
@@ -200,15 +187,7 @@ class DAQMoveUI(ControlModuleUI):
         self.abs_value_sb_red = self.abs_value_sb_2
 
         self.abs_value_sb_bis = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('pymodaq', 'actuator', 'siprefix'))
-        self.status_led = MultistateLED(
-            states=[
-                (MoveLedState.UNINITIALIZED, StatusPalette.color(Status.OFF)),
-                (MoveLedState.IDLE,          StatusPalette.color(Status.IDLE)),
-                (MoveLedState.MOVING,        StatusPalette.color(Status.RUNNING)),
-                (MoveLedState.ERROR,         StatusPalette.color(Status.ERROR)),
-            ],
-            readonly=True,
-        )
+        self._setup_status_led()
         self.current_value_sb = QSpinBox_ro(font_size=10, min_height=20,
                                             siPrefix=config('pymodaq', 'actuator', 'siprefix'),
                                             )
@@ -274,13 +253,13 @@ class DAQMoveUI(ControlModuleUI):
         if toolbar is None:
             toolbar = self.toolbar
         self._setup_name_widget(toolbar=toolbar)
+        self.add_widget('status_led', self.status_led, toolbar=toolbar)
         self.add_widget('actuators_combo', self.actuator_selector, toolbar=toolbar)
         self._setup_init_action(toolbar=toolbar, action_name='ini_actuator',
                                 display_name='Ini. Actuator', tip='Connect to selected actuator')
         self._setup_settings_action(toolbar=toolbar)
         toolbar.addSeparator()
         self.add_widget('current', self.current_value_sb, toolbar=toolbar)
-        self.add_widget('move_done', self.status_led, toolbar=toolbar)
 
         self.add_action('stop', 'Stop', 'stop_circle', "Stop Motion",
                         toolbar=toolbar, icon_color=self.get_theme().red)

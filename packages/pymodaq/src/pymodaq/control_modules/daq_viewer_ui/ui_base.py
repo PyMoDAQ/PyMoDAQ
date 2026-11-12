@@ -88,6 +88,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
         self._data_ready = False
         self._detector_widget = None
+        self._setup_status_led()
 
         self.selector = ViewerSelector(add_menu_entries=add_menu_entries)
 
@@ -97,7 +98,8 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.update_viewers([self.selector.selected_module.daq_type.to_viewer_type()])
         self.connect_things()
 
-        self.enable_actions(False, all_except=('ini_detector', 'selector', 'show_settings', 'show_graphs'))
+        self.enable_actions(False, all_except=('ini_detector', 'selector', 'show_settings', 'show_graphs',
+                                              'status_led'))
         self._settings_widget.setVisible(False)
 
     # -------------------------------------------------------------------------
@@ -120,11 +122,13 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     @detector_init.setter
     def detector_init(self, status):
         self._ini_state = status
-        self.enable_actions(status, all_except=('ini_detector', 'selector', 'show_settings', 'show_graphs'))
+        self.enable_actions(status, all_except=('ini_detector', 'selector', 'show_settings', 'show_graphs',
+                                              'status_led'))
         self.set_action_enabled('selector', not status)
         self.update_init_icon(status, action_name='ini_detector')
         if self.has_action('ini_detector'):
             self.set_action_checked('ini_detector', status)
+        self.update_status_led()
 
     @property
     def data_ready(self):
@@ -161,6 +165,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     def setup_actions(self):
         # Common actions from ControlModuleUI
         self._setup_name_widget(toolbar=self.toolbar)
+        self.add_widget('status_led', self.status_led, toolbar=self.toolbar)
         self.add_widget('selector', self.selector.add_widget)
         self._setup_init_action(action_name='ini_detector', display_name='Ini. Detector',
                                 tip='Connect to selected detector')
@@ -195,6 +200,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._connect_common_actions()
 
         self.connect_action('grab', self._grab)
+        self.connect_action('grab', self.update_status_led, signal_name='toggled')
         self.connect_action('snap', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SNAP, )))
         self.connect_action('reset_live', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.RESET_LIVE)))
         self.connect_action('save_current', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SAVE_CURRENT, )))
@@ -265,6 +271,9 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
                                             [checked,
                                              self.selector.selected_module]))
 
+    def _is_busy(self) -> bool:
+        return self.is_action_checked('grab')
+
     def quit_fun(self):
         return self.app.quit_fun()
 
@@ -283,7 +292,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.command_sig.emit(ThreadCommand(UiToMainViewer.GRAB, attribute=self.is_action_checked('grab')))
         self.enable_actions(not self.is_action_checked('grab'),
                             all_except=('grab', 'selector', 'show_settings', 'show_graphs',
-                                        'reset_live'))
+                                        'reset_live', 'status_led'))
 
         if not self.config('pymodaq', 'viewer', 'allow_settings_edition'):
             self._settings_widget.setEnabled(not self.is_action_checked('grab'))
