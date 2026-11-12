@@ -562,7 +562,8 @@ def resolve_target(target: Optional[str] = None) -> tuple[str, Optional[Path]]:
     def packages_in(base: Path) -> list[Path]:
         return sorted(p for p in base.glob('pymodaq_plugins_*') if (p / '__init__.py').is_file())
 
-    if path.name.startswith('pymodaq_plugins_') and (path / '__init__.py').is_file():
+    if (path.name.startswith('pymodaq_plugins_') and (path / '__init__.py').is_file()
+            and not packages_in(path / 'src')):  # a repository named as its package has a src folder: use that one
         folders = [path]
     else:
         folders = packages_in(path / 'src') or packages_in(path)
