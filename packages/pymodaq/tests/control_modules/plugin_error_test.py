@@ -10,8 +10,7 @@ from pymodaq_utils.config import GlobalConfig
 from pymodaq_utils.utils import ThreadCommand
 
 from pymodaq.control_modules.daq_move import DAQ_Move, ActuatorWorker
-from pymodaq.control_modules.daq_move_ui.ui_base import MoveLedState
-from pymodaq.control_modules.daq_viewer_ui.ui_base import ViewerLedState
+from pymodaq.control_modules.ui_utils import LedState
 from pymodaq_gui.utils.widgets import StatusPalette, Status
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer, DetectorWorker
 from pymodaq.control_modules.thread_commands import (ThreadStatus, ThreadStatusMove, ThreadStatusViewer, ControlToHardwareMove,
@@ -132,24 +131,30 @@ def test_move_status_led_follows_the_error(qtbot, theme):
 
     move.thread_status(ThreadCommand(ThreadStatus.ERROR, 'move_abs: position out of range'))
     assert not icon_colors  # an error of a command does not touch the init button
-    assert led.get_state() == MoveLedState.ERROR
+    assert led.get_state() == LedState.ERROR
     assert led.toolTip() == 'move_abs: position out of range'
-    assert dict(led._states)[MoveLedState.ERROR] == StatusPalette.color(Status.ERROR)
+    assert dict(led._states)[LedState.ERROR] == StatusPalette.color(Status.ERROR)
 
     move.thread_status(ThreadCommand(ThreadStatus.CLOSE, ['Hardware closed']))  # the hardware answers
-    assert led.get_state() == MoveLedState.UNINITIALIZED
+    assert led.get_state() == LedState.UNINITIALIZED
     assert led.toolTip() == ''
 
+    move.ui.actuator_init = True
     move.thread_status(ThreadCommand(ThreadStatus.ERROR, 'oops'))
     move.ui.move_done = False  # what DAQ_Move does when it sends a move order
-    assert led.get_state() == MoveLedState.MOVING
+    assert led.get_state() == LedState.BUSY
+    move.thread_status(ThreadCommand(ThreadStatus.ERROR, 'oops again'))
+    assert led.get_state() == LedState.ERROR
+    move.thread_status(ThreadCommand(ThreadStatus.CLOSE, ['Hardware closed']))
+    assert led.get_state() == LedState.UNINITIALIZED
+    move.ui.move_done = False
 
     move.thread_status(ThreadCommand(ThreadStatus.INI_HARDWARE, dict(initialized=False, info='no device found')))
-    assert led.get_state() == MoveLedState.ERROR  # a failed initialization is shown, not only a grey LED
+    assert led.get_state() == LedState.ERROR  # a failed initialization is shown, not only a grey LED
     assert led.toolTip() == 'no device found'
     assert icon_colors[-1] == theme.orange  # the init button: orange after a failed initialization
     move.thread_status(ThreadCommand(ThreadStatus.INI_HARDWARE, dict(initialized=True, info='', controller=None)))
-    assert led.get_state() == MoveLedState.IDLE
+    assert led.get_state() == LedState.IDLE
     assert icon_colors[-1] == theme.green
 
     move.quit_fun()
@@ -213,30 +218,30 @@ def test_viewer_status_led_follows_initialization_grab_and_errors(qtbot, theme):
     name_widget = viewer.ui.get_action('name').widget
     assert order.index(viewer.ui.status_led.widget if hasattr(led, 'widget') else led) == order.index(name_widget) + 1  # right after the name
     assert led.isEnabled()  # also before the initialization
-    assert led.get_state() == ViewerLedState.UNINITIALIZED
-    assert dict(led._states)[ViewerLedState.GRABBING] == StatusPalette.color(Status.RUNNING)
-    assert dict(led._states)[ViewerLedState.ERROR] == StatusPalette.color(Status.ERROR)
+    assert led.get_state() == LedState.UNINITIALIZED
+    assert dict(led._states)[LedState.BUSY] == StatusPalette.color(Status.RUNNING)
+    assert dict(led._states)[LedState.ERROR] == StatusPalette.color(Status.ERROR)
 
     viewer.thread_status(ThreadCommand(ThreadStatus.INI_HARDWARE, dict(initialized=True, info='', controller=None)))
-    assert led.get_state() == ViewerLedState.IDLE
+    assert led.get_state() == LedState.IDLE
     viewer.ui.get_action('grab').setChecked(True)  # the grab button, also set from the module itself
-    assert led.get_state() == ViewerLedState.GRABBING
+    assert led.get_state() == LedState.BUSY
     assert led.isEnabled()  # grabbing disables the other actions, not the LED
 
     viewer.thread_status(ThreadCommand(ThreadStatus.ERROR, 'camera unplugged'))
-    assert led.get_state() == ViewerLedState.ERROR
+    assert led.get_state() == LedState.ERROR
     assert led.toolTip() == 'camera unplugged'
     viewer.thread_status(ThreadCommand(ThreadStatusViewer.GRAB))  # the hardware answers
-    assert led.get_state() == ViewerLedState.GRABBING  # back to what the module was doing
+    assert led.get_state() == LedState.BUSY  # back to what the module was doing
     assert led.toolTip() == ''
     viewer.ui.get_action('grab').setChecked(False)
-    assert led.get_state() == ViewerLedState.IDLE
+    assert led.get_state() == LedState.IDLE
 
     viewer.thread_status(ThreadCommand(ThreadStatus.INI_HARDWARE, dict(initialized=False, info='no camera')))
-    assert led.get_state() == ViewerLedState.ERROR  # a failed initialization is shown, not only a grey LED
+    assert led.get_state() == LedState.ERROR  # a failed initialization is shown, not only a grey LED
     assert led.toolTip() == 'no camera'
     viewer.thread_status(ThreadCommand(ThreadStatus.INI_HARDWARE, dict(initialized=True, info='', controller=None)))
-    assert led.get_state() == ViewerLedState.IDLE
+    assert led.get_state() == LedState.IDLE
 
     viewer.quit_fun()
     widget.close()
