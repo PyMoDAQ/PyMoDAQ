@@ -337,6 +337,31 @@ class DataSaverLoader(DataManagement):
         """ Get the opened status of the underlying hdf5 file"""
         return self._h5saver.isopen()
 
+    @staticmethod
+    def _get_data_metadata(data: DataWithAxes, ind_data: int, **metadata) -> dict:
+        """Metadata saved as attributes of the h5 array holding the ind_data-th array of a DataWithAxes
+
+        Common to all the savers so that they all write the same attributes: the ones listed below, the
+        ``units`` of the data and the values of its ``extra_attributes`` (see
+        :meth:`DataWithAxes.add_extra_attribute`).
+
+        Parameters
+        ----------
+        data: DataWithAxes
+        ind_data: int
+            index of the array within the data
+        metadata: dict
+            specific entries (``nav_indexes``, ``distribution``...), they take precedence over the defaults
+        """
+        meta = dict(timestamp=data.timestamp, label=data.labels[ind_data],
+                    source=data.source.name, distribution=data.distribution.name,
+                    origin=data.origin, units=data.units,
+                    nav_indexes=tuple(data.nav_indexes) if data.nav_indexes is not None else None)
+        meta.update(metadata)
+        for name in data.extra_attributes:
+            meta[name] = getattr(data, name)
+        return meta
+
     def add_data(self, where: Union[Node, str], data: DataWithAxes, save_axes=True, **kwargs):
         """Adds Array nodes to a given location adding eventually axes as others nodes and metadata
 
@@ -349,15 +374,7 @@ class DataSaverLoader(DataManagement):
         """
 
         for ind_data in range(len(data)):
-            metadata = dict(timestamp=data.timestamp, label=data.labels[ind_data],
-                            source=data.source.name, distribution=data.distribution.name,
-                            origin=data.origin,
-                            units=data.units,
-                            nav_indexes=tuple(data.nav_indexes)
-                            if data.nav_indexes is not None else None)
-            metadata.update(kwargs)
-            for name in data.extra_attributes:
-                metadata[name] = getattr(data, name)
+            metadata = self._get_data_metadata(data, ind_data, **kwargs)
             self._h5saver.add_array(where, self._get_next_node_name(where), self.data_type,
                                     title=data.name, array_to_save=data[ind_data],
                                     data_dimension=data.dim.name, metadata=metadata)
@@ -628,12 +645,9 @@ class DataEnlargeableSaver(DataSaverLoader):
                                         array_type=data[ind_data].dtype,
                                         enlargeable=True,
                                         data_dimension=data.dim.name,
-                                        metadata=dict(timestamp=data.timestamp,
-                                                      label=data.labels[ind_data],
-                                                      source=data.source.name,
-                                                      distribution='spread',
-                                                      origin=data.origin,
-                                                      nav_indexes=tuple(nav_indexes)))
+                                        metadata=self._get_data_metadata(data, ind_data,
+                                                                         distribution='spread',
+                                                                         nav_indexes=tuple(nav_indexes)))
                 if data.errors is not None:
                     error_dwa = data.errors_as_dwa()
                     self._h5saver.add_array(where,
@@ -645,12 +659,9 @@ class DataEnlargeableSaver(DataSaverLoader):
                                             array_type=error_dwa[ind_data].dtype,
                                             enlargeable=True,
                                             data_dimension=error_dwa.dim.name,
-                                            metadata=dict(timestamp=error_dwa.timestamp,
-                                                          label=error_dwa.labels[ind_data],
-                                                          source=error_dwa.source.name,
-                                                          distribution='spread',
-                                                          origin=error_dwa.origin,
-                                                          nav_indexes=tuple(nav_indexes)))
+                                            metadata=self._get_data_metadata(error_dwa, ind_data,
+                                                                             distribution='spread',
+                                                                             nav_indexes=tuple(nav_indexes)))
 
             if add_enl_axes:
                 for ind_enl_axis in range(self._n_enl_axes):
@@ -781,10 +792,9 @@ class DataExtendedSaver(DataSaverLoader):
                                         scan_shape=self.extended_shape,
                                         add_scan_dim=True,
                                         data_dimension=data.dim.name,
-                                        metadata=dict(timestamp=data.timestamp, label=data.labels[ind_data],
-                                                      source=data.source.name, distribution=distribution.name,
-                                                      origin=data.origin,
-                                                      nav_indexes=tuple(nav_indexes)))
+                                        metadata=self._get_data_metadata(data, ind_data,
+                                                                         distribution=distribution.name,
+                                                                         nav_indexes=tuple(nav_indexes)))
 
                 if data.errors is not None:
                     error_dwa = data.errors_as_dwa()
@@ -798,10 +808,9 @@ class DataExtendedSaver(DataSaverLoader):
                                             scan_shape=self.extended_shape,
                                             add_scan_dim=True,
                                             data_dimension=error_dwa.dim.name,
-                                            metadata=dict(timestamp=error_dwa.timestamp, label=error_dwa.labels[ind_data],
-                                                          source=error_dwa.source.name, distribution=distribution.name,
-                                                          origin=error_dwa.origin,
-                                                          nav_indexes=tuple(nav_indexes)))
+                                            metadata=self._get_data_metadata(error_dwa, ind_data,
+                                                                             distribution=distribution.name,
+                                                                             nav_indexes=tuple(nav_indexes)))
 
 
             if save_axes:
