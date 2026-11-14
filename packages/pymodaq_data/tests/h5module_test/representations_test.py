@@ -104,3 +104,13 @@ def test_register_mode(lab_a):
         assert len(rep.MODES['flat'].build(infos).children) == 4
     finally:
         del rep.MODES['flat']
+
+
+def test_build_tree_and_notebook_rendering(lab_a, lab_b):
+    tree = rep.build_tree([lab_a, lab_b], 'concept')
+    assert 'Dark spectrum' in str(tree)
+    assert 'background [lab_a]  -> /RawData/Spectrometer/Data1D/CH00/Data00' in str(tree)
+    html_repr = tree._repr_html_()
+    assert '<details' in html_repr and '<code>/RawData' in html_repr
+    assert rep.RepItem('<b>', None)._repr_html_().count('<b>') == 0  # labels are escaped
+    assert rep.build_tree(lab_a, 'quantity').find('Count') is not None

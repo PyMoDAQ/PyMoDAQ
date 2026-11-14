@@ -10,6 +10,7 @@ This module has no Qt and no RDF dependency: the grouping is read from the attri
 saved on each data node (``semantic_iri``, ``quantity_kind``, ``unit_iri``, ``units``, see
 ``DataWithAxes.add_extra_attribute``).
 """
+import html
 import re
 from dataclasses import dataclass, field
 from typing import Callable, Dict, Iterable, Iterator, List, Optional
@@ -49,6 +50,22 @@ class RepItem:
         lines = ['  ' * indent + self.label + (f'  -> {self.path}' if self.path else '')]
         lines += [c.to_text(indent + 1) for c in self.children]
         return '\n'.join(lines)
+
+    def to_html(self) -> str:
+        """Collapsible HTML tree (``<details>``), data items show their h5 path"""
+        label = html.escape(self.label)
+        if not self.children:
+            path = f' <code>{html.escape(self.path)}</code>' if self.path else ''
+            return f'<div style="margin-left:1.2em">{label}{path}</div>'
+        inner = ''.join(c.to_html() for c in self.children)
+        return (f'<details open style="margin-left:1.2em"><summary><b>{label}</b></summary>'
+                f'{inner}</details>')
+
+    def __str__(self) -> str:
+        return self.to_text()
+
+    def _repr_html_(self) -> str:  # displayed by Jupyter when the item is the last expression of a cell
+        return self.to_html()
 
 
 def local_name(iri: str) -> str:
@@ -127,6 +144,30 @@ def quantity_mode(infos: List[DataInfo]) -> RepItem:
                                   lambda u: local_name(u) if ':' in u or '/' in u else u, multi)
         root.children.append(item)
     return root
+
+
+def build_tree(files, mode: str = 'concept') -> RepItem:
+    """Tree of one or several PyMoDAQ h5 files in the given mode (see ``MODES``), for scripts and
+    notebooks. In a notebook, ending a cell with the returned item displays it as a collapsible tree.
+
+    Parameters
+    ----------
+    files: str, Path or an iterable of them
+    mode: name of a registered mode
+    """
+    from pathlib import Path
+    from pymodaq_data.h5modules.browsing import H5BrowserUtil
+    if isinstance(files, (str, Path)):
+        files = [files]
+    infos: List[DataInfo] = []
+    for file in files:
+        h5 = H5BrowserUtil(backend='h5py')
+        h5.init_file(file_name=Path(file), new_file=False, mode='r')
+        try:
+            infos += data_infos(h5.root(), Path(file).stem)
+        finally:
+            h5.close_file()
+    return MODES[mode].build(infos)
 
 
 @dataclass
