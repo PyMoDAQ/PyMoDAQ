@@ -1,4 +1,5 @@
 from pathlib import Path
+from unittest import mock
 
 import numpy as np
 import pytest
@@ -157,3 +158,9 @@ def test_unknown_names_raise(lab_a):
         rep.build_mode('nope', [])
     with pytest.raises(ValueError):
         rep.set_semantics('nope')
+
+
+def test_replacing_a_registered_name_warns(lab_a):
+    with mock.patch.object(rep.logger, 'warning') as warning:
+        rep.register_mode('concept', 'By concept')(rep.concept_mode)  # same name again
+    assert warning.called and 'already registered' in warning.call_args[0][0]
