@@ -172,6 +172,13 @@ def _load_entry_points():
                     logger.warning(f'Could not load {entry_point.name} from {group}: {e}')
 
 
+def semantics_names() -> List[str]:
+    """Names of the registered semantics providers that can be created without argument, for a selector
+    (not 'default', the behaviour without ontology, nor 'rdf' that needs sources)"""
+    _load_entry_points()
+    return [name for name in SemanticsFactory.providers if name not in ('default', 'rdf')]
+
+
 def get_semantics(name: str = 'default', **kwargs) -> SemanticsBase:
     """Instance of a registered semantics provider (also loads those declared by entry points).
 
