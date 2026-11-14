@@ -13,11 +13,10 @@ from typing import Union, List, Tuple, Iterable
 from pathlib import Path
 
 import numpy as np
-import xml.etree.ElementTree as ET
 
 from pymodaq_utils.abstract import ABCMeta, abstract_attribute
 from pymodaq_utils.enums import enum_checker
-from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_utils.warnings import deprecation_msg
 from pymodaq_data.data import (Axis, DataDim, DataWithAxes, DataToExport, DataDistribution,
                                DataDimError, squeeze)
 from .saving import DataType, H5SaverLowLevel
@@ -25,8 +24,6 @@ from .backends import GROUP, CARRAY, Node, EARRAY, NodeError, GroupType  # noqa:
 from pymodaq_utils.utils import capitalize
 from pymodaq_data.h5modules.saving import SaveType
 from .. import DataToExport, DataDistribution
-
-logger = set_logger(get_module_name(__file__))
 
 SPECIAL_GROUP_NAMES = dict(nav_axes='NavAxes')
 
@@ -40,7 +37,7 @@ class DataBundle:
     """Convenience class to hold data to be saved or plotted"""
     dte: DataToExport
     node: str = None
-    settings: str = ''
+    settings: str = ''  # deprecated and ignored: settings are written when the group is created
     indexes: list[int] = None  # indexes within an eventual Extended array (see DAQ_Scan)
     axis_values: list[float | np.ndarray] = None  # axis values within an eventual Enlargeable array (see Optimizers)
     distribution: DataDistribution = field(
@@ -921,33 +918,20 @@ class DataToExportSaver:
     def add_data_bundle(self, data: DataBundle):
         self.add_data(data.node, data.dte, data.settings)
 
-    def _add_settings(self, where: Union[Node, str], settings_as_xml=''):
-        """Add the settings to the ``settings`` attribute of the ``where`` group node
+    @staticmethod
+    def _warn_settings_deprecated(settings_as_xml=''):
+        """Warn if settings are given to ``add_data``: they are ignored
 
-        If the group has no settings yet, ``settings_as_xml`` is written as is. If it already holds
-        some (for instance the ``All_settings`` of a module written by ``add_det_group`` /
-        ``add_act_group``), the root element of ``settings_as_xml`` is appended as a child of the
-        existing root element, unless a child with the same tag is already there. Hence calling it
-        at each step of an enlargeable saver writes the settings only once, which also keeps the
-        group attributes untouched once SWMR mode is active.
+        The settings of a module, a scan or an extension are written as the ``settings`` attribute
+        of its group when this group is created (``add_det_group``, ``add_act_group``,
+        ``add_scan_group``, ``add_incremental_group``...), not when data is added.
         """
-        if settings_as_xml in ('', b'', None):
-            return
-        node = self._get_node(where)
-        existing = node.attrs.get('settings', '')
-        if existing in ('', b'', None):
-            node.attrs['settings'] = settings_as_xml
-            return
-        try:
-            existing_root = ET.fromstring(existing)
-            new_root = ET.fromstring(settings_as_xml)
-        except ET.ParseError as e:
-            logger.warning(f'Settings not added to node {node.path}, they are not valid XML: {e}')
-            return
-        if existing_root.tag == new_root.tag or existing_root.find(new_root.tag) is not None:
-            return
-        existing_root.append(new_root)
-        node.attrs['settings'] = ET.tostring(existing_root)
+        if settings_as_xml not in ('', b'', None):
+            deprecation_msg('The settings_as_xml argument of DataToExportSaver.add_data (and '
+                            'DataBundle.settings) is deprecated and ignored: give the settings '
+                            'when creating the group, with the settings_as_xml argument of '
+                            'H5SaverLowLevel.add_incremental_group (add_det_group, add_act_group, '
+                            'add_scan_group...)', stacklevel=4)
 
     def add_data(self, where: Union[Node, str], data: DataToExport, settings_as_xml='', **kwargs):
         """
@@ -958,14 +942,13 @@ class DataToExportSaver:
             the path of a given node or the node itself
         data: DataToExport
         settings_as_xml: str
-            The settings parameter as an XML string, added to the ``settings`` attribute of the
-            ``where`` group node (see ``_add_settings``)
+            deprecated and ignored, settings are written when the group is created
         Keyword Arguments:
             all extra metadata to be saved as attributes of each data array
 
         """
 
-        self._add_settings(where, settings_as_xml)
+        self._warn_settings_deprecated(settings_as_xml)
         dims = data.get_dim_presents()
         for dim in dims:
             dim_group = self._h5saver.get_set_group(where, dim)
@@ -1082,8 +1065,7 @@ class DataToExportEnlargeableSaver(DataToExportSaver):
         axis_value: float or np.ndarray #deprecated in 4.2.0, use axis_values
             The next value (or values) of the enlarged axis
         settings_as_xml: str
-            The settings parameter as an XML string, added to the ``settings`` attribute of the
-            ``where`` group node (see ``_add_settings``)
+            deprecated and ignored, settings are written when the group is created
         Keyword Arguments:
             all extra metadata to be saved as attributes of each data array
         """
@@ -1187,13 +1169,12 @@ class DataToExportExtendedSaver(DataToExportSaver):
             indexes where to save data in the init h5array (should have the same length as
             extended_shape and with values coherent with this shape
         settings_as_xml: str
-            The settings parameter as an XML string, added to the ``settings`` attribute of the
-            ``where`` group node (see ``_add_settings``)
+            deprecated and ignored, settings are written when the group is created
         Keyword Arguments:
             not used by this saver
 
         """
-        self._add_settings(where, settings_as_xml)
+        self._warn_settings_deprecated(settings_as_xml)
         dims = data.get_dim_presents()
         for dim in dims:
             dim_group = self._h5saver.get_set_group(where, dim)

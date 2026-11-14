@@ -5,7 +5,6 @@ Created the 21/11/2022
 @author: Sebastien Weber
 """
 import numpy as np
-import xml.etree.ElementTree as ET
 import pytest
 from pathlib import Path
 
@@ -643,75 +642,61 @@ class TestDataToExportSaver:
 
 
 class TestDataToExportSaverSettings:
-    """settings_as_xml is written once as the 'settings' attribute of the 'where' group
-    (issue #1489), never on the data arrays and never over existing module settings"""
+    """settings_as_xml of add_data is deprecated and ignored (issue #1489): nothing is written,
+    neither on the group nor on the data arrays (it used to land there as 'settings]')"""
 
     SETTINGS = '<settings>some xml</settings>'
 
     @staticmethod
     def _data_nodes(h5saver, where):
         return [node for node in h5saver.walk_nodes(where)
-                if 'data_type' in node.attrs and node.attrs['data_type'] in ('data', 'Data', 'data_enlargeable', 'EnlData')]
+                if 'data_type' in node.attrs and
+                node.attrs['data_type'] in ('data', 'Data', 'data_enlargeable', 'EnlData')]
 
-    @pytest.mark.parametrize('saver_kind', ['plain', 'enlargeable', 'timed', 'extended'])
-    def test_settings_on_group(self, h5saver_lowlevel, init_data_to_export, saver_kind):
+    @pytest.mark.parametrize('saver_kind', ['plain', 'enlargeable', 'timed', 'extended', 'bundle'])
+    def test_settings_deprecated_and_ignored(self, h5saver_lowlevel, init_data_to_export, saver_kind):
         h5saver = h5saver_lowlevel
         det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
-        if saver_kind == 'plain':
-            DataToExportSaver(h5saver).add_data(det_group, init_data_to_export,
-                                                settings_as_xml=self.SETTINGS)
-        elif saver_kind == 'enlargeable':
-            DataToExportEnlargeableSaver(h5saver).add_data(det_group, init_data_to_export,
-                                                           axis_values=[1.],
-                                                           settings_as_xml=self.SETTINGS)
-        elif saver_kind == 'timed':
-            DataToExportTimedSaver(h5saver).add_data(det_group, init_data_to_export,
-                                                     settings_as_xml=self.SETTINGS)
-        else:
-            DataToExportExtendedSaver(h5saver, extended_shape=(3,)).add_data(
-                det_group, init_data_to_export, indexes=(0,), settings_as_xml=self.SETTINGS)
+        with pytest.warns(DeprecationWarning, match='settings_as_xml'):
+            if saver_kind == 'plain':
+                DataToExportSaver(h5saver).add_data(det_group, init_data_to_export,
+                                                    settings_as_xml=self.SETTINGS)
+            elif saver_kind == 'enlargeable':
+                DataToExportEnlargeableSaver(h5saver).add_data(det_group, init_data_to_export,
+                                                               axis_values=[1.],
+                                                               settings_as_xml=self.SETTINGS)
+            elif saver_kind == 'timed':
+                DataToExportTimedSaver(h5saver).add_data(det_group, init_data_to_export,
+                                                         settings_as_xml=self.SETTINGS)
+            elif saver_kind == 'extended':
+                DataToExportExtendedSaver(h5saver, extended_shape=(3,)).add_data(
+                    det_group, init_data_to_export, indexes=(0,), settings_as_xml=self.SETTINGS)
+            else:
+                DataToExportSaver(h5saver).add_data_bundle(
+                    DataBundle(dte=init_data_to_export, node=det_group, settings=self.SETTINGS))
 
-        assert h5saver.get_node(det_group).attrs['settings'] == self.SETTINGS
+        assert 'settings' not in h5saver.get_node(det_group).attrs.attrs_name
         data_nodes = self._data_nodes(h5saver, det_group)
         assert len(data_nodes) > 0
         for node in data_nodes:
             assert 'settings]' not in node.attrs.attrs_name
             assert 'settings' not in node.attrs.attrs_name
 
-    def test_settings_from_data_bundle(self, h5saver_lowlevel, init_data_to_export):
-        h5saver = h5saver_lowlevel
-        det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
-        DataToExportSaver(h5saver).add_data_bundle(
-            DataBundle(dte=init_data_to_export, node=det_group, settings=self.SETTINGS))
-        assert h5saver.get_node(det_group).attrs['settings'] == self.SETTINGS
-
-    def test_settings_appended_to_module_settings(self, h5saver_lowlevel, init_data_to_export):
-        h5saver = h5saver_lowlevel
-        det_group = h5saver.add_det_group(
-            h5saver.raw_group, title='MyDet',
-            settings_as_xml=b'<All_settings type="group"><Module type="group"/></All_settings>')
-        saver = DataToExportSaver(h5saver)
-        for _ in range(2):  # the second call must not duplicate them
-            saver.add_data(det_group, init_data_to_export,
-                           settings_as_xml='<Extra type="group"><a type="int">1</a></Extra>')
-        root = ET.fromstring(h5saver.get_node(det_group).attrs['settings'])
-        assert root.tag == 'All_settings'
-        assert [child.tag for child in root] == ['Module', 'Extra']
-        assert root.find('Extra/a').text == '1'
-
-    def test_invalid_xml_not_merged(self, h5saver_lowlevel, init_data_to_export):
+    def test_module_settings_untouched(self, h5saver_lowlevel, init_data_to_export):
         h5saver = h5saver_lowlevel
         det_group = h5saver.add_det_group(h5saver.raw_group, title='MyDet',
                                           settings_as_xml='<All_settings/>')
-        DataToExportSaver(h5saver).add_data(det_group, init_data_to_export,
-                                            settings_as_xml='not xml')
+        with pytest.warns(DeprecationWarning):
+            DataToExportSaver(h5saver).add_data(det_group, init_data_to_export,
+                                                settings_as_xml=self.SETTINGS)
         assert h5saver.get_node(det_group).attrs['settings'] == '<All_settings/>'
 
-    def test_no_settings_written_when_empty(self, h5saver_lowlevel, init_data_to_export):
+    def test_no_warning_without_settings(self, h5saver_lowlevel, init_data_to_export, recwarn):
         h5saver = h5saver_lowlevel
         det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
         DataToExportSaver(h5saver).add_data(det_group, init_data_to_export)
-        assert 'settings' not in h5saver.get_node(det_group).attrs.attrs_name
+        assert not [w for w in recwarn if issubclass(w.category, DeprecationWarning)
+                    and 'settings_as_xml' in str(w.message)]
 
 
 class TestDataToExportEnlargeableSaver:
