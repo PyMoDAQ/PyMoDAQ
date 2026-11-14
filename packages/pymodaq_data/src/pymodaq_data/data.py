@@ -29,8 +29,8 @@ from multipledispatch import dispatch
 
 
 from pymodaq_utils.enums import BaseEnum, enum_checker, StrEnum
-from pymodaq_utils.warnings import deprecation_msg
-from pymodaq_utils.utils import find_objects_in_list_from_attr_name_val
+from pymodaq_utils.warnings import deprecation_msg, user_warning
+from pymodaq_utils.utils import find_objects_in_list_from_attr_name_val, JsonConverter
 from pymodaq_utils.logger import set_logger, get_module_name
 
 from pymodaq_utils import math_utils as mutils
@@ -253,8 +253,41 @@ def _compute_slices_from_axis(axis: Axis, _slice, *ignored, is_index=True, **ign
     return _slice
 
 
+class ExtraAttributesMixin:
+    """Mixin for objects holding named extra attributes next to their regular ones
+
+    The classes using it must set ``self.extra_attributes = []`` in their ``__init__`` before
+    calling :meth:`add_extra_attribute`. The names listed in ``extra_attributes`` are the ones the
+    serializers and the h5 savers write and read back (see :class:`Axis`, :class:`DataBase` and
+    :class:`DataToExport`).
+
+    Attributes
+    ----------
+    extra_attributes: list of str
+        The names of the extra attributes
+    """
+    extra_attributes: List[str]
+
+    def add_extra_attribute(self, **kwargs):
+        """Add named attributes to this object, and remember their names in `extra_attributes`
+
+        A warning is emitted for a value (or an item it holds) whose type cannot be saved in a h5 file,
+        read back and transmitted: see :meth:`pymodaq_utils.utils.JsonConverter.trusted_types` for the
+        supported types. The attribute is added anyway.
+        """
+        for key in kwargs:
+            unsupported = JsonConverter.unsupported_type(kwargs[key])
+            if unsupported is not None:
+                user_warning(f'The extra attribute {key} of type {unsupported} cannot be saved and read back '
+                             f'or transmitted, supported types are: {", ".join(JsonConverter.trusted_types())}',
+                             stacklevel=3)
+            if key not in self.extra_attributes:
+                self.extra_attributes.append(key)
+            setattr(self, key, kwargs[key])
+
+
 @ser_factory.register_decorator()
-class Axis(SerializableBase):
+class Axis(ExtraAttributesMixin, SerializableBase):
     """Object holding info and data about physical axis of some data
 
     In case the axis's data is linear, store the info as a scale and offset else store the data
@@ -278,10 +311,16 @@ class Axis(SerializableBase):
     spread_order: int
         An integer needed in the case where data has a spread DataDistribution. It refers to the index along the data's
         spread_index dimension
+    kwargs: named parameters
+        All other parameters are stored dynamically using the name/value pair. The name of these
+        extra parameters are added into the extra_attributes attribute (same pattern as
+        :class:`DataWithAxes`). They are saved with the axis in the h5 files.
 
     Examples
     --------
     >>> axis = Axis('myaxis', units='seconds', data=np.array([1,2,3,4,5]), index=0)
+    >>> axis = Axis('wavelength', 'nm', data=np.linspace(400, 700, 100),
+    ...             quantity_kind='http://qudt.org/vocab/quantitykind/Wavelength')
     """
 
     base_type = 'Axis'
@@ -293,7 +332,7 @@ class Axis(SerializableBase):
         return super().__new__(cls)
 
     def __init__(self, label: str = '', units: str = '', data: Optional[Union[np.ndarray, pint.Quantity]] = None, index: int = 0,
-                 scaling=None, offset=None, size=None, spread_order: int = 0):
+                 scaling=None, offset=None, size=None, spread_order: int = 0, **kwargs):
         super().__init__()
 
         self.iaxis: SpecialSlicersData = SpecialSlicersData(self, False)
@@ -314,6 +353,8 @@ class Axis(SerializableBase):
         self.spread_order = spread_order
         if (scaling is None or offset is None or size is None) and data is not None:
             self.get_scale_offset_from_data(data)
+        self.extra_attributes: List[str] = []
+        self.add_extra_attribute(**kwargs)
 
     @staticmethod
     def serialize(axis: Axis):
@@ -378,8 +419,10 @@ class Axis(SerializableBase):
                     index=index)
 
     def copy(self):
-        """Return a shallow copy of this axis"""
-        return copy.copy(self)
+        """Return a shallow copy of this axis (its extra attributes are copied too)"""
+        new_axis = copy.copy(self)
+        new_axis.extra_attributes = list(self.extra_attributes)
+        return new_axis
 
     def as_dwa(self, set_itself_as_axis=False) -> DataWithAxes:
         """Convert this axis to a DataRaw whose data are the axis values
@@ -774,7 +817,7 @@ class DataLowLevel:
         self._timestamp = timestamp
 
 
-class DataBase(DataLowLevel, NDArrayOperatorsMixin):
+class DataBase(ExtraAttributesMixin, DataLowLevel, NDArrayOperatorsMixin):
     """Base object to store homogeneous data and metadata generated by pymodaq's objects.
 
     To be inherited for real data
@@ -1032,12 +1075,6 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
                                                    axes=deepcopy(self.axes),  # type: ignore[attr-defined]
                                                    units=self.units,
                                                    ) for ind, array in enumerate(self)])
-
-    def add_extra_attribute(self, **kwargs):
-        for key in kwargs:
-            if key not in self.extra_attributes:
-                self.extra_attributes.append(key)
-            setattr(self, key, kwargs[key])
 
     def get_full_name(self) -> str:
         """Get the data ful name including the origin attribute into the returned value
@@ -2128,6 +2165,7 @@ class DataWithAxes(DataBase, SerializableBase):
         * serialize the dim enum as a string
         * serialize the distribution enum as a string
         * serialize the list of numpy arrays
+        * serialize the units
         * serialize the list of labels
         * serialize the origin
         * serialize the nav_index tuple as a list of int
@@ -3504,7 +3542,7 @@ class DataFromRoi(DataCalculated):
 
 
 @ser_factory.register_decorator()
-class DataToExport(DataLowLevel, SerializableBase):
+class DataToExport(ExtraAttributesMixin, DataLowLevel, SerializableBase):
     """Object to store all raw and calculated DataWithAxes data for later exporting, saving, sending signal...
 
     Includes methods to retrieve data from dim, source...
@@ -3550,12 +3588,6 @@ class DataToExport(DataLowLevel, SerializableBase):
         self.extra_attributes: List[str] = []
         self.add_extra_attribute(**kwargs)
 
-    def add_extra_attribute(self, **kwargs):
-        for key in kwargs:
-            if key not in self.extra_attributes:
-                self.extra_attributes.append(key)
-            setattr(self, key, kwargs[key])
-
     @staticmethod
     def serialize(dte: DataToExport):
         """ Convert a DataToExport into a bytes string
@@ -3572,10 +3604,11 @@ class DataToExport(DataLowLevel, SerializableBase):
         -----
         The bytes sequence is constructed as:
 
-        * serialize the string type: 'DataToExport'
         * serialize the timestamp: float
         * serialize the name
         * serialize the list of DataWithAxes
+        * serialize the list of names of extra attributes
+        * serialize the extra attributes
         """
         bytes_string = b''
         bytes_string += ser_factory.get_apply_serializer(dte.timestamp)

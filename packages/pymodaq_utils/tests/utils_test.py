@@ -5,6 +5,7 @@ import pytest
 import re
 from pathlib import Path
 import datetime
+import warnings
 
 from serializall import SerializableFactory
 
@@ -47,7 +48,11 @@ class TestJsonConverter:
         assert conv.json2object(conv.object2json([10, 5, 'yui'])) == [10, 5, 'yui']
         assert conv.json2object(conv.object2json((10, 5, 'yui'))) == (10, 5, 'yui')
 
-        assert conv.json2object(conv.object2json(1j)) == {'module': 'builtins', 'type': 'complex', 'data': '1j'}
+        assert conv.json2object(conv.object2json(1j)) == 1j
+        # a type that is not supported is not rebuilt (and a warning is emitted when it is stored)
+        with pytest.warns(UserWarning):
+            stored = conv.object2json(object())
+        assert conv.json2object(stored)['type'] == 'object'
         assert isinstance(conv.json2object(conv), utils.JsonConverter)
 
 
@@ -340,3 +345,57 @@ class TestFindInIterable:
         assert selection[1] == objects[2], 2
 
 
+
+
+class TestSupportedTypes:
+    """The types of the attributes saved in h5 files come from the registry of the serialization factory"""
+    VALUES = [1.5, 3, True, None, 'a', b'b', 1 + 2j, np.float64(1.5), np.float32(0.1), np.int32(3), np.int64(-3),
+              np.uint16(7), np.bool_(True), np.bool_(False), np.complex64(1 + 2j), np.float64('inf'),
+              {1, 'a'}, set(), frozenset({2}), Path('/a b/c'), datetime.datetime(2026, 1, 1, 1, 2, 3, 4,
+              tzinfo=datetime.timezone.utc), datetime.date(2026, 1, 2), datetime.time(1, 2, 3, 4),
+              (1, 'a'), [np.int8(1), {3}], {'a': np.float32(2)}]
+
+    def test_trusted_types_are_the_serializable_ones(self):
+        serializable = {t.__name__ for t in SerializableFactory().get_serializables()}
+        assert set(utils.JsonConverter.trusted_types()) <= serializable
+        for name in ('float32', 'int8', 'set', 'frozenset', 'PosixPath', 'datetime', 'complex', 'dict'):
+            assert utils.JsonConverter.istrusted(name)
+        assert utils.JsonConverter.istrusted('ndarray')
+        assert not utils.JsonConverter.istrusted('Axis')
+
+    @pytest.mark.parametrize('value', VALUES)
+    def test_supported_values_round_trip_in_json_and_binary(self, value):
+        assert utils.JsonConverter.unsupported_type(value) is None
+        factory = SerializableFactory()
+        with warnings.catch_warnings():
+            warnings.simplefilter('error')
+            from_json = utils.JsonConverter.json2object(utils.JsonConverter.object2json(value))
+        from_bytes = factory.get_apply_deserializer(factory.get_apply_serializer(value))
+        for result in (from_json, from_bytes):
+            assert result == value or (value != value and result != result)
+
+    @pytest.mark.parametrize('value', [np.array([object()]), object(), [1, object()], {'a': np.array([None])}, {1: slice(2)}])
+    def test_unsupported_values(self, value):
+        assert utils.JsonConverter.unsupported_type(value) is not None
+
+
+class TestArrays:
+    @pytest.mark.parametrize('array', [np.arange(3), np.linspace(0, 1, 5) / 3, np.arange(5000.) / 7,
+                                       np.array([[1, 2], [3, 4]], dtype=np.int16), np.array([1 + 2j, np.nan]),
+                                       np.array([True, False]), np.array(['a', 'bc']), np.array([]),
+                                       np.float32([0.1, 0.2]), np.array([[np.nan, np.inf, -np.inf]]),
+                                       np.array(3.5)])
+    def test_arrays_round_trip_with_all_their_content(self, array):
+        result = utils.JsonConverter.json2object(utils.JsonConverter.object2json(array))
+
+        assert isinstance(result, np.ndarray)
+        assert result.dtype == array.dtype and result.shape == array.shape
+        assert np.array_equal(result, array, equal_nan=array.dtype.kind in 'fc')
+
+    @pytest.mark.parametrize('data', ["array([1], dtype=object)", "array([__import__('os')])",
+                                      "array([1], dtype=np.sys)", "array([1], dtype='O')",
+                                      "array(['a'], dtype='<U999999999')", "array([1], 2)"])
+    def test_unsafe_arrays_are_not_rebuilt(self, data):
+        stored = json.dumps(dict(module='numpy', type='ndarray', data=data))
+
+        assert utils.JsonConverter.json2object(stored) == json.loads(stored)
