@@ -234,3 +234,20 @@ def test_standard_hierarchy_names_low_level_nodes(qtbot, h5_path, monkeypatch):
     assert names[base + '/Data00'] == 'Data00 · background [counts]'
     assert names[base + '/Axis00'] == 'Axis00 · x'            # no unit on that axis
     assert names['/RawData/Det/Data1D'] == 'Data1D' and names['/RawData'] == 'RawData'
+
+
+def test_quantity_mode_shows_axes(qtbot, h5_path, monkeypatch):
+    monkeypatch.setattr(browsing, 'config', FakeConfig())
+    browser = open_browser(qtbot, h5_path)
+    browser.set_mode('quantity')
+    tree = browser.view.h5file_tree.tree
+    top = tree.topLevelItem(0)
+    assert [top.child(i).text(0) for i in range(top.childCount())][-1] == 'Axes'
+    axes = top.child(top.childCount() - 1)
+    leaf = axes.child(0).child(0).child(0)
+    assert leaf.text(0).startswith('Axis00 · x') and leaf.text(2).endswith('/Axis00')
+    shown = []
+    browser.hyper_viewer.show_data = lambda data, **kwargs: shown.append(data)
+    tree.setCurrentItem(leaf)
+    browser.show_h5_data(leaf)
+    assert len(shown) == 1  # the axis data are shown as in the standard hierarchy

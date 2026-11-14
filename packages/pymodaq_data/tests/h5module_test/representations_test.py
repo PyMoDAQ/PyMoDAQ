@@ -62,9 +62,14 @@ def test_helpers():
 
 def test_data_infos(lab_a):
     infos, _ = infos_of(lab_a)
-    assert sorted(i.label for i in infos) == ['background', 'other', 'reference', 'signal']
+    data = [i for i in infos if i.kind == 'data']
+    assert sorted(i.label for i in data) == ['background', 'other', 'reference', 'signal']
     assert all(i.path.startswith('/RawData/Spectrometer/') for i in infos)
-    assert all(i.attrs['data_type'] == 'data' for i in infos)  # axes are not listed
+    assert all(i.attrs['data_type'] == 'data' for i in data)
+    axes = [i for i in infos if i.kind == 'axis']          # the axes are listed too, with their context
+    assert len(axes) == 4 and {i.label for i in axes} == {'x'}
+    assert sorted(i.owner for i in axes) == ['background', 'other', 'reference', 'signal']
+    assert {i.role for i in axes} == {'signal'}
 
 
 def test_concept_mode(lab_a):
@@ -77,14 +82,15 @@ def test_concept_mode(lab_a):
     assert dark.children[0].label == 'background'
     node_paths = {i.path for i in infos}
     # every leaf points to an existing data node, grouping items point to nothing
-    assert {n.path for n in tree.walk() if n.path} == node_paths
+    assert {n.path for n in tree.walk() if n.path} == {i.path for i in infos if i.kind == 'data'}  # no axes here
 
 
 def test_quantity_mode(lab_a):
     infos, _ = infos_of(lab_a)
     tree = rep.build_mode('quantity', infos)
     count = tree.find('Count')
-    assert [u.label for u in count.children] == ['NUM']
+    assert [u.label for u in count.children] == ['counts']  # the `units` attribute, the IRI is in the tooltip
+    assert count.children[0].tooltip == 'unit:NUM'
     assert sorted(l.label for l in count.children[0].children) == ['background', 'reference', 'signal']
     # not annotated data still grouped by the plain `units` attribute
     assert tree.find(rep.UNANNOTATED).find('V').children[0].label == 'other'
@@ -103,7 +109,7 @@ def test_register_mode(lab_a):
 
     @rep.register_mode('flat', 'Flat')
     def flat(infos, semantics):
-        return rep.RepItem('All', children=[rep.RepItem(x.label, x.path) for x in infos])
+        return rep.RepItem('All', children=[rep.RepItem(x.label, x.path) for x in infos if x.kind == 'data'])
 
     try:
         assert 'flat' in rep.mode_names() and rep.mode_title('flat') == 'Flat'
@@ -176,6 +182,8 @@ def test_dataloader_describe(lab_a):
     with DataLoader(lab_a) as loader:
         tree = loader.describe('concept')
     assert tree.find('Dark spectrum').children[0].label == 'background'  # one file: no file name added
+    with DataLoader(lab_a) as loader:
+        assert 'Data00 · background [counts]' in str(loader.describe('hdf5'))
 
 
 def test_unknown_names_raise(lab_a):
@@ -241,3 +249,49 @@ def test_explicit_node_name(lab_a):
         assert rep.explicit_node_name('Data1D', h5.get_node('/RawData/Spectrometer/Data1D')) == 'Data1D'
     finally:
         h5.close_file()
+
+
+def test_quantity_mode_lists_axes_apart(lab_a, lab_b, tmp_path):
+    tree = rep.build_tree([lab_a, lab_b], 'quantity')
+    assert [c.label for c in tree.children][-1] == 'Axes'      # data branches first, axes last
+    axes = tree.find('Axes')
+    # the test files have an axis without quantity kind: they are not annotated
+    unannotated = axes.find(rep.UNANNOTATED)
+    leaf = unannotated.children[0].children[0]
+    assert leaf.label.startswith('Axis00 · x') and 'signal axis' in leaf.label and '[lab_a]' in leaf.label
+    assert leaf.path.endswith('/Axis00')
+    # no axis among the data branches
+    assert all(n.path is None or n.path.endswith('Data00') for c in tree.children[:-1] for n in c.walk())
+
+
+def test_axis_role_signal_or_navigation(tmp_path):
+    from pymodaq_data.data import DataRaw
+    scan = DataRaw('scan', data=[np.random.rand(3, 10)], nav_indexes=(0,), labels=['scan'],
+                   axes=[Axis('field', units='T', data=np.arange(3.), index=0),
+                         Axis('wl', units='nm', data=np.arange(10.), index=1)])
+    scan.axes[0].add_extra_attribute(quantity_kind='qk:MagneticFluxDensity', unit_iri='unit:T')
+    scan.axes[1].add_extra_attribute(quantity_kind='qk:Wavelength', unit_iri='unit:NanoM')
+    h5 = H5SaverLowLevel()
+    path = tmp_path / 'scan.h5'
+    h5.init_file(file_name=path, new_file=True)
+    DataToExportSaver(h5).add_data(h5.get_set_group(h5.raw_group, 'Det'), DataToExport('t', data=[scan]))
+    h5.close_file()
+    infos, _ = infos_of(path)
+    roles = {i.label: i.role for i in infos if i.kind == 'axis'}
+    assert roles == {'field': 'navigation', 'wl': 'signal'}
+    axes = rep.build_mode('quantity', infos).find('Axes')
+    assert 'navigation axis' in axes.find('Magnetic flux density').children[0].children[0].label
+    assert 'signal axis' in axes.find('Wavelength').children[0].children[0].label
+
+
+def test_build_tree_standard_hierarchy_matches_the_browser_names(lab_a, lab_b):
+    tree = rep.build_tree(lab_a, 'hdf5')
+    text = str(tree)
+    assert 'CH00 · background' in text and 'Data00 · background [counts]' in text and 'Axis00 · x' in text
+    assert tree.label == 'lab_a'
+    leaf = next(n for n in tree.walk() if n.label.startswith('Data00 · background'))
+    assert leaf.path == '/RawData/Spectrometer/Data1D/CH00/Data00'
+    group = next(n for n in tree.walk() if n.label == 'Spectrometer')
+    assert group.path == '/RawData/Spectrometer'  # groups keep their path too
+    both = rep.build_tree([lab_a, lab_b], 'hdf5')
+    assert [c.label for c in both.children] == ['lab_a', 'lab_b']
