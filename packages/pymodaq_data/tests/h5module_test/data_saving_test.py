@@ -144,6 +144,41 @@ class TestAxisSaverLoader:
                 assert axis_node.attrs[attr] == attrs_values[ind]
         assert axis_node.read() == pytest.approx(axis.get_data())
 
+    def test_axis_extra_attributes(self, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
+        axis_saver = AxisSaverLoader(h5saver)
+        axis = Axis('Photon energy', 'eV', data=np.linspace(1.5, 4., 20), index=0,
+                    quantity_kind='http://qudt.org/vocab/quantitykind/Energy',
+                    unit_iri='http://qudt.org/vocab/unit/EV')
+        assert axis.extra_attributes == ['quantity_kind', 'unit_iri']
+
+        axis_node = axis_saver.add_axis(h5saver.raw_group, axis)
+        assert axis_node.attrs['quantity_kind'] == axis.quantity_kind
+        assert axis_node.attrs['unit_iri'] == axis.unit_iri
+
+        loaded = axis_saver.load_axis(axis_node)
+        assert loaded.extra_attributes == ['quantity_kind', 'unit_iri']
+        assert loaded.quantity_kind == axis.quantity_kind
+        assert loaded.unit_iri == axis.unit_iri
+        assert loaded == axis
+
+    def test_axis_without_extra_attributes_has_none_after_loading(self, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
+        axis_saver = AxisSaverLoader(h5saver)
+        axis = Axis('x', 'ms', data=np.linspace(0, 1, 5), index=0)
+        loaded = axis_saver.load_axis(axis_saver.add_axis(h5saver.raw_group, axis))
+        assert loaded.extra_attributes == []
+
+    def test_axis_extra_attributes_through_data_saver(self, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
+        axis = Axis('wavelength', 'nm', data=np.linspace(400, 700, 30), index=0,
+                    quantity_kind='Wavelength')
+        dwa = DataRaw('spectrum', data=[np.arange(30.)], axes=[axis])
+        group = h5saver.get_set_group(h5saver.raw_group, 'det')
+        DataToExportSaver(h5saver).add_data(group, DataToExport('dte', data=[dwa]))
+        loaded = DataLoader(h5saver).load_all('/RawData', DataToExport('all'))
+        assert loaded[0].axes[0].quantity_kind == 'Wavelength'
+
     def test_load_axis(self, h5saver_lowlevel):
         h5saver = h5saver_lowlevel
         axis_saver = AxisSaverLoader(h5saver)

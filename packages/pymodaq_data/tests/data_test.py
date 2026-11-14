@@ -2144,3 +2144,20 @@ class TestEq:
         assert dat1 == dat2
 
 
+
+
+class TestAxisExtraAttributes:
+    def test_init_and_add(self):
+        axis = data_mod.Axis('x', 'nm', data=np.arange(5.), quantity_kind='Wavelength')
+        assert axis.quantity_kind == 'Wavelength'
+        assert axis.extra_attributes == ['quantity_kind']
+        axis.add_extra_attribute(unit_iri='nm_iri', quantity_kind='Length')
+        assert axis.extra_attributes == ['quantity_kind', 'unit_iri']
+        assert axis.quantity_kind == 'Length'
+
+    def test_copy_is_independent(self):
+        axis = data_mod.Axis('x', 'nm', data=np.arange(5.), quantity_kind='Wavelength')
+        other = axis.copy()
+        other.add_extra_attribute(unit_iri='u')
+        assert other.quantity_kind == 'Wavelength'
+        assert axis.extra_attributes == ['quantity_kind']

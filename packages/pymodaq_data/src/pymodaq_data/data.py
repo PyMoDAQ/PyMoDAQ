@@ -278,10 +278,16 @@ class Axis(SerializableBase):
     spread_order: int
         An integer needed in the case where data has a spread DataDistribution. It refers to the index along the data's
         spread_index dimension
+    kwargs: named parameters
+        All other parameters are stored dynamically using the name/value pair. The name of these
+        extra parameters are added into the extra_attributes attribute (same pattern as
+        :class:`DataWithAxes`). They are saved with the axis in the h5 files.
 
     Examples
     --------
     >>> axis = Axis('myaxis', units='seconds', data=np.array([1,2,3,4,5]), index=0)
+    >>> axis = Axis('wavelength', 'nm', data=np.linspace(400, 700, 100),
+    ...             quantity_kind='http://qudt.org/vocab/quantitykind/Wavelength')
     """
 
     base_type = 'Axis'
@@ -293,7 +299,7 @@ class Axis(SerializableBase):
         return super().__new__(cls)
 
     def __init__(self, label: str = '', units: str = '', data: Optional[Union[np.ndarray, pint.Quantity]] = None, index: int = 0,
-                 scaling=None, offset=None, size=None, spread_order: int = 0):
+                 scaling=None, offset=None, size=None, spread_order: int = 0, **kwargs):
         super().__init__()
 
         self.iaxis: SpecialSlicersData = SpecialSlicersData(self, False)
@@ -314,6 +320,19 @@ class Axis(SerializableBase):
         self.spread_order = spread_order
         if (scaling is None or offset is None or size is None) and data is not None:
             self.get_scale_offset_from_data(data)
+        self.extra_attributes: List[str] = []
+        self.add_extra_attribute(**kwargs)
+
+    def add_extra_attribute(self, **kwargs):
+        """Add named attributes to this axis, and remember their names in `extra_attributes`
+
+        Same pattern as :meth:`DataWithAxes.add_extra_attribute`: the extra attributes are saved
+        with the axis by the h5 savers and given back by the loaders.
+        """
+        for key in kwargs:
+            if key not in self.extra_attributes:
+                self.extra_attributes.append(key)
+            setattr(self, key, kwargs[key])
 
     @staticmethod
     def serialize(axis: Axis):
@@ -378,8 +397,10 @@ class Axis(SerializableBase):
                     index=index)
 
     def copy(self):
-        """Return a shallow copy of this axis"""
-        return copy.copy(self)
+        """Return a shallow copy of this axis (its extra attributes are copied too)"""
+        new_axis = copy.copy(self)
+        new_axis.extra_attributes = list(self.extra_attributes)
+        return new_axis
 
     def as_dwa(self, set_itself_as_axis=False) -> DataWithAxes:
         """Convert this axis to a DataRaw whose data are the axis values
