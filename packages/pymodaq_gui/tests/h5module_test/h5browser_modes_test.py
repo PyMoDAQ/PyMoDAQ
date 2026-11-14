@@ -48,9 +48,9 @@ def test_modes_show_same_data(qtbot, h5_path, monkeypatch):
         return found
 
     assert [browser.view.mode_combo.itemData(i) for i in range(browser.view.mode_combo.count())] == \
-        ['hdf5', 'concept', 'quantity']
+        ['hdf5', 'hierarchy', 'concept', 'quantity']
 
-    for mode in ('hdf5', 'concept', 'quantity'):
+    for mode in ('hdf5', 'hierarchy', 'concept', 'quantity'):
         browser.set_mode(mode)
         assert len(leaves()) == 2
         shown.clear()
@@ -109,7 +109,7 @@ def test_semantics_choice(qtbot, h5_path, tmp_path, monkeypatch):
 class FakeConfig:
     """Stand-in for the user config, so that tests do not write in the real one"""
     def __init__(self, **values):
-        self.values = {'last_ontology': '', 'ontology_files': [], 'representation': ['hdf5', 'concept', 'quantity'],
+        self.values = {'last_ontology': '', 'ontology_files': [], 'representation': ['hdf5', 'hierarchy', 'concept', 'quantity'],
                        **values}
 
     def __call__(self, *path):
@@ -172,9 +172,9 @@ def test_representation_mode_is_remembered(qtbot, h5_path):
         browser = open_browser(qtbot, h5_path)
         assert browser.mode == 'hdf5'  # default: first of the list
         browser.set_mode('quantity')
-        assert fake.values['representation'] == ['quantity', 'hdf5', 'concept']
+        assert fake.values['representation'] == ['quantity', 'hdf5', 'hierarchy', 'concept']
         browser.set_mode('concept')
-        assert fake.values['representation'] == ['concept', 'quantity', 'hdf5']
+        assert fake.values['representation'] == ['concept', 'quantity', 'hdf5', 'hierarchy']
 
         later = open_browser(qtbot, h5_path)  # next start
         assert later.mode == 'concept'
@@ -184,3 +184,50 @@ def test_representation_mode_is_remembered(qtbot, h5_path):
     # an unknown or removed mode in the config falls back to the standard hierarchy
     with mock.patch.object(browsing, 'config', FakeConfig(representation=['gone', 'hdf5'])):
         assert open_browser(qtbot, h5_path).mode == browsing.HIERARCHY_MODE
+
+
+def test_copy_node_path_in_every_mode(qtbot, h5_path, monkeypatch):
+    monkeypatch.setattr(browsing, 'config', FakeConfig())
+    browser = open_browser(qtbot, h5_path)
+    tree = browser.view.h5file_tree.tree
+    clipboard = QtWidgets.QApplication.clipboard()
+    action = browser.get_action('copy_path')
+    assert action in tree.actions()  # in the right-click menu
+
+    def items():
+        stack, found = [tree.topLevelItem(0)], []
+        while stack:
+            item = stack.pop()
+            stack += [item.child(i) for i in range(item.childCount())]
+            found.append(item)
+        return found
+
+    for mode in ('hdf5', 'hierarchy', 'concept', 'quantity'):
+        browser.set_mode(mode)
+        for item in items():
+            clipboard.setText('')
+            tree.setCurrentItem(item)
+            if item.text(2):  # points to a node: the action copies its full path
+                assert action.isEnabled()
+                action.trigger()
+                assert clipboard.text() == item.text(2)
+                assert item.text(2).startswith('/')
+            else:  # only a grouping label (concept, unit): nothing to copy
+                assert not action.isEnabled()
+                action.trigger()
+                assert clipboard.text() == ''
+
+
+def test_hierarchy_mode_names_the_data(qtbot, h5_path, monkeypatch):
+    monkeypatch.setattr(browsing, 'config', FakeConfig())
+    browser = open_browser(qtbot, h5_path)
+    browser.set_mode('hierarchy')
+    tree = browser.view.h5file_tree.tree
+    texts = []
+    stack = [tree.topLevelItem(0)]
+    while stack:
+        item = stack.pop()
+        stack += [item.child(i) for i in range(item.childCount())]
+        texts.append(item.text(0))
+    assert 'CH00 · background' in texts
+    assert 'Data00 · background [counts] · Dark spectrum' in texts
