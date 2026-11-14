@@ -189,3 +189,42 @@ def test_replacing_a_registered_name_warns(lab_a):
     with mock.patch.object(rep.logger, 'warning') as warning:
         rep.register_mode('concept', 'By concept')(rep.concept_mode)  # same name again
     assert warning.called and 'already registered' in warning.call_args[0][0]
+
+
+TTL = f"""
+@prefix : <{NS}> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+:Spectrum a rdfs:Class ; rdfs:label "Spectrum"@en .
+:DarkSpectrum rdfs:subClassOf :Spectrum ; rdfs:label "Dark (shutter closed)"@en, "Sombre"@fr .
+:SampleSpectrum rdfs:subClassOf :Spectrum ; skos:prefLabel "Sample"@en ; rdfs:label "ignored"@en .
+:ReferenceSpectrum rdfs:subClassOf :Spectrum .
+"""
+
+
+@pytest.fixture
+def ttl(tmp_path):
+    pytest.importorskip('rdflib')
+    path = tmp_path / 'onto.ttl'
+    path.write_text(TTL)
+    return path
+
+
+def test_labels_and_parents(ttl):
+    RdfSemantics = pytest.importorskip('pymodaq_data.h5modules.semantics_rdf').RdfSemantics
+    sem = RdfSemantics(ttl)
+    assert sem.label(NS + 'DarkSpectrum') == 'Dark (shutter closed)'   # english, not french
+    assert sem.label(NS + 'SampleSpectrum') == 'Sample'                # skos:prefLabel first
+    assert sem.label(NS + 'ReferenceSpectrum') == 'Reference spectrum'  # no label: default
+    assert sem.parent(NS + 'DarkSpectrum') == NS + 'Spectrum'
+    assert sem.parent(NS + 'Spectrum') is None
+    assert sem.knows(NS + 'Spectrum') and not sem.knows(NS + 'Other')
+
+
+def test_registered_as_rdf_and_used_by_modes(lab_a, ttl):
+    pytest.importorskip('rdflib')
+    sem = rep.get_semantics('rdf', sources=[str(ttl)])
+    tree = rep.build_tree(lab_a, 'concept', sem)
+    spectrum = tree.find('Spectrum')
+    assert [c.label for c in spectrum.children] == ['Dark (shutter closed)', 'Reference spectrum', 'Sample']
+    assert spectrum.find('Sample').children[0].label == 'signal'

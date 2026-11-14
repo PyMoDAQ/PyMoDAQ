@@ -142,10 +142,10 @@ class SemanticsFactory:
         return inner_wrapper
 
     @classmethod
-    def create(cls, name: str) -> SemanticsBase:
+    def create(cls, name: str, **kwargs) -> SemanticsBase:
         if name not in cls.providers:
             raise ValueError(f'Unknown semantics provider "{name}", registered: {list(cls.providers)}')
-        return cls.providers[name]()
+        return cls.providers[name](**kwargs)
 
 
 class RepresentationModeFactory:
@@ -172,10 +172,19 @@ def _load_entry_points():
                     logger.warning(f'Could not load {entry_point.name} from {group}: {e}')
 
 
-def get_semantics(name: str = 'default') -> SemanticsBase:
-    """Instance of a registered semantics provider (also loads those declared by entry points)"""
+def get_semantics(name: str = 'default', **kwargs) -> SemanticsBase:
+    """Instance of a registered semantics provider (also loads those declared by entry points).
+
+    ``kwargs`` go to the provider, e.g. ``get_semantics('rdf', sources='my_ontology.ttl')``
+    """
     _load_entry_points()
-    return SemanticsFactory.create(name)
+    if name == 'rdf' and name not in SemanticsFactory.providers:
+        try:
+            from pymodaq_data.h5modules import semantics_rdf  # noqa: F401  (registers the provider)
+        except ImportError as e:
+            raise ImportError('The "rdf" semantics provider needs rdflib: '
+                              'pip install pymodaq_data[semantics]') from e
+    return SemanticsFactory.create(name, **kwargs)
 
 
 def data_infos(root, file: str = '') -> List[DataInfo]:
