@@ -30,6 +30,10 @@ country = "UnitedStates"
     style = ['rounded']  # pymodaq uses the first elt in config
 toolbar_button_style = ['icon_only', 'text_only', 'text_beside_icon', 'text_under_icon', 'follow_style']  # pymodaq uses the first elt in config; changeable live from the View > Toolbar style menu
 
+[h5browser]
+last_ontology = ''  # ontology selected last in the H5 browser: '' (none), a registered provider name or the path of an RDF file
+ontology_files = []  # RDF files chosen with "Other file..." in the H5 browser, most recent first
+
 [viewer]
 rois_as_popup = false
 rois_dock_layout = ['horizontal', 'vertical']  # row stacking of the ROIs dock shared by a viewer's region-of-interest panels (current choice first); also changeable live from that dock's right-click menu
