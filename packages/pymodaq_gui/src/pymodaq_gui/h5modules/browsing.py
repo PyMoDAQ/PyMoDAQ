@@ -229,6 +229,7 @@ class H5Browser(CustomApp):
         self._semantics = None  # the corresponding provider (None: default behaviour)
         self.mode = HIERARCHY_MODE  # representation of the file content, see pymodaq_data representations
 
+        self._restore_mode()
         self._restore_semantics()
 
         self.settings_attributes = ParameterManager()
@@ -573,6 +574,26 @@ class H5Browser(CustomApp):
         self.populate_tree()
         self.view.h5file_tree.expand_all()
 
+    def _restore_mode(self):
+        """Use the representation mode chosen last time (first of the config list), if still available"""
+        try:
+            mode = config('gui', 'h5browser', 'representation')[0]
+        except Exception:
+            return
+        if mode == HIERARCHY_MODE or mode in representations.mode_names():
+            self.mode = mode
+
+    def _remember_mode(self, mode: str):
+        """Put the chosen mode first in the config list, keeping the others (and the modes registered
+        since) after it"""
+        try:
+            names = [HIERARCHY_MODE] + representations.mode_names()
+            known = [m for m in config('gui', 'h5browser', 'representation') if m in names]
+            others = [m for m in dict.fromkeys(known + names) if m != mode]
+            config['gui', 'h5browser', 'representation'] = [mode] + others
+        except Exception as e:  # a config problem must not prevent browsing
+            logger.warning(f'Could not store the representation mode: {e}')
+
     def _remember_semantics(self, key: str):
         """Store the choice in the user config: it is selected again at the next start and the files
         chosen are kept in the list"""
@@ -611,6 +632,7 @@ class H5Browser(CustomApp):
         'hdf5' for the standard hierarchy). Data are still shown as before on double-click."""
         if mode != self.mode:
             self.mode = mode
+            self._remember_mode(mode)
             self.populate_tree()
             self.view.h5file_tree.expand_all()
 

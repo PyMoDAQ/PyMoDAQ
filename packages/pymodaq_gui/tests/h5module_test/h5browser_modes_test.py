@@ -28,7 +28,8 @@ def h5_path(tmp_path):
     return path
 
 
-def test_modes_show_same_data(qtbot, h5_path):
+def test_modes_show_same_data(qtbot, h5_path, monkeypatch):
+    monkeypatch.setattr(browsing, 'config', FakeConfig())
     with mock.patch.object(browsing.H5Browser, 'check_version'):
         window = QtWidgets.QMainWindow()
         browser = browsing.H5Browser(window, h5file_path=h5_path)
@@ -108,7 +109,8 @@ def test_semantics_choice(qtbot, h5_path, tmp_path, monkeypatch):
 class FakeConfig:
     """Stand-in for the user config, so that tests do not write in the real one"""
     def __init__(self, **values):
-        self.values = {'last_ontology': '', 'ontology_files': [], **values}
+        self.values = {'last_ontology': '', 'ontology_files': [], 'representation': ['hdf5', 'concept', 'quantity'],
+                       **values}
 
     def __call__(self, *path):
         return self.values[path[-1]]
@@ -162,3 +164,23 @@ def test_semantics_choice_is_remembered(qtbot, h5_path, tmp_path):
         browser.set_mode('concept')
         assert [browser.view.semantics_combo.itemText(i) for i in range(browser.view.semantics_combo.count())] == \
             ['No ontology', 'first.ttl', 'Other file...']
+
+
+def test_representation_mode_is_remembered(qtbot, h5_path):
+    fake = FakeConfig()
+    with mock.patch.object(browsing, 'config', fake):
+        browser = open_browser(qtbot, h5_path)
+        assert browser.mode == 'hdf5'  # default: first of the list
+        browser.set_mode('quantity')
+        assert fake.values['representation'] == ['quantity', 'hdf5', 'concept']
+        browser.set_mode('concept')
+        assert fake.values['representation'] == ['concept', 'quantity', 'hdf5']
+
+        later = open_browser(qtbot, h5_path)  # next start
+        assert later.mode == 'concept'
+        assert later.view.mode_combo.currentData() == 'concept'
+        assert later.view.h5file_tree.tree.topLevelItem(0).text(0) == 'By concept'
+
+    # an unknown or removed mode in the config falls back to the standard hierarchy
+    with mock.patch.object(browsing, 'config', FakeConfig(representation=['gone', 'hdf5'])):
+        assert open_browser(qtbot, h5_path).mode == browsing.HIERARCHY_MODE
