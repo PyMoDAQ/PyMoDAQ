@@ -12,7 +12,7 @@ from pymodaq_data.h5modules import saving, backends
 from pymodaq_data.h5modules.data_saving import (
     DataLoader, AxisSaverLoader, DataSaverLoader, DataToExportSaver,
     DataEnlargeableSaver, DataToExportTimedSaver, SPECIAL_GROUP_NAMES, DataToExportExtendedSaver,
-    DataToExportEnlargeableSaver, DataExtendedSaver, DataLoader, BkgSaver, squeeze)
+    DataToExportEnlargeableSaver, DataExtendedSaver, DataLoader, BkgSaver, squeeze, DataBundle)
 from pymodaq_data.data import (Axis, DataWithAxes, DataSource, DataToExport, DataRaw,
                                DataDim, DataDistribution, Averaging)
 
@@ -588,9 +588,115 @@ class TestDataExtendedSaver:
         assert np.all(np.isnan(arr[2]))
 
 
+class TestUnitsAndExtraAttributesInAllSavers:
+    """The units and the extra attributes of a DataWithAxes must be written by every saver"""
+
+    @staticmethod
+    def _get_data():
+        data = DataRaw(name='mydata', data=[DATA0D for _ in range(2)], labels=['mylabel1', 'mylabel2'],
+                       units='V', dim='Data0D', distribution='uniform')
+        data.add_extra_attribute(semantic_iri='https://example.org/term', another=123)
+        return data
+
+    @staticmethod
+    def _check_attrs(node):
+        assert node.attrs['units'] == 'V'
+        assert node.attrs['semantic_iri'] == 'https://example.org/term'
+        assert node.attrs['another'] == 123
+
+    def test_simple_saver(self, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
+        DataSaverLoader(h5saver).add_data(h5saver.raw_group, self._get_data())
+        self._check_attrs(h5saver.get_node('/RawData/Data00'))
+
+    def test_extended_saver(self, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
+        data_saver = DataExtendedSaver(h5saver, (5,))
+        data = self._get_data()
+        data_saver.add_data(h5saver.raw_group, data, (0,))
+        self._check_attrs(h5saver.get_node('/RawData/Data00'))
+        self._check_attrs(h5saver.get_node('/RawData/Data01'))
+
+    def test_enlargeable_saver(self, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
+        data_saver = DataEnlargeableSaver(h5saver)
+        data_saver.add_data(h5saver.raw_group, self._get_data(), axis_values=(0.,))
+        self._check_attrs(h5saver.get_node('/RawData/EnlData00'))
+        self._check_attrs(h5saver.get_node('/RawData/EnlData01'))
+
+    def test_extended_saver_load_back(self, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
+        data_saver = DataExtendedSaver(h5saver, (3,))
+        data = self._get_data()
+        for ind in range(3):
+            data_saver.add_data(h5saver.raw_group, data, (ind,))
+        loaded = DataLoader(h5saver).load_data('/RawData/Data00', load_all=True)
+        assert loaded.units == 'V'
+        assert loaded.semantic_iri == 'https://example.org/term'
+        assert loaded.another == 123
+
+
 class TestDataToExportSaver:
     def test_save(self, create_h5_with_data_to_export):
         h5saver = create_h5_with_data_to_export
+
+
+class TestDataToExportSaverSettings:
+    """settings_as_xml of add_data is deprecated and ignored (issue #1489): nothing is written,
+    neither on the group nor on the data arrays (it used to land there as 'settings]')"""
+
+    SETTINGS = '<settings>some xml</settings>'
+
+    @staticmethod
+    def _data_nodes(h5saver, where):
+        return [node for node in h5saver.walk_nodes(where)
+                if 'data_type' in node.attrs and
+                node.attrs['data_type'] in ('data', 'Data', 'data_enlargeable', 'EnlData')]
+
+    @pytest.mark.parametrize('saver_kind', ['plain', 'enlargeable', 'timed', 'extended', 'bundle'])
+    def test_settings_deprecated_and_ignored(self, h5saver_lowlevel, init_data_to_export, saver_kind):
+        h5saver = h5saver_lowlevel
+        det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
+        with pytest.warns(DeprecationWarning, match='settings_as_xml'):
+            if saver_kind == 'plain':
+                DataToExportSaver(h5saver).add_data(det_group, init_data_to_export,
+                                                    settings_as_xml=self.SETTINGS)
+            elif saver_kind == 'enlargeable':
+                DataToExportEnlargeableSaver(h5saver).add_data(det_group, init_data_to_export,
+                                                               axis_values=[1.],
+                                                               settings_as_xml=self.SETTINGS)
+            elif saver_kind == 'timed':
+                DataToExportTimedSaver(h5saver).add_data(det_group, init_data_to_export,
+                                                         settings_as_xml=self.SETTINGS)
+            elif saver_kind == 'extended':
+                DataToExportExtendedSaver(h5saver, extended_shape=(3,)).add_data(
+                    det_group, init_data_to_export, indexes=(0,), settings_as_xml=self.SETTINGS)
+            else:
+                DataToExportSaver(h5saver).add_data_bundle(
+                    DataBundle(dte=init_data_to_export, node=det_group, settings=self.SETTINGS))
+
+        assert 'settings' not in h5saver.get_node(det_group).attrs.attrs_name
+        data_nodes = self._data_nodes(h5saver, det_group)
+        assert len(data_nodes) > 0
+        for node in data_nodes:
+            assert 'settings]' not in node.attrs.attrs_name
+            assert 'settings' not in node.attrs.attrs_name
+
+    def test_module_settings_untouched(self, h5saver_lowlevel, init_data_to_export):
+        h5saver = h5saver_lowlevel
+        det_group = h5saver.add_det_group(h5saver.raw_group, title='MyDet',
+                                          settings_as_xml='<All_settings/>')
+        with pytest.warns(DeprecationWarning):
+            DataToExportSaver(h5saver).add_data(det_group, init_data_to_export,
+                                                settings_as_xml=self.SETTINGS)
+        assert h5saver.get_node(det_group).attrs['settings'] == '<All_settings/>'
+
+    def test_no_warning_without_settings(self, h5saver_lowlevel, init_data_to_export, recwarn):
+        h5saver = h5saver_lowlevel
+        det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
+        DataToExportSaver(h5saver).add_data(det_group, init_data_to_export)
+        assert not [w for w in recwarn if issubclass(w.category, DeprecationWarning)
+                    and 'settings_as_xml' in str(w.message)]
 
 
 class TestDataToExportEnlargeableSaver:

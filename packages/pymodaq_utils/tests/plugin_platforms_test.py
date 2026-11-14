@@ -1,3 +1,4 @@
+import sys
 import textwrap
 
 import pytest
@@ -58,6 +59,23 @@ def make_package(tmp_path, platforms_value, archs_value='None', classifiers=('Op
         '[project]\nname = "pymodaq_plugins_foo"\nclassifiers = [\n    "Development Status :: 5",\n'
         f'{lines}    "Programming Language :: Python :: 3",\n]\n')
     return package
+
+
+def test_import_error_of_a_module_not_supported_here_is_environmental(tmp_path, monkeypatch):
+    other = "('win32',)" if not sys.platform.startswith('win') else "('linux',)"
+    supported = "('linux',)" if not sys.platform.startswith('win') else "('win32',)"
+    for declared, expected in ((other, True), (supported, False), ('None', False)):
+        package = make_package(tmp_path, declared)
+        module = package / 'daq_move_plugins' / 'daq_move_Foo.py'
+        module.write_text('import os\nos.add_dll_directory_not_here()\n' + module.read_text())  # AttributeError
+        monkeypatch.syspath_prepend(str(tmp_path / 'src'))
+        for name in [m for m in sys.modules if m.startswith('pymodaq_plugins_foo')]:
+            del sys.modules[name]
+        with pytest.raises(checks.PluginLoadError) as error:
+            checks.load_plugin_class(checks.PluginModule('pymodaq_plugins_foo', 'daq_move_Foo', 'move'))
+        assert error.value.environmental is expected
+    for name in [m for m in sys.modules if m.startswith('pymodaq_plugins_foo')]:
+        del sys.modules[name]  # the next tests build their own package of the same name
 
 
 def test_package_platforms(tmp_path):
