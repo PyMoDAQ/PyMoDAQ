@@ -291,49 +291,6 @@ def _sort(item: RepItem) -> None:
         _sort(child)
 
 
-def hierarchy_mode(infos: List[DataInfo], semantics: SemanticsBase) -> RepItem:
-    """The hierarchy of the file restricted to the data, where each node tells what it holds: the groups
-    holding data are named after it (``CH00 · background``) and each data shows its unit and, if annotated,
-    its concept (``Data00 · background [counts] · Dark spectrum``). Group items keep the h5 path of the
-    group, so that double-clicking them does the same as in the standard hierarchy."""
-    multi = len({i.file for i in infos}) > 1
-    root = RepItem('Hierarchy with data names')
-    nodes: Dict[tuple, RepItem] = {}
-    group_data: Dict[int, List[str]] = {}
-
-    def group_item(file: str, parts: List[str]) -> RepItem:
-        key = (file if multi else '',) + tuple(parts)
-        if key not in nodes:
-            parent = group_item(file, parts[:-1]) if parts[:-1] else (
-                file_item(file) if multi else root)
-            nodes[key] = RepItem(parts[-1], '/' + '/'.join(parts), tooltip='/' + '/'.join(parts))
-            parent.children.append(nodes[key])
-        return nodes[key]
-
-    def file_item(file: str) -> RepItem:
-        key = ('file', file)
-        if key not in nodes:
-            nodes[key] = RepItem(file or 'file')
-            root.children.append(nodes[key])
-        return nodes[key]
-
-    for info in infos:
-        parts = [p for p in info.path.split('/') if p]
-        if len(parts) < 2:
-            continue
-        group = group_item(info.file, parts[:-1])
-        held = group_data.setdefault(id(group), [])
-        held.append(info.label)   # the group (e.g. CH00) is named after the data it holds
-        group.label = f'{parts[-2]} · {", ".join(held)}'
-        unit = str(info.attrs.get('units') or '')
-        label = f'{parts[-1]} · {info.label}' + (f' [{unit}]' if unit else '')
-        iri = str(info.attrs.get(SEMANTIC_IRI, ''))
-        if iri:
-            label += f' · {semantics.label(iri)}'
-        group.children.append(RepItem(label, info.path, tooltip=info.path))
-    return root
-
-
 def quantity_mode(infos: List[DataInfo], semantics: SemanticsBase) -> RepItem:
     """Data grouped by quantity kind, then by unit."""
     multi = len({i.file for i in infos}) > 1
@@ -416,6 +373,5 @@ def build_mode(name: str, infos: List[DataInfo], semantics: SemanticsBase = None
     return RepresentationModeFactory.builders[name](infos, semantics or SemanticsBase())
 
 
-register_mode('hierarchy', 'HDF5 hierarchy with data names')(hierarchy_mode)
 register_mode('concept', 'By concept')(concept_mode)
 register_mode('quantity', 'By quantity and unit')(quantity_mode)
