@@ -10,6 +10,9 @@ import pint.errors
 import pytest
 from pytest import approx, mark
 import time
+import datetime
+import warnings
+from pathlib import Path
 
 from pymodaq_utils import math_utils as mutils
 from pymodaq_utils.units import nm2eV, eV2nm
@@ -2161,3 +2164,33 @@ class TestAxisExtraAttributes:
         other.add_extra_attribute(unit_iri='u')
         assert other.quantity_kind == 'Wavelength'
         assert axis.extra_attributes == ['quantity_kind']
+
+
+class TestExtraAttributeTypesWarning:
+    """add_extra_attribute warns when a value cannot be saved in a h5 file, read back and transmitted"""
+
+    @pytest.mark.parametrize('value', [1.5, 'text', None, np.float32(1), np.arange(3), {1, 2}, Path('/a'),
+                                       datetime.datetime(2026, 1, 1), [1, (2, 'a')]])
+    @pytest.mark.parametrize('factory', [
+        lambda: data_mod.DataRaw('data', data=[np.arange(3.)]),
+        lambda: data_mod.Axis('axis', data=np.arange(3.)),
+        lambda: data_mod.DataToExport('dte'),
+    ])
+    def test_supported_types_do_not_warn(self, factory, value):
+        obj = factory()
+        with warnings.catch_warnings():
+            warnings.simplefilter('error')
+            obj.add_extra_attribute(my_attr=value)
+        assert obj.my_attr is value or np.all(obj.my_attr == value)
+
+    @pytest.mark.parametrize('value', [object(), [1, object()], np.array([None]), slice(2)])
+    @pytest.mark.parametrize('factory', [
+        lambda: data_mod.DataRaw('data', data=[np.arange(3.)]),
+        lambda: data_mod.Axis('axis', data=np.arange(3.)),
+        lambda: data_mod.DataToExport('dte'),
+    ])
+    def test_unsupported_types_warn_but_are_added(self, factory, value):
+        obj = factory()
+        with pytest.warns(UserWarning, match='my_attr'):
+            obj.add_extra_attribute(my_attr=value)
+        assert 'my_attr' in obj.extra_attributes

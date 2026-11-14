@@ -29,8 +29,8 @@ from multipledispatch import dispatch
 
 
 from pymodaq_utils.enums import BaseEnum, enum_checker, StrEnum
-from pymodaq_utils.warnings import deprecation_msg
-from pymodaq_utils.utils import find_objects_in_list_from_attr_name_val
+from pymodaq_utils.warnings import deprecation_msg, user_warning
+from pymodaq_utils.utils import find_objects_in_list_from_attr_name_val, JsonConverter
 from pymodaq_utils.logger import set_logger, get_module_name
 
 from pymodaq_utils import math_utils as mutils
@@ -269,8 +269,18 @@ class ExtraAttributesMixin:
     extra_attributes: List[str]
 
     def add_extra_attribute(self, **kwargs):
-        """Add named attributes to this object, and remember their names in `extra_attributes`"""
+        """Add named attributes to this object, and remember their names in `extra_attributes`
+
+        A warning is emitted for a value (or an item it holds) whose type cannot be saved in a h5 file,
+        read back and transmitted: see :meth:`pymodaq_utils.utils.JsonConverter.trusted_types` for the
+        supported types. The attribute is added anyway.
+        """
         for key in kwargs:
+            unsupported = JsonConverter.unsupported_type(kwargs[key])
+            if unsupported is not None:
+                user_warning(f'The extra attribute {key} of type {unsupported} cannot be saved and read back '
+                             f'or transmitted, supported types are: {", ".join(JsonConverter.trusted_types())}',
+                             stacklevel=3)
             if key not in self.extra_attributes:
                 self.extra_attributes.append(key)
             setattr(self, key, kwargs[key])
