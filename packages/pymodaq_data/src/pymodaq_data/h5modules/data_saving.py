@@ -13,9 +13,11 @@ from typing import Union, List, Tuple, Iterable
 from pathlib import Path
 
 import numpy as np
+import xml.etree.ElementTree as ET
 
 from pymodaq_utils.abstract import ABCMeta, abstract_attribute
 from pymodaq_utils.enums import enum_checker
+from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_data.data import (Axis, DataDim, DataWithAxes, DataToExport, DataDistribution,
                                DataDimError, squeeze)
 from .saving import DataType, H5SaverLowLevel
@@ -23,6 +25,8 @@ from .backends import GROUP, CARRAY, Node, EARRAY, NodeError, GroupType  # noqa:
 from pymodaq_utils.utils import capitalize
 from pymodaq_data.h5modules.saving import SaveType
 from .. import DataToExport, DataDistribution
+
+logger = set_logger(get_module_name(__file__))
 
 SPECIAL_GROUP_NAMES = dict(nav_axes='NavAxes')
 
@@ -918,18 +922,32 @@ class DataToExportSaver:
         self.add_data(data.node, data.dte, data.settings)
 
     def _add_settings(self, where: Union[Node, str], settings_as_xml=''):
-        """Write the settings once, as the ``settings`` attribute of the ``where`` group node
+        """Add the settings to the ``settings`` attribute of the ``where`` group node
 
-        Nothing is written if ``settings_as_xml`` is empty or if the group already holds non-empty
-        settings (for instance the ones of a module written by ``add_det_group``/``add_act_group``),
-        so that they are never overwritten. Writing only once also keeps the group attributes
-        untouched once SWMR mode is active.
+        If the group has no settings yet, ``settings_as_xml`` is written as is. If it already holds
+        some (for instance the ``All_settings`` of a module written by ``add_det_group`` /
+        ``add_act_group``), the root element of ``settings_as_xml`` is appended as a child of the
+        existing root element, unless a child with the same tag is already there. Hence calling it
+        at each step of an enlargeable saver writes the settings only once, which also keeps the
+        group attributes untouched once SWMR mode is active.
         """
         if settings_as_xml in ('', b'', None):
             return
         node = self._get_node(where)
-        if node.attrs.get('settings', '') in ('', b''):
+        existing = node.attrs.get('settings', '')
+        if existing in ('', b'', None):
             node.attrs['settings'] = settings_as_xml
+            return
+        try:
+            existing_root = ET.fromstring(existing)
+            new_root = ET.fromstring(settings_as_xml)
+        except ET.ParseError as e:
+            logger.warning(f'Settings not added to node {node.path}, they are not valid XML: {e}')
+            return
+        if existing_root.tag == new_root.tag or existing_root.find(new_root.tag) is not None:
+            return
+        existing_root.append(new_root)
+        node.attrs['settings'] = ET.tostring(existing_root)
 
     def add_data(self, where: Union[Node, str], data: DataToExport, settings_as_xml='', **kwargs):
         """
@@ -940,8 +958,8 @@ class DataToExportSaver:
             the path of a given node or the node itself
         data: DataToExport
         settings_as_xml: str
-            The settings parameter as an XML string, saved as the ``settings`` attribute of the
-            ``where`` group node, unless this node already holds non-empty settings
+            The settings parameter as an XML string, added to the ``settings`` attribute of the
+            ``where`` group node (see ``_add_settings``)
         Keyword Arguments:
             all extra metadata to be saved as attributes of each data array
 
@@ -1064,8 +1082,8 @@ class DataToExportEnlargeableSaver(DataToExportSaver):
         axis_value: float or np.ndarray #deprecated in 4.2.0, use axis_values
             The next value (or values) of the enlarged axis
         settings_as_xml: str
-            The settings parameter as an XML string, saved as the ``settings`` attribute of the
-            ``where`` group node, unless this node already holds non-empty settings
+            The settings parameter as an XML string, added to the ``settings`` attribute of the
+            ``where`` group node (see ``_add_settings``)
         Keyword Arguments:
             all extra metadata to be saved as attributes of each data array
         """
@@ -1169,8 +1187,8 @@ class DataToExportExtendedSaver(DataToExportSaver):
             indexes where to save data in the init h5array (should have the same length as
             extended_shape and with values coherent with this shape
         settings_as_xml: str
-            The settings parameter as an XML string, saved as the ``settings`` attribute of the
-            ``where`` group node, unless this node already holds non-empty settings
+            The settings parameter as an XML string, added to the ``settings`` attribute of the
+            ``where`` group node (see ``_add_settings``)
         Keyword Arguments:
             not used by this saver
 
