@@ -2194,3 +2194,62 @@ class TestExtraAttributeTypesWarning:
         with pytest.warns(UserWarning, match='my_attr'):
             obj.add_extra_attribute(my_attr=value)
         assert 'my_attr' in obj.extra_attributes
+
+
+class TestUnitsHistory:
+    """The conversions of units are listed in the extra attribute units_history"""
+
+    def make_axis(self):
+        return data_mod.Axis('wavelength', 'nm', data=np.linspace(400., 700., 4), index=1, spread_order=2,
+                             unit_iri='http://qudt.org/vocab/unit/NanoM')
+
+    def test_axis_units_as_inplace_keeps_attributes_and_records(self):
+        axis = self.make_axis()
+        axis.units_as('eV', inplace=True, context='spectroscopy')
+        axis.units_as('THz', inplace=True, context='spectroscopy')
+
+        assert axis.units == 'THz'
+        assert axis.units_history == 'nm->eV->THz'
+        assert axis.unit_iri == 'http://qudt.org/vocab/unit/NanoM'  # kept, see units_history
+        assert 'units_history' in axis.extra_attributes
+
+    def test_axis_new_object_has_extra_attributes_index_and_history(self):
+        axis = self.make_axis()
+        for name, new_axis in [('units_as', axis.units_as('m', inplace=False)),
+                               ('to_base_units', axis.to_base_units())]:
+            assert new_axis is not axis
+            assert new_axis.unit_iri == axis.unit_iri, name
+            assert new_axis.index == 1 and new_axis.spread_order == 2, name
+            assert new_axis.units_history == f'nm->{new_axis.units}', name
+        assert 'units_history' not in axis.extra_attributes  # the source is not modified
+        assert axis.units == 'nm'
+
+        reduced = axis.to_reduced_units()  # nm is already reduced: nothing converted, nothing recorded
+        assert reduced.unit_iri == axis.unit_iri and 'units_history' not in reduced.extra_attributes
+
+    def test_no_history_without_conversion(self):
+        axis = self.make_axis()
+        axis.units_as('nm', inplace=True)
+        assert 'units_history' not in axis.extra_attributes
+        axis.force_units('mm')
+        assert 'units_history' not in axis.extra_attributes
+
+    def test_data_conversion(self):
+        dwa = data_mod.DataRaw('d', units='mm', data=[np.arange(4.)])
+        dwa.add_extra_attribute(unit_iri='http://qudt.org/vocab/unit/MilliM')
+        dwa.units_as('m', inplace=True)
+        assert dwa.units_history == 'mm->m'
+        new = dwa.units_as('cm', inplace=False)
+        assert new.units_history == 'mm->m->cm'
+        assert dwa.units_history == 'mm->m'
+        assert new.unit_iri == dwa.unit_iri
+        base = dwa.to_base_units()
+        assert base.units_history == 'mm->m'  # already in base units
+
+    def test_history_is_saved_and_transmitted(self):
+        axis = self.make_axis()
+        axis.units_as('eV', inplace=True, context='spectroscopy')
+        from pymodaq_utils.serialize.factory import SerializableFactory
+        factory = SerializableFactory()
+        axis_back = factory.get_apply_deserializer(factory.get_apply_serializer(axis))
+        assert axis_back.units_history == 'nm->eV'

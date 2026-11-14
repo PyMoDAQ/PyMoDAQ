@@ -193,11 +193,28 @@ def test_dte_serialization_keeps_extra_attributes_and_children():
         assert _all_fields(dwa_back) == _all_fields(dwa)
 
 
-@pytest.mark.xfail(strict=True, reason='Axis.serialize does not write the extra attributes of an '
-                                       'axis (changes the binary layout), see issue #1494')
 def test_axis_extra_attributes_serialization():
     axis = data_mod.Axis('x', 'nm', data=np.linspace(400, 700, 10), index=0,
                          quantity_kind='Wavelength')
     axis_back = ser_factory.get_apply_deserializer(ser_factory.get_apply_serializer(axis))
     assert axis_back.extra_attributes == ['quantity_kind']
     assert axis_back.quantity_kind == 'Wavelength'
+
+
+def test_axis_without_extra_attributes_serialization():
+    axis = data_mod.Axis('x', 'nm', data=np.linspace(400, 700, 10), index=1)
+    axis_back = ser_factory.get_apply_deserializer(ser_factory.get_apply_serializer(axis))
+    assert axis_back.extra_attributes == []
+    assert axis_back.index == 1
+
+
+def test_axes_extra_attributes_inside_data_serialization():
+    axis = data_mod.Axis('x', 'nm', data=np.linspace(400, 700, 10), index=0, spread_order=0,
+                         quantity_kind='Wavelength', unit_iri='http://qudt.org/vocab/unit/NanoM',
+                         units_history='nm->eV')
+    dwa = data_mod.DataRaw('d', data=[np.arange(10.)], axes=[axis])
+    dwa_back = ser_factory.get_apply_deserializer(ser_factory.get_apply_serializer(dwa))
+    axis_back = dwa_back.axes[0]
+    assert sorted(axis_back.extra_attributes) == ['quantity_kind', 'unit_iri', 'units_history']
+    assert axis_back.unit_iri == 'http://qudt.org/vocab/unit/NanoM'
+    assert axis_back.units_history == 'nm->eV'
