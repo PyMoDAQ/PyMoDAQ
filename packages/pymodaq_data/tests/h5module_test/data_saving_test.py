@@ -5,6 +5,7 @@ Created the 21/11/2022
 @author: Sebastien Weber
 """
 import numpy as np
+import xml.etree.ElementTree as ET
 import pytest
 from pathlib import Path
 
@@ -684,13 +685,27 @@ class TestDataToExportSaverSettings:
             DataBundle(dte=init_data_to_export, node=det_group, settings=self.SETTINGS))
         assert h5saver.get_node(det_group).attrs['settings'] == self.SETTINGS
 
-    def test_module_settings_not_overwritten(self, h5saver_lowlevel, init_data_to_export):
+    def test_settings_appended_to_module_settings(self, h5saver_lowlevel, init_data_to_export):
+        h5saver = h5saver_lowlevel
+        det_group = h5saver.add_det_group(
+            h5saver.raw_group, title='MyDet',
+            settings_as_xml=b'<All_settings type="group"><Module type="group"/></All_settings>')
+        saver = DataToExportSaver(h5saver)
+        for _ in range(2):  # the second call must not duplicate them
+            saver.add_data(det_group, init_data_to_export,
+                           settings_as_xml='<Extra type="group"><a type="int">1</a></Extra>')
+        root = ET.fromstring(h5saver.get_node(det_group).attrs['settings'])
+        assert root.tag == 'All_settings'
+        assert [child.tag for child in root] == ['Module', 'Extra']
+        assert root.find('Extra/a').text == '1'
+
+    def test_invalid_xml_not_merged(self, h5saver_lowlevel, init_data_to_export):
         h5saver = h5saver_lowlevel
         det_group = h5saver.add_det_group(h5saver.raw_group, title='MyDet',
-                                          settings_as_xml='<module/>')
+                                          settings_as_xml='<All_settings/>')
         DataToExportSaver(h5saver).add_data(det_group, init_data_to_export,
-                                            settings_as_xml=self.SETTINGS)
-        assert h5saver.get_node(det_group).attrs['settings'] == '<module/>'
+                                            settings_as_xml='not xml')
+        assert h5saver.get_node(det_group).attrs['settings'] == '<All_settings/>'
 
     def test_no_settings_written_when_empty(self, h5saver_lowlevel, init_data_to_export):
         h5saver = h5saver_lowlevel
