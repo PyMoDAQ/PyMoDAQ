@@ -109,6 +109,8 @@ class SemanticsFactory:
     def register(cls, name: str) -> Callable:
         """Class decorator: ``@SemanticsFactory.register('my_ontology')``"""
         def inner_wrapper(provider: type) -> type:
+            if name in cls.providers:
+                logger.warning(f'The semantics provider "{name}" is already registered. Replacing it')
             cls.providers[name] = provider
             return provider
         return inner_wrapper
@@ -283,6 +285,8 @@ def register_mode(name: str, title: str):
             return RepItem('All', children=[RepItem(i.label, i.path) for i in infos])
     """
     def inner_wrapper(builder: Callable[[List[DataInfo]], RepItem]):
+        if name in RepresentationModeFactory.builders:
+            logger.warning(f'The representation mode "{name}" is already registered. Replacing it')
         RepresentationModeFactory.builders[name] = builder
         RepresentationModeFactory.titles[name] = title
         return builder
