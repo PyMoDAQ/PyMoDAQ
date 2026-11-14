@@ -1320,7 +1320,7 @@ class DataLoader:
         data.create_missing_axes()
         return data
 
-    def describe(self, mode: str = 'concept'):
+    def describe(self, mode: str = 'concept', semantics=None):
         """Tree of the data nodes of the file in a representation mode, without loading the data
 
         See Also
@@ -1329,7 +1329,7 @@ class DataLoader:
         """
         from pymodaq_data.h5modules import representations
         name = Path(self.h5saver.h5_file_name).stem if self.h5saver.h5_file_name else ''
-        return representations.build_mode(mode, representations.data_infos(self.h5saver.root(), name))
+        return representations.build_mode(mode, representations.data_infos(self.h5saver.root(), name), semantics)
 
     def load_all(self, where: GROUP | str, data: DataToExport = None, with_bkg=False) -> DataToExport:
         if data is None:

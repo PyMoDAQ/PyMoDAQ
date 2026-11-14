@@ -57,7 +57,7 @@ def lab_b(tmp_path):
 def test_helpers():
     assert rep.local_name(NS + 'DarkSpectrum') == 'DarkSpectrum'
     assert rep.local_name('unit:NUM') == 'NUM'
-    assert rep.iri_label(NS + 'DarkSpectrum') == 'Dark spectrum'
+    assert rep.SemanticsBase().label(NS + 'DarkSpectrum') == 'Dark spectrum'
 
 
 def test_data_infos(lab_a):
@@ -102,7 +102,7 @@ def test_register_mode(lab_a):
     infos, _ = infos_of(lab_a)
 
     @rep.register_mode('flat', 'Flat')
-    def flat(infos):
+    def flat(infos, semantics):
         return rep.RepItem('All', children=[rep.RepItem(x.label, x.path) for x in infos])
 
     try:
@@ -112,28 +112,53 @@ def test_register_mode(lab_a):
         del rep.RepresentationModeFactory.builders['flat']
 
 
+class Onto(rep.SemanticsBase):
+    """Knows the 'Spectrum' concept and that every ...Spectrum is a Spectrum"""
+    def knows(self, iri):
+        return iri.endswith('Spectrum')
+
+    def label(self, iri):
+        return 'Spectrum' if iri == NS + 'Spectrum' else super().label(iri)
+
+    def parent(self, iri):
+        return NS + 'Spectrum' if iri != NS + 'Spectrum' else None
+
+
 def test_semantics_provider_gives_hierarchy_and_labels(lab_a):
     infos, _ = infos_of(lab_a)
+    tree = rep.build_mode('concept', infos, Onto())
+    spectrum = tree.find('Spectrum')
+    assert [c.label for c in spectrum.children] == ['Dark spectrum', 'Reference spectrum', 'Sample spectrum']
+    assert spectrum.find('Dark spectrum').children[0].label == 'background'
+    assert tree.find(rep.UNANNOTATED) is not None
+    # no global state: without the argument the tree is flat again
+    assert rep.build_mode('concept', infos).find('Dark spectrum') is not None
 
-    @rep.SemanticsFactory.register('test_onto')
-    class Onto(rep.SemanticsBase):
-        def label(self, iri):
-            return 'Spectrum' if iri == NS + 'Spectrum' else super().label(iri)
 
-        def parent(self, iri):
-            return NS + 'Spectrum' if iri.endswith('Spectrum') and iri != NS + 'Spectrum' else None
-
+def test_registered_provider_by_name(lab_a):
+    rep.SemanticsFactory.register('test_onto')(Onto)
     try:
-        rep.set_semantics('test_onto')
-        tree = rep.build_mode('concept', infos)
-        spectrum = tree.find('Spectrum')
-        assert [c.label for c in spectrum.children] == ['Dark spectrum', 'Reference spectrum', 'Sample spectrum']
-        assert spectrum.find('Dark spectrum').children[0].label == 'background'
-        assert tree.find(rep.UNANNOTATED) is not None
+        assert isinstance(rep.get_semantics('test_onto'), Onto)
+        assert rep.build_tree(lab_a, 'concept', rep.get_semantics('test_onto')).find('Spectrum') is not None
     finally:
-        rep.set_semantics('default')
         del rep.SemanticsFactory.providers['test_onto']
-    assert rep.build_mode('concept', infos).find('Dark spectrum') is not None  # flat again
+
+
+def test_composite_semantics(lab_a):
+    class Volts(rep.SemanticsBase):
+        def knows(self, iri):
+            return iri == 'qk:Count'
+
+        def label(self, iri):
+            return 'Detector counts'
+
+    composite = rep.CompositeSemantics([Volts(), Onto()])
+    assert composite.label('qk:Count') == 'Detector counts'          # first provider
+    assert composite.label(NS + 'Spectrum') == 'Spectrum'            # second provider
+    assert composite.label(NS + 'SomethingElse') == 'Something else'  # nobody knows: default
+    assert composite.parent(NS + 'DarkSpectrum') == NS + 'Spectrum'
+    tree = rep.build_tree(lab_a, 'quantity', composite)
+    assert tree.find('Detector counts') is not None
 
 
 def test_build_tree_and_notebook_rendering(lab_a, lab_b):
@@ -157,7 +182,7 @@ def test_unknown_names_raise(lab_a):
     with pytest.raises(ValueError):
         rep.build_mode('nope', [])
     with pytest.raises(ValueError):
-        rep.set_semantics('nope')
+        rep.get_semantics('nope')
 
 
 def test_replacing_a_registered_name_warns(lab_a):
