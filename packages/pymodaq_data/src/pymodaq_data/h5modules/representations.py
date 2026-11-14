@@ -88,8 +88,12 @@ def humanize(name: str) -> str:
 class SemanticsBase:
     """What the modes need to know about the terms (IRIs) found in the files. The default one only reads the
     name of the IRI. A richer one (labels, class hierarchy from an ontology) can be registered with
-    ``@SemanticsFactory.register('my_name')`` and selected with :func:`set_semantics`; PyMoDAQ itself needs
-    no RDF library."""
+    ``@SemanticsFactory.register('my_name')`` and passed to the modes (``semantics`` argument); PyMoDAQ itself
+    needs no RDF library."""
+
+    def knows(self, iri: str) -> bool:
+        """True if the provider has its own information on this term (used by :class:`CompositeSemantics`)"""
+        return False
 
     def label(self, iri: str) -> str:
         """Human readable name of a term"""
@@ -98,6 +102,28 @@ class SemanticsBase:
     def parent(self, iri: str) -> Optional[str]:
         """The more general concept of a term, None at the top (or if unknown)"""
         return None
+
+
+class CompositeSemantics(SemanticsBase):
+    """Several providers used together (e.g. one ontology per technique): each term is answered by the first
+    provider that knows it, otherwise by the default behaviour."""
+
+    def __init__(self, providers: Iterable[SemanticsBase]):
+        self.providers = list(providers)
+
+    def _provider_of(self, iri: str) -> Optional[SemanticsBase]:
+        return next((p for p in self.providers if p.knows(iri)), None)
+
+    def knows(self, iri: str) -> bool:
+        return self._provider_of(iri) is not None
+
+    def label(self, iri: str) -> str:
+        provider = self._provider_of(iri)
+        return provider.label(iri) if provider else super().label(iri)
+
+    def parent(self, iri: str) -> Optional[str]:
+        provider = self._provider_of(iri)
+        return provider.parent(iri) if provider else None
 
 
 class SemanticsFactory:
@@ -123,14 +149,13 @@ class SemanticsFactory:
 
 
 class RepresentationModeFactory:
-    """Registry of the representation modes: ``builder(infos) -> RepItem``, see :func:`register_mode`.
+    """Registry of the representation modes: ``builder(infos, semantics) -> RepItem``, see :func:`register_mode`.
     Also filled by the ``pymodaq.h5_representations`` entry points."""
-    builders: Dict[str, Callable[[List['DataInfo']], 'RepItem']] = {}
+    builders: Dict[str, Callable[..., 'RepItem']] = {}
     titles: Dict[str, str] = {}
 
 
 SemanticsFactory.register('default')(SemanticsBase)
-_active_semantics = {'name': 'default', 'object': None}
 _entry_points_loaded = False
 
 
@@ -147,20 +172,10 @@ def _load_entry_points():
                     logger.warning(f'Could not load {entry_point.name} from {group}: {e}')
 
 
-def set_semantics(name: str = 'default') -> None:
-    """Select the registered provider used by the modes to label and order terms"""
+def get_semantics(name: str = 'default') -> SemanticsBase:
+    """Instance of a registered semantics provider (also loads those declared by entry points)"""
     _load_entry_points()
-    _active_semantics.update(name=name, object=SemanticsFactory.create(name))
-
-
-def semantics() -> SemanticsBase:
-    if _active_semantics['object'] is None:
-        set_semantics(_active_semantics['name'])
-    return _active_semantics['object']
-
-
-def iri_label(iri: str) -> str:
-    return semantics().label(iri)
+    return SemanticsFactory.create(name)
 
 
 def data_infos(root, file: str = '') -> List[DataInfo]:
@@ -198,7 +213,7 @@ def _group_by(infos: List[DataInfo], key: Callable[[DataInfo], str], label: Call
     return sorted(groups.values(), key=lambda g: (g.label == UNANNOTATED, g.label))
 
 
-def concept_mode(infos: List[DataInfo]) -> RepItem:
+def concept_mode(infos: List[DataInfo], semantics: SemanticsBase) -> RepItem:
     """Data grouped by what they are (``semantic_iri``), under their more general concepts if the active
     semantics provider knows them."""
     multi = len({i.file for i in infos}) > 1
@@ -207,8 +222,8 @@ def concept_mode(infos: List[DataInfo]) -> RepItem:
 
     def concept_item(iri: str) -> RepItem:
         if iri not in nodes:
-            nodes[iri] = RepItem(iri_label(iri), tooltip=iri)
-            parent = semantics().parent(iri)
+            nodes[iri] = RepItem(semantics.label(iri), tooltip=iri)
+            parent = semantics.parent(iri)
             (concept_item(parent) if parent and parent != iri else root).children.append(nodes[iri])
         return nodes[iri]
 
@@ -229,15 +244,15 @@ def _sort(item: RepItem) -> None:
         _sort(child)
 
 
-def quantity_mode(infos: List[DataInfo]) -> RepItem:
+def quantity_mode(infos: List[DataInfo], semantics: SemanticsBase) -> RepItem:
     """Data grouped by quantity kind, then by unit."""
     multi = len({i.file for i in infos}) > 1
     root = RepItem('By quantity and unit')
     by_qk: Dict[str, List[DataInfo]] = {}
     for info in infos:
         by_qk.setdefault(str(info.attrs.get(QUANTITY_KIND, '')), []).append(info)
-    for qk in sorted(by_qk, key=lambda k: (k == '', iri_label(k))):
-        item = RepItem(iri_label(qk) if qk else UNANNOTATED, tooltip=qk)
+    for qk in sorted(by_qk, key=lambda k: (k == '', semantics.label(k))):
+        item = RepItem(semantics.label(qk) if qk else UNANNOTATED, tooltip=qk)
 
         def unit_of(i: DataInfo) -> str:
             return str(i.attrs.get(UNIT_IRI) or i.attrs.get('units') or '')
@@ -248,7 +263,7 @@ def quantity_mode(infos: List[DataInfo]) -> RepItem:
     return root
 
 
-def build_tree(files, mode: str = 'concept') -> RepItem:
+def build_tree(files, mode: str = 'concept', semantics: SemanticsBase = None) -> RepItem:
     """Tree of one or several PyMoDAQ h5 files in the given mode (see ``mode_names()``), for scripts and
     notebooks. In a notebook, ending a cell with the returned item displays it as a collapsible tree.
 
@@ -256,6 +271,7 @@ def build_tree(files, mode: str = 'concept') -> RepItem:
     ----------
     files: str, Path or an iterable of them
     mode: name of a registered mode
+    semantics: provider of labels and concept hierarchy, the default one if None
     """
     from pathlib import Path
     from pymodaq_data.h5modules.browsing import H5BrowserUtil
@@ -269,19 +285,19 @@ def build_tree(files, mode: str = 'concept') -> RepItem:
             infos += data_infos(h5.root(), Path(file).stem)
         finally:
             h5.close_file()
-    return build_mode(mode, infos)
+    return build_mode(mode, infos, semantics)
 
 
 def register_mode(name: str, title: str):
     """Decorator registering a representation mode. The decorated function maps the data nodes of the
-    open file(s) to a tree: ``builder(infos: List[DataInfo]) -> RepItem``.
+    open file(s) to a tree: ``builder(infos: List[DataInfo], semantics: SemanticsBase) -> RepItem``.
 
     Examples
     --------
     ::
 
         @register_mode('flat', 'All data')
-        def flat(infos):
+        def flat(infos, semantics):
             return RepItem('All', children=[RepItem(i.label, i.path) for i in infos])
     """
     def inner_wrapper(builder: Callable[[List[DataInfo]], RepItem]):
@@ -303,11 +319,11 @@ def mode_title(name: str) -> str:
     return RepresentationModeFactory.titles.get(name, name)
 
 
-def build_mode(name: str, infos: List[DataInfo]) -> RepItem:
+def build_mode(name: str, infos: List[DataInfo], semantics: SemanticsBase = None) -> RepItem:
     _load_entry_points()
     if name not in RepresentationModeFactory.builders:
         raise ValueError(f'Unknown representation mode "{name}", registered: {mode_names()}')
-    return RepresentationModeFactory.builders[name](infos)
+    return RepresentationModeFactory.builders[name](infos, semantics or SemanticsBase())
 
 
 register_mode('concept', 'By concept')(concept_mode)
