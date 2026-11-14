@@ -31,6 +31,7 @@ country = "UnitedStates"
 toolbar_button_style = ['icon_only', 'text_only', 'text_beside_icon', 'text_under_icon', 'follow_style']  # pymodaq uses the first elt in config; changeable live from the View > Toolbar style menu
 
 [h5browser]
+representation = ['hdf5', 'concept', 'quantity']  # representation modes of the file content, the one in use first (the browser puts the last chosen in first position)
 last_ontology = ''  # ontology selected last in the H5 browser: '' (none), a registered provider name or the path of an RDF file
 ontology_files = []  # RDF files chosen with "Other file..." in the H5 browser, most recent first
 
