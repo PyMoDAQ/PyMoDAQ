@@ -66,8 +66,9 @@ def test_modes_show_same_data(qtbot, h5_path):
     assert shown == []
 
 
-def test_semantics_choice(qtbot, h5_path, tmp_path):
+def test_semantics_choice(qtbot, h5_path, tmp_path, monkeypatch):
     pytest.importorskip('rdflib')
+    monkeypatch.setattr(browsing, 'config', FakeConfig())
     ttl = tmp_path / 'onto.ttl'
     ttl.write_text("""
 @prefix : <https://x.org/spectro#> .
@@ -102,3 +103,62 @@ def test_semantics_choice(qtbot, h5_path, tmp_path):
 
     browser.set_semantics_choice(browsing.NO_SEMANTICS)
     assert labels() == ['Dark spectrum', 'Sample spectrum']
+
+
+class FakeConfig:
+    """Stand-in for the user config, so that tests do not write in the real one"""
+    def __init__(self, **values):
+        self.values = {'last_ontology': '', 'ontology_files': [], **values}
+
+    def __call__(self, *path):
+        return self.values[path[-1]]
+
+    def __setitem__(self, path, value):
+        self.values[path[-1]] = value
+
+
+def make_ttl(path):
+    path.write_text('@prefix : <https://x.org/spectro#> . @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .'
+                    ' :Spectrum rdfs:label "Spectrum" . :DarkSpectrum rdfs:subClassOf :Spectrum .')
+    return path
+
+
+def open_browser(qtbot, h5_path):
+    with mock.patch.object(browsing.H5Browser, 'check_version'):
+        window = QtWidgets.QMainWindow()
+        browser = browsing.H5Browser(window, h5file_path=h5_path)
+    qtbot.addWidget(window)
+    return browser
+
+
+def test_semantics_choice_is_remembered(qtbot, h5_path, tmp_path):
+    pytest.importorskip('rdflib')
+    first, second = make_ttl(tmp_path / 'first.ttl'), make_ttl(tmp_path / 'second.ttl')
+    fake = FakeConfig()
+    with mock.patch.object(browsing, 'config', fake):
+        browser = open_browser(qtbot, h5_path)
+        browser.set_mode('concept')
+        for ttl in (first, second):
+            with mock.patch.object(browsing, 'select_file', return_value=ttl):
+                browser.set_semantics_choice(browsing.OTHER_FILE)
+        assert fake.values['last_ontology'] == str(second)
+        assert fake.values['ontology_files'] == [str(second), str(first)]  # most recent first
+
+        # next start: the last ontology is selected again and both files are in the list
+        later = open_browser(qtbot, h5_path)
+        assert later.semantics_key == str(second)
+        later.set_mode('concept')
+        combo = later.view.semantics_combo
+        assert combo.currentText() == 'second.ttl'
+        assert [combo.itemText(i) for i in range(combo.count())] == \
+            ['No ontology', 'second.ttl', 'first.ttl', 'Other file...']
+
+    # a remembered file that disappeared is ignored, without error
+    second.unlink()
+    with mock.patch.object(browsing, 'config', FakeConfig(last_ontology=str(second),
+                                                           ontology_files=[str(second), str(first)])):
+        browser = open_browser(qtbot, h5_path)
+        assert browser.semantics_key == browsing.NO_SEMANTICS
+        browser.set_mode('concept')
+        assert [browser.view.semantics_combo.itemText(i) for i in range(browser.view.semantics_combo.count())] == \
+            ['No ontology', 'first.ttl', 'Other file...']

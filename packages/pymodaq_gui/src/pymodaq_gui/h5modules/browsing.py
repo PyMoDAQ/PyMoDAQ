@@ -47,6 +47,7 @@ logger = set_logger(get_module_name(__file__))
 HIERARCHY_MODE = 'hdf5'
 OTHER_FILE = '__other_file__'  # key of the semantics choice asking for an RDF file
 NO_SEMANTICS = ''
+MAX_ONTOLOGY_FILES = 10
 
 
 def rep_item_to_qtree(item: representations.RepItem) -> QtWidgets.QTreeWidgetItem:
@@ -227,6 +228,8 @@ class H5Browser(CustomApp):
         self.semantics_key = NO_SEMANTICS  # selected ontology: '' (none), a registered name or a file path
         self._semantics = None  # the corresponding provider (None: default behaviour)
         self.mode = HIERARCHY_MODE  # representation of the file content, see pymodaq_data representations
+
+        self._restore_semantics()
 
         self.settings_attributes = ParameterManager()
 
@@ -563,11 +566,45 @@ class H5Browser(CustomApp):
             else:
                 self._semantics = representations.get_semantics('rdf', sources=key)
             self.semantics_key = key
+            self._remember_semantics(key)
         except Exception as e:  # unreadable file, rdflib missing...
             logger.exception(str(e))
             messagebox(severity='warning', title='Ontology', text=f'Could not use the ontology {key}:\n{e}')
         self.populate_tree()
         self.view.h5file_tree.expand_all()
+
+    def _remember_semantics(self, key: str):
+        """Store the choice in the user config: it is selected again at the next start and the files
+        chosen are kept in the list"""
+        try:
+            config['gui', 'h5browser', 'last_ontology'] = key
+            if key not in [NO_SEMANTICS] + representations.semantics_names():
+                files = [key] + [f for f in self._ontology_files() if f != key]
+                config['gui', 'h5browser', 'ontology_files'] = files[:MAX_ONTOLOGY_FILES]
+        except Exception as e:  # a config problem must not prevent browsing
+            logger.warning(f'Could not store the ontology choice: {e}')
+
+    @staticmethod
+    def _ontology_files() -> List[str]:
+        """Remembered RDF files that still exist"""
+        try:
+            return [f for f in config('gui', 'h5browser', 'ontology_files') if Path(f).is_file()]
+        except Exception:
+            return []
+
+    def _restore_semantics(self):
+        """Select again the ontology used last time, if still available"""
+        try:
+            key = config('gui', 'h5browser', 'last_ontology')
+        except Exception:
+            return
+        if key and (key in representations.semantics_names() or Path(key).is_file()):
+            try:
+                self._semantics = (representations.get_semantics(key) if key in representations.semantics_names()
+                                   else representations.get_semantics('rdf', sources=key))
+                self.semantics_key = key
+            except Exception as e:  # rdflib missing, file not readable any more...
+                logger.warning(f'Could not restore the ontology {key}: {e}')
 
     def set_mode(self, mode: str):
         """Display the file content with another representation mode (name of a registered mode or
@@ -593,8 +630,10 @@ class H5Browser(CustomApp):
                                     [(name, representations.mode_title(name)) for name in representations.mode_names()],
                                     self.mode)
                 known = [(name, name) for name in representations.semantics_names()]
-                if self.semantics_key not in [NO_SEMANTICS] + [name for name, _ in known]:
-                    known.append((self.semantics_key, Path(self.semantics_key).name))  # a file chosen earlier
+                files = self._ontology_files()
+                if self.semantics_key not in [NO_SEMANTICS] + [name for name, _ in known] + files:
+                    files.append(self.semantics_key)  # current choice, even if not stored
+                known += [(file, Path(file).name) for file in files]
                 self.view.set_semantics_choices([(NO_SEMANTICS, 'No ontology')] + known, self.semantics_key)
                 self.view.semantics_combo.setEnabled(self.mode != HIERARCHY_MODE)
                 if self.mode == HIERARCHY_MODE or self.mode not in representations.mode_names():
