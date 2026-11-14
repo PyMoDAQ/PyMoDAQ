@@ -135,11 +135,12 @@ def _literal_array(node: ast.Call) -> np.ndarray:
     values = _literal_value(node.args[0])
     dtype = None
     for keyword in node.keywords:
+        dtype_name: Optional[str]
         if isinstance(keyword.value, ast.Constant) and isinstance(keyword.value.value, str):
             dtype_name = keyword.value.value
         else:
-            dtype_name = _dotted_name(keyword.value)
-            dtype_name = dtype_name.split('.')[-1] if dtype_name is not None else None
+            dotted_name = _dotted_name(keyword.value)
+            dtype_name = dotted_name.split('.')[-1] if dotted_name is not None else None
         try:
             dtype = np.dtype(dtype_name)
         except TypeError as e:
