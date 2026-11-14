@@ -231,3 +231,21 @@ def test_hierarchy_mode_names_the_data(qtbot, h5_path, monkeypatch):
         texts.append(item.text(0))
     assert 'CH00 · background' in texts
     assert 'Data00 · background [counts] · Dark spectrum' in texts
+
+
+def test_standard_hierarchy_names_low_level_nodes(qtbot, h5_path, monkeypatch):
+    monkeypatch.setattr(browsing, 'config', FakeConfig())
+    browser = open_browser(qtbot, h5_path)
+    assert browser.mode == 'hdf5'
+    tree = browser.view.h5file_tree.tree
+    names = {}
+    stack = [tree.topLevelItem(0)]
+    while stack:
+        item = stack.pop()
+        stack += [item.child(i) for i in range(item.childCount())]
+        names[item.text(2)] = item.text(0)
+    base = '/RawData/Det/Data1D/CH00'
+    assert names[base] == 'CH00 · background'
+    assert names[base + '/Data00'] == 'Data00 · background [counts]'
+    assert names[base + '/Axis00'] == 'Axis00 · x'            # no unit on that axis
+    assert names['/RawData/Det/Data1D'] == 'Data1D' and names['/RawData'] == 'RawData'

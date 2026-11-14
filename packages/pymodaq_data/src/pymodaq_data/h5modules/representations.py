@@ -212,6 +212,37 @@ def data_infos(root, file: str = '') -> List[DataInfo]:
     return infos
 
 
+def explicit_node_name(name: str, node) -> str:
+    """Name of an h5 node as shown in the standard hierarchy, completed with what the node holds:
+    ``Data00`` -> ``Data00 · background [counts]``, ``Axis00`` -> ``Axis00 · Wavelength [nm]`` and a group
+    holding data ``CH00`` -> ``CH00 · background``. Other nodes keep their name.
+
+    Parameters
+    ----------
+    name: the name of the node
+    node: a pymodaq_data h5 node (attributes are read, the data are not)
+    """
+    def label_unit(n) -> str:
+        attrs = n.attrs
+        text = str(attrs['label']) if 'label' in attrs.attrs_name else ''
+        unit = str(attrs['units']) if 'units' in attrs.attrs_name else ''
+        return text + (f' [{unit}]' if unit and text else '')
+
+    try:
+        attrs_name = node.attrs.attrs_name
+        if node.attrs['CLASS'] == 'GROUP':
+            held = [str(c.attrs['label']) for c in node.children().values()
+                    if c.attrs['CLASS'] != 'GROUP' and 'data_type' in c.attrs.attrs_name
+                    and c.attrs['data_type'] == 'data' and 'label' in c.attrs.attrs_name]
+            return f'{name} · {", ".join(held)}' if held else name
+        if 'data_type' in attrs_name and node.attrs['data_type'] in ('data', 'axis'):
+            text = label_unit(node)
+            return f'{name} · {text}' if text else name
+    except Exception:  # an explicit name is a convenience, never a reason to fail displaying the tree
+        pass
+    return name
+
+
 def _leaf(info: DataInfo, multi_file: bool) -> RepItem:
     label = f'{info.label} [{info.file}]' if multi_file and info.file else info.label
     return RepItem(label, info.path, tooltip=info.path)
