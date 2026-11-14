@@ -114,3 +114,10 @@ def test_build_tree_and_notebook_rendering(lab_a, lab_b):
     assert '<details' in html_repr and '<code>/RawData' in html_repr
     assert rep.RepItem('<b>', None)._repr_html_().count('<b>') == 0  # labels are escaped
     assert rep.build_tree(lab_a, 'quantity').find('Count') is not None
+
+
+def test_dataloader_describe(lab_a):
+    from pymodaq_data.h5modules.data_saving import DataLoader
+    with DataLoader(lab_a) as loader:
+        tree = loader.describe('concept')
+    assert tree.find('Dark spectrum').children[0].label == 'background'  # one file: no file name added
