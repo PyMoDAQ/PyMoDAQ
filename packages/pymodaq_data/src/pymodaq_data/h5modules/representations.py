@@ -15,7 +15,6 @@ import re
 from dataclasses import dataclass, field
 from typing import Callable, Dict, Iterable, Iterator, List, Optional
 
-from pymodaq_utils.factory import ObjectFactory
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import get_entrypoints
 
@@ -101,14 +100,30 @@ class SemanticsBase:
         return None
 
 
-class SemanticsFactory(ObjectFactory):
+class SemanticsFactory:
     """Registry of the :class:`SemanticsBase` providers, also filled by the ``pymodaq.h5_semantics``
     entry points"""
+    providers: Dict[str, type] = {}
+
+    @classmethod
+    def register(cls, name: str) -> Callable:
+        """Class decorator: ``@SemanticsFactory.register('my_ontology')``"""
+        def inner_wrapper(provider: type) -> type:
+            cls.providers[name] = provider
+            return provider
+        return inner_wrapper
+
+    @classmethod
+    def create(cls, name: str) -> SemanticsBase:
+        if name not in cls.providers:
+            raise ValueError(f'Unknown semantics provider "{name}", registered: {list(cls.providers)}')
+        return cls.providers[name]()
 
 
-class RepresentationModeFactory(ObjectFactory):
+class RepresentationModeFactory:
     """Registry of the representation modes: ``builder(infos) -> RepItem``, see :func:`register_mode`.
     Also filled by the ``pymodaq.h5_representations`` entry points."""
+    builders: Dict[str, Callable[[List['DataInfo']], 'RepItem']] = {}
     titles: Dict[str, str] = {}
 
 
@@ -268,7 +283,7 @@ def register_mode(name: str, title: str):
             return RepItem('All', children=[RepItem(i.label, i.path) for i in infos])
     """
     def inner_wrapper(builder: Callable[[List[DataInfo]], RepItem]):
-        RepresentationModeFactory.register(name)(builder)
+        RepresentationModeFactory.builders[name] = builder
         RepresentationModeFactory.titles[name] = title
         return builder
     return inner_wrapper
@@ -277,7 +292,7 @@ def register_mode(name: str, title: str):
 def mode_names() -> List[str]:
     """Names of the registered modes (also loads those declared by entry points)"""
     _load_entry_points()
-    return list(RepresentationModeFactory._builders[RepresentationModeFactory.__name__])
+    return list(RepresentationModeFactory.builders)
 
 
 def mode_title(name: str) -> str:
@@ -286,7 +301,9 @@ def mode_title(name: str) -> str:
 
 def build_mode(name: str, infos: List[DataInfo]) -> RepItem:
     _load_entry_points()
-    return RepresentationModeFactory.create(name, infos=infos)
+    if name not in RepresentationModeFactory.builders:
+        raise ValueError(f'Unknown representation mode "{name}", registered: {mode_names()}')
+    return RepresentationModeFactory.builders[name](infos)
 
 
 register_mode('concept', 'By concept')(concept_mode)
