@@ -288,19 +288,39 @@ def explicit_node_name(name: str, node) -> str:
     return name
 
 
-def _leaf(info: DataInfo, multi_file: bool) -> RepItem:
-    label = f'{info.label} [{info.file}]' if multi_file and info.file else info.label
+def main_group(path: str) -> str:
+    """The main groups holding a data or axis node: what lies between the root group (RawData...) and the
+    data type group (Data0D, Data1D, DataND...), e.g. ``scan_000`` or ``Spectrometer``"""
+    parts = [p for p in path.split('/') if p]
+    for i, part in enumerate(parts):
+        if re.fullmatch(r'Data(\d+D|ND)', part):
+            return '/'.join(parts[1:i])
+    return '/'.join(parts[1:-2])
+
+
+def _show_groups(infos: List[DataInfo]) -> bool:
+    """Tell where data come from only if they do not all come from the same group"""
+    return len({main_group(i.path) for i in infos}) > 1
+
+
+def _leaf(info: DataInfo, multi_file: bool, with_group: bool = False) -> RepItem:
+    label = info.label
+    group = main_group(info.path) if with_group else ''
+    if group:
+        label += f' · {group}'
+    if multi_file and info.file:
+        label += f' [{info.file}]'
     return RepItem(label, info.path, tooltip=info.path)
 
 
 def _group_by(infos: List[DataInfo], key: Callable[[DataInfo], str], label: Callable[[str], str],
-              multi_file: bool) -> List[RepItem]:
+              multi_file: bool, with_group: bool = False) -> List[RepItem]:
     groups: Dict[str, RepItem] = {}
     for info in infos:
         k = key(info)
         if k not in groups:
             groups[k] = RepItem(label(k) if k else UNANNOTATED, tooltip=k)
-        groups[k].children.append(_leaf(info, multi_file))
+        groups[k].children.append(_leaf(info, multi_file, with_group))
     # annotated groups sorted by label, not annotated last
     return sorted(groups.values(), key=lambda g: (g.label == UNANNOTATED, g.label))
 
@@ -310,6 +330,7 @@ def concept_mode(infos: List[DataInfo], semantics: SemanticsBase) -> RepItem:
     semantics provider knows them."""
     infos = [i for i in infos if i.kind == 'data']
     multi = len({i.file for i in infos}) > 1
+    with_group = _show_groups(infos)
     root = RepItem('By concept')
     nodes: Dict[str, RepItem] = {}
 
@@ -323,7 +344,7 @@ def concept_mode(infos: List[DataInfo], semantics: SemanticsBase) -> RepItem:
     unannotated = RepItem(UNANNOTATED)
     for info in infos:
         iri = str(info.attrs.get(SEMANTIC_IRI, ''))
-        (concept_item(iri) if iri else unannotated).children.append(_leaf(info, multi))
+        (concept_item(iri) if iri else unannotated).children.append(_leaf(info, multi, with_group))
     _sort(root)
     if unannotated.children:
         root.children.append(unannotated)
@@ -350,12 +371,14 @@ def _unit_text(info: DataInfo) -> str:
     return str(info.attrs.get('units') or '') or _unit_label(_unit_of(info))
 
 
-def _axis_leaf(info: DataInfo, multi_file: bool) -> RepItem:
+def _axis_leaf(info: DataInfo, multi_file: bool, with_group: bool = False) -> RepItem:
     name = info.path.rsplit('/', 1)[-1]
     unit = _unit_text(info)
     label = f'{name} · {info.label}' + (f' [{unit}]' if unit else '')
     details = [f'of {info.owner}' if info.owner else '', f'{info.role} axis' if info.role else '']
     label += ''.join(f' · {d}' for d in details if d)
+    if with_group and main_group(info.path):
+        label += f' · {main_group(info.path)}'
     if multi_file and info.file:
         label += f' [{info.file}]'
     return RepItem(label, info.path, tooltip=info.path)
@@ -383,13 +406,14 @@ def quantity_mode(infos: List[DataInfo], semantics: SemanticsBase) -> RepItem:
     """Data grouped by quantity kind, then by unit; the axes are in a separate 'Axes' branch grouped the
     same way, each telling which data it belongs to and whether it is a signal or a navigation axis."""
     multi = len({i.file for i in infos}) > 1
+    with_group = _show_groups(infos)
     root = RepItem('By quantity and unit')
     root.children = _by_quantity_and_unit([i for i in infos if i.kind == 'data'], semantics,
-                                          lambda i: _leaf(i, multi))
+                                          lambda i: _leaf(i, multi, with_group))
     axes = [i for i in infos if i.kind == 'axis']
     if axes:
         axes_item = RepItem('Axes')
-        axes_item.children = _by_quantity_and_unit(axes, semantics, lambda i: _axis_leaf(i, multi))
+        axes_item.children = _by_quantity_and_unit(axes, semantics, lambda i: _axis_leaf(i, multi, with_group))
         root.children.append(axes_item)
     return root
 
