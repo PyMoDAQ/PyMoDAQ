@@ -68,7 +68,7 @@ def test_data_infos(lab_a):
 
 def test_concept_mode(lab_a):
     infos, _ = infos_of(lab_a)
-    tree = rep.MODES['concept'].build(infos)
+    tree = rep.build_mode('concept', infos)
     assert [c.label for c in tree.children] == ['Dark spectrum', 'Reference spectrum',
                                                 'Sample spectrum', rep.UNANNOTATED]
     dark = tree.find('Dark spectrum')
@@ -81,7 +81,7 @@ def test_concept_mode(lab_a):
 
 def test_quantity_mode(lab_a):
     infos, _ = infos_of(lab_a)
-    tree = rep.MODES['quantity'].build(infos)
+    tree = rep.build_mode('quantity', infos)
     count = tree.find('Count')
     assert [u.label for u in count.children] == ['NUM']
     assert sorted(l.label for l in count.children[0].children) == ['background', 'reference', 'signal']
@@ -91,7 +91,7 @@ def test_quantity_mode(lab_a):
 
 def test_two_files_share_concepts(lab_a, lab_b):
     infos = infos_of(lab_a)[0] + infos_of(lab_b)[0]
-    tree = rep.MODES['concept'].build(infos)
+    tree = rep.build_mode('concept', infos)
     dark = tree.find('Dark spectrum')
     assert sorted(c.label for c in dark.children) == ['background [lab_a]', 'dark [lab_b]']
     assert tree.find('Transmittance spectrum') is not None
@@ -99,11 +99,40 @@ def test_two_files_share_concepts(lab_a, lab_b):
 
 def test_register_mode(lab_a):
     infos, _ = infos_of(lab_a)
-    rep.register_mode('flat', 'Flat', lambda i: rep.RepItem('All', children=[rep.RepItem(x.label, x.path) for x in i]))
+
+    @rep.register_mode('flat', 'Flat')
+    def flat(infos):
+        return rep.RepItem('All', children=[rep.RepItem(x.label, x.path) for x in infos])
+
     try:
-        assert len(rep.MODES['flat'].build(infos).children) == 4
+        assert 'flat' in rep.mode_names() and rep.mode_title('flat') == 'Flat'
+        assert len(rep.build_mode('flat', infos).children) == 4
     finally:
-        del rep.MODES['flat']
+        del rep.RepresentationModeFactory._builders['RepresentationModeFactory']['flat']
+
+
+def test_semantics_provider_gives_hierarchy_and_labels(lab_a):
+    infos, _ = infos_of(lab_a)
+
+    @rep.SemanticsFactory.register('test_onto')
+    class Onto(rep.SemanticsBase):
+        def label(self, iri):
+            return 'Spectrum' if iri == NS + 'Spectrum' else super().label(iri)
+
+        def parent(self, iri):
+            return NS + 'Spectrum' if iri.endswith('Spectrum') and iri != NS + 'Spectrum' else None
+
+    try:
+        rep.set_semantics('test_onto')
+        tree = rep.build_mode('concept', infos)
+        spectrum = tree.find('Spectrum')
+        assert [c.label for c in spectrum.children] == ['Dark spectrum', 'Reference spectrum', 'Sample spectrum']
+        assert spectrum.find('Dark spectrum').children[0].label == 'background'
+        assert tree.find(rep.UNANNOTATED) is not None
+    finally:
+        rep.set_semantics('default')
+        del rep.SemanticsFactory._builders['SemanticsFactory']['test_onto']
+    assert rep.build_mode('concept', infos).find('Dark spectrum') is not None  # flat again
 
 
 def test_build_tree_and_notebook_rendering(lab_a, lab_b):

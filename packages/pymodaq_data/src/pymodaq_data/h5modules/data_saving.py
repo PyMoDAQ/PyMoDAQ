@@ -1329,7 +1329,7 @@ class DataLoader:
         """
         from pymodaq_data.h5modules import representations
         name = Path(self.h5saver.h5_file_name).stem if self.h5saver.h5_file_name else ''
-        return representations.MODES[mode].build(representations.data_infos(self.h5saver.root(), name))
+        return representations.build_mode(mode, representations.data_infos(self.h5saver.root(), name))
 
     def load_all(self, where: GROUP | str, data: DataToExport = None, with_bkg=False) -> DataToExport:
         if data is None:
