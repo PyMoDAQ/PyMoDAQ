@@ -2155,6 +2155,7 @@ class DataWithAxes(DataBase, SerializableBase):
         * serialize the dim enum as a string
         * serialize the distribution enum as a string
         * serialize the list of numpy arrays
+        * serialize the units
         * serialize the list of labels
         * serialize the origin
         * serialize the nav_index tuple as a list of int
@@ -3593,10 +3594,11 @@ class DataToExport(ExtraAttributesMixin, DataLowLevel, SerializableBase):
         -----
         The bytes sequence is constructed as:
 
-        * serialize the string type: 'DataToExport'
         * serialize the timestamp: float
         * serialize the name
         * serialize the list of DataWithAxes
+        * serialize the list of names of extra attributes
+        * serialize the extra attributes
         """
         bytes_string = b''
         bytes_string += ser_factory.get_apply_serializer(dte.timestamp)
