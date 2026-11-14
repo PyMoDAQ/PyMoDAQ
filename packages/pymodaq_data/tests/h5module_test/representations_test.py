@@ -240,3 +240,16 @@ def test_hierarchy_mode(lab_a, lab_b):
     # two files: one subtree per file
     both = rep.build_tree([lab_a, lab_b], 'hierarchy')
     assert [c.label for c in both.children] == ['lab_a', 'lab_b']
+
+
+def test_explicit_node_name(lab_a):
+    h5 = H5BrowserUtil(backend='h5py')
+    h5.init_file(file_name=lab_a, new_file=False, mode='r')
+    try:
+        base = '/RawData/Spectrometer/Data1D/CH00'
+        assert rep.explicit_node_name('CH00', h5.get_node(base)) == 'CH00 · background'
+        assert rep.explicit_node_name('Data00', h5.get_node(base + '/Data00')) == 'Data00 · background [counts]'
+        assert rep.explicit_node_name('Axis00', h5.get_node(base + '/Axis00')) == 'Axis00 · x'
+        assert rep.explicit_node_name('Data1D', h5.get_node('/RawData/Spectrometer/Data1D')) == 'Data1D'
+    finally:
+        h5.close_file()
