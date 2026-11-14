@@ -17,7 +17,7 @@ import numpy as np
 
 from pymodaq_utils import logger as logger_module
 from pymodaq_utils.config import GlobalConfig as Config
-from pymodaq_utils.warnings import deprecation_msg
+from pymodaq_utils.warnings import deprecation_msg, user_warning
 from serializall import SerializableFactory, SerializableBase
 
 from importlib import metadata
@@ -68,12 +68,12 @@ class UnsafeExpressionError(ValueError):
 def _literal_value(node: ast.AST) -> Any:
     """Rebuild a value from the ast of its ``repr`` without ever evaluating code
 
-    Only numbers, strings, bytes, booleans, None, signed numbers, tuples, lists, dicts and sets of these,
-    and the str, int, float, datetime, date, time and numpy.float64 constructors given plain arguments are
-    accepted.
+    Only numbers, strings, bytes, booleans, None, signed and complex numbers, tuples, lists, dicts and sets of
+    these, and the constructors of ``_SAFE_CONSTRUCTORS`` (str, int, float, complex, set, frozenset, Path,
+    datetime, date, time, the numpy scalar types) given plain arguments are accepted.
     """
     if isinstance(node, ast.Constant):
-        if isinstance(node.value, (str, bytes, int, float, bool, type(None))):
+        if isinstance(node.value, (str, bytes, int, float, complex, bool, type(None))):
             return node.value
     elif isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.USub, ast.UAdd)):
         operand = _literal_value(node.operand)
@@ -83,6 +83,16 @@ def _literal_value(node: ast.AST) -> Any:
         return float(node.id)
     elif isinstance(node, ast.Attribute) and _dotted_name(node) in ('np.nan', 'numpy.nan'):
         return np.nan
+    elif isinstance(node, ast.Attribute) and _dotted_name(node) in ('np.True_', 'numpy.True_'):
+        return np.True_
+    elif isinstance(node, ast.Attribute) and _dotted_name(node) in ('np.False_', 'numpy.False_'):
+        return np.False_
+    elif isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Add, ast.Sub)):
+        # the repr of a complex number: (1+2j)
+        left, right = _literal_value(node.left), _literal_value(node.right)
+        if (isinstance(left, (int, float)) and not isinstance(left, bool) and isinstance(right, complex)
+                and right.real == 0):
+            return left + right if isinstance(node.op, ast.Add) else left - right
     elif isinstance(node, ast.Dict):
         items = {}
         for key, value in zip(node.keys, node.values):
@@ -96,6 +106,8 @@ def _literal_value(node: ast.AST) -> Any:
         return tuple(_literal_value(elt) for elt in node.elts)
     elif isinstance(node, ast.List):
         return [_literal_value(elt) for elt in node.elts]
+    elif isinstance(node, ast.Call) and _dotted_name(node.func) in ('array', 'np.array', 'numpy.array'):
+        return _literal_array(node)
     elif isinstance(node, ast.Call):
         name = _dotted_name(node.func)
         constructor = _SAFE_CONSTRUCTORS.get(name) if name is not None else None
@@ -113,6 +125,39 @@ def _literal_value(node: ast.AST) -> Any:
     raise UnsafeExpressionError(f'Unexpected content in stored value: {type(node).__name__}')
 
 
+_ARRAY_KINDS = 'biufcU'
+
+
+def _literal_array(node: ast.Call) -> np.ndarray:
+    """Rebuild a numpy array from the ``repr`` of an array of numbers, booleans or strings"""
+    if len(node.args) != 1 or any(keyword.arg != 'dtype' for keyword in node.keywords):
+        raise UnsafeExpressionError('Unexpected arguments for an array')
+    values = _literal_value(node.args[0])
+    dtype = None
+    for keyword in node.keywords:
+        if isinstance(keyword.value, ast.Constant) and isinstance(keyword.value.value, str):
+            dtype_name = keyword.value.value
+        else:
+            dtype_name = _dotted_name(keyword.value)
+            dtype_name = dtype_name.split('.')[-1] if dtype_name is not None else None
+        try:
+            dtype = np.dtype(dtype_name)
+        except TypeError as e:
+            raise UnsafeExpressionError(f'Unexpected dtype {dtype_name}') from e
+        if dtype.kind not in _ARRAY_KINDS:
+            raise UnsafeExpressionError(f'Unexpected dtype {dtype_name}')
+    if dtype is not None and dtype.kind == 'U':
+        # the size of the strings is the one of the longest, never what the stored text asks for
+        array = np.array(values)
+        if array.dtype != dtype:
+            raise UnsafeExpressionError('Unexpected size of the strings of an array')
+    else:
+        array = np.array(values, dtype=dtype)
+    if array.dtype.kind not in _ARRAY_KINDS:
+        raise UnsafeExpressionError('Unexpected content in an array')
+    return array
+
+
 def _dotted_name(node: ast.AST) -> Optional[str]:
     if isinstance(node, ast.Name):
         return node.id
@@ -126,19 +171,25 @@ _SAFE_CONSTRUCTORS: Dict[str, Callable[..., Any]] = {
     'datetime.datetime': datetime.datetime,
     'datetime.date': datetime.date,
     'datetime.time': datetime.time,
-    'np.float64': np.float64,
-    'numpy.float64': np.float64,
     'str': str,
     'int': int,
     'float': float,
     'OrderedDict': OrderedDict,
     'collections.OrderedDict': OrderedDict,
-    'np.array': np.array,
-    'array': np.array,
-    'np.int64': np.int64,
-    'np.int32': np.int32,
-    'np.float32': np.float32,
+    'complex': complex,
+    'set': set,
+    'frozenset': frozenset,
+    'Path': Path,
+    'PosixPath': Path,
+    'WindowsPath': Path,
+    'pathlib.Path': Path,
+    'pathlib.PosixPath': Path,
+    'pathlib.WindowsPath': Path,
 }
+for _name in ('float16', 'float32', 'float64', 'int8', 'int16', 'int32', 'int64', 'uint8', 'uint16', 'uint32',
+              'uint64', 'complex64', 'complex128'):
+    _SAFE_CONSTRUCTORS[f'np.{_name}'] = getattr(np, _name)
+    _SAFE_CONSTRUCTORS[f'numpy.{_name}'] = getattr(np, _name)
 
 
 def safe_literal_eval(text: str) -> Any:
@@ -162,9 +213,49 @@ class JsonConverter:
 
     @classmethod
     def trusted_types(cls) -> list[str]:
-        """Names of the types :meth:`json2object` is allowed to rebuild"""
-        return ['float', 'int', 'str', 'datetime', 'date', 'time', 'tuple', 'list', 'bool', 'bytes',
-                'float64']
+        """Names of the types :meth:`json2object` is allowed to rebuild
+
+        The single source of the types supported for the attributes (and ``extra_attributes``) is the
+        registry of the serialization factory (``serializall``): its builtin, numpy, datetime and pathlib
+        types.
+        """
+        names = []
+        for obj_type in SerializableFactory().get_serializables():
+            if obj_type.__module__ in cls._TRUSTED_MODULES and obj_type.__name__ not in names:
+                names.append(obj_type.__name__)
+        return names
+
+    _TRUSTED_MODULES = ('builtins', 'numpy', 'datetime', 'pathlib', 'pathlib._local', 'collections')
+
+    @classmethod
+    def unsupported_type(cls, obj: Any) -> Optional[str]:
+        """Name of the first type, in ``obj`` or in the items it holds, that cannot be saved then read back
+
+        An object is supported if its type is in the registry of the serialization factory (transmitted
+        over the network) and in :meth:`trusted_types` (saved as an attribute of an h5 node).
+
+        Returns
+        -------
+        None if ``obj`` is supported, otherwise the name of the type that is not.
+        """
+        obj_type = type(obj)
+        if obj_type not in SerializableFactory().get_serializables():
+            return obj_type.__name__
+        if isinstance(obj, np.ndarray) and obj.dtype.kind not in _ARRAY_KINDS:
+            return f'ndarray of {obj.dtype}'
+        if not cls.istrusted(obj_type.__name__):
+            return obj_type.__name__
+        if isinstance(obj, dict):
+            items = list(obj.keys()) + list(obj.values())
+        elif isinstance(obj, (list, tuple, set, frozenset)):
+            items = list(obj)
+        else:
+            return None
+        for item in items:
+            name = cls.unsupported_type(item)
+            if name is not None:
+                return name
+        return None
 
     @classmethod
     def istrusted(cls, type_name: str) -> bool:
@@ -173,8 +264,18 @@ class JsonConverter:
 
     @classmethod
     def object2json(cls, obj: Any) -> str:
-        """Return a json string with the module, type name and repr of ``obj``"""
-        dic = dict(module=type(obj).__module__, type=type(obj).__name__, data=repr(obj))
+        """Return a json string with the module, type name and repr of ``obj``
+
+        A warning is emitted if ``obj`` is not of a type that can be read back (see
+        :meth:`unsupported_type`): it is then returned as a plain dict by :meth:`json2object`.
+        """
+        unsupported = cls.unsupported_type(obj)
+        if unsupported is not None:
+            user_warning(f'An attribute of type {unsupported} is saved but cannot be read back as such, '
+                         f'supported types are: {", ".join(cls.trusted_types())}', stacklevel=4)
+        with np.printoptions(threshold=sys.maxsize, linewidth=sys.maxsize, floatmode='unique'):
+            data = repr(obj)  # the whole content of arrays, with all their digits
+        dic = dict(module=type(obj).__module__, type=type(obj).__name__, data=data)
         return json.dumps(dic)
 
     @classmethod
