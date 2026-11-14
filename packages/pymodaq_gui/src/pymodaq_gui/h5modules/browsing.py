@@ -275,10 +275,13 @@ class H5Browser(CustomApp):
                                                                                    ' substraction if possible',
                         auto_toolbar=False)
 
+        self.add_action('copy_path', 'Copy node path', 'file_copy', tip='Copy the full h5 path of the node to the clipboard',
+                        auto_toolbar=False)
+
         self.view.add_actions([self.get_action('export'), self.get_action('comment'),
                                self.get_action('plot_node'), self.get_action('plot_nodes'),
                                self.get_action('plot_node_with_bkg'),
-                               self.get_action('plot_nodes_with_bkg')])
+                               self.get_action('plot_nodes_with_bkg'), self.get_action('copy_path')])
 
         self.add_action('load', 'Load File', 'file_open', tip='Open a new file', menu=MenuToolbarNames.FILE)
         self.add_action('save', 'Save File as', 'file_save', tip='Save as another file', menu=MenuToolbarNames.FILE)
@@ -292,6 +295,8 @@ class H5Browser(CustomApp):
         self.connect_action('load', lambda: self.load_file(None, None))
         self.connect_action('save', self.save_file)
         self.connect_action('refresh', self.refresh_file)
+        self.connect_action('copy_path', self.copy_node_path)
+        self.view.h5file_tree.tree.currentItemChanged.connect(lambda *_: self._update_copy_path_action())
 
         self.connect_action('plot_node', lambda: self.get_node_and_plot(False))
         self.connect_action('plot_nodes', lambda: self.get_node_and_plot(False, True))
@@ -424,6 +429,16 @@ class H5Browser(CustomApp):
 
         except Exception as e:
             logger.exception(str(e))
+
+    def copy_node_path(self):
+        """Copy the full h5 path of the selected node to the clipboard (all representation modes)"""
+        path = self.get_tree_node_path()
+        if path:
+            QtWidgets.QApplication.clipboard().setText(path)
+
+    def _update_copy_path_action(self):
+        # items that only group (a concept, a unit...) do not point to a node
+        self.get_action('copy_path').setEnabled(bool(self.get_tree_node_path()))
 
     def get_tree_node_path(self):
         """Get the node path of the currently selected node in the UI"""
