@@ -13,7 +13,7 @@ from pymodaq_data.h5modules import representations as rep
 NS = 'https://w3id.org/pymodaq/spectro#'
 
 
-def make_file(path: Path, items):
+def make_file(path: Path, items, group: str = 'Spectrometer'):
     """items: (name, units, concept or None, quantity kind or None, unit iri or None)"""
     dte = DataToExport('test')
     for name, units, concept, qk, unit_iri in items:
@@ -24,7 +24,7 @@ def make_file(path: Path, items):
         dte.append(data)
     h5 = H5SaverLowLevel()
     h5.init_file(file_name=path, new_file=True)
-    DataToExportSaver(h5).add_data(h5.get_set_group(h5.raw_group, 'Spectrometer'), dte)
+    DataToExportSaver(h5).add_data(h5.get_set_group(h5.raw_group, group), dte)
     h5.close_file()
     return path
 
@@ -295,3 +295,15 @@ def test_build_tree_standard_hierarchy_matches_the_browser_names(lab_a, lab_b):
     assert group.path == '/RawData/Spectrometer'  # groups keep their path too
     both = rep.build_tree([lab_a, lab_b], 'hdf5')
     assert [c.label for c in both.children] == ['lab_a', 'lab_b']
+
+
+def test_main_groups_shown_only_when_data_come_from_several_groups(lab_a, tmp_path):
+    assert rep.main_group('/RawData/scan_000/Data1D/CH00/Data00') == 'scan_000'
+    assert rep.main_group('/RawData/Det/Data0D/CH00/Axis00') == 'Det'
+    assert ' · Spectrometer' not in rep.build_tree(lab_a, 'concept').to_text()  # a single group: no noise
+
+    two = make_file(tmp_path / 'two.h5', [('noir', 'counts', 'DarkSpectrum', 'qk:Count', 'unit:NUM')],
+                    group='scan_001')
+    text = rep.build_tree([lab_a, two], 'concept').to_text()
+    assert 'noir · scan_001 [two]' in text and 'background · Spectrometer [lab_a]' in text
+    assert 'scan_001' in rep.build_tree([lab_a, two], 'quantity').to_text()
