@@ -30,6 +30,7 @@ from pymodaq_data.h5modules.browsing import H5BrowserUtil
 
 from pymodaq_gui.parameter import ioxml
 from pymodaq_gui.utils.widgets.tree_layout import TreeLayout
+from pymodaq_data.h5modules import representations
 from pymodaq_gui.utils.utils import h5tree_to_QTree, pngbinary2Qlabel
 from pymodaq_gui.utils.file_io import select_file, select_file_filter
 from pymodaq_gui.plotting.data_viewers.viewerND import ViewerND
@@ -43,9 +44,24 @@ config = Config()
 logger = set_logger(get_module_name(__file__))
 
 
+HIERARCHY_MODE = 'hdf5'
+
+
+def rep_item_to_qtree(item: representations.RepItem) -> QtWidgets.QTreeWidgetItem:
+    """Convert a RepItem tree into a QTreeWidgetItem tree with the same columns as h5tree_to_QTree:
+    [name, '', h5 path], the path being empty for items that do not stand for a node."""
+    qitem = QtWidgets.QTreeWidgetItem([item.label, '', item.path or ''])
+    if item.tooltip:
+        qitem.setToolTip(0, item.tooltip)
+    for child in item.children:
+        qitem.addChild(rep_item_to_qtree(child))
+    return qitem
+
+
 class View(QObject):
     item_clicked_sig = Signal(object)
     item_double_clicked_sig = Signal(object)
+    mode_changed_sig = Signal(str)  # name of the selected representation mode
     
     def __init__(self, widget: QtWidgets.QWidget, settings_tree, settings_attributes_tree):
         super().__init__()
@@ -73,7 +89,19 @@ class View(QObject):
         self.h5file_tree.item_clicked_sig.connect(self.item_clicked_sig.emit)
         self.h5file_tree.item_double_clicked_sig.connect(self.item_double_clicked_sig.emit)
         
-        v_splitter.addWidget(widget)
+        # selector of the representation mode of the file content (hierarchy, by concept...)
+        self.mode_combo = QtWidgets.QComboBox()
+        self.mode_combo.setToolTip('How the content of the file is organised in the tree')
+        self.mode_combo.currentIndexChanged.connect(
+            lambda _: self.mode_changed_sig.emit(self.mode_combo.currentData()))
+        tree_container = QtWidgets.QWidget()
+        tree_layout = QtWidgets.QVBoxLayout()
+        tree_layout.setContentsMargins(0, 0, 0, 0)
+        tree_layout.addWidget(self.mode_combo)
+        tree_layout.addWidget(widget)
+        tree_container.setLayout(tree_layout)
+
+        v_splitter.addWidget(tree_container)
         v_splitter.addWidget(settings_attributes_tree)
 
         h_splitter.addWidget(v_splitter)
@@ -112,6 +140,15 @@ class View(QObject):
 
     def clear(self):
         self.h5file_tree.tree.clear()
+
+    def set_modes(self, modes: List[Tuple[str, str]], current: str):
+        """Fill the mode selector with (identifier, title) pairs, without emitting mode_changed_sig"""
+        self.mode_combo.blockSignals(True)
+        self.mode_combo.clear()
+        for name, title in modes:
+            self.mode_combo.addItem(title, name)
+        self.mode_combo.setCurrentIndex(max(self.mode_combo.findData(current), 0))
+        self.mode_combo.blockSignals(False)
 
     def add_base_item(self, base_tree_item):
         self.h5file_tree.tree.addTopLevelItem(base_tree_item)
@@ -170,6 +207,7 @@ class H5Browser(CustomApp):
         self._swmr = swmr
         self._file_is_external = False  # True when h5file was passed by caller (shared handle)
         self.current_node_path = None
+        self.mode = HIERARCHY_MODE  # representation of the file content, see pymodaq_data representations
 
         self.settings_attributes = ParameterManager()
 
@@ -189,6 +227,7 @@ class H5Browser(CustomApp):
                          settings_attributes_tree=self.settings_attributes.settings_tree)
         self.view.item_clicked_sig.connect(self.show_h5_attributes)
         self.view.item_double_clicked_sig.connect(self.show_h5_data)
+        self.view.mode_changed_sig.connect(self.set_mode)
         self.hyper_viewer = ViewerND(self.view.viewer_widget)
 
     def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar):
@@ -408,6 +447,8 @@ class H5Browser(CustomApp):
     def show_h5_attributes(self, item=None):
         try:
             self.current_node_path = self.get_tree_node_path()
+            if not self.current_node_path:  # item not standing for a node (a concept, a unit...)
+                return
 
             attr_dict, settings, scan_settings, pixmaps = self.h5utils.get_h5_attributes(self.current_node_path)
 
@@ -470,6 +511,8 @@ class H5Browser(CustomApp):
         try:
             if item is None:
                 self.current_node_path = self.get_tree_node_path()
+            if not self.get_tree_node_path():  # item not standing for a node (a concept, a unit...)
+                return
             self.show_h5_attributes()
             node = self.h5utils.get_node(self.current_node_path)
             self.data_node_signal.emit(self.current_node_path)
@@ -485,6 +528,14 @@ class H5Browser(CustomApp):
         except Exception as e:
             logger.exception(str(e))
 
+    def set_mode(self, mode: str):
+        """Display the file content with another representation mode (name of a registered mode or
+        'hdf5' for the standard hierarchy). Data are still shown as before on double-click."""
+        if mode != self.mode:
+            self.mode = mode
+            self.populate_tree()
+            self.view.h5file_tree.expand_all()
+
     def populate_tree(self):
         """
             | Init the ui-tree and store data into calling the h5_tree_to_Qtree convertor method
@@ -497,9 +548,16 @@ class H5Browser(CustomApp):
             if self.h5utils.h5file is not None:
                 self.view.clear()
                 base_node = self.h5utils.root()
-                base_tree_item, pixmap_items = h5tree_to_QTree(base_node)
-                self.view.add_base_item(base_tree_item)
-                self.view.add_widget_to_tree(pixmap_items)
+                self.view.set_modes([(HIERARCHY_MODE, 'HDF5 hierarchy')] +
+                                    [(name, mode.title) for name, mode in representations.MODES.items()],
+                                    self.mode)
+                if self.mode == HIERARCHY_MODE or self.mode not in representations.MODES:
+                    base_tree_item, pixmap_items = h5tree_to_QTree(base_node)
+                    self.view.add_base_item(base_tree_item)
+                    self.view.add_widget_to_tree(pixmap_items)
+                else:
+                    infos = representations.data_infos(base_node, Path(self.h5utils.h5_file_name or '').stem)
+                    self.view.add_base_item(rep_item_to_qtree(representations.MODES[self.mode].build(infos)))
 
         except Exception as e:
             logger.exception(str(e))
