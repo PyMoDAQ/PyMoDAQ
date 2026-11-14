@@ -64,3 +64,41 @@ def test_modes_show_same_data(qtbot, h5_path):
     tree.setCurrentItem(tree.topLevelItem(0).child(0))
     browser.show_h5_data(tree.currentItem())
     assert shown == []
+
+
+def test_semantics_choice(qtbot, h5_path, tmp_path):
+    pytest.importorskip('rdflib')
+    ttl = tmp_path / 'onto.ttl'
+    ttl.write_text("""
+@prefix : <https://x.org/spectro#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+:Spectrum rdfs:label "Spectrum" .
+:DarkSpectrum rdfs:subClassOf :Spectrum ; rdfs:label "Dark" .
+""")
+    with mock.patch.object(browsing.H5Browser, 'check_version'):
+        window = QtWidgets.QMainWindow()
+        browser = browsing.H5Browser(window, h5file_path=h5_path)
+    qtbot.addWidget(window)
+    tree = browser.view.h5file_tree.tree
+    combo = browser.view.semantics_combo
+    assert [combo.itemData(i) for i in range(combo.count())] == ['', browsing.OTHER_FILE]
+    assert not combo.isEnabled()  # standard hierarchy: no ontology involved
+
+    browser.set_mode('concept')
+    assert combo.isEnabled()
+    labels = lambda: [tree.topLevelItem(0).child(i).text(0) for i in range(tree.topLevelItem(0).childCount())]
+    assert labels() == ['Dark spectrum', 'Sample spectrum']
+
+    with mock.patch.object(browsing, 'select_file', return_value=ttl):  # "Other file..."
+        browser.set_semantics_choice(browsing.OTHER_FILE)
+    # the ontology only knows the dark spectrum: 'Sample spectrum' stays at the top with its default label
+    assert labels() == ['Sample spectrum', 'Spectrum']
+    assert tree.topLevelItem(0).child(1).child(0).text(0) == 'Dark'
+    assert combo.currentText() == 'onto.ttl'  # the chosen file is now in the list
+
+    with mock.patch.object(browsing, 'select_file', return_value=None):  # cancelled: nothing changes
+        browser.set_semantics_choice(browsing.OTHER_FILE)
+    assert labels() == ['Sample spectrum', 'Spectrum']
+
+    browser.set_semantics_choice(browsing.NO_SEMANTICS)
+    assert labels() == ['Dark spectrum', 'Sample spectrum']

@@ -45,6 +45,8 @@ logger = set_logger(get_module_name(__file__))
 
 
 HIERARCHY_MODE = 'hdf5'
+OTHER_FILE = '__other_file__'  # key of the semantics choice asking for an RDF file
+NO_SEMANTICS = ''
 
 
 def rep_item_to_qtree(item: representations.RepItem) -> QtWidgets.QTreeWidgetItem:
@@ -62,6 +64,7 @@ class View(QObject):
     item_clicked_sig = Signal(object)
     item_double_clicked_sig = Signal(object)
     mode_changed_sig = Signal(str)  # name of the selected representation mode
+    semantics_changed_sig = Signal(str)  # key of the selected semantics ('' none, OTHER_FILE, a name...)
     
     def __init__(self, widget: QtWidgets.QWidget, settings_tree, settings_attributes_tree):
         super().__init__()
@@ -98,6 +101,11 @@ class View(QObject):
         tree_layout = QtWidgets.QVBoxLayout()
         tree_layout.setContentsMargins(0, 0, 0, 0)
         tree_layout.addWidget(self.mode_combo)
+        self.semantics_combo = QtWidgets.QComboBox()
+        self.semantics_combo.setToolTip('Ontology giving the labels and the hierarchy of the concepts')
+        self.semantics_combo.activated.connect(
+            lambda _: self.semantics_changed_sig.emit(self.semantics_combo.currentData()))
+        tree_layout.addWidget(self.semantics_combo)
         tree_layout.addWidget(widget)
         tree_container.setLayout(tree_layout)
 
@@ -140,6 +148,15 @@ class View(QObject):
 
     def clear(self):
         self.h5file_tree.tree.clear()
+
+    def set_semantics_choices(self, choices: List[Tuple[str, str]], current: str):
+        """Fill the semantics selector with (key, title) pairs, then 'Other file...' (no signal emitted)"""
+        self.semantics_combo.blockSignals(True)
+        self.semantics_combo.clear()
+        for key, title in choices + [(OTHER_FILE, 'Other file...')]:
+            self.semantics_combo.addItem(title, key)
+        self.semantics_combo.setCurrentIndex(max(self.semantics_combo.findData(current), 0))
+        self.semantics_combo.blockSignals(False)
 
     def set_modes(self, modes: List[Tuple[str, str]], current: str):
         """Fill the mode selector with (identifier, title) pairs, without emitting mode_changed_sig"""
@@ -207,6 +224,8 @@ class H5Browser(CustomApp):
         self._swmr = swmr
         self._file_is_external = False  # True when h5file was passed by caller (shared handle)
         self.current_node_path = None
+        self.semantics_key = NO_SEMANTICS  # selected ontology: '' (none), a registered name or a file path
+        self._semantics = None  # the corresponding provider (None: default behaviour)
         self.mode = HIERARCHY_MODE  # representation of the file content, see pymodaq_data representations
 
         self.settings_attributes = ParameterManager()
@@ -228,6 +247,7 @@ class H5Browser(CustomApp):
         self.view.item_clicked_sig.connect(self.show_h5_attributes)
         self.view.item_double_clicked_sig.connect(self.show_h5_data)
         self.view.mode_changed_sig.connect(self.set_mode)
+        self.view.semantics_changed_sig.connect(self.set_semantics_choice)
         self.hyper_viewer = ViewerND(self.view.viewer_widget)
 
     def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar):
@@ -528,6 +548,27 @@ class H5Browser(CustomApp):
         except Exception as e:
             logger.exception(str(e))
 
+    def set_semantics_choice(self, key: str):
+        """Select the ontology used to label and organise the concepts: '' for none, the name of a
+        registered provider, a path to an RDF file, or OTHER_FILE to ask for such a file."""
+        if key == OTHER_FILE:
+            path = select_file(save=False, filter="RDF files (*.ttl *.rdf *.owl *.xml *.jsonld *.nt);;"
+                                                   "All files (*.*)")
+            key = str(path) if path else self.semantics_key  # cancelled: keep the previous choice
+        try:
+            if key == NO_SEMANTICS:
+                self._semantics = None
+            elif key in representations.semantics_names():
+                self._semantics = representations.get_semantics(key)
+            else:
+                self._semantics = representations.get_semantics('rdf', sources=key)
+            self.semantics_key = key
+        except Exception as e:  # unreadable file, rdflib missing...
+            logger.exception(str(e))
+            messagebox(severity='warning', title='Ontology', text=f'Could not use the ontology {key}:\n{e}')
+        self.populate_tree()
+        self.view.h5file_tree.expand_all()
+
     def set_mode(self, mode: str):
         """Display the file content with another representation mode (name of a registered mode or
         'hdf5' for the standard hierarchy). Data are still shown as before on double-click."""
@@ -551,13 +592,18 @@ class H5Browser(CustomApp):
                 self.view.set_modes([(HIERARCHY_MODE, 'HDF5 hierarchy')] +
                                     [(name, representations.mode_title(name)) for name in representations.mode_names()],
                                     self.mode)
+                known = [(name, name) for name in representations.semantics_names()]
+                if self.semantics_key not in [NO_SEMANTICS] + [name for name, _ in known]:
+                    known.append((self.semantics_key, Path(self.semantics_key).name))  # a file chosen earlier
+                self.view.set_semantics_choices([(NO_SEMANTICS, 'No ontology')] + known, self.semantics_key)
+                self.view.semantics_combo.setEnabled(self.mode != HIERARCHY_MODE)
                 if self.mode == HIERARCHY_MODE or self.mode not in representations.mode_names():
                     base_tree_item, pixmap_items = h5tree_to_QTree(base_node)
                     self.view.add_base_item(base_tree_item)
                     self.view.add_widget_to_tree(pixmap_items)
                 else:
                     infos = representations.data_infos(base_node, Path(self.h5utils.h5_file_name or '').stem)
-                    self.view.add_base_item(rep_item_to_qtree(representations.build_mode(self.mode, infos)))
+                    self.view.add_base_item(rep_item_to_qtree(representations.build_mode(self.mode, infos, self._semantics)))
 
         except Exception as e:
             logger.exception(str(e))
