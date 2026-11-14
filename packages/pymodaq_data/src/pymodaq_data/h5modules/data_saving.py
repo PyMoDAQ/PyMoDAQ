@@ -223,6 +223,13 @@ class DataManagement(metaclass=ABCMeta):
         return nodes
 
 
+#: attributes written by PyMoDAQ on an axis node; any other attribute is an extra attribute of the Axis
+AXIS_NODE_ATTRIBUTES = ('TITLE', 'CLASS', 'VERSION', 'backend', 'data_dimension', 'data_type',
+                        'distribution', 'dtype', 'subdtype', 'shape', 'size', 'EXTDIM', 'path',
+                        'timestamp', 'label', 'units', 'index', 'offset', 'scaling',
+                        'spread_order')
+
+
 class AxisSaverLoader(DataManagement):
     """Specialized Object to save and load Axis object to and from a h5file
 
@@ -253,13 +260,15 @@ class AxisSaverLoader(DataManagement):
         enlargeable: bool
             Specify if the underlying array will be enlargebale
         """
+        metadata = dict(size=axis.size, label=axis.label, units=axis.units,
+                        index=axis.index, offset=axis.offset, scaling=axis.scaling,
+                        distribution='uniform' if axis.is_axis_linear() else 'spread',
+                        spread_order=axis.spread_order)
+        for name in axis.extra_attributes:
+            metadata[name] = getattr(axis, name)
         array = self._h5saver.add_array(where, self._get_next_node_name(where), self.data_type, title=axis.label,
                                         array_to_save=axis.get_data(), data_dimension=DataDim['Data1D'],
-                                        enlargeable=enlargeable,
-                                        metadata=dict(size=axis.size, label=axis.label, units=axis.units,
-                                                      index=axis.index, offset=axis.offset, scaling=axis.scaling,
-                                                      distribution='uniform' if axis.is_axis_linear() else 'spread',
-                                                      spread_order=axis.spread_order))
+                                        enlargeable=enlargeable, metadata=metadata)
         return array
 
     def load_axis(self, where: Union[Node, str]) -> Axis:
@@ -277,9 +286,12 @@ class AxisSaverLoader(DataManagement):
         axis_node = self._get_node(where)
         if not self._is_node_of_data_type(axis_node):
             raise AxisError(f'Could not create an Axis object from this node: {axis_node}')
+        extra_attributes = axis_node.attrs.to_dict()
+        for name in AXIS_NODE_ATTRIBUTES:
+            extra_attributes.pop(name, None)
         return Axis(label=axis_node.attrs['label'], units=axis_node.attrs['units'],
                     data=squeeze(axis_node.read()), index=axis_node.attrs['index'],
-                    spread_order=axis_node.attrs['spread_order'])
+                    spread_order=axis_node.attrs['spread_order'], **extra_attributes)
 
     def get_axes(self, where: Union[Node, str]) -> List[Axis]:
         """Return a list of Axis objects from the Axis Nodes hanging from (or among) a given Node
