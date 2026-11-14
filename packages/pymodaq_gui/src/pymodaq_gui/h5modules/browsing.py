@@ -44,7 +44,7 @@ config = Config()
 logger = set_logger(get_module_name(__file__))
 
 
-HIERARCHY_MODE = 'hdf5'
+HIERARCHY_MODE = representations.HIERARCHY_MODE
 OTHER_FILE = '__other_file__'  # key of the semantics choice asking for an RDF file
 NO_SEMANTICS = ''
 MAX_ONTOLOGY_FILES = 10

@@ -24,15 +24,19 @@ SEMANTIC_IRI = 'semantic_iri'
 QUANTITY_KIND = 'quantity_kind'
 UNIT_IRI = 'unit_iri'
 UNANNOTATED = 'Not annotated'
+HIERARCHY_MODE = 'hdf5'  # the standard hierarchy of the file, built by hierarchy_tree, not a registered mode
 
 
 @dataclass
 class DataInfo:
-    """What a mode needs to know about one data node of a file."""
+    """What a mode needs to know about one data or axis node of a file."""
     path: str                     # h5 path of the node (what the viewer loads)
-    label: str                    # name of the data
+    label: str                    # name of the data or of the axis
     file: str = ''                # file name, to tell apart nodes of several open files
     attrs: Dict[str, object] = field(default_factory=dict)  # all h5 attributes of the node
+    kind: str = 'data'            # 'data' or 'axis'
+    owner: str = ''               # axis only: label of the data stored next to it
+    role: str = ''                # axis only: 'signal' or 'navigation' (a scan axis), '' if unknown
 
 
 @dataclass
@@ -195,21 +199,62 @@ def get_semantics(name: str = 'default', **kwargs) -> SemanticsBase:
 
 
 def data_infos(root, file: str = '') -> List[DataInfo]:
-    """All data nodes (``data_type == 'data'``) below ``root``, a pymodaq_data h5 group
-    (e.g. ``H5BrowserUtil.root()``)."""
+    """All data nodes (``data_type == 'data'``) and axis nodes (``'axis'``, ``kind='axis'``) below
+    ``root``, a pymodaq_data h5 group (e.g. ``H5BrowserUtil.root()``)."""
     infos: List[DataInfo] = []
 
+    def data_type(node) -> str:
+        if node.attrs['CLASS'] != 'GROUP' and 'data_type' in node.attrs.attrs_name:
+            return str(node.attrs['data_type'])
+        return ''
+
+    def info_of(node, **kwargs) -> DataInfo:
+        attrs = {name: node.attrs[name] for name in node.attrs.attrs_name}
+        return DataInfo(node.path, str(attrs.get('label', node.name)), file, attrs, **kwargs)
+
     def visit(node):
-        attrs_name = node.attrs.attrs_name
         if node.attrs['CLASS'] == 'GROUP':
-            for child in node.children().values():
-                visit(child)
-        elif 'data_type' in attrs_name and node.attrs['data_type'] == 'data':
-            attrs = {name: node.attrs[name] for name in attrs_name}
-            infos.append(DataInfo(node.path, str(attrs.get('label', node.name)), file, attrs))
+            children = list(node.children().values())
+            owner = next((c for c in children if data_type(c) == 'data'), None)
+            for child in children:
+                kind = data_type(child)
+                if kind == 'data':
+                    infos.append(info_of(child))
+                elif kind == 'axis':
+                    infos.append(info_of(child, kind='axis', **_axis_context(child, owner)))
+                else:
+                    visit(child)
 
     visit(root)
     return infos
+
+
+def hierarchy_tree(root, file: str = '') -> RepItem:
+    """The standard hierarchy of the file (every node, groups included) with the explicit names of the
+    h5browser (see :func:`explicit_node_name`); each item keeps the h5 path of its node."""
+    def visit(node, name: str) -> RepItem:
+        item = RepItem(explicit_node_name(name, node), node.path, tooltip=node.path)
+        if node.attrs['CLASS'] == 'GROUP':
+            item.children = [visit(child, child_name) for child_name, child in node.children().items()]
+        return item
+
+    top = RepItem(file or 'file', root.path)
+    top.children = [visit(child, name) for name, child in root.children().items()]
+    return top
+
+
+def _axis_context(axis, owner) -> dict:
+    """Label of the data stored next to an axis and whether it is a signal or a navigation axis"""
+    if owner is None:
+        return {}
+    context = {'owner': str(owner.attrs['label']) if 'label' in owner.attrs.attrs_name else owner.name}
+    try:
+        if 'nav_indexes' in owner.attrs.attrs_name and 'index' in axis.attrs.attrs_name:
+            nav = [int(i) for i in owner.attrs['nav_indexes']]
+            context['role'] = 'navigation' if int(axis.attrs['index']) in nav else 'signal'
+    except Exception:
+        pass
+    return context
 
 
 def explicit_node_name(name: str, node) -> str:
@@ -263,6 +308,7 @@ def _group_by(infos: List[DataInfo], key: Callable[[DataInfo], str], label: Call
 def concept_mode(infos: List[DataInfo], semantics: SemanticsBase) -> RepItem:
     """Data grouped by what they are (``semantic_iri``), under their more general concepts if the active
     semantics provider knows them."""
+    infos = [i for i in infos if i.kind == 'data']
     multi = len({i.file for i in infos}) > 1
     root = RepItem('By concept')
     nodes: Dict[str, RepItem] = {}
@@ -291,22 +337,60 @@ def _sort(item: RepItem) -> None:
         _sort(child)
 
 
-def quantity_mode(infos: List[DataInfo], semantics: SemanticsBase) -> RepItem:
-    """Data grouped by quantity kind, then by unit."""
-    multi = len({i.file for i in infos}) > 1
-    root = RepItem('By quantity and unit')
+def _unit_of(info: DataInfo) -> str:
+    return str(info.attrs.get(UNIT_IRI) or info.attrs.get('units') or '')
+
+
+def _unit_label(unit: str) -> str:
+    return local_name(unit) if ':' in unit or '/' in unit else unit
+
+
+def _unit_text(info: DataInfo) -> str:
+    """Unit as the user knows it (the ``units`` attribute, e.g. nm), else the name of its IRI"""
+    return str(info.attrs.get('units') or '') or _unit_label(_unit_of(info))
+
+
+def _axis_leaf(info: DataInfo, multi_file: bool) -> RepItem:
+    name = info.path.rsplit('/', 1)[-1]
+    unit = _unit_text(info)
+    label = f'{name} · {info.label}' + (f' [{unit}]' if unit else '')
+    details = [f'of {info.owner}' if info.owner else '', f'{info.role} axis' if info.role else '']
+    label += ''.join(f' · {d}' for d in details if d)
+    if multi_file and info.file:
+        label += f' [{info.file}]'
+    return RepItem(label, info.path, tooltip=info.path)
+
+
+def _by_quantity_and_unit(infos: List[DataInfo], semantics: SemanticsBase, leaf: Callable) -> List[RepItem]:
     by_qk: Dict[str, List[DataInfo]] = {}
     for info in infos:
         by_qk.setdefault(str(info.attrs.get(QUANTITY_KIND, '')), []).append(info)
+    items = []
     for qk in sorted(by_qk, key=lambda k: (k == '', semantics.label(k))):
         item = RepItem(semantics.label(qk) if qk else UNANNOTATED, tooltip=qk)
+        by_unit: Dict[str, RepItem] = {}
+        for info in by_qk[qk]:
+            unit = _unit_of(info)
+            if unit not in by_unit:
+                by_unit[unit] = RepItem(_unit_text(info) if unit else UNANNOTATED, tooltip=unit)
+            by_unit[unit].children.append(leaf(info))
+        item.children = sorted(by_unit.values(), key=lambda g: (g.label == UNANNOTATED, g.label))
+        items.append(item)
+    return items
 
-        def unit_of(i: DataInfo) -> str:
-            return str(i.attrs.get(UNIT_IRI) or i.attrs.get('units') or '')
 
-        item.children = _group_by(by_qk[qk], unit_of,
-                                  lambda u: local_name(u) if ':' in u or '/' in u else u, multi)
-        root.children.append(item)
+def quantity_mode(infos: List[DataInfo], semantics: SemanticsBase) -> RepItem:
+    """Data grouped by quantity kind, then by unit; the axes are in a separate 'Axes' branch grouped the
+    same way, each telling which data it belongs to and whether it is a signal or a navigation axis."""
+    multi = len({i.file for i in infos}) > 1
+    root = RepItem('By quantity and unit')
+    root.children = _by_quantity_and_unit([i for i in infos if i.kind == 'data'], semantics,
+                                          lambda i: _leaf(i, multi))
+    axes = [i for i in infos if i.kind == 'axis']
+    if axes:
+        axes_item = RepItem('Axes')
+        axes_item.children = _by_quantity_and_unit(axes, semantics, lambda i: _axis_leaf(i, multi))
+        root.children.append(axes_item)
     return root
 
 
@@ -317,7 +401,8 @@ def build_tree(files, mode: str = 'concept', semantics: SemanticsBase = None) ->
     Parameters
     ----------
     files: str, Path or an iterable of them
-    mode: name of a registered mode
+    mode: name of a registered mode, or 'hdf5' for the standard hierarchy of the h5browser (every node,
+        one subtree per file if there are several)
     semantics: provider of labels and concept hierarchy, the default one if None
     """
     from pathlib import Path
@@ -325,13 +410,21 @@ def build_tree(files, mode: str = 'concept', semantics: SemanticsBase = None) ->
     if isinstance(files, (str, Path)):
         files = [files]
     infos: List[DataInfo] = []
+    hierarchies: List[RepItem] = []
     for file in files:
         h5 = H5BrowserUtil(backend='h5py')
         h5.init_file(file_name=Path(file), new_file=False, mode='r')
         try:
-            infos += data_infos(h5.root(), Path(file).stem)
+            if mode == HIERARCHY_MODE:
+                hierarchies.append(hierarchy_tree(h5.root(), Path(file).stem))
+            else:
+                infos += data_infos(h5.root(), Path(file).stem)
         finally:
             h5.close_file()
+    if mode == HIERARCHY_MODE:
+        if len(hierarchies) == 1:
+            return hierarchies[0]
+        return RepItem('Files', children=hierarchies)
     return build_mode(mode, infos, semantics)
 
 
@@ -339,13 +432,16 @@ def register_mode(name: str, title: str):
     """Decorator registering a representation mode. The decorated function maps the data nodes of the
     open file(s) to a tree: ``builder(infos: List[DataInfo], semantics: SemanticsBase) -> RepItem``.
 
+    ``infos`` holds the data nodes (``kind == 'data'``) and the axis nodes (``kind == 'axis'``): a mode
+    only interested in the data filters on ``kind``.
+
     Examples
     --------
     ::
 
         @register_mode('flat', 'All data')
         def flat(infos, semantics):
-            return RepItem('All', children=[RepItem(i.label, i.path) for i in infos])
+            return RepItem('All', children=[RepItem(i.label, i.path) for i in infos if i.kind == 'data'])
     """
     def inner_wrapper(builder: Callable[[List[DataInfo]], RepItem]):
         if name in RepresentationModeFactory.builders:
