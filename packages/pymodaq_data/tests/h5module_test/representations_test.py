@@ -108,7 +108,7 @@ def test_register_mode(lab_a):
         assert 'flat' in rep.mode_names() and rep.mode_title('flat') == 'Flat'
         assert len(rep.build_mode('flat', infos).children) == 4
     finally:
-        del rep.RepresentationModeFactory._builders['RepresentationModeFactory']['flat']
+        del rep.RepresentationModeFactory.builders['flat']
 
 
 def test_semantics_provider_gives_hierarchy_and_labels(lab_a):
@@ -131,7 +131,7 @@ def test_semantics_provider_gives_hierarchy_and_labels(lab_a):
         assert tree.find(rep.UNANNOTATED) is not None
     finally:
         rep.set_semantics('default')
-        del rep.SemanticsFactory._builders['SemanticsFactory']['test_onto']
+        del rep.SemanticsFactory.providers['test_onto']
     assert rep.build_mode('concept', infos).find('Dark spectrum') is not None  # flat again
 
 
@@ -150,3 +150,10 @@ def test_dataloader_describe(lab_a):
     with DataLoader(lab_a) as loader:
         tree = loader.describe('concept')
     assert tree.find('Dark spectrum').children[0].label == 'background'  # one file: no file name added
+
+
+def test_unknown_names_raise(lab_a):
+    with pytest.raises(ValueError):
+        rep.build_mode('nope', [])
+    with pytest.raises(ValueError):
+        rep.set_semantics('nope')
