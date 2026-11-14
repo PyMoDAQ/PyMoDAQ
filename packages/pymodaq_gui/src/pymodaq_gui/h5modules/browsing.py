@@ -549,15 +549,15 @@ class H5Browser(CustomApp):
                 self.view.clear()
                 base_node = self.h5utils.root()
                 self.view.set_modes([(HIERARCHY_MODE, 'HDF5 hierarchy')] +
-                                    [(name, mode.title) for name, mode in representations.MODES.items()],
+                                    [(name, representations.mode_title(name)) for name in representations.mode_names()],
                                     self.mode)
-                if self.mode == HIERARCHY_MODE or self.mode not in representations.MODES:
+                if self.mode == HIERARCHY_MODE or self.mode not in representations.mode_names():
                     base_tree_item, pixmap_items = h5tree_to_QTree(base_node)
                     self.view.add_base_item(base_tree_item)
                     self.view.add_widget_to_tree(pixmap_items)
                 else:
                     infos = representations.data_infos(base_node, Path(self.h5utils.h5_file_name or '').stem)
-                    self.view.add_base_item(rep_item_to_qtree(representations.MODES[self.mode].build(infos)))
+                    self.view.add_base_item(rep_item_to_qtree(representations.build_mode(self.mode, infos)))
 
         except Exception as e:
             logger.exception(str(e))
