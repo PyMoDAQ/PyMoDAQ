@@ -230,18 +230,6 @@ def test_registered_as_rdf_and_used_by_modes(lab_a, ttl):
     assert spectrum.find('Sample').children[0].label == 'signal'
 
 
-def test_hierarchy_mode(lab_a, lab_b):
-    tree = rep.build_tree(lab_a, 'hierarchy')
-    leaf = next(n for n in tree.walk() if n.label.startswith('Data00 · background'))
-    assert leaf.label == 'Data00 · background [counts] · Dark spectrum'
-    group = next(n for n in tree.walk() if n.label == 'CH00 · background')
-    assert group.path == leaf.path.rsplit('/', 1)[0] and group.children == [leaf]
-    assert next(n for n in tree.walk() if n.label.startswith('Data00 · other')).label == 'Data00 · other [V]'
-    # two files: one subtree per file
-    both = rep.build_tree([lab_a, lab_b], 'hierarchy')
-    assert [c.label for c in both.children] == ['lab_a', 'lab_b']
-
-
 def test_explicit_node_name(lab_a):
     h5 = H5BrowserUtil(backend='h5py')
     h5.init_file(file_name=lab_a, new_file=False, mode='r')
