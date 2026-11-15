@@ -8,10 +8,11 @@ import qt_themes
 from pymodaq_gui.managers.action_manager import QAction
 from pymodaq_gui.utils.custom_app import CustomApp
 from pymodaq_gui.utils import Dock
-from pymodaq_gui.utils.widgets import LabelWithFont
+from pymodaq_gui.utils.widgets import LabelWithFont, MultistateLED, StatusPalette, Status
 from pymodaq_gui.utils.styling import create_font, create_icon
 from pymodaq_gui.plotting.utils.plot_utils import DetachablePanel
 from pymodaq_gui.utils.widgets.widget_with_label_title import WidgetWithLabelTitle
+from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import GlobalConfig as Config
 
@@ -22,6 +23,14 @@ if TYPE_CHECKING:
     from pymodaq.control_modules.utils import ControlModule
 
 config = Config()
+
+
+class LedState(StrEnum):
+    """States of the status LED of the control modules (see :meth:`ControlModuleUI.update_status_led`)"""
+    UNINITIALIZED = 'uninitialized'
+    IDLE = 'idle'
+    BUSY = 'busy'  # moving for an actuator, grabbing for a detector
+    ERROR = 'error'
 
 
 class ControlModuleUI(CustomApp):
@@ -50,6 +59,8 @@ class ControlModuleUI(CustomApp):
         self.settings_dock: Dock = settings_dock
         self.config = config
         self._ini_state = False
+        self._in_error = False
+        self.status_led: MultistateLED = None
 
         self._settings_widget = WidgetWithLabelTitle(self.title, closable=True, attachable=True,
                                                      expand_subwidget=True)
@@ -91,11 +102,45 @@ class ControlModuleUI(CustomApp):
     def set_init_color(self, color: QtGui.QColor):
         self.get_action('name').widget.set_color(color)
 
+    def _setup_status_led(self) -> MultistateLED:
+        """Create the status LED, with the colors of the :class:`~pymodaq_gui.utils.widgets.StatusPalette`
+
+        Grey when not initialized, green when idle, blue when busy (see :meth:`_is_busy`), orange in error.
+        """
+        self.status_led = MultistateLED(
+            states=[
+                (LedState.UNINITIALIZED, StatusPalette.color(Status.OFF)),
+                (LedState.IDLE,          StatusPalette.color(Status.IDLE)),
+                (LedState.BUSY,          StatusPalette.color(Status.RUNNING)),
+                (LedState.ERROR,         StatusPalette.color(Status.ERROR)),
+            ],
+            readonly=True,
+        )
+        return self.status_led
+
+    def _is_busy(self) -> bool:
+        """bool: True when the module is working (to be overridden: an actuator moving, a detector grabbing)"""
+        return False
+
+    def update_status_led(self, *_) -> None:
+        """Show the state of the module: error, not initialized, busy or idle"""
+        if self.status_led is None:
+            return
+        if self._in_error:
+            state = LedState.ERROR
+        elif not self._ini_state:
+            state = LedState.UNINITIALIZED
+        elif self._is_busy():
+            state = LedState.BUSY
+        else:
+            state = LedState.IDLE
+        self.status_led.set_state(state)
+
     def set_error_state(self, in_error: bool, message: str = '') -> None:
         """Show that the module is in error after an exception of its plugin
 
-        Does nothing by default, the UIs having a status LED override it (see
-        :class:`~pymodaq.control_modules.daq_move_ui.ui_base.DAQMoveUI`).
+        The status LED turns to ``ERROR`` (orange) with the error as tooltip, and goes back to what the module is
+        doing (not initialized, idle or busy) when the error is cleared.
 
         Parameters
         ----------
@@ -104,6 +149,10 @@ class ControlModuleUI(CustomApp):
         message: str
             The error to show to the user
         """
+        self._in_error = in_error
+        self.update_status_led()
+        if self.status_led is not None:
+            self.status_led.setToolTip(message if in_error else '')
 
     def _setup_init_action(self, toolbar: QtWidgets.QToolBar = None,
                            action_name: str = 'init',
