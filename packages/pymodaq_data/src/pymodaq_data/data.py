@@ -285,6 +285,21 @@ class ExtraAttributesMixin:
                 self.extra_attributes.append(key)
             setattr(self, key, kwargs[key])
 
+    def _record_units_change(self, old_units: str, new_units: str):
+        """Keep track of a conversion in the extra attribute ``units_history`` (for instance ``'nm->eV->THz'``)
+
+        The extra attributes are kept by a conversion, but the ones that depend on the units (for instance the
+        IRI of the unit in an ontology) were set for the units before the conversion. ``units_history`` tells
+        that they may not describe the current units anymore.
+        """
+        if old_units == new_units:
+            return
+        history = getattr(self, UNITS_HISTORY, None) or old_units
+        self.add_extra_attribute(**{UNITS_HISTORY: f'{history}->{new_units}'})
+
+
+UNITS_HISTORY = 'units_history'  # name of the extra attribute listing the conversions of units
+
 
 @ser_factory.register_decorator()
 class Axis(ExtraAttributesMixin, SerializableBase):
@@ -378,6 +393,10 @@ class Axis(ExtraAttributesMixin, SerializableBase):
         * serialize the axis array
         * serialize the axis
         * serialize the axis spread_order
+        * serialize the dict of the extra attributes of the axis (name: value)
+
+        The extra attributes were added at the end of the sequence: a message holding an axis can only be read
+        by the same version of PyMoDAQ (the format has no version or length for the axis).
         """
         if not isinstance(axis, Axis):
             raise TypeError(f'{axis} should be a list, not a {type(axis)}')
@@ -388,6 +407,8 @@ class Axis(ExtraAttributesMixin, SerializableBase):
         bytes_string += ser_factory.get_apply_serializer(axis.get_data())
         bytes_string += ser_factory.get_apply_serializer(axis.index)
         bytes_string += ser_factory.get_apply_serializer(axis.spread_order)
+        bytes_string += ser_factory.get_apply_serializer(
+            {name: getattr(axis, name) for name in axis.extra_attributes})
         return bytes_string
 
     @staticmethod
@@ -407,9 +428,10 @@ class Axis(ExtraAttributesMixin, SerializableBase):
         axis_index, remaining_bytes = ser_factory.get_apply_deserializer(remaining_bytes, False)
         axis_spread_order, remaining_bytes = ser_factory.get_apply_deserializer(remaining_bytes,
                                                                                 False)
+        extra_attributes, remaining_bytes = ser_factory.get_apply_deserializer(remaining_bytes, False)
 
         axis = Axis(axis_label, axis_units, data=axis_array, index=axis_index,
-                    spread_order=axis_spread_order)
+                    spread_order=axis_spread_order, **extra_attributes)
         return axis, remaining_bytes
 
     @staticmethod
@@ -464,52 +486,65 @@ class Axis(ExtraAttributesMixin, SerializableBase):
         units = check_units(units)
         self._units = units
 
+    def _converted(self, units: str, data) -> 'Axis':
+        """New axis in the given units: it has the extra attributes of this one, and the conversion is
+        recorded in its ``units_history``"""
+        new_axis = Axis(self.label, units, data=data)
+        new_axis.index = self.index
+        new_axis.spread_order = self.spread_order
+        for name in self.extra_attributes:
+            new_axis.add_extra_attribute(**{name: copy.deepcopy(getattr(self, name))})
+        new_axis._record_units_change(self.units, units)
+        return new_axis
+
     def units_as(self, units: str, inplace=True, context: Optional[str] = None, **context_kwargs):
         """Convert the axis to other units, optionally using a pint context
 
         If `inplace` is True the axis is modified and None is returned, else a new Axis is returned.
+        The extra attributes are kept, and the conversion is added to the extra attribute `units_history`
+        (for instance 'nm->eV'), as the extra attributes depending on the units may not describe the new units.
         """
-        if inplace:
-            #self._units = units
-            if context is None:
-                self.data = self.get_quantity().to(units).magnitude
-            else:
-                self.data = self.get_quantity().to(units, context, **context_kwargs).magnitude
-            self.force_units(units)
-            return
+        old_units = self.units
+        if context is None:
+            quantity = self.get_quantity().to(units)
         else:
-            if context is not None:
-                return Axis(self.label, units,
-                            data=self.get_quantity().to(units, context, **context_kwargs).magnitude)
-            else:
-                return Axis(self.label, units,
-                            data=self.get_quantity().to(units))
+            quantity = self.get_quantity().to(units, context, **context_kwargs)
+        if inplace:
+            self.data = quantity.magnitude
+            self.force_units(units)
+            self._record_units_change(old_units, units)
+        else:
+            return self._converted(units, quantity.magnitude)
 
     def to_reduced_units(self, inplace=False):
         """Convert the axis to reduced units (see :func:`dimensionless_aware_reduce_units`)
 
         If `inplace` is True the axis is modified and None is returned, else a new Axis is returned.
+        The conversion is recorded as in :meth:`units_as`.
         """
         quantity = dimensionless_aware_reduce_units(self.get_quantity())
         if inplace:
+            old_units = self.units
             self.data = quantity.magnitude
             self.force_units(str(quantity.units))
+            self._record_units_change(old_units, self.units)
         else:
-            return Axis(self.label, units=str(quantity.units),
-                        data=quantity.magnitude)
+            return self._converted(str(quantity.units), quantity.magnitude)
 
     def to_base_units(self, inplace=False):
         """Convert the axis to pint base units
 
         If `inplace` is True the axis is modified and None is returned, else a new Axis is returned.
+        The conversion is recorded as in :meth:`units_as`.
         """
         quantity = self.get_quantity().to_base_units()
         if inplace:
+            old_units = self.units
             self.data = quantity.magnitude
             self.force_units(str(quantity.units))
+            self._record_units_change(old_units, self.units)
         else:
-            return Axis(self.label, units=str(quantity.units),
-                        data=quantity.magnitude)
+            return self._converted(str(quantity.units), quantity.magnitude)
 
     @property
     def index(self) -> int:
@@ -984,13 +1019,16 @@ class DataBase(ExtraAttributesMixin, DataLowLevel, NDArrayOperatorsMixin):
                 f'{e}')
 
         if inplace:
+            old_units = self._units
             self.data = arrays
             self._units = units
+            self._record_units_change(old_units, units)
             return self
         else:
             new_data = copy.deepcopy(self)
             new_data.data = arrays
             new_data._units = units
+            new_data._record_units_change(self._units, units)
             return new_data
 
     def force_units(self, units: str):
@@ -1002,6 +1040,7 @@ class DataBase(ExtraAttributesMixin, DataLowLevel, NDArrayOperatorsMixin):
         data_quantities = [quantity.to_base_units() for quantity in self.quantities]
         dwa.data = [quantity.magnitude for quantity in data_quantities]
         dwa.force_units(str(data_quantities[0].units))
+        dwa._record_units_change(self.units, dwa.units)
         return dwa
 
     def value(self, units: Optional[str] = None) -> float:
