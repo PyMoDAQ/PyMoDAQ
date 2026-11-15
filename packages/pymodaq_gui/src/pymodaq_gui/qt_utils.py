@@ -25,6 +25,43 @@ logger = logger_module.set_logger(logger_module.get_module_name(__file__))
 
 config = Config()
 
+
+TOOLBAR_BUTTON_STYLES = {
+    'icon_only': QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly,
+    'text_only': QtCore.Qt.ToolButtonStyle.ToolButtonTextOnly,
+    'text_beside_icon': QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
+    'text_under_icon': QtCore.Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+    'follow_style': QtCore.Qt.ToolButtonStyle.ToolButtonFollowStyle,
+}
+
+
+def get_toolbar_button_style() -> QtCore.Qt.ToolButtonStyle | None:
+    """The toolbar button style set in the configuration, None if it is not set or not valid"""
+    name = config.get(('gui', 'style', 'toolbar_button_style'), [None])[0]
+    return TOOLBAR_BUTTON_STYLES.get(name)
+
+
+class ToolbarStyleSignaller(QtCore.QObject):
+    style_changed = QtCore.Signal(object)
+
+
+toolbar_style_signaller = ToolbarStyleSignaller()
+
+
+class ToolbarStyleChecks(QtCore.QObject):
+    """Keeps the checkable toolbar style actions in sync, lives as long as the menu it is parented to"""
+
+    def __init__(self, actions: dict[str, QtGui.QAction], parent: QtCore.QObject) -> None:
+        super().__init__(parent)
+        self._actions = actions
+        toolbar_style_signaller.style_changed.connect(self.sync)
+
+    @QtCore.Slot(object)
+    def sync(self, style: QtCore.Qt.ToolButtonStyle) -> None:
+        for name, action in self._actions.items():
+            action.setChecked(TOOLBAR_BUTTON_STYLES[name] == style)
+
+
 class WhiteCheckboxStyle(QProxyStyle):
     _pixmap_cache: dict = {}
     def _get_checkbox_pixmap(self, checked : bool, size: QSize) -> QPixmap:
