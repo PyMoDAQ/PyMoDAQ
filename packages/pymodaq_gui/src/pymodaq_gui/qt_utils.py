@@ -2,6 +2,7 @@
 import os
 import sys
 import warnings
+from pathlib import Path
 from typing import cast, Union
 
 import qt_themes
@@ -32,6 +33,73 @@ class ThemeSignaller(QtCore.QObject):
 
 
 theme_signaller = ThemeSignaller()
+
+
+TOOLBAR_BUTTON_STYLES = {
+    'icon_only': QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly,
+    'text_only': QtCore.Qt.ToolButtonStyle.ToolButtonTextOnly,
+    'text_beside_icon': QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
+    'text_under_icon': QtCore.Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+    'follow_style': QtCore.Qt.ToolButtonStyle.ToolButtonFollowStyle,
+}
+
+
+def get_toolbar_button_style() -> QtCore.Qt.ToolButtonStyle | None:
+    """The toolbar button style set in the configuration, None if it is not set or not valid"""
+    name = config.get(('gui', 'style', 'toolbar_button_style'), [None])[0]
+    return TOOLBAR_BUTTON_STYLES.get(name)
+
+
+class ToolbarStyleSignaller(QtCore.QObject):
+    """Emits ``style_changed(style)`` each time the global toolbar button style changes."""
+    style_changed = QtCore.Signal(object)
+
+
+toolbar_style_signaller = ToolbarStyleSignaller()
+
+
+class ToolbarStyleChecks(QtCore.QObject):
+    """Keeps the checkable toolbar style actions in sync, lives as long as the menu it is parented to"""
+
+    def __init__(self, actions: dict[str, QtGui.QAction], parent: QtCore.QObject) -> None:
+        super().__init__(parent)
+        self._actions = actions
+        toolbar_style_signaller.style_changed.connect(self.sync)
+
+    @QtCore.Slot(object)
+    def sync(self, style: Qt.ToolButtonStyle) -> None:
+        for name, action in self._actions.items():
+            action.setChecked(TOOLBAR_BUTTON_STYLES[name] == style)
+
+
+class ThemeChecks(QtCore.QObject):
+    """Keeps the checkable theme actions in sync, lives as long as the menu it is parented to"""
+
+    def __init__(self, actions: dict[str, QtGui.QAction], themes: dict[str, qt_themes.Theme],
+                 parent: QtCore.QObject):
+        super().__init__(parent)
+        self._actions = actions
+        self._themes = themes
+        theme_signaller.theme_changed.connect(self.sync)
+
+    @QtCore.Slot(object)
+    def sync(self, theme: qt_themes.Theme):
+        for name, action in self._actions.items():
+            action.setChecked(self._themes[name] == theme)
+
+
+class MenuIconRefresher(QtCore.QObject):
+    """Rebuilds a menu icon on theme change, lives as long as the menu it is parented to"""
+
+    def __init__(self, icon_name: Union[str, Path], parent: QtWidgets.QMenu):
+        super().__init__(parent)
+        self._icon_name = icon_name
+        theme_signaller.theme_changed.connect(self.refresh)
+
+    @QtCore.Slot(object)
+    def refresh(self, _theme=None):
+        from pymodaq_gui.utils.styling import create_icon
+        self.parent().setIcon(create_icon(self._icon_name))
 
 
 class WhiteCheckboxStyle(QProxyStyle):
