@@ -13,9 +13,13 @@ elt_grab.png              Grab element editor with a few detectors listed, one o
 elt_wait.png              Wait element editor (time spin box in ms).
 elt_repeat.png            Repeat element editor (number of repetitions).
 elt_scanner.png           Scanner element editor with one or two actuators selected and a scan type configured.
-elt_choice.png            Choice element editor with the "threshold" model selected so its settings show
-                          (detectors, Probe Data, threshold, direction, Data0D), plus the green/red True/False
-                          target combo boxes.
+elt_choice.png            Choice element editor with the "threshold" model selected on the True row so its settings
+                          show (detectors, Probe Data, threshold, direction, Data0D) - sentence-style rows, "True:
+                          go to <target> if threshold" and "False: go to <target>", no color-coded combo boxes.
+elt_switch.png            Switch element editor with at least two rules (e.g. both "threshold"), each a single-line
+                          "Rule N: go to <target> if threshold" header with its detector settings below, plus the
+                          unnumbered "Fallback: go to <target>" row, the Add Rule button, and the highlighted
+                          "Manual override: go to <target>" row at the bottom.
 elt_sequence.png          Sequence element editor with the combo box listing the other sequences.
 elt_state.png             State element editor with the state combo box and the "Show Manager" button.
 
