@@ -303,13 +303,16 @@ class View1D(ActionManager, QObject):
         self.roi_widget = WidgetWithLabelTitle(self.title, self.roi_manager.roiwidget,
                                                closable=True, attachable=True,
                                                expand_subwidget=True)
-        self.roi_widget.sig_close.connect(lambda: self.get_action('do_math').trigger())
-        self.roi_widget.closeEvent = lambda event: self.set_action_checked('do_math', False)
+        self.roi_widget.sig_close.connect(lambda: self.get_action('roi').trigger())
+        # trigger() (not set_action_checked()) so the native window close runs the same
+        # roi_clicked()/filter cascade as the panel's own close button
+        self.roi_widget.closeEvent = (
+            lambda event: self.get_action('roi').trigger() if self.is_action_checked('roi') else None)
         self._rois_panel = DetachablePanel(
             self.roi_widget, self.rois_dock, f'{self.title} ROIs',
             detached=config('gui', 'viewer', 'rois_as_popup'),
             layout_config_path=('gui', 'viewer', 'rois_dock_layout'),
-            is_shown=lambda: self.is_action_checked('do_math'),
+            is_shown=lambda: self.is_action_checked('roi'),
             owner=self.parent_widget)
         self.data_displayer = DataDisplayer(self.plotitem, flip_axes=self.flip_axes)
         self.other_data_displayers: Dict[str, DataDisplayer] = {}
@@ -417,10 +420,12 @@ class View1D(ActionManager, QObject):
             if config('gui', 'viewer', 'viewer1D', action_name):
                 self.get_action(action_name).trigger()
 
-    def do_math(self):
+    def roi_clicked(self, isroichecked=True):
         try:
-            self._rois_panel.show(self.is_action_checked('do_math'))
-            self.lineout_widgets.setVisible(self.is_action_checked('do_math'))
+            self._rois_panel.show(isroichecked)
+            self.lineout_widgets.setVisible(isroichecked)
+            for roi_meta in self.roi_manager.ROIs:
+                roi_meta.roi.setVisible(isroichecked)
 
         except Exception as e:
             logger.exception(str(e))
@@ -456,7 +461,7 @@ class View1D(ActionManager, QObject):
     def connect_things(self):
         self.connect_action('aspect_ratio', self.lock_aspect_ratio)
 
-        self.connect_action('do_math', self.do_math)
+        self.connect_action('roi', self.roi_clicked)
         self.connect_action('scatter', self.data_displayer.update_scatter)
         self.connect_action('xyplot', self.data_displayer.update_xy)
         self.connect_action('xyplot', self.process_xyplot)
@@ -490,7 +495,7 @@ class View1D(ActionManager, QObject):
         self.ROIselect.setVisible(self.is_action_checked('ROIselect'))
 
     def setup_actions(self):
-        self.add_action('roi', 'Math', 'calculate', 'Do Math using ROI', checkable=True)
+        self.add_action('roi', 'ROI', 'calculate', tip='Show/Hide ROI panel', checkable=True)
         self._actions['do_math'] = self.get_action('roi')  # for backcompatibility
         self.add_action('crosshair', 'Crosshair', 'add_2', 'Show data cursor', checkable=True)
         self.add_action('aspect_ratio', 'AspectRatio', 'aspect_ratio', 'Fix the aspect ratio',
@@ -569,7 +574,6 @@ class Viewer1D(ViewerBase):
                            rois_dock=rois_dock)
 
         self.filter_from_rois = Filter1DFromRois(self.view.roi_manager)
-        self.filter_from_rois.register_activation_signal(self.view.get_action('do_math').triggered)
         self.filter_from_rois.register_target_slot(self.process_roi_lineouts)
 
         self.filter_from_crosshair = Filter1DFromCrosshair(self.view.crosshair)
@@ -609,17 +613,19 @@ class Viewer1D(ViewerBase):
     def process_roi_lineouts(self, roi_dte: DataToExport):
         self.view.display_roi_lineouts(roi_dte)
         try:
-            if not self._display_temporary:
-                roi_dte_bis = roi_dte.deepcopy()
-                for dwa in roi_dte_bis:
-                    if dwa.name == 'HorData':
-                        dwa.name = f'Hlineout'
-                    elif dwa.name == 'IntData':
-                        dwa.name = f'Integrated'
-                self.data_to_export.append(roi_dte_bis.data)
-                self.data_to_export_signal.emit(self.data_to_export)
+            roi_dte_bis = roi_dte.deepcopy()
+            for dwa in roi_dte_bis:
+                if dwa.name == 'HorData':
+                    dwa.name = f'Hlineout'
+                elif dwa.name == 'IntData':
+                    dwa.name = f'Integrated'
+            self.data_to_export.append(roi_dte_bis.data)
         except AttributeError as e:
-            pass
+            logger.warning(str(e))
+        # emit even without ROI data (e.g. all ROIs with Process data off), otherwise the
+        # DAQ_Viewer would wait forever for this viewer's data
+        if not self._display_temporary:
+            self.data_to_export_signal.emit(self.data_to_export)
         self.ROI_changed.emit()
 
     def prepare_connect_ui(self):
@@ -648,8 +654,8 @@ class Viewer1D(ViewerBase):
         self.filter_from_crosshair.filter_data(self._raw_data)
 
     def activate_roi(self, activate=True):
-        self.view.set_action_checked('do_math', activate)
-        self.view.get_action('do_math').triggered.emit(activate)
+        self.view.set_action_checked('roi', activate)
+        self.view.get_action('roi').triggered.emit(activate)
 
     @property
     def labels(self):
@@ -719,7 +725,7 @@ def main():
                    axes=[Axis('myaxis', 'units', data=x)])
 
     Form.show()
-    prog.view.get_action('do_math').trigger()
+    prog.view.get_action('roi').trigger()
 
     def print_data(data: DataToExport):
         print(data.data)
