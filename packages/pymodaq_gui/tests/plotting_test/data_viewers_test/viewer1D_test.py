@@ -83,19 +83,23 @@ class TestViewer1D:
         assert use_channel['selected'] == ['CH00', 'CH01']
 
     def test_add_roi_centers_on_view(self, init_viewer1d):
-        """A freshly added ROI is centered on the current x-view and scaled to a fraction of
-        it (config 'gui', 'viewer', 'roi_default_size_fraction'), instead of a fixed tiny
-        region that is hard to grab without zooming in first."""
+        """A freshly added ROI is centered on the data's x-axis extent and scaled to a
+        fraction of it (config 'gui', 'viewer', 'roi_default_size_fraction'), instead of a
+        fixed tiny region that is hard to grab without zooming in first, and regardless of
+        the current zoom level."""
         prog, data = init_viewer1d
         prog.show_data(data)
         prog.get_action('roi').trigger()
 
+        # zoom to a sub-range of the data: the default size/position must still be based on
+        # the full data extent, not this (possibly very different) view range
         view_box = prog.view.roi_manager.view_box
         view_box.enableAutoRange(enable=False)
-        view_box.setRange(xRange=(0, 200), padding=0)
+        view_box.setRange(xRange=(40, 60), padding=0)
 
         fraction = plot_utils.config('gui', 'viewer', 'roi_default_size_fraction')
-        (xmin, xmax), _ = view_box.viewRange()
+        axis = data.get_axis_from_index(0)[0]
+        xmin, xmax = axis.min(), axis.max()
         expected_width = (xmax - xmin) * fraction
 
         roi_manager = prog.view.roi_manager
@@ -103,6 +107,27 @@ class TestViewer1D:
             ROIFactory.get_descriptors_from_dimensionality(ROIDim.ROI1D)[0])
 
         region_min, region_max = roi_manager.ROIs[0].roi.getRegion()
+        assert region_max - region_min == approx(expected_width)
+        assert (region_min + region_max) / 2 == approx((xmin + xmax) / 2)
+
+    def test_roi_select_centers_on_axis(self, init_viewer1d):
+        """The ROIselect tool is also sized/centered on the data's x-axis extent, not the
+        current (possibly zoomed) view range, when shown (#1444)."""
+        prog, data = init_viewer1d
+        prog.show_data(data)
+
+        view_box = prog.view.roi_manager.view_box
+        view_box.enableAutoRange(enable=False)
+        view_box.setRange(xRange=(40, 60), padding=0)
+
+        fraction = plot_utils.config('gui', 'viewer', 'roi_default_size_fraction')
+        axis = data.get_axis_from_index(0)[0]
+        xmin, xmax = axis.min(), axis.max()
+        expected_width = (xmax - xmin) * fraction
+
+        prog.get_action('ROIselect').trigger()
+
+        region_min, region_max = prog.view.ROIselect.getRegion()
         assert region_max - region_min == approx(expected_width)
         assert (region_min + region_max) / 2 == approx((xmin + xmax) / 2)
 

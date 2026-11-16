@@ -1,7 +1,7 @@
 import sys
 import datetime
 from collections import OrderedDict
-from typing import List, Iterable, Union, Dict, Tuple
+from typing import List, Iterable, Union, Dict, Tuple, Optional
 
 from pyqtgraph import mkPen
 from qtpy import QtWidgets
@@ -22,7 +22,7 @@ from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerBase
 from pymodaq_gui.plotting.utils.plot_utils import make_dashed_pens
 from pymodaq_gui.plotting.items.roi import RoiInfo
-from pymodaq_gui.plotting.items.roi import LinearROI, ROIDim
+from pymodaq_gui.plotting.items.roi import LinearROI, ROIDim, center_roi_in_range
 from pymodaq_gui.managers.roi_viewer_manager import ROIViewerManager, roi_format
 from pymodaq_gui.plotting.utils.filter import Filter1DFromCrosshair, Filter1DFromRois
 from pymodaq_gui.plotting.widgets import PlotWidget
@@ -94,6 +94,12 @@ class DataDisplayer(QObject):
 
     def get_axis(self) -> Axis:
         return self._axis
+
+    def get_data_axis(self) -> Optional[Axis]:
+        """The axis of the currently displayed data (None if nothing is displayed yet)"""
+        if self._data is None:
+            return None
+        return self._data.get_axis_from_index(0)[0]
 
     @property
     def linewidth(self) -> int:
@@ -323,6 +329,7 @@ class View1D(ActionManager, QObject):
             is_shown=lambda: self.is_action_checked('do_math'),
             owner=self.parent_widget)
         self.data_displayer = DataDisplayer(self.plotitem, flip_axes=self.flip_axes)
+        self.roi_manager.get_axis_range = self._get_roi_axis_range
         self.other_data_displayers: Dict[str, DataDisplayer] = {}
         self.setup_widgets()
 
@@ -497,8 +504,24 @@ class View1D(ActionManager, QObject):
             self.lineout_viewers.update_colors(
                 make_dashed_pens(colors[ind]), displayer=roi_format(roi_meta.index))
 
+    def _get_roi_axis_range(self) -> Tuple[Tuple[float, float], Tuple[float, float]]:
+        """The current data's x-axis extent, to size/center a new or ROI-select ROI on
+
+        Falls back to the current (possibly zoomed) view range when there is no data loaded
+        yet.
+        """
+        axis = self.data_displayer.get_data_axis()
+        if axis is None:
+            return self.plotitem.vb.viewRange()
+        return (axis.min(), axis.max()), self.plotitem.vb.viewRange()[1]
+
     def show_ROI_select(self):
-        self.ROIselect.setVisible(self.is_action_checked('ROIselect'))
+        visible = self.is_action_checked('ROIselect')
+        self.ROIselect.setVisible(visible)
+        if visible:
+            fraction = config('gui', 'viewer', 'roi_default_size_fraction')
+            x_range, y_range = self._get_roi_axis_range()
+            center_roi_in_range(self.ROIselect, ROIDim.ROI1D, x_range, y_range, fraction)
 
     def setup_actions(self):
         self.add_action('roi', 'Math', 'calculate', 'Do Math using ROI', checkable=True)

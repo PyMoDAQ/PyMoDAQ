@@ -2,7 +2,7 @@ from collections import OrderedDict
 import copy
 import numpy as np
 import sys
-from typing import Union, Iterable, List, Dict
+from typing import Union, Iterable, List, Dict, Optional, Tuple
 import qt_themes
 from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal
@@ -25,7 +25,7 @@ from pymodaq_data.data import (Axis, DataToExport, DataRaw,
                                DataDistribution, DataWithAxes)
 from pymodaq_data.plotting.utils import PlotColors
 
-from pymodaq_gui.managers.roi_viewer_manager import ROIViewerManager, ROIDim
+from pymodaq_gui.managers.roi_viewer_manager import ROIViewerManager, ROIDim, center_roi_in_range
 from pymodaq_gui.plotting.items.roi import SimpleRectROI, RoiInfo
 
 from pymodaq_gui.managers.action_manager import ActionManager
@@ -344,6 +344,10 @@ class View2D(ActionManager, QtCore.QObject):
         self._title = title
         self.rois_dock = rois_dock
         self.ROIselect = SimpleRectROI([0, 0], [10, 10], centered=True, sideScalers=True)
+        # the actual data's x/y axis extent, cached by set_transform(); used in preference to
+        # the view range to size/center a new or ROI-select ROI (see _get_roi_axis_range)
+        self._data_x_axis: Optional[Axis] = None
+        self._data_y_axis: Optional[Axis] = None
 
         self._lineout_widgets = {widg_key: QtWidgets.QWidget() for widg_key in Lineouts.values()}
         self.lineout_viewers: Dict[str, Viewer1D] = None
@@ -357,6 +361,7 @@ class View2D(ActionManager, QtCore.QObject):
 
         self.image_widget = ImageWidget()
         self.roi_manager = ROIViewerManager(self.image_widget.plotitem.vb, ROIDim.ROI2D)
+        self.roi_manager.get_axis_range = self._get_roi_axis_range
         self.roi_widget = WidgetWithLabelTitle(self.title, self.roi_manager.roiwidget,
                                                closable=True, attachable=True,
                                                expand_subwidget=True)
@@ -451,12 +456,26 @@ class View2D(ActionManager, QtCore.QObject):
                 self.plotitem.removeItem(item)
 
     def set_transform(self, xaxis: Axis, yaxis: Axis):
+        self._data_x_axis = xaxis
+        self._data_y_axis = yaxis
+
         tr = QtGui.QTransform()  # prepare PlotItems transformation:
         tr.translate(xaxis.offset, yaxis.offset)
         tr.scale(xaxis.scaling, yaxis.scaling)
 
         for image_item_name in self.data_displayer.get_images():
             self.data_displayer.get_image(image_item_name).setTransform(tr)
+
+    def _get_roi_axis_range(self) -> Tuple[Tuple[float, float], Tuple[float, float]]:
+        """The current data's x/y axis extent, to size/center a new or ROI-select ROI on
+
+        Falls back to the current (possibly zoomed) view range when there is no uniform data
+        displayed yet (e.g. spread data, or nothing loaded).
+        """
+        if self._data_x_axis is None or self._data_y_axis is None:
+            return self.plotitem.vb.viewRange()
+        return ((self._data_x_axis.min(), self._data_x_axis.max()),
+                (self._data_y_axis.min(), self._data_y_axis.max()))
 
     def set_image_displayer(self, data_distribution: DataDistribution):
         self.clear_plot_item()
@@ -794,12 +813,13 @@ class View2D(ActionManager, QtCore.QObject):
             self.lineout_viewers[Lineouts.INT].view.remove_data_displayer('crosshair')
         logger.debug(f'Crosshair visible?: {self.crosshair.isVisible()}')
 
-    def show_ROI_select(self, pos=None, size=None):
-        self.ROIselect.setVisible(self.is_action_checked('ROIselect'))
-        range = self.get_view_range()
-        size = np.array((range[0][1] - range[0][0], range[1][1] - range[1][0])) * 2/3
-        self.ROIselect.setSize(size, center=(0.5, 0.5))
-        self.ROIselect.setPos(np.mean(range, 1)-size/2)
+    def show_ROI_select(self):
+        visible = self.is_action_checked('ROIselect')
+        self.ROIselect.setVisible(visible)
+        if visible:
+            fraction = config('gui', 'viewer', 'roi_default_size_fraction')
+            x_range, y_range = self._get_roi_axis_range()
+            center_roi_in_range(self.ROIselect, ROIDim.ROI2D, x_range, y_range, fraction)
 
     def set_image_labels(self, labels: List[str]):
         if self.data_displayer.labels != labels:

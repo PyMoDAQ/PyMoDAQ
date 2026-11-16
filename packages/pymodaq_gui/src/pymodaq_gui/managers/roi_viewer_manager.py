@@ -2,7 +2,7 @@ import dataclasses
 from collections import OrderedDict
 from pathlib import Path
 import sys
-from typing import List, Union, Dict, Optional, Callable
+from typing import List, Union, Dict, Optional, Callable, Tuple
 
 import numpy as np
 
@@ -27,6 +27,7 @@ from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_gui.utils.utils import first_available_integer
 from pymodaq_gui.plotting.items.roi_sync import (roi_format, ROISync, RoiParameter,
                                                  ROIFactory, ROI, ROIDim)
+from pymodaq_gui.plotting.items.roi import center_roi_in_range
 
 data_processors = DataProcessorFactory()
 
@@ -127,6 +128,12 @@ class ROIViewerManager(ROIParameterManager, QtCore.QObject):
 
         self.view_box: ViewBox = view_box  # a viewbox to add ROI into!
         self._ROIs: list[ROIMeta] = []
+        # set by the data viewer: returns ((xmin, xmax), (ymin, ymax)) describing the extent
+        # of the actual data, used in preference to the current (possibly zoomed) view range
+        # so a freshly added ROI's default size tracks the data, not the zoom level. None (or
+        # a None result, e.g. no data loaded yet) falls back to the view range.
+        self.get_axis_range: Optional[
+            Callable[[], Optional[Tuple[Tuple[float, float], Tuple[float, float]]]]] = None
         self.rois_setting.on_roi_added = (
             lambda index: self._center_roi_on_view(self.get_roi_from_index(index).roi))
 
@@ -175,22 +182,18 @@ class ROIViewerManager(ROIParameterManager, QtCore.QObject):
         self.roi_changed.emit()
 
     def _center_roi_on_view(self, roi: ROI):
-        """Size and center a freshly added ROI on a fraction of the current view range
+        """Size and center a freshly added ROI on a fraction of the data's axis range
 
-        Replaces the item's own tiny (0, 0)+(10, 10) default, which is often too small to
-        grab without first zooming in, with something scaled to what is actually on screen.
+        Uses `get_axis_range` (the data's actual extent) when available, falling back to the
+        current view range otherwise. Sizing against the view range alone would make the ROI
+        balloon to a huge fraction of the data whenever the user is zoomed out.
         """
         fraction = config('gui', 'viewer', 'roi_default_size_fraction')
-        (xmin, xmax), (ymin, ymax) = self.view_box.viewRange()
-        if self.roi_dim == ROIDim.ROI1D:
-            xwidth = (xmax - xmin) * fraction
-            xcenter = (xmin + xmax) / 2
-            roi.setPos((xcenter - xwidth / 2, xcenter + xwidth / 2))
-        else:
-            width = (xmax - xmin) * fraction
-            height = (ymax - ymin) * fraction
-            roi.setSize([width, height])
-            roi.setPos([xmin + (xmax - xmin - width) / 2, ymin + (ymax - ymin - height) / 2])
+        axis_range = self.get_axis_range() if self.get_axis_range is not None else None
+        if axis_range is None:
+            axis_range = self.view_box.viewRange()
+        x_range, y_range = axis_range
+        center_roi_in_range(roi, self.roi_dim, x_range, y_range, fraction)
 
     def value_changed(self, param: Parameter):
         if param.name() == 'color':

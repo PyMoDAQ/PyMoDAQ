@@ -48,6 +48,28 @@ class ROIDim(StrEnum):
             return DataDim.Data2D
 
 
+def center_roi_in_range(roi: pgROI, roi_dim: ROIDim,
+                        x_range: Tuple[float, float], y_range: Tuple[float, float],
+                        fraction: float):
+    """Size and center a ROI item on a fraction of the given x/y ranges
+
+    Gives a ROI (a freshly added one, or a freshly shown ROI-select rectangle) a sensible
+    default geometry instead of the item's own tiny (0, 0)+(10, 10) default, which is often
+    too small to grab without first zooming in.
+    """
+    xmin, xmax = x_range
+    if roi_dim == ROIDim.ROI1D:
+        width = (xmax - xmin) * fraction
+        center = (xmin + xmax) / 2
+        roi.setPos((center - width / 2, center + width / 2))
+    else:
+        ymin, ymax = y_range
+        width = (xmax - xmin) * fraction
+        height = (ymax - ymin) * fraction
+        roi.setSize([width, height])
+        roi.setPos([xmin + (xmax - xmin - width) / 2, ymin + (ymax - ymin - height) / 2])
+
+
 class ROIBase:
     """ Base class to be inherited for ROI to be created by the factory"""
     DIMENSIONALITY: ROIDim = NotImplemented
