@@ -23,7 +23,7 @@ from typing import Any, Callable
 
 from pymodaq.control_modules.hardware.capabilities import Capabilities, apply_write
 from pymodaq.control_modules.hardware.subscription import Subscription
-from pymodaq_gui.parameter.utils import apply_param_change, serialize_child_added
+from pymodaq_gui.parameter.utils import apply_param_change, get_param_from_name, serialize_child_added
 from pymodaq_utils.logger import set_logger, get_module_name
 from qtpy.QtCore import QObject, QSignalBlocker, QTimer, Signal, Slot
 
@@ -135,6 +135,15 @@ class HardwareThread(QObject):
         self._caps = caps
         self._pushed: set[str] = {q.name for q in caps.measurements if q.push}
         self._get_of: dict[str, Callable] = {q.name: q.get for q in caps.measurements + caps.controls if q.get}
+        # setting=: name -> backing param name, for reads (see capabilities.py's Quantity.setting).
+        # _measurement_setting_of is the reverse, measurements only: what _on_plugin_settings_changed
+        # needs to fan a changed param out as a pushed reading.
+        self._setting_of: dict[str, str] = {
+            q.name: q.setting for q in caps.measurements + caps.controls if q.setting
+        }
+        self._measurement_setting_of: dict[str, str] = {
+            q.setting: q.name for q in caps.measurements if q.setting
+        }
         # a measurement's channel can have these too, same as a control's - see request_action
         self._actions_of: dict[str, dict[str, Any]] = {
             q.name: dict(q.actions) for q in caps.measurements + caps.controls if q.actions
@@ -205,6 +214,13 @@ class HardwareThread(QObject):
         Dispatches on *change* the same way ``_on_plugin_settings_changed``/``settings_changed``
         forwards it - ``'childAdded'``'s own *data* is ``(state, pos)``, a fresh ``Parameter``
         built from *state* here, never the live GUI-thread object it was serialized from.
+
+        A ``'value'`` edit on a ``setting=``-backed *measurement*'s own param also fans out
+        through :meth:`_fan_out` - blocked, like everything else here, under the
+        ``QSignalBlocker`` that stops a control's own edit from looping back through
+        :meth:`_on_plugin_settings_changed` as if the plugin had changed it itself; nothing else
+        would tell that measurement's own subscribers/toolbar about a dock-originated edit
+        otherwise.
         """
         with QSignalBlocker(self._plugin_settings):
             param = self._plugin_settings.child(*path) if path else self._plugin_settings
@@ -212,6 +228,10 @@ class HardwareThread(QObject):
         commit = getattr(self._plugin, 'commit_settings', None)
         if commit is not None:
             commit(param)
+        if change == 'value':
+            measurement_name = self._measurement_setting_of.get(param.name())
+            if measurement_name is not None:
+                self._fan_out(measurement_name, data, time.time())
 
     def _on_plugin_settings_changed(self, _, changes) -> None:
         """Forward a settings change the plugin makes itself - never a GUI edit, which
@@ -221,11 +241,19 @@ class HardwareThread(QObject):
         legacy ``send_param_status`` (``control_modules/plugin_base.py``): the first three cross as
         plain data, but ``'childAdded'``'s own data is ``(child, pos)`` with *child* a live
         ``Parameter`` of this thread's own tree - unsafe to hand across the thread boundary as-is,
-        so it's serialized first, the same way the legacy path does.
+        so it's serialized first (``child.saveState()``), the same way the legacy path does.
+
+        A ``'value'`` change on a ``setting=``-backed measurement's param also fans out through
+        :meth:`_fan_out`, same as the plugin calling ``push_reading`` itself - what ``setting=``
+        implying ``push=True`` means in practice. Additive to the dock-forwarding above.
         """
         for param, change, data in changes:
             if change not in ('value', 'limits', 'options', 'childAdded'):
                 continue
+            if change == 'value':
+                measurement_name = self._measurement_setting_of.get(param.name())
+                if measurement_name is not None:
+                    self._fan_out(measurement_name, data, time.time())
             if change == 'childAdded':
                 data = serialize_child_added(data)
             path = self._plugin_settings.childPath(param)
@@ -239,16 +267,18 @@ class HardwareThread(QObject):
     def request_write(self, channel: str, value: object) -> None:
         """Set *channel* to *value* through :func:`~.capabilities.apply_write`, on this thread.
 
-        ``pre_set``, then ``set`` or ``write``, then ``plugin.<channel> = value``, then ``post_set``
-        - see ``apply_write`` for the full order. Emits ``write_done``, or ``write_failed`` on error.
+        ``pre_set``, then ``set`` or ``write``, then ``plugin.<channel> = value``, then ``post_set``;
+        a ``setting=``-backed channel writes its ``Parameter`` in this thread's settings tree instead
+        - see ``apply_write`` for both. Emits ``write_done`` with the confirmed value, or
+        ``write_failed`` on error.
         """
         try:
-            apply_write(self._plugin, self._caps, channel, value)
+            confirmed = apply_write(self._plugin, self._caps, channel, value, self._plugin_settings)
         except Exception as exc:
             logger.exception(f'write of {channel!r} failed')
             self.write_failed.emit(channel, str(exc))
             return
-        self.write_done.emit(channel, value)
+        self.write_done.emit(channel, confirmed)
 
     @Slot(str, str, object)
     @_when_open
@@ -326,7 +356,11 @@ class HardwareThread(QObject):
         self._send(sub, data, time.time())
 
     def _read_channel(self, channel: str) -> object:
-        """One channel's value: its own ``get`` if declared, otherwise a single-channel ``read``."""
+        """One channel's value: a ``setting=``'s own ``Parameter`` if declared, else its own
+        ``get`` if declared, otherwise a single-channel ``read``."""
+        setting = self._setting_of.get(channel)
+        if setting is not None:
+            return get_param_from_name(self._plugin_settings, setting).value()
         getter = self._get_of.get(channel)
         if getter is not None:
             return getter(self._plugin)

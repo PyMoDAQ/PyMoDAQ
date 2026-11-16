@@ -926,6 +926,142 @@ class TestSettingsChanged:
 
 
 # ---------------------------------------------------------------------------
+# setting=: a quantity backed by the plugin's own settings Parameter, dispatched here rather
+# than through get=/set= - see capabilities.py's Quantity.setting.
+# ---------------------------------------------------------------------------
+
+class TestSettingBackedDispatch:
+
+    def _thread(self):
+        class _Plugin(MockPlugin):
+            params = [{'name': 'setpoint', 'type': 'float', 'limits': [0, 100]},
+                      {'name': 'temperature', 'type': 'float'},
+                      {'name': 'averaging', 'type': 'int', 'value': 1}]
+            setpoint = control(setting='setpoint')
+            temperature = measurement(setting='temperature')
+            averaging = control(setting='averaging')
+
+        return make_initialised_thread(_Plugin())
+
+    def test_write_applies_to_the_parameter_and_calls_commit_settings(self, qapp):
+        thread_obj, plugin = self._thread()
+        done = Collector()
+        thread_obj.write_done.connect(done)
+        thread_obj.request_write('setpoint', 42.0)
+        assert done.last() == ('setpoint', 42.0)
+        assert thread_obj._plugin_settings.child('setpoint').value() == 42.0
+        assert len(plugin.commit_calls) == 1
+        assert plugin.commit_calls[0].name() == 'setpoint'
+
+    def test_write_confirms_with_the_parameters_own_value_not_the_input(self, qapp):
+        """pyqtgraph's 'int' type truncates a float input - the confirmed value must be the
+        re-read Parameter, never the input, or the toolbar would show a value that was never
+        actually stored."""
+        thread_obj, plugin = self._thread()
+        done = Collector()
+        thread_obj.write_done.connect(done)
+        thread_obj.request_write('averaging', 3.7)
+        name, confirmed = done.last()
+        assert confirmed == thread_obj._plugin_settings.child('averaging').value()
+        assert confirmed != 3.7
+
+    def test_write_does_not_loop_back_as_a_device_driven_settings_change(self, qapp):
+        thread_obj, plugin = self._thread()
+        changed = Collector()
+        thread_obj.settings_changed.connect(changed)
+        thread_obj.request_write('setpoint', 42.0)
+        assert changed.count == 0
+
+    def test_a_failing_commit_settings_emits_write_failed(self, qapp):
+        thread_obj, plugin = self._thread()
+        plugin.commit_settings = lambda param: (_ for _ in ()).throw(RuntimeError('rejected'))
+        failed = Collector()
+        thread_obj.write_failed.connect(failed)
+        thread_obj.request_write('setpoint', 42.0)
+        assert failed.last() == ('setpoint', 'rejected')
+
+    def test_read_answers_from_the_live_parameter(self, qapp):
+        thread_obj, plugin = self._thread()
+        thread_obj._plugin_settings.child('temperature').setValue(21.5)
+        assert thread_obj._read_channel('temperature') == 21.5
+
+    def test_a_plugin_driven_change_fans_out_to_an_active_subscriber(self, qapp):
+        """setting= on a measurement implies push=True: no timer is ever created for it (see
+        subscribe()'s own self._pushed check), yet an active subscriber still gets every value
+        the moment the Parameter changes - the settings-tree listener is the push source."""
+        thread_obj, plugin = self._thread()
+        sub = Subscription('temperature', 1000.0)
+        got = Collector()
+        sub.data_ready.connect(got)
+        thread_obj.subscribe(sub)
+        thread_obj._plugin_settings.child('temperature').setValue(21.5)
+        assert got.last()[0] == 21.5
+        assert thread_obj._timers == {}  # no periodic timer - delivery is push-driven, not polled
+        thread_obj.unsubscribe(sub)
+
+    def test_a_plugin_driven_change_still_reaches_the_dock_too(self, qapp):
+        """The push-forwarding above is additive - the existing dock-mirroring path still runs."""
+        thread_obj, plugin = self._thread()
+        changed = Collector()
+        thread_obj.settings_changed.connect(changed)
+        thread_obj._plugin_settings.child('temperature').setValue(21.5)
+        assert changed.last() == (['temperature'], 21.5, 'value')
+
+    def test_a_dock_edit_on_a_setting_backed_measurement_still_fans_out(self, qapp):
+        """update_settings (the GUI-edit path, as Controller._relay_settings_change forwards it)
+        applies under a QSignalBlocker to stop a *control*'s edit looping back as if the plugin
+        had changed it itself - but that must not also silence a *measurement*'s own fan-out:
+        without it, editing a setting=-backed measurement in the Settings dock would leave every
+        subscriber/toolbar display silently stale (see HARDWARE_MODULE.md, section 9)."""
+        thread_obj, plugin = self._thread()
+        sub = Subscription('temperature', 1000.0)
+        got = Collector()
+        sub.data_ready.connect(got)
+        thread_obj.subscribe(sub)
+        thread_obj.update_settings(['temperature'], 21.5, 'value')
+        assert got.last()[0] == 21.5
+        thread_obj.unsubscribe(sub)
+
+    def test_write_outside_the_declared_domain_is_rejected(self, qapp):
+        """setting='s write goes straight to the Parameter, never through a plugin set=/write()
+        that could reject an out-of-range value itself, and pyqtgraph's own setValue doesn't clip
+        to limits - 'setpoint' here derives lo=0, hi=100 from its own param's limits=[0, 100]."""
+        thread_obj, plugin = self._thread()
+        before = thread_obj._plugin_settings.child('setpoint').value()
+        failed = Collector()
+        thread_obj.write_failed.connect(failed)
+        thread_obj.request_write('setpoint', 500.0)
+        assert failed.count == 1
+        assert thread_obj._plugin_settings.child('setpoint').value() == before  # never applied
+
+    def test_a_nan_write_is_rejected_not_silently_accepted(self, qapp):
+        """NaN compares False to both < lo and > hi, which would silently pass as 'in domain'
+        under a naive (value < lo) / (value > hi) check - in_domain instead negates >=/<=, which
+        catches it the same way any other out-of-domain value is caught."""
+        thread_obj, plugin = self._thread()
+        before = thread_obj._plugin_settings.child('setpoint').value()
+        failed = Collector()
+        thread_obj.write_failed.connect(failed)
+        thread_obj.request_write('setpoint', float('nan'))
+        assert failed.count == 1
+        assert thread_obj._plugin_settings.child('setpoint').value() == before
+
+    def test_a_domain_check_error_is_reported_as_write_failed(self, qapp):
+        """in_domain can itself raise (e.g. comparing an incompatible type) - checked inside the
+        same try/except as the rest of the write, so it's reported through write_failed like
+        every other rejection here, not left to escape to the generic `error` signal, which
+        nothing clears this write's own pending/timeout state from."""
+        thread_obj, plugin = self._thread()
+        failed = Collector()
+        errors = Collector()
+        thread_obj.write_failed.connect(failed)
+        thread_obj.error.connect(errors)
+        thread_obj.request_write('setpoint', 'not a number')
+        assert failed.count == 1
+        assert errors.count == 0
+
+
+# ---------------------------------------------------------------------------
 # get / set: a quantity that answers its own read or write
 # ---------------------------------------------------------------------------
 

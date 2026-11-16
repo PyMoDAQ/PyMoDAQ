@@ -23,7 +23,7 @@ import numpy as np
 from pyqtgraph.parametertree import ParameterTree
 from qt_themes import get_theme
 from qtpy import QtWidgets
-from qtpy.QtCore import QMetaObject, QTimer, Qt, Signal, Slot
+from qtpy.QtCore import QMetaObject, QSignalBlocker, QTimer, Qt, Signal, Slot
 from qtpy import QtGui
 from qtpy.QtGui import QColor
 
@@ -32,6 +32,7 @@ from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_data.data import DataDim, DataRaw, DataWithAxes
 
 from pymodaq_gui.managers.action_manager import ActionManager
+from pymodaq_gui.parameter.utils import get_param_from_name
 from pymodaq_gui.plotting.data_viewers.base import ViewerBase, ViewersEnum
 from pymodaq_gui.plotting.data_viewers.viewer import viewer_factory
 from pymodaq_gui.utils.widget_sync import SyncMode, ValueSync, make_property_getter, make_property_setter
@@ -482,6 +483,8 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         elif kind == 'toggle':
             widget.setCheckable(True)
             widget.setText(str(quantity.values[0]))
+        if quantity.setting and kind in ('value', 'selector'):
+            self._watch_setting_backed_domain(quantity, widget, kind)
 
         widget_ref = ref(widget)
         getter = make_property_getter(widget_ref, rule.property_name)
@@ -502,6 +505,36 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
             if rule.extra_setter is not None:
                 rule.extra_setter(widget, value)
         self._sync_for(quantity.name).bind(widget, setter=set_value, mode=SyncMode.FROM_SYNC, init_from=None)
+
+    def _watch_setting_backed_domain(self, quantity: Quantity, widget: QtWidgets.QWidget, kind: str) -> None:
+        """Keep a ``setting=``-backed representation's domain live from its backing ``Parameter``'s
+        own ``limits`` - the runtime counterpart of ``capabilities.py``'s declaration-time
+        derivation, for a plugin that discovers its real choices only once open. Watches
+        ``Controller.settings``'s own copy (the GUI-thread mirror), since this runs in the GUI
+        thread. Never ``'toggle'``: its two values pick the representation itself, not a domain
+        that can resize later.
+        """
+        param = get_param_from_name(self.controller.settings, quantity.setting)
+        if param is None:
+            return
+
+        def _refresh(_param, limits, widget=widget, quantity=quantity, kind=kind):
+            if kind == 'selector':
+                quantity.values = list(limits.keys()) if isinstance(limits, dict) else list(limits)
+                current = widget.currentText()
+                items = [str(v) for v in quantity.values]
+                with QSignalBlocker(widget):
+                    widget.clear()
+                    widget.addItems(items)
+                    if current in items:
+                        widget.setCurrentText(current)
+            else:
+                quantity.lo, quantity.hi = limits[0], limits[1]
+                with QSignalBlocker(widget):
+                    widget.setRange(-1e12 if quantity.lo is None else quantity.lo,
+                                    1e12 if quantity.hi is None else quantity.hi)
+
+        param.sigLimitsChanged.connect(_refresh)
 
     @staticmethod
     def _check_representation_compatible(widget: QtWidgets.QWidget, rule: RepresentationRule,
@@ -866,14 +899,24 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         instead of leaving it at whatever its construction default happened to be (a combo box's
         first item, a spinbox at 0) until the first write confirmation finally corrects it.
 
-        A control with its own ``get=`` answers a cheap one-shot read the same way a Read click
-        would; unlike a plain ``Read``, the result also goes straight into this control's own
-        widget sync (a read alone never does that - only a confirmed write does, see
-        ``_on_written``), which is the whole point here. A control declaring none has no way to be
-        known from here at all - nothing above the hardware thread can read the plugin directly
+        A ``setting=``-backed control's real current value already sits in ``controller.settings``
+        (built from the plugin's own params/``params_state``) - no hardware access needed at all,
+        and ``setting=``/``get=`` are mutually exclusive (see ``capabilities.py``'s ``control()``),
+        so this is checked first, ahead of ``get=``.
+
+        Otherwise, a control with its own ``get=`` answers a cheap one-shot read the same way a
+        Read click would; unlike a plain ``Read``, the result also goes straight into this
+        control's own widget sync (a read alone never does that - only a confirmed write does, see
+        ``_on_written``), which is the whole point here. A control declaring neither has no way to
+        be known from here at all - nothing above the hardware thread can read the plugin directly
         (see ``HARDWARE_MODULE.md``) - so its widget just keeps its construction default.
         """
         name = quantity.name
+        if quantity.setting:
+            param = get_param_from_name(self.controller.settings, quantity.setting)
+            if param is not None:
+                self._sync_for(name).value = param.value()
+            return
         if quantity.get is not None:
             def _on_initial_value(data, name=name):
                 self._sync_for(name).value = data

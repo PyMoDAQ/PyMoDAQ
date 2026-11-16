@@ -1212,3 +1212,109 @@ class TestWidgetSync:
 ])
 def test_the_viewer_follows_the_quantitys_dim(shape, viewer):
     assert _viewer_type(measurement(shape=shape)) is viewer
+class TestSettingBackedControl:
+    """A setting=-backed control's value lives in the Settings dock's own Parameter - a toolbar
+    write, a dock edit, or the plugin itself changing it must all keep the toolbar and the dock
+    in sync with each other, through whichever of the three actually happened."""
+
+    def test_the_toolbar_shows_the_real_value_on_connect(self, registry, qtbot):
+        """setting=/get= are mutually exclusive, so _sync_initial_value's old get=-only check was
+        always a no-op for a setting=-backed control - its widget kept its construction default
+        (0) instead of the settings tree's own real value, here restored from params_state-free
+        'value': 42 declared on the param itself, until the first edit happened to correct it."""
+        class Stage(Camera):
+            params = [{'name': 'setpoint', 'type': 'float', 'limits': [0, 100], 'value': 42.0}]
+            setpoint = control(setting='setpoint')
+
+        widget = make_module(registry, qtbot, Stage, 29, initialize=True)
+        qtbot.waitUntil(lambda: widget._value_widgets['setpoint'].value() == 42.0, timeout=2000)
+        widget.release()
+
+    def test_a_toolbar_write_reaches_the_dock(self, registry, qtbot):
+        class Stage(Camera):
+            params = [{'name': 'setpoint', 'type': 'float', 'limits': [0, 100], 'value': 0}]
+            setpoint = control(setting='setpoint')
+
+        widget = make_module(registry, qtbot, Stage, 30, initialize=True)
+        widget._value_widgets['setpoint'].setValue(42.0)
+        widget._value_widgets['setpoint'].editingFinished.emit()
+        qtbot.waitUntil(lambda: widget.controller.settings.child('setpoint').value() == 42.0, timeout=2000)
+        widget.release()
+
+    def test_a_dock_edit_reaches_the_toolbar(self, registry, qtbot):
+        class Stage(Camera):
+            params = [{'name': 'setpoint', 'type': 'float', 'limits': [0, 100], 'value': 0}]
+            setpoint = control(setting='setpoint')
+
+        widget = make_module(registry, qtbot, Stage, 31, initialize=True)
+        widget.controller.settings.child('setpoint').setValue(42.0)
+        qtbot.waitUntil(lambda: widget._value_widgets['setpoint'].value() == 42.0, timeout=2000)
+        widget.release()
+
+    def test_a_plugin_driven_change_reaches_the_toolbar_too(self, registry, qtbot):
+        class Stage(Camera):
+            params = [{'name': 'setpoint', 'type': 'float', 'limits': [0, 100], 'value': 0}]
+            setpoint = control(setting='setpoint')
+
+        widget = make_module(registry, qtbot, Stage, 32, initialize=True)
+        widget.controller.thread._plugin_settings.child('setpoint').setValue(42.0)  # as the plugin would, on its own
+        qtbot.waitUntil(lambda: widget._value_widgets['setpoint'].value() == 42.0, timeout=2000)
+        widget.release()
+
+    def test_a_plain_settings_dock_edit_is_unaffected(self, registry, qtbot):
+        """A 'value' change on a param that backs no declared quantity keeps going through the
+        plain update_settings/commit_settings path, exactly as before setting= existed."""
+        class Stage(Camera):
+            params = [{'name': 'gain', 'type': 'float', 'value': 1.0}]
+
+            def __init__(self):
+                super().__init__()
+                self.committed = []
+
+            def commit_settings(self, param):
+                self.committed.append((param.name(), param.value()))
+
+        widget = make_module(registry, qtbot, Stage, 33, initialize=True)
+        widget.controller.settings.child('gain').setValue(3.0)
+        plugin = widget.controller.thread._plugin
+        qtbot.waitUntil(lambda: ('gain', 3.0) in plugin.committed, timeout=2000)
+        widget.release()
+
+    def test_a_discrete_control_selector_live_refreshes_from_the_plugins_own_limits(self, registry, qtbot):
+        class Stage(Camera):
+            params = [{'name': 'mode', 'type': 'list', 'limits': ['internal', 'external'], 'value': 'internal'}]
+            mode = control(setting='mode')
+
+        widget = make_module(registry, qtbot, Stage, 34, initialize=True)
+        widget.controller.thread._plugin_settings.child('mode').setLimits(['internal', 'external', 'burst'])
+        qtbot.waitUntil(
+            lambda: [widget._value_widgets['mode'].itemText(i)
+                     for i in range(widget._value_widgets['mode'].count())] ==
+                    ['internal', 'external', 'burst'],
+            timeout=2000)
+        widget.release()
+
+    def test_a_pid_shaped_setpoint_and_readback_settle_correctly(self, registry, qtbot):
+        """The PID scenario from the design discussion: a setpoint control and a temperature
+        measurement, both setting=-backed, living as siblings in one settings group. The
+        temperature measurement's plugin-side updates (simulating a real sensor loop) feed the
+        same settle-watch (_check_settled) any other readback would, unaffected by setting=/push=
+        underneath - a one-shot read, never a wait on anything. Named 'actual_temperature', not
+        'temperature' - Camera already declares a plain 'temperature' measurement, which would
+        otherwise collide with the readback name and make tier 1 ("an existing measurement of
+        that name wins") apply instead of the tier-2 setting= derivation this test means to cover."""
+        class PidStage(Camera):
+            params = [{'name': 'group', 'type': 'group', 'children': [
+                {'name': 'setpoint', 'type': 'float', 'limits': [0, 100], 'value': 0},
+                {'name': 'actual_temperature', 'type': 'float', 'value': 0},
+            ]}]
+            setpoint = control(setting='setpoint', readback='actual_temperature', epsilon=0.5)
+
+        widget = make_module(registry, qtbot, PidStage, 35, initialize=True)
+        widget._value_widgets['setpoint'].setValue(50.0)
+        widget._value_widgets['setpoint'].editingFinished.emit()
+        qtbot.waitUntil(lambda: 'setpoint' in widget._pending, timeout=2000)  # pending until settled
+        widget.controller.thread._plugin_settings.child('group', 'actual_temperature').setValue(50.2)
+        qtbot.waitUntil(lambda: 'setpoint' not in widget._pending, timeout=SETTLE_POLL_MS * 5)
+        assert 'setpoint' not in widget._failed
+        widget.release()

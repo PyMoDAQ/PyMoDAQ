@@ -590,6 +590,36 @@ class TestGuiSettingsRelay:
         assert gui_child is not device_child  # rebuilt on the device side, not the same object
 
 
+class SettingBacked(Spectrometer):
+    params = [{'name': 'setpoint', 'type': 'float', 'limits': [0, 100]}]
+    setpoint = control(setting='setpoint')
+
+
+class TestGuiSettingsRelaySettingBacked:
+    """setting=-backed controls route through write_requested instead of the generic dock relay
+    (see Controller._relay_settings_change) - the open-check that implies needs its own coverage,
+    separate from TestGuiSettingsRelay's plain-param tests above."""
+
+    def test_a_dock_edit_on_a_setting_backed_control_reroutes_through_write_requested(self, registry, qtbot):
+        key, ctrl = attach(registry, hardware_class=SettingBacked, controller_id=43)
+        ctrl.thread.ini_hardware()
+        with qtbot.waitSignal(ctrl.written, timeout=2000) as blocker:
+            ctrl.settings.child('setpoint').setValue(42.0)
+        assert blocker.args == ['setpoint', 42.0]
+
+    def test_a_dock_edit_while_closed_fails_immediately(self, registry, qtbot):
+        """The same rejection _require_open raises for the equivalent controller.<name> = value -
+        not a write_requested left to queue and only fail after the full write-timeout wait."""
+        key, ctrl = attach(registry, hardware_class=SettingBacked, controller_id=44)
+        requests = []
+        ctrl.write_requested.connect(lambda name, value: requests.append((name, value)))
+        with qtbot.waitSignal(ctrl.write_failed, timeout=2000) as blocker:
+            ctrl.settings.child('setpoint').setValue(42.0)
+        assert blocker.args[0] == 'setpoint'
+        assert 'not open' in blocker.args[1]
+        assert requests == []  # never queued at all - no timeout wait involved
+
+
 class TestConfigDefaults:
     """WRITE_TIMEOUT_S/READ_TIMEOUT_S come from config_template.toml's [hardware_module] section,
     not a hardcoded literal - but stay plain module globals (not read fresh on every call) so

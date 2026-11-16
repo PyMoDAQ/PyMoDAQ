@@ -67,6 +67,25 @@ What to try, and what each one is for:
   ``instr_get``/``instr_set`` (``capabilities.py``) instead of a one-line bridge method per
   quantity: still the real ``_ShutterDriver.get_shutter``/``.set_shutter`` passed by reference, just
   redirected to ``self.controller`` instead of ``self``.
+- operating_mode: a control with ``setting='operating_mode'`` alone - no ``get=``/``set=``, both
+  answered by the matching settings entry directly, and its two choices (``values=``) derived from
+  that entry's own ``limits``, not declared a second time. Editing it from either the toolbar or the
+  Settings dock updates the other; a plugin-internal change would too (nothing here makes one, but
+  ``_discover_calibrate_mode`` below is exactly that). Click "Discover calibrate mode" (an action on
+  this same row) to see the toolbar's own dropdown grow a third item live, from the plugin changing
+  its own settings entry's ``limits`` - the runtime counterpart of the declaration-time derivation
+  that gave it its first two.
+- pid_setpoint / pid_temperature: the full ``setting=``-backed readback pattern from a PID-style
+  loop - ``pid_setpoint`` and ``pid_temperature`` are sibling entries in one settings group, and
+  ``pid_temperature`` is never declared as its own ``measurement()`` at all: naming it in
+  ``readback=`` is enough, since a settings entry of that name already exists - the same
+  declaration-time derivation ``operating_mode`` gets, applied automatically to an auto-created
+  readback instead of written out by hand. A background loop (``_advance_pid``, a real ``QTimer`` -
+  the hardware thread has an event loop of its own to run it on) nudges ``pid_temperature`` toward
+  whatever ``pid_setpoint`` currently is, entirely inside the plugin, with nothing here ever polling
+  it: ``pid_temperature``'s row updates live because ``setting=`` on a measurement implies
+  ``push=True`` - the settings-tree listener *is* the push source. Move ``pid_setpoint`` and watch
+  the row turn pending (orange) until ``pid_temperature`` settles within ``epsilon=0.5`` of it.
 
 Every quantity except ``stage_target`` answers through its own declared keyword without needing
 ``read()``/``write()`` at all - ``stage_target`` is the one exception, for the reason real settling
@@ -80,6 +99,7 @@ import numpy as np
 from pymodaq_data.data import Axis, DataRaw
 from pymodaq_gui.qt_utils import mkQApp
 from pymodaq_gui.utils.shared_ui import SharedUI
+from qtpy.QtCore import QTimer
 
 from pymodaq.control_modules.hardware.capabilities import STORED, control, instr_get, instr_set, measurement
 from pymodaq.control_modules.hardware_module import HardwareModule
@@ -144,7 +164,13 @@ class CatalogDevice(_RelayDriver):
     would distract from what this one row (``heater_power``) is actually demonstrating.
     """
 
-    params: list = []
+    params: list = [
+        {'name': 'operating_mode', 'type': 'list', 'limits': ['standby', 'measure'], 'value': 'standby'},
+        {'name': 'pid_group', 'type': 'group', 'children': [
+            {'name': 'pid_setpoint', 'type': 'float', 'limits': [0, 100], 'value': 20.0},
+            {'name': 'pid_temperature', 'type': 'float', 'value': 20.0},
+        ]},
+    ]
 
     controller: _ShutterDriver  # type hint only, for IDE autocompletion - assigned in open() below
 
@@ -182,6 +208,14 @@ class CatalogDevice(_RelayDriver):
                            docs='Composed driver (self.controller): get=/set= via instr_get/instr_set',
                            get=instr_get(_ShutterDriver.get_shutter),
                            set=instr_set(_ShutterDriver.set_shutter))
+    operating_mode = control(setting='operating_mode', label='Operating mode',
+                             docs='setting= alone: both read and write answered by the matching '
+                                  'settings entry, its values= derived from that entry\'s own limits',
+                             actions={'discover_calibrate_mode': lambda plugin: plugin._discover_calibrate_mode()})
+    pid_setpoint = control(setting='pid_setpoint', readback='pid_temperature', epsilon=0.5,
+                           label='PID setpoint',
+                           docs='setting= plus readback=\'pid_temperature\' - a settings entry of '
+                                'that name already exists, so nothing else needs declaring it')
 
     def __init__(self):
         self._start = time.monotonic()
@@ -207,9 +241,40 @@ class CatalogDevice(_RelayDriver):
         # instr_get/instr_set only look this up when a read/write actually happens, always after
         # open() has already returned, so there is no ordering problem.
         self.controller = _ShutterDriver()
+        # Kept for _discover_calibrate_mode/_advance_pid below - the plugin's own route to its
+        # settings tree, the same reference setting=/get=/set= never need since HardwareThread
+        # dispatches those directly against it instead (see hardware/README.md, "setting=").
+        self._settings = settings
+        # A real QTimer, not read()-driven like _advance_stage above: pid_temperature is
+        # setting=-backed, so nothing ever polls it - something has to change its Parameter's
+        # value on its own for its row to show anything moving at all. Runs on the hardware
+        # thread, which has its own Qt event loop to host it, same as any other QObject there.
+        self._pid_timer = QTimer()
+        self._pid_timer.setInterval(100)
+        self._pid_timer.timeout.connect(self._advance_pid)
+        self._pid_timer.start()
 
     def close(self):
-        pass
+        self._pid_timer.stop()
+
+    def _discover_calibrate_mode(self) -> None:
+        """A plugin-internal settings change, the same shape a real instrument's own capability
+        discovery would make from inside open()/commit_settings - exercises the toolbar's own
+        live-refresh (hardware_module.py's _watch_setting_backed_domain), not just the
+        declaration-time derivation operating_mode's first two choices already came from.
+        """
+        current = self._settings.child('operating_mode').value()
+        self._settings.child('operating_mode').setLimits(['standby', 'measure', 'calibrate'])
+        self._settings.child('operating_mode').setValue(current)  # setLimits alone never changes it
+
+    def _advance_pid(self) -> None:
+        """A first-order approach towards pid_setpoint, run periodically - not a real PID
+        controller (no integral/derivative terms), just enough drift-towards-target to show
+        pid_temperature settling within epsilon= after a write, and to show its row updating
+        live from the plugin's own settings change, never polled."""
+        setpoint = self._settings.child('pid_group', 'pid_setpoint').value()
+        current = self._settings.child('pid_group', 'pid_temperature').value()
+        self._settings.child('pid_group', 'pid_temperature').setValue(current + 0.2 * (setpoint - current))
 
     def read(self, names=None, fresh=True):
         """Only ``stage_actual_position`` ever reaches this - every other quantity answers through

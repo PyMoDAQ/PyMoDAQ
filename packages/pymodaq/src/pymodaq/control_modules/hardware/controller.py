@@ -15,9 +15,9 @@ from qtpy.QtCore import QObject, QTimer, Qt, Signal
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.logger import set_logger, get_module_name
 
-from pymodaq_gui.parameter.utils import apply_param_change, serialize_child_added
+from pymodaq_gui.parameter.utils import apply_param_change, get_param_from_name, serialize_child_added
 
-from pymodaq.control_modules.hardware.capabilities import Access, Capabilities, Quantity
+from pymodaq.control_modules.hardware.capabilities import Access, Capabilities, Quantity, quantity_for_setting
 from pymodaq.control_modules.hardware.subscription import Subscription
 
 __all__ = ['Controller', 'controller_class']
@@ -94,6 +94,7 @@ class Controller(QObject):
         thread.error.connect(self.device_error)
         thread.write_done.connect(self.written)
         self.written.connect(self._remember_written_value)
+        self.written.connect(self._sync_setting_backed_control_to_dock)
         thread.write_done.connect(self._stop_write_timeout)
         thread.write_failed.connect(self.write_failed)
         thread.write_failed.connect(self._stop_write_timeout)
@@ -122,11 +123,18 @@ class Controller(QObject):
         ``Parameter`` built from *state* here, never the original object the thread serialized it
         from (see ``hardware_thread.py``'s ``_on_plugin_settings_changed``). Runs as a queued,
         cross-thread slot, so any failure is caught here rather than left to crash it.
+
+        A ``'value'`` change on a ``setting=``-backed control also emits ``written`` - the plugin
+        changed it itself, so nothing else would tell the toolbar.
         """
         self._syncing_from_device = True
         try:
             param = self.settings.child(*path)
             apply_param_change(param, data, change)
+            if change == 'value':
+                quantity = quantity_for_setting(self.capabilities.controls, path[-1]) if path else None
+                if quantity is not None:
+                    self.written.emit(quantity.name, data)
         except Exception as exc:
             logger.exception(f'applying a device-driven settings change failed: {change!r}')
             self.device_error.emit(str(exc))
@@ -134,11 +142,15 @@ class Controller(QObject):
             self._syncing_from_device = False
 
     def _relay_settings_change(self, _, changes) -> None:
-        """A dock edit on the shared settings tree, forwarded to the hardware thread.
-        ``'childAdded'``'s own data is ``(child, pos)`` with *child* a live ``Parameter`` of this
-        GUI-thread tree - unsafe to hand across the thread boundary as-is, so it's serialized
-        first, the same way the opposite direction (``HardwareThread._on_plugin_settings_changed``)
-        already does.
+        """A dock edit on the shared settings tree, forwarded to the hardware thread - unless
+        it's a ``setting=``-backed control's own ``'value'``, which instead goes through
+        ``write_requested`` exactly as a toolbar edit would (same pending/timeout/``written``
+        pipeline, not a second path reimplementing it). Everything else -
+        ``'limits'``/``'options'``/``'childAdded'``, or a plain setting's ``'value'`` - goes
+        through ``settings_update_requested`` unchanged. ``'childAdded'``'s own data is
+        ``(child, pos)`` with *child* a live ``Parameter`` of this GUI-thread tree - unsafe to
+        hand across the thread boundary as-is, so it's serialized first, the same way the
+        opposite direction (``HardwareThread._on_plugin_settings_changed``) already does.
 
         Connected once here, on the one :class:`Controller` every :class:`HardwareModule` window
         sharing this device attaches to - never per window: they all edit the same settings tree,
@@ -146,11 +158,27 @@ class Controller(QObject):
         any real side effect ``commit_settings`` has), and would vanish entirely the moment
         whichever window happened to register it was closed (Qt auto-disconnects a bound-method
         slot once its receiving ``QObject`` is destroyed).
+
+        A ``setting=``-backed control's own edit while the device is closed fails immediately
+        with ``write_failed``, the same rejection ``_require_open`` raises for the equivalent
+        programmatic ``controller.<name> = value`` - rather than silently queuing a
+        ``write_requested`` doomed to the full write-timeout wait, the only symptom before
+        ``_require_open`` existed.
         """
         if self._syncing_from_device:
             return  # a change coming from the device, not the user: do not write it back
         for param, change, data in changes:
-            if change == 'childAdded':
+            if change == 'value':
+                quantity = quantity_for_setting(self.capabilities.controls, param.name())
+                if quantity is not None:
+                    try:
+                        self._require_open(quantity.name)
+                    except RuntimeError as exc:
+                        self.write_failed.emit(quantity.name, str(exc))
+                        continue
+                    self.write_requested.emit(quantity.name, data)
+                    continue
+            elif change == 'childAdded':
                 data = serialize_child_added(data)
             path = self.settings.childPath(param)
             if path is not None:
@@ -161,6 +189,30 @@ class Controller(QObject):
         returning the latest value *received* - doesn't keep answering with a stale pre-write
         value until the next poll/one-shot read happens to land."""
         self._last_values[name] = value
+
+    def _sync_setting_backed_control_to_dock(self, name: str, value: object) -> None:
+        """Mirror a ``setting=``-backed control's confirmed value into the Settings dock.
+
+        ``written`` fires for every confirmed write regardless of origin, but ``request_write``'s
+        ``setting=`` dispatch applies under a ``QSignalBlocker`` on the *thread's* tree so a write
+        doesn't bounce back as if the plugin had made it - which also means nothing else tells
+        *this*, the dock's own GUI-thread copy, about a toolbar-originated write. This is that
+        notification. Skipped while ``_syncing_from_device``: a genuine plugin-internal change
+        already applied the same value here, moments ago, through the method above.
+        """
+        if self._syncing_from_device:
+            return
+        quantity = self._quantity_named(name)
+        if quantity is None or not quantity.setting:
+            return
+        param = get_param_from_name(self.settings, quantity.setting)
+        if param is None:
+            return
+        self._syncing_from_device = True
+        try:
+            param.setValue(value)
+        finally:
+            self._syncing_from_device = False
 
     def _on_status(self, connected: bool, info: str) -> None:
         self._connected = connected

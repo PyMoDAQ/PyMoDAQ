@@ -317,8 +317,8 @@ class TestReadback:
             x = control(readback='x_positoin')  # typo
             x_position = measurement(units='mm')
 
-        with pytest.raises(ValueError, match="'x' declares readback 'x_positoin', which is not a declared "
-                                              "measurement"):
+        with pytest.raises(ValueError, match="'x' declares readback 'x_positoin', which is neither a declared "
+                                              "measurement nor a settings entry"):
             Capabilities.from_device(Stage)
 
     def test_a_declared_measurement_is_linked_not_duplicated(self):
@@ -738,6 +738,243 @@ class TestMergeInto:
 
         with pytest.raises(ValueError, match="not a declared quantity"):
             Capabilities.from_device(Stage)
+
+
+class TestSettingMutualExclusivity:
+    """setting= is checked at the measurement()/control() factory level, against the caller's raw
+    kwargs, not in Quantity._validate() - that constructor also runs for Quantity.from_dict()'s
+    reconstruction, which passes the already-derived domain alongside setting= at once; a check
+    there would wrongly reject every round-tripped setting=-backed quantity (see TestSettingRoundTrip)."""
+
+    def test_setting_and_get_on_a_measurement_raises(self):
+        with pytest.raises(ValueError, match='mutually exclusive'):
+            measurement(setting='x', get=lambda plugin: 1)
+
+    def test_setting_and_explicit_push_on_a_measurement_raises(self):
+        with pytest.raises(ValueError, match='already implies push=True'):
+            measurement(setting='x', push=True)
+
+    @pytest.mark.parametrize('kwargs', [
+        dict(get=lambda plugin: 1), dict(set=lambda plugin, v: None),
+        dict(pre_set=lambda plugin, v: None), dict(post_set=lambda plugin, v: None),
+    ])
+    def test_setting_and_a_get_set_hook_on_a_control_raises(self, kwargs):
+        with pytest.raises(ValueError, match='mutually exclusive'):
+            control(setting='x', **kwargs)
+
+    @pytest.mark.parametrize('kwargs', [dict(values=['a', 'b']), dict(lo=0), dict(hi=10)])
+    def test_setting_and_an_explicit_domain_on_a_control_raises(self, kwargs):
+        with pytest.raises(ValueError, match='mutually exclusive'):
+            control(setting='x', **kwargs)
+
+
+class TestSettingDomainDerivation:
+
+    def test_bounded_float_derives_lo_hi_from_limits(self):
+        class Stage:
+            params = [{'name': 'exposure_ms', 'type': 'float', 'limits': [1, 1000]}]
+            exposure = control(setting='exposure_ms')
+
+        caps = Capabilities.from_device(Stage)
+        assert (caps.controls[0].lo, caps.controls[0].hi) == (1, 1000)
+
+    def test_bounded_int_derives_lo_hi_from_min_max(self):
+        class Stage:
+            params = [{'name': 'averaging', 'type': 'int', 'min': 1, 'max': 100}]
+            averaging = control(setting='averaging')
+
+        caps = Capabilities.from_device(Stage)
+        assert (caps.controls[0].lo, caps.controls[0].hi) == (1, 100)
+
+    def test_slide_derives_lo_hi_the_same_as_float(self):
+        class Stage:
+            params = [{'name': 'gain', 'type': 'slide', 'limits': [0, 10]}]
+            gain = control(setting='gain')
+
+        caps = Capabilities.from_device(Stage)
+        assert (caps.controls[0].lo, caps.controls[0].hi) == (0, 10)
+
+    def test_unbounded_float_derives_no_limits(self):
+        class Stage:
+            params = [{'name': 'offset', 'type': 'float'}]
+            offset = control(setting='offset')
+
+        caps = Capabilities.from_device(Stage)
+        assert (caps.controls[0].lo, caps.controls[0].hi) == (None, None)
+
+    def test_list_derives_values_from_a_plain_list(self):
+        class Stage:
+            params = [{'name': 'mode', 'type': 'list', 'limits': ['internal', 'external']}]
+            mode = control(setting='mode')
+
+        caps = Capabilities.from_device(Stage)
+        assert caps.controls[0].values == ['internal', 'external']
+
+    def test_list_derives_values_from_a_dicts_keys(self):
+        class Stage:
+            params = [{'name': 'mode', 'type': 'list', 'limits': {'internal': 0, 'external': 1}}]
+            mode = control(setting='mode')
+
+        caps = Capabilities.from_device(Stage)
+        assert caps.controls[0].values == ['internal', 'external']
+
+    def test_bool_derives_false_true(self):
+        class Stage:
+            params = [{'name': 'armed', 'type': 'bool'}]
+            armed = control(setting='armed')
+
+        caps = Capabilities.from_device(Stage)
+        assert caps.controls[0].values == [False, True]
+
+    def test_units_and_shape_are_never_inferred(self):
+        class Stage:
+            params = [{'name': 'exposure_ms', 'type': 'float'}]
+            exposure = control(setting='exposure_ms', units='ms')
+
+        caps = Capabilities.from_device(Stage)
+        assert caps.controls[0].units == 'ms'
+
+    def test_no_matching_param_raises(self):
+        class Stage:
+            params = [{'name': 'exposure_ms', 'type': 'float'}]
+            exposure = control(setting='typo')
+
+        with pytest.raises(ValueError, match="'exposure' declares setting='typo', which is not a "
+                                              "param name declared anywhere in the plugin"):
+            Capabilities.from_device(Stage)
+
+    def test_an_unsupported_param_type_raises_naming_the_type(self):
+        class Stage:
+            params = [{'name': 'calibration', 'type': 'table'}]
+            calibration = measurement(setting='calibration')
+
+        with pytest.raises(ValueError, match="a 'table' param - that type has no corresponding "
+                                              "Quantity domain"):
+            Capabilities.from_device(Stage)
+
+    def test_a_nested_param_is_found_by_leaf_name(self):
+        class Stage:
+            params = [{'name': 'group', 'type': 'group', 'children': [
+                {'name': 'exposure_ms', 'type': 'float', 'limits': [1, 1000]},
+            ]}]
+            exposure = control(setting='exposure_ms')
+
+        caps = Capabilities.from_device(Stage)
+        assert (caps.controls[0].lo, caps.controls[0].hi) == (1, 1000)
+
+    def test_two_quantities_cannot_share_one_setting(self):
+        class Stage:
+            params = [{'name': 'x', 'type': 'float'}]
+            a = measurement(setting='x')
+            b = control(setting='x')
+
+        with pytest.raises(ValueError, match="setting 'x' is declared by both 'a' and 'b'"):
+            Capabilities.from_device(Stage)
+
+    def test_derivation_is_idempotent_across_repeated_from_device_calls(self):
+        class Stage:
+            params = [{'name': 'exposure_ms', 'type': 'float', 'limits': [1, 1000]}]
+            exposure = control(setting='exposure_ms')
+
+        Capabilities.from_device(Stage)
+        caps = Capabilities.from_device(Stage)  # the same class-level Quantity, resolved again
+        assert (caps.controls[0].lo, caps.controls[0].hi) == (1, 1000)
+
+
+class TestSettingRoundTrip:
+
+    def test_a_bounded_setting_survives_serialization(self):
+        class Stage:
+            params = [{'name': 'exposure_ms', 'type': 'float', 'limits': [1, 1000]}]
+            exposure = control(setting='exposure_ms')
+
+        caps = Capabilities.from_device(Stage)
+        restored = Capabilities.from_dict(json.loads(json.dumps(caps.to_dict())))
+        assert restored.to_dict() == caps.to_dict()
+        assert restored.controls[0].setting == 'exposure_ms'
+
+    def test_an_unbounded_setting_survives_serialization_without_raising(self):
+        """The case that actually caught the from_dict/no-params bug: lo=hi=None is both the
+        correctly-derived result for an unbounded float and indistinguishable from "not yet
+        resolved" by domain emptiness alone - _derive_setting_domain also needs params itself to
+        be empty before it can safely skip re-deriving, or this raises on a perfectly valid
+        quantity the moment it round-trips."""
+        class Stage:
+            params = [{'name': 'offset', 'type': 'float'}]
+            offset = control(setting='offset')
+
+        caps = Capabilities.from_device(Stage)
+        restored = Capabilities.from_dict(json.loads(json.dumps(caps.to_dict())))
+        assert (restored.controls[0].lo, restored.controls[0].hi) == (None, None)
+
+
+class TestReadbackSettingFallback:
+    """How a readback is found: an existing measurement of that name wins (tested in TestReadback
+    already); failing that, a settings entry of that name derives setting= for the auto-created
+    measurement; failing that too, readback=True auto-creates one answered through read()."""
+
+    def test_a_matching_param_derives_setting_for_the_auto_created_readback(self):
+        class Stage:
+            params = [{'name': 'group', 'type': 'group', 'children': [
+                {'name': 'setpoint', 'type': 'float', 'limits': [0, 10]},
+                {'name': 'temperature', 'type': 'float', 'limits': [0, 10]},
+            ]}]
+            setpoint = control(setting='setpoint', readback=True, epsilon=0.1)
+
+        caps = Capabilities.from_device(Stage)
+        readback = caps.measurements[0]
+        assert readback.name == 'setpoint_readback'
+
+    def test_an_explicitly_named_readback_also_gets_the_soft_match(self):
+        class Stage:
+            params = [{'name': 'setpoint', 'type': 'float', 'limits': [0, 10]},
+                      {'name': 'temperature', 'type': 'float', 'limits': [0, 10]}]
+            setpoint = control(setting='setpoint', readback='temperature', epsilon=0.1)
+
+        caps = Capabilities.from_device(Stage)
+        readback = caps.measurements[0]
+        assert readback.name == 'temperature' and readback.setting == 'temperature'
+        assert (readback.lo, readback.hi) == (0, 10)
+        assert readback.push is True
+
+    def test_an_unsupported_matching_type_falls_through_to_the_laggy_case_instead_of_raising(self):
+        class Stage:
+            params = [{'name': 'x_readback', 'type': 'table'}]
+            x = control(units='mm', lo=0, hi=50, readback=True, epsilon=0.1)
+
+        caps = Capabilities.from_device(Stage)  # must not raise
+        readback = caps.measurements[0]
+        assert readback.setting is None and readback.get is None
+
+    def test_a_named_readback_on_an_unsupported_settings_entry_raises(self):
+        """A string readback must name something that can answer it: a 'table' entry can't back a
+        measurement, so it is treated like a typo."""
+        class Stage:
+            params = [{'name': 'position_table', 'type': 'table'}]
+            x = control(units='mm', lo=0, hi=50, readback='position_table', epsilon=0.1)
+
+        with pytest.raises(ValueError, match='neither a declared measurement nor a settings entry'):
+            Capabilities.from_device(Stage)
+
+    def test_no_matching_param_falls_through_to_the_laggy_case(self):
+        class Stage:
+            params = []
+            x = control(units='mm', lo=0, hi=50, readback=True, epsilon=0.1)
+
+        caps = Capabilities.from_device(Stage)
+        readback = caps.measurements[0]
+        assert readback.setting is None and readback.get is None
+
+    def test_a_setting_backed_controls_own_get_is_never_inherited_by_its_readback(self):
+        """A readback never copies its control's value source: echoing the setpoint back as its own
+        readback would make epsilon= vacuous."""
+        class Stage:
+            params = [{'name': 'setpoint', 'type': 'float', 'limits': [0, 10]}]
+            setpoint = control(setting='setpoint', readback=True, epsilon=0.1)
+
+        caps = Capabilities.from_device(Stage)
+        readback = caps.measurements[0]
+        assert readback.setting is None and readback.get is None
 
     def test_binary_control_merges_into_a_measurements_row_too(self):
         # merge_into is about where the button is drawn, not writability: the enable control still

@@ -56,12 +56,32 @@ storage but not a whole `set=` of its own - mutually exclusive with `set=`, not 
 | Form | Names it | If no measurement of that name is declared |
 |---|---|---|
 | `readback=True` | `<name>_readback` | one is auto-created (a declared one is used untouched) |
-| `readback='custom_name'` | that name | `ValueError`: declare the measurement on the class |
+| `readback='custom_name'` | that name | `ValueError`: declare the measurement on the class (or a settings entry, see below) |
 
 The auto-created one is answered through the plugin's own `read()`, exactly like the stage
 example's `x`/`y`/`z` and their positions. It never reuses the control's own `get`: with
 `get=STORED` that would make the readback the setpoint itself. A control with no settling lag
-(`exposure` in the spectrometer example) needs no readback at all.
+(`exposure` in the spectrometer example) needs no readback at all. One exception to both rows: if no
+measurement of that name is declared but a settings entry of it is, the readback is auto-created as
+`setting=<name>` instead - see the next section, `pid_setpoint`/`pid_temperature` (catalog) being
+exactly that.
+
+## `setting=`: a quantity backed by the plugin's own settings Parameter
+
+| Form | What it means | Shown in |
+|---|---|---|
+| `setting='name'` on `measurement()`/`control()` | this value lives in the matching settings entry, not a plugin attribute - read and (on a control) write both go through it directly | `operating_mode`, `pid_setpoint` (catalog) |
+| domain (`values=`/`lo=`/`hi=`) | derived from the entry's own pyqtgraph type and `limits`/`min`/`max`, not declared again - redeclaring either raises | `operating_mode`'s `values=['standby', 'measure']`, from the entry's own `limits` |
+| `readback='name'` naming a settings entry, no matching measurement declared | the auto-created readback is derived the same way, instead of left answerless | `pid_setpoint`'s `readback='pid_temperature'` (catalog) - `pid_temperature` is never separately declared |
+| a measurement with `setting=` | implies `push=True` - the settings-tree listener is the push source, no polling ever registered for it | `pid_temperature` (catalog, via the auto-derivation above) |
+
+Mutually exclusive with `get=`/`set=`/`pre_set=`/`post_set=` on the same quantity - there is nothing
+left for any of those to do once `setting=` already answers both directions. A toolbar write, a
+Settings-dock edit, or the plugin changing the entry internally (`operating_mode`'s own
+`discover_calibrate_mode` action, in the catalog example) all keep the toolbar and the dock in sync
+with each other, through whichever of the three actually happened - see `hardware/README.md`,
+"`setting=`," for the full read/write/sync story, and `control_modules/HARDWARE_MODULE.md` for how
+this resolved the dock↔toolbar asymmetry that was still an open gap there.
 
 ## Wrapping an existing instrument object: inherit or compose
 
@@ -147,6 +167,7 @@ redrawn) together.
 | nothing to do | a value computed fresh each read | `get=` only (callable or string) |
 | something to do, no more than a hook needs | a value computed fresh each read | both, independently - `get=`/`set=` don't interact with each other |
 | a whole-row replacement (shares one hardware transaction with other channels, writes under a different name, skips storage altogether) | - | `set=` instead of the hooks |
+| the value lives in the plugin's own settings tree, not an attribute at all | answered from that same settings entry | `setting=` instead of any of the above - mutually exclusive with all of them |
 
 The real hardware access living on a *separate* object instead of the plugin itself - inherited or
 composed - is an orthogonal choice on top of any row above: it only changes what `get=`/`set=`

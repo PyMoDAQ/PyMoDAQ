@@ -199,18 +199,14 @@ This module needs no signal of its own for either direction: its Settings dock s
 `controller.settings` directly, so once `Controller` has applied a change, the dock already shows
 it.
 
-**One asymmetry, found while building the settings-sync forwarding above:** a toolbar write
-correctly updates the Settings dock too (`request_write`'s own write to a plugin setting fires the
-same `settings_changed` relay as any plugin-driven change). Editing the *Settings dock* directly
-does not update the toolbar widget back - that edit goes through `update_settings`, which emits no
-confirmation signal at all (unlike `request_write`'s `write_done`) for anything here to react to.
-Not fixed - see Known gaps.
+A `setting=`-backed *control*'s own `'value'` edit in the dock reroutes through `write_requested`
+instead - the same pending/timeout/`written` pipeline a toolbar edit uses, so the toolbar widget
+stays live both ways. A `setting=`-backed *measurement*'s own `'value'` edit in the dock instead
+fans out through `update_settings`'s own call to `_fan_out`, the same path `push_reading` uses -
+so its toolbar display, any open graph and any poll subscriber all stay live too.
 
 ## 10. Known gaps
 
-- The settings-dock-edit asymmetry above: `update_settings` needs its own confirmation signal
-  (mirroring `write_done`), or `_relay_settings_change` needs to push the new value to
-  `_sync_for(name)` optimistically the moment the edit is accepted.
 - Not a `ControlModule` yet: the Dashboard, Dashboard presets, and `ModulesManager` can't load a
   `HardwareModule`.
 - Missing widgets: `show_controls`, `save`. A control's `ui_add` can name them; they're skipped.

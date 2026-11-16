@@ -28,6 +28,8 @@ from enum import Enum
 from typing import Any, Callable
 
 from pymodaq_data.data import DataDim
+from pymodaq.control_modules.hardware.setting_domain import (
+    derive_setting_domain, in_domain, param_resolves_a_domain, quantity_for_setting)
 
 
 __all__ = [
@@ -44,6 +46,7 @@ __all__ = [
     'control',
     'instr_get',
     'instr_set',
+    'quantity_for_setting',
     'toolbar_widgets',
     'UI_WIDGETS',
 ]
@@ -216,6 +219,7 @@ class Quantity:
         stop: Callable[[Any], None] | None = None,
         actions: dict[str, Callable | Action] | None = None,
         merge_into: str | None = None,
+        setting: str | None = None,
     ) -> None:
         self.access = Access(access)
         self.units = units
@@ -263,6 +267,12 @@ class Quantity:
         # action, instead of this control getting a row of its own (e.g. an axis's enable button, right
         # next to its move controls). Resolved against the sibling controls by Capabilities.
         self.merge_into = merge_into
+        # Name of a param in the plugin's own settings tree this value lives in, instead of a
+        # plugin attribute - resolved by HardwareThread, not here (see measurement()/control()).
+        # Mutual-exclusivity checks live there too, against the raw kwargs, not here: this
+        # constructor also runs for Quantity.from_dict()'s reconstruction, which passes the
+        # already-derived domain alongside setting= at once.
+        self.setting = setting
         self.name: str | None = None
         self._validate()
 
@@ -379,6 +389,7 @@ class Quantity:
             'ui_remove': list(self.ui_remove),
             'widget': self.widget,
             'push': self.push,
+            'setting': self.setting,
         }
 
     @classmethod
@@ -401,6 +412,7 @@ class Quantity:
             ui_remove=d.get('ui_remove', []),
             widget=d.get('widget'),
             push=d.get('push', False),
+            setting=d.get('setting'),
         )
         quantity.name = d['name']
         return quantity
@@ -419,10 +431,17 @@ def measurement(
     push: bool = False,
     get: Callable[[Any], Any] | str | None = None,
     actions: dict[str, Callable | Action] | None = None,
+    setting: str | None = None,
 ) -> Quantity:
     """Declare a read-only quantity: a sensor reading, a detector channel, a status.
 
     ``push=True`` means the plugin sends its readings with ``push_reading`` instead of being polled.
+
+    ``setting=<name>`` means this quantity's value lives in the plugin's own settings tree, at the
+    entry named *name* (found by leaf name - see ``hardware/README.md``, "setting="), instead of a
+    plugin attribute; ``HardwareThread`` reads the ``Parameter`` directly, so ``get=`` isn't needed
+    and raises if given. Also implies ``push=True`` - the settings-tree listener already fires on
+    every real change - so an explicit ``push=`` alongside it raises too.
 
     ``get``, when given, answers a read of this quantity on its own: ``get(plugin)`` returns the value,
     instead of going through ``read(names, fresh)``. A single-channel read (Read, Snap, a one-shot
@@ -460,9 +479,14 @@ def measurement(
     hardware toggle such as a firmware dark-reference mode - there is nothing write-specific about an
     action, it needs no value of its own to write.
     """
+    if setting is not None:
+        if get is not None:
+            raise ValueError('setting= and get= are mutually exclusive: setting= already answers a read')
+        if push:
+            raise ValueError('setting= already implies push=True; giving both is redundant')
     return Quantity(Access.MEASUREMENT, units=units, label=label, dtype=dtype, shape=shape,
                     values=values, docs=docs, ui_add=ui_add, ui_remove=ui_remove,
-                    push=push, get=get, actions=actions)
+                    push=push or setting is not None, get=get, actions=actions, setting=setting)
 
 
 def control(
@@ -486,6 +510,7 @@ def control(
     stop: Callable[[Any], None] | None = None,
     actions: dict[str, Callable | Action] | None = None,
     merge_into: str | None = None,
+    setting: str | None = None,
 ) -> Quantity:
     """Declare a readable and writable quantity: a target, with the device's actual value as a readback.
 
@@ -546,11 +571,20 @@ def control(
     argument shape, or logic that belongs inline rather than behind a named method.
 
     ``readback`` declares the measurement that reports the actual value, which the GUI shows in the same row.
-    ``True`` names it ``<name>_readback``: a measurement of that name is used if declared, otherwise it
-    is created with the units, shape and values of the control, and answered through ``read()`` (see
-    :func:`_readback_of`). A string names a measurement that must be declared on the class (a
-    ``ValueError`` otherwise, so a typo is caught when the device class is collected). It never reuses the control's own ``get``:
-    a readback reports what the device does, and a control with no settling lag needs no readback.
+    ``True`` names it ``<name>_readback``: a measurement of that name is used if declared; otherwise,
+    if a settings entry of that name exists, it is auto-created as ``setting=<name>`` (see below);
+    otherwise it is created with the units, shape and values of the control, and answered through
+    ``read()`` (see :func:`_readback_of`). A string must name a declared measurement or a settings
+    entry (a ``ValueError`` otherwise, so a typo is caught when the device class is collected). It
+    never reuses the control's own ``get``: a readback reports what the device does, and a control
+    with no settling lag needs no readback.
+
+    ``setting=<name>`` means this control's value - read and write - lives in that settings entry
+    instead of a plugin attribute: a toolbar write, a Settings-dock edit, or the plugin changing it
+    internally all keep each other in sync (see ``hardware/README.md``, "setting="). Mutually
+    exclusive with ``get=``/``set=``/``pre_set=``/``post_set=``/``values=``/``lo=``/``hi=`` - fully
+    derived from the entry's own type and limits. Can still have a real ``readback=``/``epsilon=``:
+    the setpoint's storage and the device's physical response lag are unrelated.
 
     ``actions`` adds a button per entry, named after its key, calling ``callback(plugin)``: opt-in,
     for the controls that need one (e.g. a motor axis) - the same kwarg exists on :func:`measurement`
@@ -570,10 +604,20 @@ def control(
     still dispatches through the normal write path, only where it is drawn changes. See
     ``control_modules/HARDWARE_MODULE.md`` (section 7, ``merge_into``) for the rendering details.
     """
+    if setting is not None:
+        if get is not None or set is not None or pre_set is not None or post_set is not None:
+            raise ValueError(
+                'setting= is mutually exclusive with get=/set=/pre_set=/post_set=: '
+                'it already answers both the read and the write')
+        if values or lo is not None or hi is not None:
+            raise ValueError(
+                'setting= is mutually exclusive with values=/lo=/hi=: its domain is derived '
+                'from the matching settings entry, never declared twice')
     return Quantity(Access.CONTROL, units=units, label=label, lo=lo, hi=hi, epsilon=epsilon,
                     values=values, docs=docs, ui_add=ui_add, ui_remove=ui_remove, widget=widget,
                     widget_class=widget_class, readback=readback, get=get, set=set,
-                    pre_set=pre_set, post_set=post_set, stop=stop, actions=actions, merge_into=merge_into)
+                    pre_set=pre_set, post_set=post_set, stop=stop, actions=actions,
+                    merge_into=merge_into, setting=setting)
 
 
 def instr_get(method: Callable[[Any], Any], attr: str = 'controller') -> Callable[[Any], Any]:
@@ -630,24 +674,26 @@ def _shape_of(shape: tuple[int | None, ...] | DataDim) -> tuple[int | None, ...]
     return tuple(shape)
 
 
-def _readback_of(control: Quantity) -> Quantity:
-    """The measurement that reports *control*'s actual value: same units, shape and values, no limits.
+def _readback_of(control: Quantity, params: list) -> Quantity:
+    """The measurement that reports *control*'s actual value - same units/shape/dtype either way.
 
-    Only auto-created for ``readback=True`` when nothing of that name was declared already (see the
-    loop that calls this);
-    a plugin that needs the readback answered differently from the control just declares it itself,
-    which skips this entirely.
+    Only auto-created when nothing of that name was declared already (see the loop that calls
+    this). If *params* has a settings entry named ``control.readback`` that
+    :func:`~pymodaq.control_modules.hardware.setting_domain.param_resolves_a_domain` can use, it's
+    backed by that entry (``setting=``). Otherwise the plugin answers it through ``read()``.
 
     Never copies the control's own ``get``: with ``get=STORED`` that would make the readback the
     setpoint itself, so settling within ``epsilon`` would compare the setpoint with itself and always
-    pass. The plugin answers the readback through ``read()``, as the stage example does.
+    pass.
     """
+    setting = control.readback if param_resolves_a_domain(params, control.readback) else None
     readback = Quantity(Access.MEASUREMENT, units=control.units,
                         label=f'{control.label} readback' if control.label else '',
-                        dtype=control.dtype, shape=control.shape, values=control.values)
+                        dtype=control.dtype, shape=control.shape,
+                        values=() if setting else control.values,
+                        setting=setting, push=bool(setting))
     readback.name = control.readback
     return readback
-
 
 @dataclass
 class Capabilities:
@@ -658,6 +704,10 @@ class Capabilities:
 
     measurements: list[Quantity] = field(default_factory=list)
     controls: list[Quantity] = field(default_factory=list)
+    # The device class's own params, for setting= resolution below - a transient input, not part
+    # of this object's identity (excluded from equality/repr/to_dict). from_dict's reconstruction
+    # has none to give; see setting_domain.derive_setting_domain's own idempotency guard for why.
+    params: list = field(default_factory=list, compare=False, repr=False)
 
     def __post_init__(self) -> None:
         names = [q.name for q in self.measurements + self.controls]
@@ -705,15 +755,31 @@ class Capabilities:
             readback_owner[control.readback] = control.name
             if control.readback in measured:
                 continue
-            if not auto_named:
-                # only readback=True creates a measurement: a string must name a declared one, so a
-                # typo fails here instead of becoming a measurement nothing answers
+            if not auto_named and not param_resolves_a_domain(self.params, control.readback):
+                # only readback=True creates a plain measurement: a string must name a declared one
+                # (or a settings entry, backing the readback), so a typo fails here instead of
+                # becoming a measurement nothing answers
                 raise ValueError(
-                    f'{control.name!r} declares readback {control.readback!r}, which is not a declared '
-                    f'measurement: declare it, or use readback=True for {control.name + "_readback"!r}'
+                    f'{control.name!r} declares readback {control.readback!r}, which is neither a '
+                    f'declared measurement nor a settings entry: declare it, or use readback=True for '
+                    f'{control.name + "_readback"!r}'
                 )
-            self.measurements.append(_readback_of(control))
+            self.measurements.append(_readback_of(control, self.params))
             measured.add(control.readback)
+        # setting= resolution: a quantity's value lives in a settings entry instead of a plugin
+        # attribute. Two quantities (any mix of measurement/control) can't share one setting, same
+        # reasoning as readback_owner above - one Parameter, one confirmed value, one owner.
+        setting_owner: dict[str, str] = {}
+        for quantity in self.measurements + self.controls:
+            if not quantity.setting:
+                continue
+            if quantity.setting in setting_owner:
+                raise ValueError(
+                    f'setting {quantity.setting!r} is declared by both '
+                    f'{setting_owner[quantity.setting]!r} and {quantity.name!r}'
+                )
+            setting_owner[quantity.setting] = quantity.name
+            derive_setting_domain(quantity, self.params)
         # the target's own row is just where this control's button is drawn; a measurement's row
         # is as good a home for it as another control's, since the write still goes through this
         # control's own set path either way (e.g. a channel's enable, merged into that
@@ -748,6 +814,7 @@ class Capabilities:
         return cls(
             measurements=[q for q in quantities if q.access is Access.MEASUREMENT],
             controls=[q for q in quantities if q.access is Access.CONTROL],
+            params=getattr(klass, 'params', []),
         )
 
     def to_dict(self) -> dict:
@@ -821,19 +888,29 @@ def check_device_class(plugin_class: type) -> None:
         raise ValueError(f'{plugin_class.__name__}: ' + '; '.join(problems))
 
 
-def apply_write(plugin: Any, caps: Capabilities, name: str, value: Any) -> None:
+def apply_write(plugin: Any, caps: Capabilities, name: str, value: Any, settings: Any = None) -> Any:
     """Write *value* to *plugin*'s channel *name*: the full write, with no thread and no Qt.
+    Returns the confirmed value.
 
     ``pre_set``, then ``set`` (or ``write(name, value)`` if the plugin defines it), then
-    ``plugin.<name> = value``, then ``post_set``. Any of them raising stops the write and
-    propagates. This is what ``HardwareThread.request_write`` runs on the hardware thread; call it
-    directly to drive a plugin from a plain script or test. A bare ``plugin.<name> = value`` only
-    stores the value and runs none of the hooks.
+    ``plugin.<name> = value``, then ``post_set``; the confirmed value is *value*. Any of them
+    raising stops the write and propagates. This is what ``HardwareThread.request_write`` runs on
+    the hardware thread; call it directly to drive a plugin from a plain script or test. A bare
+    ``plugin.<name> = value`` only stores the value and runs none of the hooks.
+
+    A ``setting=``-backed control writes the ``Parameter`` of that name in *settings* (the tree
+    given to ``open()``) instead: *value* is checked against the control's domain first
+    (pyqtgraph's ``setValue`` only coerces the type, it doesn't clip or reject), then set with the
+    tree's signals blocked (a listener, such as the hardware thread, must not take it for the plugin
+    changing its own setting), then ``commit_settings(param)`` runs if the plugin defines it. The
+    confirmed value is the ``Parameter``'s own afterwards (e.g. an ``'int'`` entry truncates a float).
 
     A *name* that is not a declared control (e.g. one only in the instance's own capabilities)
     gets the same treatment as a control without hooks: ``write()`` if defined, then storage.
     """
     control = caps.control(name)
+    if control is not None and control.setting:
+        return _write_setting(plugin, control, value, settings)
     pre_set = control.pre_set if control is not None else None
     setter = control.set if control is not None else None
     post_set = control.post_set if control is not None else None
@@ -848,6 +925,27 @@ def apply_write(plugin: Any, caps: Capabilities, name: str, value: Any) -> None:
     setattr(plugin, name, value)
     if post_set is not None:
         post_set(plugin, value)
+    return value
+
+
+def _write_setting(plugin: Any, control: Quantity, value: Any, settings: Any) -> Any:
+    """``apply_write`` for a ``setting=``-backed control - see there."""
+    from pymodaq_gui.parameter.utils import get_param_from_name  # pyqtgraph: imported only when used
+    if settings is None:
+        raise ValueError(f'{control.name!r} is backed by setting {control.setting!r}: '
+                         f'apply_write needs the settings tree')
+    if not in_domain(control, value):
+        raise ValueError(f"{value!r} is outside {control.name!r}'s declared domain")
+    param = get_param_from_name(settings, control.setting)
+    was_blocked = settings.blockSignals(True)
+    try:
+        param.setValue(value)
+    finally:
+        settings.blockSignals(was_blocked)
+    commit = getattr(plugin, 'commit_settings', None)
+    if commit is not None:
+        commit(param)
+    return param.value()
 
 
 def store_pushed_readings(plugin: Any) -> None:
