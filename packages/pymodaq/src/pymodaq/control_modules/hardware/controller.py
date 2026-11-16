@@ -162,8 +162,7 @@ class Controller(QObject):
         A ``setting=``-backed control's own edit while the device is closed fails immediately
         with ``write_failed``, the same rejection ``_require_open`` raises for the equivalent
         programmatic ``controller.<name> = value`` - rather than silently queuing a
-        ``write_requested`` doomed to the full write-timeout wait, the only symptom before
-        ``_require_open`` existed.
+        ``write_requested`` doomed to the full write-timeout wait.
         """
         if self._syncing_from_device:
             return  # a change coming from the device, not the user: do not write it back
@@ -193,8 +192,8 @@ class Controller(QObject):
     def _sync_setting_backed_control_to_dock(self, name: str, value: object) -> None:
         """Mirror a ``setting=``-backed control's confirmed value into the Settings dock.
 
-        ``written`` fires for every confirmed write regardless of origin, but ``request_write``'s
-        ``setting=`` dispatch applies under a ``QSignalBlocker`` on the *thread's* tree so a write
+        ``written`` fires for every confirmed write regardless of origin, but ``apply_write``'s
+        ``setting=`` path sets the value with the *thread's* tree signals blocked so a write
         doesn't bounce back as if the plugin had made it - which also means nothing else tells
         *this*, the dock's own GUI-thread copy, about a toolbar-originated write. This is that
         notification. Skipped while ``_syncing_from_device``: a genuine plugin-internal change
