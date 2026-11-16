@@ -167,6 +167,11 @@ with `set=`, not stackable with it:
 | `pre_set=callable` or a method name string | before storage | reject the write (raise → `write_failed`, same as `set()`/`write()` raising; storage is then skipped) |
 | `post_set=callable` or a method name string | after storage | a side effect that can rely on `plugin.<name>` already holding the new value |
 
+All of this lives in `capabilities.apply_write(plugin, caps, name, value)`, which needs no thread and
+no Qt; `request_write` just calls it on the hardware thread. To drive a plugin from a plain script or
+test, call `apply_write` yourself. A bare `plugin.exposure = 50` only stores the value: it runs no
+hooks and no `write()`.
+
 A string on any of `get=`/`set=`/`pre_set=`/`post_set=` is sugar for calling that plugin method by
 name with the natural arguments (`post_set='_clamp_averaging'` instead of writing
 `lambda plugin, value: plugin._clamp_averaging(value)`), resolved once in

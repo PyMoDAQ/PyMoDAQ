@@ -9,6 +9,7 @@ from pymodaq.control_modules.hardware.capabilities import (
     Capabilities,
     Domain,
     Quantity,
+    apply_write,
     control,
     instr_get,
     instr_set,
@@ -781,3 +782,58 @@ class TestMergeInto:
         q = control(values=['disabled', 'enabled'], merge_into='x')
         restored = Quantity.from_dict(q.to_dict())
         assert restored.merge_into == 'x'
+
+
+class TestApplyWrite:
+    """apply_write runs the full write with no thread and no Qt - what request_write runs too."""
+
+    class Device:
+        exposure = control(lo=1, hi=1000, pre_set='_check', post_set='_after')
+        gain = control(set='_set_gain')
+        trigger = control(values=['internal', 'external'])
+
+        def __init__(self):
+            self.calls = []
+
+        def _check(self, value):
+            self.calls.append(('pre_set', value, self.exposure))
+            if value > 1000:
+                raise ValueError('too long')
+
+        def _after(self, value):
+            self.calls.append(('post_set', value, self.exposure))
+
+        def _set_gain(self, value):
+            self.calls.append(('set', value))
+
+        def write(self, name, value):
+            self.calls.append(('write', name, value))
+
+    def test_pre_set_write_store_post_set_in_order(self):
+        device = self.Device()
+        apply_write(device, Capabilities.from_device(self.Device), 'exposure', 50)
+        assert device.calls == [('pre_set', 50, None), ('write', 'exposure', 50), ('post_set', 50, 50)]
+        assert device.exposure == 50
+
+    def test_set_replaces_write(self):
+        device = self.Device()
+        apply_write(device, Capabilities.from_device(self.Device), 'gain', 2)
+        assert device.calls == [('set', 2)]
+        assert device.gain == 2
+
+    def test_pre_set_raising_rejects_and_stores_nothing(self):
+        device = self.Device()
+        with pytest.raises(ValueError, match='too long'):
+            apply_write(device, Capabilities.from_device(self.Device), 'exposure', 5000)
+        assert device.exposure is None
+
+    def test_plain_assignment_only_stores(self):
+        device = self.Device()
+        device.exposure = 50
+        assert device.calls == []
+
+    def test_undeclared_name_goes_through_write_then_storage(self):
+        device = self.Device()
+        apply_write(device, Capabilities.from_device(self.Device), 'extra', 3)
+        assert device.calls == [('write', 'extra', 3)]
+        assert device.extra == 3

@@ -21,7 +21,7 @@ import threading
 import time
 from typing import Any, Callable
 
-from pymodaq.control_modules.hardware.capabilities import Capabilities
+from pymodaq.control_modules.hardware.capabilities import Capabilities, apply_write
 from pymodaq.control_modules.hardware.subscription import Subscription
 from pymodaq_gui.parameter.utils import apply_param_change, serialize_child_added
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -95,10 +95,11 @@ class HardwareThread(QObject):
     _pushed : set[str]
         Names of measurements declared ``push=True``: delivered through :meth:`_push_reading`
         instead of ever being polled.
+    _caps : Capabilities
+        The plugin class's declared capabilities; :func:`~.capabilities.apply_write` dispatches
+        writes from it.
     _get_of : dict[str, Callable]
         Quantity name -> its declared ``get`` callback, used instead of ``read``.
-    _set_of : dict[str, Callable]
-        Control name -> its declared ``set`` callback, used instead of ``write``.
     _actions_of : dict[str, dict[str, Action]]
         Quantity name -> {action name: Action}, dispatched by :meth:`request_action`.
     """
@@ -131,11 +132,9 @@ class HardwareThread(QObject):
         self._subscribers: dict[str, list[Subscription]] = {}
         self._device_ident: int | None = None
         caps = Capabilities.from_device(plugin_class)
+        self._caps = caps
         self._pushed: set[str] = {q.name for q in caps.measurements if q.push}
         self._get_of: dict[str, Callable] = {q.name: q.get for q in caps.measurements + caps.controls if q.get}
-        self._set_of: dict[str, Callable] = {q.name: q.set for q in caps.controls if q.set}
-        self._pre_set_of: dict[str, Callable] = {q.name: q.pre_set for q in caps.controls if q.pre_set}
-        self._post_set_of: dict[str, Callable] = {q.name: q.post_set for q in caps.controls if q.post_set}
         # a measurement's channel can have these too, same as a control's - see request_action
         self._actions_of: dict[str, dict[str, Any]] = {
             q.name: dict(q.actions) for q in caps.measurements + caps.controls if q.actions
@@ -238,31 +237,13 @@ class HardwareThread(QObject):
     @Slot(str, object)
     @_when_open
     def request_write(self, channel: str, value: object) -> None:
-        """Set *channel* to *value*: its own ``set``, or ``write``.
+        """Set *channel* to *value* through :func:`~.capabilities.apply_write`, on this thread.
 
-        Whichever of those actually applies the value (or none, if the control has only
-        ``pre_set``/``post_set``, or neither), the value is then always stored as ``plugin.<channel>``
-        too - every control ends up with a live attribute mirroring its last successful write, with no
-        plugin code needed for that part. ``pre_set``, if declared, runs first (raise to reject, same
-        as ``set``/``write()`` raising); ``post_set`` runs after the value has been stored.
-
-        Emits ``write_done``, or ``write_failed`` on error.
+        ``pre_set``, then ``set`` or ``write``, then ``plugin.<channel> = value``, then ``post_set``
+        - see ``apply_write`` for the full order. Emits ``write_done``, or ``write_failed`` on error.
         """
         try:
-            pre_set = self._pre_set_of.get(channel)
-            if pre_set is not None:
-                pre_set(self._plugin, value)
-            setter = self._set_of.get(channel)
-            if setter is not None:
-                setter(self._plugin, value)
-            else:
-                write = getattr(self._plugin, 'write', None)
-                if write is not None:
-                    write(channel, value)
-            setattr(self._plugin, channel, value)
-            post_set = self._post_set_of.get(channel)
-            if post_set is not None:
-                post_set(self._plugin, value)
+            apply_write(self._plugin, self._caps, channel, value)
         except Exception as exc:
             logger.exception(f'write of {channel!r} failed')
             self.write_failed.emit(channel, str(exc))

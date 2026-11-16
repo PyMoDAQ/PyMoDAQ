@@ -33,6 +33,7 @@ __all__ = [
     'Quantity',
     'Capabilities',
     'Action',
+    'apply_write',
     'measurement',
     'control',
     'instr_get',
@@ -718,3 +719,36 @@ class Capabilities:
 
     def has_controls(self) -> bool:
         return bool(self.controls)
+
+    def control(self, name: str) -> Quantity | None:
+        """The declared control named *name*, or ``None``."""
+        return next((q for q in self.controls if q.name == name), None)
+
+
+def apply_write(plugin: Any, caps: Capabilities, name: str, value: Any) -> None:
+    """Write *value* to *plugin*'s channel *name*: the full write, with no thread and no Qt.
+
+    ``pre_set``, then ``set`` (or ``write(name, value)`` if the plugin defines it), then
+    ``plugin.<name> = value``, then ``post_set``. Any of them raising stops the write and
+    propagates. This is what ``HardwareThread.request_write`` runs on the hardware thread; call it
+    directly to drive a plugin from a plain script or test. A bare ``plugin.<name> = value`` only
+    stores the value and runs none of the hooks.
+
+    A *name* that is not a declared control (e.g. one only in the instance's own capabilities)
+    gets the same treatment as a control without hooks: ``write()`` if defined, then storage.
+    """
+    control = caps.control(name)
+    pre_set = control.pre_set if control is not None else None
+    setter = control.set if control is not None else None
+    post_set = control.post_set if control is not None else None
+    if pre_set is not None:
+        pre_set(plugin, value)
+    if setter is not None:
+        setter(plugin, value)
+    else:
+        write = getattr(plugin, 'write', None)
+        if write is not None:
+            write(name, value)
+    setattr(plugin, name, value)
+    if post_set is not None:
+        post_set(plugin, value)
