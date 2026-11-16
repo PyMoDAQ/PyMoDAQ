@@ -60,9 +60,10 @@ registry, `Controller` itself).
 ## 3. Writing a value, and settling
 
 A control with both `readback=` and a non-zero `epsilon` (e.g. a motor axis) stays **pending**
-(orange) after a confirmed write until its readback polls within tolerance - what replaces a
-separate "move done" signal. A control with neither just resolves the moment the write itself is
-confirmed.
+(orange) after a confirmed write until its readback polls within tolerance of the *confirmed*
+value (not the requested one: a `setting=` entry may change it, and a plugin changing its own
+`setting=`-backed setpoint confirms a value nobody requested) - what replaces a separate "move
+done" signal. A control with neither just resolves the moment the write itself is confirmed.
 
 ```mermaid
 sequenceDiagram

@@ -8,6 +8,7 @@ from qtpy import QtWidgets
 
 from qtpy.QtCore import Property, Qt, Signal
 
+from pymodaq.control_modules import hardware_module
 from pymodaq.control_modules.hardware import controller
 from pymodaq.control_modules.hardware.capabilities import STORED, Action, control, measurement
 from pymodaq.control_modules.hardware_module import (
@@ -1314,5 +1315,40 @@ class TestSettingBackedControl:
         qtbot.waitUntil(lambda: 'setpoint' in widget._pending, timeout=2000)  # pending until settled
         widget.controller.thread._plugin_settings.child('group', 'actual_temperature').setValue(50.2)
         qtbot.waitUntil(lambda: 'setpoint' not in widget._pending, timeout=SETTLE_POLL_MS * 5)
+        assert 'setpoint' not in widget._failed
+        widget.release()
+
+    def test_the_settle_target_is_the_confirmed_value_not_the_requested_one(self, registry, qtbot):
+        """An 'int' entry confirms 20 for a requested 20.7: a readback reaching 20 has arrived, it
+        must not wait for 20.7 until the settle timeout turns the row red."""
+        class IntStage(Camera):
+            params = [{'name': 'step', 'type': 'int', 'limits': [0, 100], 'value': 0},
+                      {'name': 'step_position', 'type': 'float', 'value': 0.0}]
+            step = control(setting='step', readback='step_position', epsilon=0.1)
+
+        widget = make_module(registry, qtbot, IntStage, 36, initialize=True)
+        widget._write('step', 20.7)  # straight through the GUI's write path, no spinbox rounding first
+        qtbot.waitUntil(lambda: widget.controller.step == 20, timeout=2000)  # confirmed, truncated
+        widget.controller.thread._plugin_settings.child('step_position').setValue(20.0)
+        qtbot.waitUntil(lambda: 'step' not in widget._pending, timeout=SETTLE_POLL_MS * 5)
+        assert 'step' not in widget._failed
+        widget.release()
+
+    def test_a_setpoint_the_plugin_changes_itself_settles_instead_of_failing(self, registry, qtbot, monkeypatch):
+        """The plugin moving its own setting=-backed setpoint emits written with no write request
+        behind it: the settle watch must compare against that value, not time out with no target."""
+        monkeypatch.setattr(hardware_module, 'SETTLE_TIMEOUT_S', 0.5)
+
+        class PidStage(Camera):
+            params = [{'name': 'setpoint', 'type': 'float', 'limits': [0, 100], 'value': 0.0},
+                      {'name': 'actual_temperature', 'type': 'float', 'value': 0.0}]
+            setpoint = control(setting='setpoint', readback='actual_temperature', epsilon=0.5)
+
+        widget = make_module(registry, qtbot, PidStage, 37, initialize=True)
+        settings = widget.controller.thread._plugin_settings
+        with qtbot.waitSignal(widget.controller.written, timeout=2000):
+            settings.child('setpoint').setValue(40.0)
+        settings.child('actual_temperature').setValue(40.2)
+        qtbot.wait(800)  # past the patched settle timeout
         assert 'setpoint' not in widget._failed
         widget.release()

@@ -194,7 +194,7 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         self._pending: set[str] = set()  # writes sent, not yet acknowledged, or not yet settled
         self._failed: set[str] = set()  # writes the plugin rejected, or that never settled
         self._reading: set[str] = set()  # one-shot reads in flight
-        self._targets: dict[str, float] = {}  # a settling control's last requested value
+        self._targets: dict[str, float] = {}  # a settling control's last confirmed value
         self._settle_timers: dict[str, QTimer] = {}  # settling controls: readback polled until within epsilon
         self._settle_deadlines: dict[str, float] = {}
         self.controller: Controller = self._registry.attach(key, plugin_class, params_state)
@@ -647,8 +647,6 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         if self._attached:  # a widget can still emit after the device is released
             self._pending.add(name)
             self._failed.discard(name)
-            if self._settles(self._quantities[name]):
-                self._targets[name] = value
             self._refresh_led(name)
             setattr(self.controller, name, value)
 
@@ -878,6 +876,10 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
 
     def _on_written(self, name: str, value: object) -> None:
         if self._settles(self._quantities[name]):
+            # The target is the confirmed value, not the one requested: a setting= entry may change
+            # it (an 'int' entry truncates a float), and a plugin changing its own setting=-backed
+            # setpoint emits written with no request behind it at all.
+            self._targets[name] = value
             self._start_settle_watch(name)  # stays pending (orange) until the readback reaches the target
         else:
             self._pending.discard(name)
