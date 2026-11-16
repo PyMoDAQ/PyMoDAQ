@@ -15,8 +15,6 @@ PyMoDAQ Scripting
 +-------------+-------------+---------------+
 |             | Linux       | Windows       |
 +=============+=============+===============+
-| Python 3.10 | |310-linux| | |310-windows| |
-+-------------+-------------+---------------+
 | Python 3.11 | |311-linux| | |311-windows| |
 +-------------+-------------+---------------+
 | Python 3.12 | |312-linux| | |312-windows| |
@@ -28,9 +26,6 @@ PyMoDAQ Scripting
 
 
 
-.. |310-linux| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_scripting/{{BRANCH_NAME}}/tests_Linux_3.10.svg
-    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-data.yml
-
 .. |311-linux| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_scripting/{{BRANCH_NAME}}/tests_Linux_3.11.svg
     :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-data.yml
 
@@ -38,9 +33,6 @@ PyMoDAQ Scripting
     :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-data.yml
 
 .. |313-linux| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_scripting/{{BRANCH_NAME}}/tests_Linux_3.13.svg
-    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-data.yml
-
-.. |310-windows| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_scripting/{{BRANCH_NAME}}/tests_Windows_3.10.svg
     :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-data.yml
 
 .. |311-windows| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_scripting/{{BRANCH_NAME}}/tests_Windows_3.11.svg

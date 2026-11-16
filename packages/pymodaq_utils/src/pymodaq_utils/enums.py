@@ -1,9 +1,4 @@
-import sys
-
-if sys.version_info < (3, 11):
-    from strenum import StrEnum as _StrEnum
-else:
-    from enum import StrEnum as _StrEnum
+from enum import StrEnum as _StrEnum
 
 from enum import Enum, auto   # noqa  # pylint: disable=unused-import
 from typing import List, Type, TypeVar, Union

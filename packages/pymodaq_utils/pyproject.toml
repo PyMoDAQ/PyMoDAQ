@@ -10,7 +10,7 @@ dynamic = [
 description = "Modular Data Acquisition with Python"
 readme = "README.rst"
 license = { file="LICENSE" }
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [
     { name = "Sébastien Weber", email = "sebastien.weber@cemes.fr" },
 ]
@@ -21,7 +21,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Natural Language :: English",
     "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",    
@@ -38,7 +37,6 @@ dependencies = [
     "pint",
     "python-dateutil",
     "toml",
-    "strenum; python_version<\"3.11\"",
     "serializall>=0.1.0",
     "aenum",
     "requests",
