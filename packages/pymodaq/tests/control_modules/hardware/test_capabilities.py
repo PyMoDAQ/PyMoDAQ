@@ -871,14 +871,15 @@ class TestSettingDomainDerivation:
         with pytest.raises(ValueError, match="setting 'x' is declared by both 'a' and 'b'"):
             Capabilities.from_device(Stage)
 
-    def test_derivation_is_idempotent_across_repeated_from_device_calls(self):
+    def test_repeated_from_device_calls_derive_the_same_domain(self):
         class Stage:
             params = [{'name': 'exposure_ms', 'type': 'float', 'limits': [1, 1000]}]
             exposure = control(setting='exposure_ms')
 
         Capabilities.from_device(Stage)
-        caps = Capabilities.from_device(Stage)  # the same class-level Quantity, resolved again
+        caps = Capabilities.from_device(Stage)
         assert (caps.controls[0].lo, caps.controls[0].hi) == (1, 1000)
+        assert (Stage.exposure.lo, Stage.exposure.hi) == (None, None)  # the declaration is untouched
 
 
 class TestSettingRoundTrip:
@@ -894,11 +895,8 @@ class TestSettingRoundTrip:
         assert restored.controls[0].setting == 'exposure_ms'
 
     def test_an_unbounded_setting_survives_serialization_without_raising(self):
-        """The case that actually caught the from_dict/no-params bug: lo=hi=None is both the
-        correctly-derived result for an unbounded float and indistinguishable from "not yet
-        resolved" by domain emptiness alone - _derive_setting_domain also needs params itself to
-        be empty before it can safely skip re-deriving, or this raises on a perfectly valid
-        quantity the moment it round-trips."""
+        """lo=hi=None is the correctly-derived domain of an unbounded float: from_dict, with no
+        params, keeps it as serialized instead of re-deriving it."""
         class Stage:
             params = [{'name': 'offset', 'type': 'float'}]
             offset = control(setting='offset')

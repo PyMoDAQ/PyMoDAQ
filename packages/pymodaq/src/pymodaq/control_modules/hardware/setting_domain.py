@@ -62,14 +62,10 @@ _BOUNDS_FROM = {'float': _numeric_bounds, 'int': _numeric_bounds, 'slide': _nume
 def derive_setting_domain(quantity: Quantity, params: list) -> None:
     """Fill in *quantity*'s domain from the settings entry its own ``setting=`` names.
 
-    Two idempotency guards, not one: skipped if the domain is already resolved (repeated
-    ``from_device()`` calls on the same singleton ``Quantity``), and skipped if *params* is empty
-    (``Quantity.from_dict`` never has any). Both are needed - an unbounded ``'float'``/``'int'``/
-    ``'slide'`` legitimately resolves to ``lo=hi=None``, indistinguishable from "unresolved" by the
-    first guard alone, so a round-tripped one would otherwise re-derive and raise on no ``params``.
+    ``Capabilities.from_device`` resolves copies of the declarations, so this runs once per copy.
+    With no *params* (``Capabilities.from_dict``), the domain was serialized with the quantity
+    and there is nothing to derive.
     """
-    if quantity.values or quantity.lo is not None or quantity.hi is not None:
-        return
     if not params:
         return
     entry = find_param_entry(params, quantity.setting)
