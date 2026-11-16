@@ -34,6 +34,7 @@ __all__ = [
     'Capabilities',
     'Action',
     'apply_write',
+    'check_plugin',
     'measurement',
     'control',
     'instr_get',
@@ -227,6 +228,10 @@ class Quantity:
         # needs to replace this whole shape instead of just hooking into it.
         self.pre_set = pre_set
         self.post_set = post_set
+        # keyword -> method name, for each of get/set/pre_set/post_set given as a string: kept by
+        # Capabilities when it replaces the string with a callable, so check_plugin can still
+        # check the name against the plugin class afterwards.
+        self.callback_names: dict[str, str] = {}
         # Named actions, each its own button in this control's own row (see Action).
         self.actions: dict[str, Action] = {
             name: value if isinstance(value, Action) else Action(callback=value)
@@ -625,6 +630,9 @@ class Capabilities:
         # before anything below, so _readback_of (next) sees a real callable to default a readback's
         # own get to, same as a hand-written lambda would give it.
         for quantity in self.measurements + self.controls:
+            for keyword in ('get', 'set', 'pre_set', 'post_set'):
+                if isinstance(getattr(quantity, keyword), str):
+                    quantity.callback_names[keyword] = getattr(quantity, keyword)
             if quantity.get is True:
                 quantity.get = lambda plugin, name=quantity.name: getattr(plugin, name)
             elif isinstance(quantity.get, str):
@@ -723,6 +731,31 @@ class Capabilities:
     def control(self, name: str) -> Quantity | None:
         """The declared control named *name*, or ``None``."""
         return next((q for q in self.controls if q.name == name), None)
+
+
+def check_plugin(plugin_class: type) -> None:
+    """Raise a ``ValueError`` now for what would otherwise fail at the first read or write.
+
+    Checks that every method name given as a string to ``get=``/``set=``/``pre_set=``/``post_set=``
+    is a callable attribute of *plugin_class*, and that the plugin defines ``read()`` if a
+    measurement (an auto-created readback included) has no ``get=`` and is not ``push=True``, since
+    it is polled through ``read()``. ``write()``, ``open()`` and ``close()`` are not required here:
+    ``write()`` is optional by design, and a missing ``open()`` already fails the connection.
+
+    Signatures are not checked: ``inspect.signature`` fails on many driver methods (C extensions,
+    decorated or pymeasure ``fget`` methods).
+    """
+    caps = Capabilities.from_device(plugin_class)
+    problems = []
+    for quantity in caps.measurements + caps.controls:
+        for keyword, method in quantity.callback_names.items():
+            if not callable(getattr(plugin_class, method, None)):
+                problems.append(f'{quantity.name}: {keyword}={method!r} is not a method of the class')
+    polled = [q.name for q in caps.measurements if q.get is None and not q.push]
+    if polled and not callable(getattr(plugin_class, 'read', None)):
+        problems.append(f'{polled} have no get= and are not push=True, so they need a read() method')
+    if problems:
+        raise ValueError(f'{plugin_class.__name__}: ' + '; '.join(problems))
 
 
 def apply_write(plugin: Any, caps: Capabilities, name: str, value: Any) -> None:

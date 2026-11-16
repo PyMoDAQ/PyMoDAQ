@@ -178,6 +178,11 @@ name with the natural arguments (`post_set='_clamp_averaging'` instead of writin
 `Capabilities.__post_init__`, before anything else that reads `quantity.get`/`.set`/etc. sees it -
 including the readback default below.
 
+`check_plugin(plugin_class)` (run by `HardwareRegistry.attach`, before the hardware thread starts)
+raises a `ValueError` if one of these names is not a method of the class, or if a polled
+measurement (no `get=`, not `push=True`) needs a `read()` the plugin doesn't define. Without it, both
+would only fail at the first read or write, on the hardware thread.
+
 ### Wrapping an existing instrument object (pymeasure or otherwise): compose, don't inherit
 
 A question worth answering explicitly, since the "written in the pymeasure style" wording at the

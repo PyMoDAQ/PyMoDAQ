@@ -119,6 +119,9 @@ class TestLayout:
             def open(self, settings):
                 pass
 
+            def read(self, names, fresh):
+                raise NotImplementedError
+
             def close(self):
                 pass
 

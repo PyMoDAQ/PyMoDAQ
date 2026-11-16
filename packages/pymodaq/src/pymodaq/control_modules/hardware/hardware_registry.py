@@ -12,7 +12,7 @@ import threading
 from dataclasses import dataclass
 from typing import Any, ClassVar
 
-from pymodaq.control_modules.hardware.capabilities import Capabilities
+from pymodaq.control_modules.hardware.capabilities import Capabilities, check_plugin
 from pymodaq.control_modules.hardware.controller import controller_class
 from pymodaq.control_modules.hardware.hardware_thread import HardwareThread, make_plugin_settings
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -94,8 +94,10 @@ class HardwareRegistry:
                                      f'not {plugin_class.__name__}')
                 entry.ref_count += 1
                 return entry.controller
-            # Build the class before the thread starts: a quantity name clash raises here.
+            # Build the class and check the plugin before the thread starts: a quantity name clash,
+            # a misnamed callback or a missing read() raises here, not on the hardware thread.
             cls = controller_class(plugin_class)
+            check_plugin(plugin_class)
             settings = make_plugin_settings(plugin_class, params_state)
             thread = self._make_thread(plugin_class, params_state)
             controller = cls(thread, settings, Capabilities.from_device(plugin_class))
