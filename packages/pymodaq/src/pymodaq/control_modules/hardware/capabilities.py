@@ -268,7 +268,8 @@ class Quantity:
         # next to its move controls). Resolved against the sibling controls by Capabilities.
         self.merge_into = merge_into
         # Name of a param in the plugin's own settings tree this value lives in, instead of a
-        # plugin attribute - resolved by HardwareThread, not here (see measurement()/control()).
+        # plugin attribute - its domain is derived by Capabilities, its reads and writes go to the
+        # settings tree (see measurement()/control()).
         # Mutual-exclusivity checks live there too, against the raw kwargs, not here: this
         # constructor also runs for Quantity.from_dict()'s reconstruction, which passes the
         # already-derived domain alongside setting= at once.
@@ -484,6 +485,9 @@ def measurement(
             raise ValueError('setting= and get= are mutually exclusive: setting= already answers a read')
         if push:
             raise ValueError('setting= already implies push=True; giving both is redundant')
+        if values:
+            raise ValueError('setting= is mutually exclusive with values=: its domain is derived '
+                             'from the matching settings entry, never declared twice')
     return Quantity(Access.MEASUREMENT, units=units, label=label, dtype=dtype, shape=shape,
                     values=values, docs=docs, ui_add=ui_add, ui_remove=ui_remove,
                     push=push or setting is not None, get=get, actions=actions, setting=setting)

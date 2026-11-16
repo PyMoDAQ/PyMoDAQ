@@ -871,6 +871,10 @@ class TestSettingDomainDerivation:
         with pytest.raises(ValueError, match="setting 'x' is declared by both 'a' and 'b'"):
             Capabilities.from_device(Stage)
 
+    def test_a_setting_backed_measurement_cannot_declare_values_too(self):
+        with pytest.raises(ValueError, match='mutually exclusive with values='):
+            measurement(setting='mode', values=['a', 'b'])
+
     def test_repeated_from_device_calls_derive_the_same_domain(self):
         class Stage:
             params = [{'name': 'exposure_ms', 'type': 'float', 'limits': [1, 1000]}]
