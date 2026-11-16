@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional, Union
 
 from qtpy import QtWidgets
 from qtpy.QtWidgets import QMessageBox, QDialogButtonBox, QDialog
@@ -30,12 +31,12 @@ class ConfigManager(ParameterManager):
     title = "Config"
     name = "config"
 
-    def __init__(self, config_path: Path = "", msgbox=False):
+    def __init__(self, config_path: Union[str, Path] = "", msgbox: bool = False):
         """
         Initialize the ConfigManager.
 
         Args:
-            config_path (Path, optional): Path to the configuration directory. Defaults to ''.
+            config_path (str or Path, optional): Path to the configuration directory. Defaults to ''.
             msgbox (bool, optional): If True, shows a dialog box on initialization asking
                 whether to create a new config or modify an existing one. Defaults to False.
         """
@@ -61,7 +62,7 @@ class ConfigManager(ParameterManager):
             else:  # cancel
                 pass
 
-    def make_config(self):
+    def make_config(self) -> list[dict]:
         """
         Create additional configuration parameters.
 
@@ -74,7 +75,7 @@ class ConfigManager(ParameterManager):
         """
         return []
 
-    def set_new_config(self, file: str = None, show=True):
+    def set_new_config(self, file: Optional[str] = None, show: bool = True) -> None:
         """
         Create a new configuration with default parameters.
 
@@ -101,7 +102,7 @@ class ConfigManager(ParameterManager):
         if show:
             self.show_config()
 
-    def set_config_from_file(self, file_path: Path, show=True):
+    def set_config_from_file(self, file_path: Union[str, Path], show: bool = True) -> None:
         """
         Load an existing configuration from an XML file.
 
@@ -109,7 +110,7 @@ class ConfigManager(ParameterManager):
         with the parameters from the file.
 
         Args:
-            file_path (Path): Path to the XML configuration file to load.
+            file_path (str or Path): Path to the XML configuration file to load.
             show (bool, optional): If True, displays the configuration dialog
                 after loading. Defaults to True.
 
@@ -134,7 +135,7 @@ class ConfigManager(ParameterManager):
         if show:
             self.show_config()
 
-    def show_config(self, widget=None, overwrite=False):
+    def show_config(self, widget: Optional[QtWidgets.QWidget] = None, overwrite: bool = False) -> Optional[bool]:
         """
         Display the configuration dialog for viewing and editing settings.
 
@@ -148,7 +149,8 @@ class ConfigManager(ParameterManager):
             overwrite (bool, optional): If True, overwrites existing files without
                 prompting. Defaults to False.
         Returns:
-            bool: True if the file was successfully saved, False otherwise.
+            bool or None: True if the file was successfully saved, False otherwise. None if the
+                dialog was cancelled.
         """
         dialog = QDialog()
         vlayout = QtWidgets.QVBoxLayout()
@@ -171,8 +173,9 @@ class ConfigManager(ParameterManager):
         res = dialog.exec()
         if res == QDialog.DialogCode.Accepted:
             return self.save_config(overwrite)
+        return None
     
-    def save_config(self, overwrite=False):
+    def save_config(self, overwrite: bool = False) -> bool:
         """
         Save the current configuration to an XML file.
 
@@ -195,7 +198,7 @@ class ConfigManager(ParameterManager):
         filename = self.settings.child("filename").value()       
         saved = False
         try:
-            ioxml.parameter_to_xml_file(self.settings, self.config_path.joinpath(filename), overwrite=overwrite)
+            ioxml.parameter_to_xml_file(self.settings, Path(self.config_path).joinpath(filename), overwrite=overwrite)
             saved = True
         except FileExistsError as currenterror:
             logger.warning(f"{currenterror} File {filename}.xml exists")
@@ -204,7 +207,7 @@ class ConfigManager(ParameterManager):
                 message="File exist do you want to overwrite it ?",
             )
             if user_agreed:
-                ioxml.parameter_to_xml_file(self.settings, self.config_path.joinpath(filename))
+                ioxml.parameter_to_xml_file(self.settings, Path(self.config_path).joinpath(filename))
                 logger.warning(f"File {filename}.xml overwriten at user request")
                 saved = True
             else:

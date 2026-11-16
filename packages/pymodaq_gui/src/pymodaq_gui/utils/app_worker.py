@@ -1,9 +1,9 @@
 import numpy as np
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 from qtpy import QtCore
 from qtpy.QtCore import QObject, Signal
 
-from pymodaq.utils.managers.modules import ModulesManager
 from pymodaq_data import DataToExport, Axis
 from pymodaq_data.h5modules.data_saving import DataLoader, DataBundle, DataToExportSaver, DataToExportExtendedSaver, \
     DataToExportEnlargeableSaver, DataToExportTimedSaver
@@ -13,13 +13,18 @@ from pymodaq_gui.managers.h5manager import H5Manager
 from pymodaq_gui.managers.runner_thread_manager import WorkerThreadManager, ThreadWorker, DataForProcessor, \
     get_thread_params
 
-from pymodaq.utils.h5modules.module_saving import (
-    ExtensionSaver, ScanSaver, LoggerSaver, OptimizerSaver)
-from pymodaq.utils.custom_ext import CustomExt
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.utils import CustomApp
 from pymodaq_gui.utils.custom_app import WorkFlowActions
 from pymodaq_utils.utils import ThreadCommand
+
+
+# the savers a SaverWorker can use
+SaverTypes = (DataToExportSaver | DataToExportExtendedSaver |
+              DataToExportEnlargeableSaver | DataToExportTimedSaver)
+
+if TYPE_CHECKING:  # only for the annotations, pymodaq_gui does not depend on pymodaq at run time
+    from pymodaq.utils.managers.modules import ModulesManager
 
 
 
@@ -27,18 +32,24 @@ from pymodaq_utils.utils import ThreadCommand
 class SaverWorker(ThreadWorker):
     """ Worker in separated thread receiving the data ad DataBundle
     and adding them into the extended or enlargeable arrays within a H5file using one of the
-    ExtensionSaver module saver """
+    ExtensionSaver module saver
+
+    Note
+    ----
+    The type of the saver is only hinted with the DataToExport savers (SaverTypes) the worker
+    relies on. It can also be an object of a higher level, such as the extension savers of pymodaq
+    (ScanSaver, LoggerSaver, OptimizerSaver...), as long as it provides the same saving interface.
+    """
 
     nav_axes_signal = Signal(list)
     worker_setting_name: str = 'saver_worker'
     name = 'SaverWorker'
     params = get_thread_params(worker_setting_name)
 
-    def __init__(self, saver: ScanSaver | LoggerSaver | OptimizerSaver, parent = None):
+    def __init__(self, saver: SaverTypes, parent = None):
         super().__init__(parent)
 
-        self.saver: (ScanSaver | LoggerSaver | OptimizerSaver | DataToExportSaver | DataToExportExtendedSaver |
-                     DataToExportEnlargeableSaver | DataToExportTimedSaver) = saver
+        self.saver: SaverTypes = saver
         self.data_to_save_signal.connect(self.save_data, QtCore.Qt.ConnectionType.QueuedConnection)
         self.nav_axes_signal.connect(self.add_nav_axes, QtCore.Qt.ConnectionType.QueuedConnection)
 
@@ -134,7 +145,7 @@ class ExtensionWorker(QObject):
         return self._app.h5_manager
 
     @property
-    def modules_manager(self) -> ModulesManager:
+    def modules_manager(self) -> 'ModulesManager':
         """ Convenience property"""
         return self._app.modules_manager
 
@@ -143,7 +154,7 @@ class ExtensionWorker(QObject):
         return self._app.settings
 
     @property
-    def module_and_data_saver(self) -> ScanSaver | LoggerSaver | OptimizerSaver:
+    def module_and_data_saver(self) -> SaverTypes:
         """ Convenience property"""
         return self._app.module_and_data_saver
 

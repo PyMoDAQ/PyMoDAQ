@@ -141,11 +141,11 @@ complexity, but actually helps to understand what each component is doing:
        SEND_INFO      = "send_info"
 
 **Dashboard example** – :class:`~pymodaq.utils.leco.rpc_method_definitions.DashboardMethods`
-contains ``GET_DEVICES``, ``GET_CONFIGURATIONS``, ``APPLY_CONFIGURATION``,
-``GET_PRESETS``, ``APPLY_PRESET``.
+contains ``GET_DEVICES``, ``GET_STATES``, ``APPLY_STATE``,
+``GET_EXPERIMENTS``, ``APPLY_EXPERIMENT``.
 :class:`~pymodaq.utils.leco.rpc_method_definitions.DashboardDirectorMethods`
-contains ``SEND_DEVICES``, ``SEND_CONFIGURATIONS``, ``SEND_PRESETS``,
-``APPLIED_CONFIGURATION_DONE``, ``APPLIED_PRESET_DONE``.
+contains ``SEND_DEVICES``, ``SEND_STATES``, ``SEND_EXPERIMENTS``,
+``APPLIED_STATE_DONE``, ``APPLIED_EXPERIMENT_DONE``.
 Both mirror each other in
 :class:`~pymodaq.utils.leco.pymodaq_listener.LECODashboardCommands`.
 
@@ -182,8 +182,8 @@ Qt thread.
            super().__init__(name, handler_class=MyActorHandler, **kwargs)
 
 **Dashboard example** – ``get_devices``,
-``get_configurations``, ``apply_configuration``, ``get_presets``,
-``apply_preset`` were added to ``ActorHandler``.  Each simply emits the matching
+``get_states``, ``apply_state``, ``get_experiments``,
+``apply_experiment`` were added to ``ActorHandler``.  Each simply emits the matching
 ``LECODashboardCommands`` on ``cmd_signal``:
 
 .. code-block:: python
@@ -191,9 +191,9 @@ Qt thread.
    def get_devices(self):
        self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.GET_DEVICES))
 
-   def apply_preset(self, preset: str):
+   def apply_experiment(self, experiment: str):
        self.signals.cmd_signal.emit(
-           ThreadCommand(LECODashboardCommands.APPLY_PRESET, attribute=preset)
+           ThreadCommand(LECODashboardCommands.APPLY_EXPERIMENT, attribute=experiment)
        )
 
    ...
@@ -244,14 +244,14 @@ your new commands:
            method=DashboardDirectorMethods.SEND_DEVICES,
            **binary_serialization_to_kwargs(command.attribute, data_key="data"),
        )
-   elif command.command == LECODashboardCommands.SEND_CONFIGURATIONS:
+   elif command.command == LECODashboardCommands.SEND_STATES:
        self.send_rpc_message_to_remote(
            method=DashboardDirectorMethods.SEND_CONFIGURATIONS,
-           configurations=command.attribute,   # plain list, no serialisation needed
+           states=command.attribute,   # plain list, no serialisation needed
        )
-   elif command.command == LECODashboardCommands.APPLIED_PRESET_DONE:
+   elif command.command == LECODashboardCommands.APPLIED_EXPERIMENT_DONE:
        self.send_rpc_message_to_remote(
-           method=DashboardDirectorMethods.APPLIED_PRESET_DONE,
+           method=DashboardDirectorMethods.APPLIED_EXPERIMENT_DONE,
            done=command.attribute,
        )
 
@@ -296,26 +296,26 @@ This slot runs in the Qt thread and is called whenever the background
            self._leco_commands_signal.emit(
                ThreadCommand(LECODashboardCommands.SEND_DEVICES, devices)
            )
-       elif status.command == LECODashboardCommands.GET_PRESETS:
+       elif status.command == LECODashboardCommands.GET_EXPERIMENTS:
            # returns immediately
            self._leco_commands_signal.emit(
-               ThreadCommand(LECODashboardCommands.SEND_PRESETS,
-                             self.preset_manager.entries)
+               ThreadCommand(LECODashboardCommands.SEND_EXPERIMENTS,
+                             self.experiment_manager.entries)
            )
-       elif status.command == LECODashboardCommands.APPLY_PRESET:
-           # asynchronous: preset loading triggers a callback that later emits
-           # APPLIED_PRESET_DONE once the preset has been loaded
-           preset = status.attribute
-           self._scripted_preset_load = True
-           self.preset_manager.execute_entry_base(preset)
+       elif status.command == LECODashboardCommands.APPLY_EXPERIMENT:
+           # asynchronous: experiment loading triggers a callback that later emits
+           # APPLIED_EXPERIMENT_DONE once the experiment has been loaded
+           experiment = status.attribute
+           self._scripted_experiment_load = True
+           self.experiment_manager.execute_entry_base(experiment)
        ...
    ...
-   def do_things_after_preset(self, preset_name: str):
+   def do_things_after_experiment_set(self, experiment_name: str):
         ...
-        # returns the loaded preset value here
-        if self._scripted_preset_load:
-            self._scripted_preset_load = False
-            self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.APPLIED_PRESET_DONE, True))
+        # returns the loaded experiment value here
+        if self._scripted_experiment_load:
+            self._scripted_experiment_load = False
+            self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.APPLIED_EXPERIMENT_DONE, True))
 
 Once all of that is done, your component is available through LECO with the sets or methods you defined.
 
@@ -343,7 +343,7 @@ The inheritance tree is::
    ├── LECODeviceWrapper          # adds settings management
    │   ├── LECOActuatorWrapper    # move commands & position callbacks
    │   └── LECODetectorWrapper    # snap/grab commands & data callbacks
-   └── LECODashboardWrapper       # preset/config/device-list commands
+   └── LECODashboardWrapper       # experiment/state/device-list commands
 
    Device[WrapperT]               # generic public interface
    ├── Actuator                   # wraps LECOActuatorWrapper
@@ -591,9 +591,9 @@ With the public classes in place, scripts are straightforward.  Calling
 
    from pymodaq.scripting import Actuator, Detector, Dashboard
 
-   # connect to a running Dashboard and load a preset
+   # connect to a running Dashboard and load an experiment
    dashboard = Dashboard()
-   dashboard.apply_preset('default').result()
+   dashboard.apply_experiment('default').result()
 
    # get all loaded modules as Actuator / Detector instances
    devices = dashboard.get_scripting_devices()

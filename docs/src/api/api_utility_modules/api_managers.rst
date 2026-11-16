@@ -90,3 +90,8 @@ API of the various managers, special classes easing the experimental orchestrati
 .. py:currentmodule:: pymodaq.utils.managers.state.state_manager
 
 .. autoclass:: StateManager
+
+.. py:currentmodule:: pymodaq.utils.dashboard_mixin
+
+.. autoclass:: DashboardMixin
+   :members:

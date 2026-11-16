@@ -155,9 +155,13 @@ class MenuButton(QtWidgets.QPushButton):
     def update_entries(self, add_menu_entries: list[str] | dict | str = None,):
         if add_menu_entries is None:
             add_menu_entries = []
-        # Create the nested menu
-        self.menu = IterableMenu('iterable', add_menu_entries, callable=self._add_menu_item_selected)
+        # Create the nested menu, owned by the button (setMenu does not take ownership)
+        old_menu = getattr(self, 'menu', None)
+        self.menu = IterableMenu('iterable', add_menu_entries, callable=self._add_menu_item_selected,
+                                 parent=self)
         self.setMenu(self.menu)
+        if isinstance(old_menu, QtWidgets.QMenu):
+            old_menu.deleteLater()
 
     def _add_menu_item_selected(self, name, path_tuple):
         """Called when a menu item is selected from the nested add menu."""

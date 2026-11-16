@@ -607,8 +607,15 @@ class H5Saver(H5SaverBase, QObject):
         QObject.__init__(self)
         H5SaverBase.__init__(self, *args, **kwargs)
 
-        self.settings.child('new_file').sigActivated.connect(lambda *_: self.new_file_sig.emit())
-        self.settings.child('show_file').sigActivated.connect(lambda *_: self.show_file_content())
+        # methods, not lambdas: a lambda connected to a Parameter would keep this object alive
+        self.settings.child('new_file').sigActivated.connect(self._emit_new_file)
+        self.settings.child('show_file').sigActivated.connect(self._show_file_content)
+
+    def _emit_new_file(self):
+        self.new_file_sig.emit()
+
+    def _show_file_content(self):
+        self.show_file_content()
 
     def close(self):
         self.close_file()

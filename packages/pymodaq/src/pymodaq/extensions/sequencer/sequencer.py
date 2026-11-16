@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional
 import yaml
 
 from pymodaq_gui.utils.app_worker import ExtensionWorker, SaverWorker
@@ -176,7 +177,7 @@ class Sequencer(CustomExt):
 
         self.create_dashboard_toolbar(add_break=False)
 
-    def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: bool = None):
+    def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: Optional[bool] = None):
         super().do_things_after_experiment_set(experiment_name, show_dashboard)
 
     def setup_actions(self):
@@ -288,6 +289,12 @@ class Sequencer(CustomExt):
             self.sequence_worker.stop("User prompted a quit of the Application, Stopping the Acquisition")
             return False
 
+        for sequence in self.sequences:
+            # else the class registry keeps the closed sequences (offered to the SequenceElt of a new Sequencer)
+            SequenceElt.unregister_sequence(sequence)
+            # a sequence is never quit itself: its actions would keep it (and the Sequencer) alive
+            sequence.delete_actions()
+            sequence.view.delete_actions()
         return True
 
 

@@ -13,7 +13,8 @@ from pymodaq_data import DataToExport
 from pymodaq_gui.managers.manager_base import ManagerActions
 from pymodaq_gui.utils.widgets.combo import ComboBox
 
-from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltBase, SeqEltFactory, ElementError
+from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltBase, SeqEltFactory, ElementError, \
+    SeqEltCategory
 from pymodaq.extensions.sequencer.utilities.widget_with_toolbar import WidgetWithToolbar
 from pymodaq_gui.utils.styling import ThemeColor
 
@@ -29,6 +30,7 @@ logger = set_logger(get_module_name(__file__))
 class StateElt(SeqEltBase):
 
     elt_name = 'state'
+    elt_category = SeqEltCategory.EXPERIMENT
     children_allowed = False
 
     def __init__(self, *args, **kwargs):
@@ -119,7 +121,9 @@ class StateElt(SeqEltBase):
 
     def _execute(self, dte: DataToExport = None):
         self.state_manager.entry = self.state
-        self.state_manager.execute_entry()
+        # the state is executed with the options saved in it (sequential/parallel, waiting for the modules or not),
+        # but never blocking this call: done_signal is emitted from the applied_entry signal
+        self.state_manager.execute_entry(block_caller=False)
 
     def _on_state_executed(self):
 

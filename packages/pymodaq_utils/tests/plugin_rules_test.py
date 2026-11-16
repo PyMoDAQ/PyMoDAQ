@@ -3,8 +3,8 @@ import textwrap
 
 import pytest
 
-from pymodaq_utils import plugin_rules as pr
-from pymodaq_utils.plugin_rules import Severity
+from pymodaq_utils.plugin_tools import rules as pr
+from pymodaq_utils.plugin_tools.rules import Severity
 
 PYPROJECT = '''
 [features]
@@ -162,6 +162,8 @@ def test_deprecated_api_of_actuators(tmp_path):
                 return self.current_position
             def move_Abs(self, value):
                 self.target_position = value
+            def move_Rel(self, value):
+                self.target_position = value
             def close(self): pass
             def ini_stage(self, controller=None):
                 return '', True
@@ -169,9 +171,26 @@ def test_deprecated_api_of_actuators(tmp_path):
     findings = pr.check_plugin_source(path, 'move', 'DAQ_Move_Foo', static_fallback=True)
     assert {'PMQ312', 'PMQ313', 'PMQ314'} <= codes(findings)
     assert codes(findings, Severity.ERROR) >= {'PMQ314'}
-    assert len([f for f in findings if f.code == 'PMQ312']) == 2  # check_position and move_Abs
-    # check_position is still accepted in place of get_actuator_value
+    assert len([f for f in findings if f.code == 'PMQ312']) == 3  # check_position, move_Abs and move_Rel
+    # the old names are still accepted in place of the mandatory methods
     assert 'PMQ306' not in codes(findings)
+
+
+def test_move_abs_and_move_rel_are_mandatory(tmp_path):
+    path = tmp_path / 'daq_move_Foo.py'
+    path.write_text(textwrap.dedent('''
+        from pymodaq.control_modules.move_utility_classes import DAQ_Move_base, comon_parameters
+
+        class DAQ_Move_Foo(DAQ_Move_base):
+            """doc"""
+            params = comon_parameters
+            def ini_stage(self, controller=None): return '', True
+            def get_actuator_value(self): pass
+            def close(self): pass
+        '''))
+    findings = pr.check_plugin_source(path, 'move', 'DAQ_Move_Foo', static_fallback=True)
+    messages = [f.message for f in findings if f.code == 'PMQ306']
+    assert any('move_abs' in m for m in messages) and any('move_rel' in m for m in messages)
 
 
 def test_comon_parameters_called_or_of_a_viewer_is_fine(tmp_path):
@@ -289,6 +308,18 @@ def test_python_code_rules(tmp_path):
     assert 'windll' in windows.message and '1 more' in windows.message
 
 
+def test_syntax_warning_names_the_file(tmp_path):
+    """An invalid escape sequence is warned about by python while the source is parsed: with the file name"""
+    import warnings
+    path = tmp_path / 'daq_move_Foo.py'
+    path.write_text('PATTERN = "\\."\n\n\nclass DAQ_Move_Foo:\n    """doc"""\n')
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always')
+        pr.check_plugin_source(path, 'move', 'DAQ_Move_Foo')
+    escapes = [w for w in caught if 'invalid escape sequence' in str(w.message)]
+    assert escapes and all(w.filename == str(path) and w.lineno == 1 for w in escapes)
+
+
 def test_noqa_on_leftovers_and_without_colon(tmp_path):
     root = tmp_path / 'pymodaq_plugins_foo'
     root.mkdir()
@@ -301,3 +332,40 @@ def test_noqa_on_leftovers_and_without_colon(tmp_path):
         '''))
     findings = [f for f in pr.check_leftovers('pymodaq_plugins_foo', root) if f.code == 'PMQ202']
     assert [f.line for f in findings] == [6]
+
+
+def test_finding_location_is_relative_to_the_package(tmp_path):
+    inside = tmp_path / 'pymodaq_plugins_xxx' / 'hardware' / 'driver.py'
+    finding = pr.Finding('PMQ317', Severity.WARNING, 'message', path=inside, line=5)
+    assert finding.location == 'hardware/driver.py:5'
+    assert pr.Finding('PMQ317', Severity.WARNING, 'message', path=tmp_path / 'other.py').location == 'other.py'
+
+
+def test_windows_only_code_is_not_reported_for_a_windows_only_package(tmp_path):
+    package = tmp_path / 'pymodaq_plugins_foo'
+    (package / 'hardware').mkdir(parents=True)
+    (package / 'daq_move_plugins').mkdir()
+    (package / 'hardware' / 'sdk.py').write_text('PATH = "C:\\\\Program Files\\\\Vendor"\n')
+    plugin = package / 'daq_move_plugins' / 'daq_move_Foo.py'
+    plugin.write_text("class DAQ_Move_Foo:\n    supported_platforms = ('win32',)\n")
+    assert not [f for f in pr.check_python_code(package) if f.code == 'PMQ317']
+    plugin.write_text("class DAQ_Move_Foo:\n    supported_platforms = ('win32', 'linux')\n")
+    assert [f for f in pr.check_python_code(package) if f.code == 'PMQ317']
+    plugin.write_text("class DAQ_Move_Foo:\n    pass\n")
+    assert [f for f in pr.check_python_code(package) if f.code == 'PMQ317']
+
+
+def test_windows_only_code_is_fine_in_the_modules_used_by_windows_only_instruments_only(tmp_path):
+    package = tmp_path / 'pymodaq_plugins_foo'
+    (package / 'hardware').mkdir(parents=True)
+    (package / 'daq_move_plugins').mkdir()
+    for name in ('kinesis', 'shared', 'other'):
+        (package / 'hardware' / f'{name}.py').write_text('PATH = "C:\\\\\\\\Program Files\\\\\\\\Vendor"\n')
+    (package / 'daq_move_plugins' / 'daq_move_Win.py').write_text(
+        "from pymodaq_plugins_foo.hardware.kinesis import PATH\nfrom ..hardware import shared\n"
+        "class DAQ_Move_Win:\n    supported_platforms = ('win32',)\n")
+    (package / 'daq_move_plugins' / 'daq_move_Any.py').write_text(
+        "from pymodaq_plugins_foo.hardware.other import PATH\nfrom pymodaq_plugins_foo.hardware import shared\n"
+        "class DAQ_Move_Any:\n    pass\n")
+    reported = {f.path.name for f in pr.check_python_code(package) if f.code == 'PMQ317'}
+    assert reported == {'shared.py', 'other.py'}

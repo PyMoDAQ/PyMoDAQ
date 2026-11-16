@@ -13,7 +13,6 @@ User's Guide
    user_folder/viewers_usage
    user_folder/extensions
    user_folder/configuration
-   user_folder/module_manager
    user_folder/dashboard_manager
    user_folder/leco
    user_folder/scripting

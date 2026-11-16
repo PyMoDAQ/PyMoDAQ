@@ -58,8 +58,8 @@ class LCD(QObject):
             self.labels.append('')
 
         vlayout = QtWidgets.QVBoxLayout()
-        hsplitter = QtWidgets.QSplitter()
-        vlayout.addWidget(hsplitter)
+        self.hsplitter = QtWidgets.QSplitter()
+        vlayout.addWidget(self.hsplitter)
         self.parent.setLayout(vlayout)
         self.viewer_widget = QtWidgets.QWidget()
         self.viewer0D = Viewer0D(self.viewer_widget)
@@ -88,10 +88,10 @@ class LCD(QObject):
 
         lcd_widget = QtWidgets.QWidget()
         lcd_widget.setLayout(vlayout)
-        hsplitter.addWidget(lcd_widget)
-        hsplitter.addWidget(self.viewer_widget)
+        self.hsplitter.addWidget(lcd_widget)
+        self.hsplitter.addWidget(self.viewer_widget)
         self.parent.resize(800, 500)
-        hsplitter.setSizes([400, 300])
+        self.hsplitter.setSizes([400, 300])
 
 
 if __name__ == '__main__':

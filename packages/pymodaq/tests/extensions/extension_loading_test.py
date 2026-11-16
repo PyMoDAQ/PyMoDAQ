@@ -1,47 +1,31 @@
 from qtpy import QtWidgets
 
-from pymodaq.utils.config import get_set_experiment_path
-from pymodaq.utils.gui_utils.loader_utils import create_extension
-from pymodaq_utils.config import GlobalConfig
-from pytest import fixture, mark
-from pymodaq.dashboard import create_load_dashboard, extensions
-
-import qt_themes
-
-experiment_path = get_set_experiment_path()
-config = GlobalConfig()
-
-@fixture
-def init_qt(qtbot):
-    qt_themes.set_theme(theme=config('gui', 'style', 'theme')[0],
-                        style=config('gui', 'style', 'style')[0])
-    return qtbot
-
-@fixture
-def dashboard(init_qt):
-    qtbot = init_qt
-    shared_ui, dashboard = create_load_dashboard()
-    qtbot.addWidget(shared_ui.parent)
-    qtbot.addWidget(dashboard.tree)
-    # dashboard.preset_manager.execute_entry()
-    yield dashboard, qtbot
-    dashboard.quit_fun()
-
+from pytest import mark
+from pymodaq.dashboard import extensions
+from pymodaq.utils.plugin_testing import loaded_extension
 
 
 class TestExtensions:
-    def test_load(self, dashboard):
-        dashboard, qtbot = dashboard
+    @mark.parametrize('ext_name', list(extensions))
+    def test_load(self, ext_name):
+        with loaded_extension(extensions[ext_name].klass) as (dashboard, ext):
+            QtWidgets.QApplication.processEvents()
 
-        for ext_name in extensions:
-            win_ext, ext = create_extension(dashboard, extensions[ext_name].klass)
-            # qtbot.addWidget(ext.parent)
-            # qtbot.addWidget(ext.tree)
-
-            ext.quit_fun()
+    @mark.parametrize('ext_name', list(extensions))
+    def test_load_with_an_experiment_applied(self, ext_name, monkeypatch):
+        """ As when the extension is opened from a Dashboard where an experiment is loaded: the experiment hook is
+        then called right after the UI is set up"""
+        from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager
+        monkeypatch.setattr(ExperimentManager, 'entry_applied', property(lambda self: True, lambda self, value: None))
+        with loaded_extension(extensions[ext_name].klass) as (dashboard, ext):
             QtWidgets.QApplication.processEvents()
 
 
-
-
-
+@mark.parametrize('ext_name', ['Scanner', 'Logger', 'Ramping'])
+def test_workflow_enabled_when_opened_with_an_experiment_applied(ext_name, monkeypatch):
+    """ These extensions enable their workflow actions in do_things_after_experiment_set: they must be usable at once"""
+    from pymodaq_gui.utils.custom_app import WorkFlowActions
+    from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager
+    monkeypatch.setattr(ExperimentManager, 'entry_applied', property(lambda self: True, lambda self, value: None))
+    with loaded_extension(extensions[ext_name].klass) as (dashboard, ext):
+        assert ext.is_action_enabled(WorkFlowActions.START)

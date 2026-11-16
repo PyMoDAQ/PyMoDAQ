@@ -8,6 +8,7 @@ numpydoc
 sphinx-datatables
 pyside6
 sphinx-design
+sphinx-llms-txt
 myst-parser
 sphinxcontrib-images
 sphinx-favicon

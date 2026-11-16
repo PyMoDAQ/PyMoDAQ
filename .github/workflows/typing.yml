@@ -1,0 +1,52 @@
+name: Type check
+
+# Limited type check: only the modules of the allow-list below are checked. Add a module to the list
+# once mypy is clean on it (see [tool.mypy] in pyproject.toml).
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'packages/**'
+      - '.github/workflows/typing.yml'
+      - 'pyproject.toml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mypy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v5.0.0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install mypy
+        run: pip install mypy
+
+      - name: Run mypy on the allow-list
+        run: >
+          mypy
+          packages/pymodaq_utils/src/pymodaq_utils/utils.py
+          packages/pymodaq_scripting/src/pymodaq_scripting/devices.py
+          packages/pymodaq/src/pymodaq/utils/data.py
+          packages/pymodaq/src/pymodaq/utils/custom_ext.py
+          packages/pymodaq/src/pymodaq/control_modules/plugin_base.py
+          packages/pymodaq/src/pymodaq/control_modules/viewer_utility_classes.py
+          packages/pymodaq_data/src/pymodaq_data/data.py
+          packages/pymodaq/src/pymodaq/control_modules/move_utility_classes.py
+          packages/pymodaq/src/pymodaq/utils/managers/modules/modules_manager.py
+          packages/pymodaq/src/pymodaq/utils/dashboard_mixin.py
+          packages/pymodaq_gui/src/pymodaq_gui/utils/custom_app.py
+          packages/pymodaq_gui/src/pymodaq_gui/managers/parameter_manager.py
+          packages/pymodaq_gui/src/pymodaq_gui/managers/action_manager.py
+          packages/pymodaq_gui/src/pymodaq_gui/parameter/utils.py
+          packages/pymodaq_gui/src/pymodaq_gui/config_saver_loader.py
+          packages/pymodaq_gui/src/pymodaq_gui/managers/config_manager.py
+          packages/pymodaq_gui/src/pymodaq_gui/managers/runner_thread_manager.py
+          packages/pymodaq_gui/src/pymodaq_gui/managers/settings/subentries.py

@@ -154,11 +154,10 @@ class UniformImageItem(PymodaqImage):
 
         if gotNewData:
             self.sigImageChanged.emit()
-        # Patching for people not using the last version of pyqtgraph
+        # Patching for people not using the last version of pyqtgraph (To be removed when 0.15.0 is released)
         if hasattr(self, "_defferedLevels") and self._defferedLevels is not None:
             self._deferredLevels = self._defferedLevels
             self._defferedLevels = None
-            print("Warning: you are using an old version of pyqtgraph, please update to the last version")
 
         if self._deferredLevels is not None:
             levels = self._deferredLevels

@@ -5,7 +5,7 @@ from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.config_saver_loader import ConfigSaverLoader
 
 from pymodaq.extensions.data_mixer.parser import (
-    extract_data_names, split_formulae, replace_names_in_formula)
+    extract_data_names, split_formulae, replace_names_in_formula, evaluate_formula)
 
 from pymodaq_utils.logger import set_logger, get_module_name
 
@@ -85,7 +85,7 @@ class DataMixerModelEquation(DataMixerModel):
         DataWithAxes: the results of the formula computation
         """
         formula_to_eval, names = replace_names_in_formula(formula)
-        dwa = eval(formula_to_eval)
+        dwa = evaluate_formula(formula_to_eval, dte)
         dwa.name = name
         return dwa
 

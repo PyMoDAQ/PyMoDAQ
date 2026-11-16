@@ -117,7 +117,7 @@ class DataToActuators(DataToExport):
     """
     mode: str
 
-    def __init__(self, *args, mode: MoveType=MoveType.REL, **kwargs):
+    def __init__(self, *args, mode: MoveType | str = MoveType.REL, **kwargs):
         if mode not in [MoveType.REL, MoveType.ABS]:
             user_warning('Incorrect mode for the actuators, '
                          'switching to default relative mode: rel')

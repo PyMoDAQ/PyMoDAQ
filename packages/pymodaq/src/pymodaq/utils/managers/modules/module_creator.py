@@ -386,6 +386,9 @@ class ModuleCreator:
                     if remove_dock_widgets:
                         dock.removeWidgets()
                     dock.close()
+                # its signals are connected to slots referencing the dashboard (and the module itself): left alive,
+                # the module would keep the whole dashboard alive
+                module.deleteLater()
             except Exception as e:
                 logger.exception(str(e))
 

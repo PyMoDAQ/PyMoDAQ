@@ -1,7 +1,7 @@
 from pathlib import Path
 from importlib import import_module
 from dataclasses import dataclass, Field, InitVar
-from typing import Tuple, Callable, TYPE_CHECKING, Any, Union, Iterable, Mapping
+from typing import Tuple, Callable, TYPE_CHECKING, Any, Union, Iterable, Mapping, Optional
 
 from qtpy import QtCore, QtWidgets
 
@@ -19,6 +19,7 @@ from pymodaq_gui.qt_utils import mkQApp
 from pymodaq_gui.utils.widgets import LabelWithFont
 from pymodaq.extensions.sequencer.utilities.widget_with_toolbar import WidgetWithToolbar
 from pymodaq_utils.abstract import abstract_attribute
+from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_gui.utils.styling import Font, ThemeColor
 
@@ -33,6 +34,14 @@ ser_factory = SerializableFactory()
 
 class ElementError(Exception):
     pass
+
+
+class SeqEltCategory(StrEnum):
+    """ Groups shown for elements in the "Add Element" menu """
+    ACTIONS = 'Actions'
+    STRUCTURE = 'Structure'
+    LOGIC = 'Logic'
+    EXPERIMENT = 'Experiment'
 
 
 def register_elements(parent_module_name: str = 'pymodaq.extensions.sequencer.utilities'):
@@ -71,6 +80,10 @@ class SeqEltBase(QtCore.QObject, ActionManager):
 
     children_allowed = False
     params = []
+
+    #: Group shown for this element in the "Add Element" menu.
+    #: Leave None to keep the element as a flat, top-level entry instead of forcing it into a group.
+    elt_category: Optional[SeqEltCategory] = None
 
     def __repr__(self):
         return f'{self.id} - {self.elt_name.capitalize()}'
@@ -517,4 +530,23 @@ class SeqEltFactory:
     def elements(self) -> list[str]:
         return [elt for elt in self.elements_registry.keys()]
 
+    def categorized_elt_names(self, exclude: Iterable[str] = ()) -> dict[str, Union[str, list]]:
+        """ Group registered elements by their declared ``elt_category`` for the Add Element menu
 
+        Elements that do not declare a category (``elt_category`` is ``None``) are kept as flat,
+        top-level entries rather than forced into a group.
+
+        Returns
+        -------
+        dict: suitable as the ``add_menu_entries``/``iterables`` of a MenuButton or IterableMenu
+        """
+        categorized: dict[str, Union[str, list]] = {}
+        for name, elt_cls in self.elements_registry.items():
+            if name in exclude:
+                continue
+            label = name.capitalize()
+            if elt_cls.elt_category is None:
+                categorized[label] = []
+            else:
+                categorized.setdefault(elt_cls.elt_category, []).append(label)
+        return categorized

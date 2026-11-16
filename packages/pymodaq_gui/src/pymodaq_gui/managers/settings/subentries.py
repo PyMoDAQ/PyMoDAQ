@@ -1,12 +1,10 @@
 from dataclasses import dataclass
-from pymodaq.control_modules.move_utility_classes import HW_SETTINGS_KEY as ACTUATOR_SETTINGS_KEY
 import time
-from typing import Callable, TYPE_CHECKING, Union, Tuple
+from typing import Callable, TYPE_CHECKING, Union, Tuple, Optional
 
 from qtpy import QtWidgets, QtCore
 from serializall import SerializableFactory
 
-from pymodaq.utils.managers.modules import ModuleType
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.abstract import abstract_attribute
@@ -24,7 +22,6 @@ ser_factory = SerializableFactory()
 if TYPE_CHECKING:
     from pymodaq_gui.managers.settings.utils import SettingsManagerModel
     from pymodaq_gui.managers.settings.settings_manager import SettingsManager
-    from pymodaq.dashboard import DashBoard
 
 
 class SubEntryError(Exception):
@@ -45,7 +42,7 @@ class SubEntry:
     module_name: str
     setting: ParameterWithPath
 
-    def __eq__(self, other: 'SubEntry'):
+    def __eq__(self, other: 'SubEntry') -> bool:  # type: ignore[override]
         return (self.entry_type == other.entry_type and
                 self.module_name == other.module_name and
                 self.setting == other.setting)
@@ -98,7 +95,7 @@ class SubEntryHandler(QtCore.QObject):
                  model: 'SettingsManagerModel',
                  settings: Parameter,
                  *args,
-                 ind_subentry: int = None,
+                 ind_subentry: Optional[int] = None,
                  **kwargs
                  ):
 
@@ -168,7 +165,7 @@ class SubEntryHandler(QtCore.QObject):
 class SubEntryHandlerFactory:
     """The factory class to get SubEntry handlers"""
 
-    handlers_registry = {}
+    handlers_registry: dict[str, type[SubEntryHandler]] = {}
 
     @classmethod
     def register_handler(cls) -> Callable:

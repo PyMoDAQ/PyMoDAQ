@@ -64,7 +64,7 @@ class PluginBase(QObject):
     self.ini_attributes() at the appropriate point in their own __init__.
     """
 
-    params = []
+    params: list[dict[str, Any]] = []
 
     def __init__(self, parent=None, params_state=None):
         QObject.__init__(self)
@@ -77,7 +77,7 @@ class PluginBase(QObject):
             elif isinstance(params_state, Parameter):
                 self.settings.restoreState(params_state.saveState())
         self.settings.sigTreeStateChanged.connect(self.send_param_status)
-        self.parent = parent
+        self.parent: Any = parent  # the worker (hides QObject.parent): emit_status uses its status_sig
         self.status = edict(info="", controller=None, initialized=False)
         self.controller: Any = None
         if parent is not None:
@@ -155,6 +155,14 @@ class PluginBase(QObject):
             path = settings_parameter_dict['path']
             param = settings_parameter_dict['param']
             change = settings_parameter_dict['change']
+            if change == 'activated':  # the button of an 'action' parameter has been clicked in the GUI
+                activated = self.settings.child(*path[1:])
+                if 'checked' in param.opts:  # a checkable button: tell the plugin if it is pressed or released
+                    activated.opts['checked'] = param.opts['checked']
+                # the slots connected to sigActivated change the state of the parameter (LED): the GUI must know
+                activated.activate()
+                self.commit_settings(param)
+                return
             try:
                 self.settings.sigTreeStateChanged.disconnect(self.send_param_status)
             except Exception:

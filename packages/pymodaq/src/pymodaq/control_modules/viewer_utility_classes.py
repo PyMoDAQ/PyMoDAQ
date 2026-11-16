@@ -2,7 +2,7 @@ from abc import abstractmethod
 
 HW_KIND = 'detector'
 HW_SETTINGS_KEY = f'{HW_KIND}_settings'
-from typing import Iterable, Union
+from typing import Any, Iterable, Optional, Union
 
 from pymodaq_data.data import DataToExport
 from pymodaq_gui.plotting.items.roi import RoiInfo
@@ -95,14 +95,25 @@ class DAQ_Viewer_base(PluginBase):
         --------
         send_param_status
     """
+    # The two following attributes are independent:
+    # hardware_averaging: each data emitted by the plugin is already the average of the Naverage ones requested in
+    #   grab_data. If False, the viewer averages them (also when the plugin streams), with the
+    #   standard error of the mean as `errors`. If True, the DAQ_Viewer cannot know the dispersion: the plugin should
+    #   fill the `errors` of the data it emits if the instrument provides them.
+    # live_mode_available: with live=True the viewer calls grab_data once and the plugin emits data until its stop
+    #   method is called. If False, the viewer calls grab_data again for each data.
     hardware_averaging = False
+    supported_platforms: Optional[tuple] = None  # systems the plugin works on, values of sys.platform ('win32', 'linux',
+    # 'darwin'). None: all of them. PyMoDAQ refuses to initialize the plugin on another system.
+    supported_architectures: Optional[tuple] = None  # processor architectures the plugin works on, values of
+    # platform.machine() (for instance ('aarch64', 'armv7l') for a Raspberry Pi). None: all of them.
     live_mode_available = False
     data_grabed_signal = Signal(list)  # will be deprecated use dte_signal
     data_grabed_signal_temp = Signal(list)  # will be deprecated use dte_signal_temp
     dte_signal = Signal(DataToExport)
     dte_signal_temp = Signal(DataToExport)
 
-    params = []
+    params: list[dict[str, Any]] = []
 
     def __init__(self, parent=None, params_state=None):
         super().__init__(parent, params_state)
@@ -217,4 +228,4 @@ class DAQ_Viewer_base(PluginBase):
         self.scan_parameters = scan_parameters
 
 if __name__ == '__main__':
-    test = DAQ_Viewer_base()
+    test = DAQ_Viewer_base()  # type: ignore[abstract]

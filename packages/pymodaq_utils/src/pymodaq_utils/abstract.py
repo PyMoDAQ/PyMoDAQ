@@ -10,7 +10,7 @@ See https://stackoverflow.com/a/50381071/8090831
 
 from abc import ABCMeta as NativeABCMeta
 from abc import abstractmethod
-from typing import cast, Any, Callable, TypeVar
+from typing import cast, Any, Callable, Optional, TypeVar
 
 
 R = TypeVar('R')
@@ -20,7 +20,11 @@ class DummyAttribute:
     pass
 
 
-def abstract_attribute(obj: Callable[[Any], R] = None) -> R:
+def abstract_attribute(obj: Optional[Callable[[Any], R]] = None) -> R:
+    """Declare an attribute that subclasses have to define, checked when instantiating (see ABCMeta)
+
+    Use it as a decorator on a property or call it without argument: ``name = abstract_attribute()``.
+    """
     _obj = cast(Any, obj)
     if obj is None:
         _obj = DummyAttribute()

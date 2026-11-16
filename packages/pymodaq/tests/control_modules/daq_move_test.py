@@ -10,7 +10,9 @@ from pymodaq.control_modules import daq_move as daqmv
 from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.move_utility_classes import HW_SETTINGS_KEY as ACTUATOR_SETTINGS_KEY
 from pymodaq.control_modules.utils import ControlModule
+from pymodaq.control_modules.thread_commands import ControlToHardwareMove
 
+from pymodaq_data import Q_
 from pymodaq_utils.config import GlobalConfig
 
 from pymodaq.utils.data import DataActuator
@@ -42,6 +44,7 @@ def ini_daq_move_ui(init_qt):
     prog = DAQ_Move(widget)
     widget.show()
     yield prog, qtbot, widget
+    prog.quit_fun()
     widget.close()
 
 
@@ -61,6 +64,48 @@ class TestMethods:
 
 
 class TestDAQMove:
+    def test_buttons_send_one_command(self, ini_daq_move_ui):
+        """Changing the actuator rebuilds the UI: buttons must not end up connected twice"""
+        daq_move, qtbot, widget = ini_daq_move_ui
+        daq_move.actuator = 'Mock'
+        with qtbot.waitSignal(daq_move.init_signal, timeout=10000):
+            daq_move.init_hardware_ui(True)
+
+        commands = []
+        daq_move.command_hardware.connect(lambda cmd: commands.append(cmd.command))
+        ui = daq_move.ui
+        ui.abs_value_sb_bis.setValue(5.)
+        for button, command in ((ui.find_home_pb, ControlToHardwareMove.MOVE_HOME),
+                                (ui.move_abs_pb, ControlToHardwareMove.MOVE_ABS),
+                                (ui.move_rel_plus_pb, ControlToHardwareMove.MOVE_REL),
+                                (ui.move_rel_minus_pb, ControlToHardwareMove.MOVE_REL),
+                                (ui.stop_pb, ControlToHardwareMove.STOP_MOTION)):
+            commands.clear()
+            button.click()
+            qtbot.wait(200)
+            assert commands.count(command) == 1
+        daq_move.quit_fun()
+
+    def test_plugin_sets_default_values(self, ini_daq_move_ui):
+        """The plugin can change the red, green and relative values of the UI with set_default_values"""
+        daq_move, qtbot, widget = ini_daq_move_ui
+        daq_move.actuator = 'Mock'
+        with qtbot.waitSignal(daq_move.init_signal, timeout=10000):
+            daq_move.init_hardware_ui(True)
+
+        plugin = daq_move.controller_and_thread.thread._hardwares[daq_move.title].plugin
+        red_value, green_value, relative_value = -3., 7., 0.25
+        plugin.set_default_values(red=red_value, green=green_value, relative=relative_value)
+        qtbot.wait(200)
+
+        assert daq_move.settings['main_settings', 'default_value_red'] == red_value
+        assert daq_move.settings['main_settings', 'default_value_green'] == green_value
+        assert daq_move.settings['main_settings', 'default_value_relative'] == relative_value
+        # the UI shows the values in its own unit
+        assert daq_move.ui.abs_value_sb_red.value() == approx(Q_(red_value, daq_move.units).m_as(daq_move.ui._unit))
+        assert daq_move.ui.abs_value_sb_green.value() == approx(Q_(green_value, daq_move.units).m_as(daq_move.ui._unit))
+        daq_move.quit_fun()
+
     def test_data_emit(self, ini_daq_move_ui):
         daq_move, qtbot, widget = ini_daq_move_ui
         daq_move.actuator = 'Mock'
@@ -92,7 +137,94 @@ class TestDAQMove:
                 thread.join(timeout=5.0)
         QtWidgets.QApplication.processEvents()
 
+    def test_axis_change_reads_the_position_of_the_new_axis(self, ini_daq_move_ui):
+        """The position of the new axis is asked after the axis was sent to the plugin thread, without a move
+
+        The hardware thread is not started: the commands are recorded where the module emits them (a real thread
+        sends a Parameter through a signal, and PySide6 6.11 aborts at random when its wrapper is deleted there).
+        """
+        daq_move, qtbot, widget = ini_daq_move_ui
+        daq_move.actuator = 'Mock'
+        sent = []
+        daq_move._update_settings_signal.connect(lambda change: sent.append(('update', change['param'].name())))
+        daq_move.command_hardware.connect(lambda cmd: sent.append((cmd.command,)))
+        second_axis = daq_move.axis_names[1]
+
+        daq_move.axis_name = second_axis  # not initialized: nothing to read
+        assert ('update', 'axis') in sent
+        assert (ControlToHardwareMove.GET_ACTUATOR_VALUE,) not in sent
+
+        sent.clear()
+        daq_move._controller_and_thread.initialized = True
+        try:
+            daq_move.axis_name = daq_move.axis_names[0]
+        finally:
+            daq_move._controller_and_thread.initialized = False
+        assert sent == [('update', 'axis'), (ControlToHardwareMove.GET_ACTUATOR_VALUE,)]
+
     def test_axis_management(self, ini_daq_move_ui):
         daq_move, qtbot, widget = ini_daq_move_ui
         daq_move.actuator = 'Mock'
         pass
+
+
+def test_continuous_save_toolbar_group(ini_daq_move_ui):
+    """DAQ_Move gets the same Continuous Save toolbar group as DAQ_Viewer, in one slot"""
+    daq_move, qtbot, widget = ini_daq_move_ui
+    ui = daq_move.ui
+
+    button = next(child for child in ui.toolbar.findChildren(QtWidgets.QToolButton)
+                  if child.defaultAction() is ui.get_action('continuous_save'))
+    assert [action.text() for action in button.menu().actions()] == ['New file', 'Browse file']
+    assert ui.get_action('continuous_save').isCheckable()
+
+
+class TestActuatorSelection:
+    @staticmethod
+    def menu_tree(menu):
+        """The menu as nested lists: the name of an action, or {submenu: [...]}"""
+        tree = []
+        for action in menu.actions():
+            if action.menu() is not None:
+                tree.append({action.text(): TestActuatorSelection.menu_tree(action.menu())})
+            else:
+                tree.append(action.text())
+        return tree
+
+    def test_actuators_are_grouped_in_the_menu_as_the_add_menus(self, ini_daq_move_ui):
+        actuator, qtbot, widget = ini_daq_move_ui
+        ui = actuator.ui
+        ui.actuators = ['PI', 'BSPiezoMirror', 'CookbookDll', 'TCPServer', 'Mock']
+
+        assert self.menu_tree(ui.actuator_selector.menu) == [
+            {'Remote': ['TCPServer']},
+            {'Mock': ['BSPiezoMirror', 'Mock', {'Cookbook': ['CookbookDll']}]},
+            {'Plugin': ['PI']},
+        ]
+        assert sorted(ui.actuators) == ['BSPiezoMirror', 'CookbookDll', 'Mock', 'PI', 'TCPServer']
+
+    def test_the_first_actuator_is_selected_and_shown_by_its_name(self, ini_daq_move_ui):
+        actuator, qtbot, widget = ini_daq_move_ui
+        ui = actuator.ui
+        ui.actuators = ['PI', 'CookbookDll']
+        assert ui.actuator == 'CookbookDll'  # the first one of the groups, as the menu shows them
+        assert ui.actuator_selector.text() == 'CookbookDll'
+
+    def test_choosing_an_actuator_is_sent_to_the_module(self, ini_daq_move_ui):
+        actuator, qtbot, widget = ini_daq_move_ui
+        ui = actuator.ui
+        ui.actuators = ['PI', 'CookbookDll']
+        with qtbot.waitSignal(ui.command_sig, timeout=1000) as blocker:
+            ui.actuator = 'PI'
+        assert blocker.args[0].attribute == 'PI'
+
+    def test_a_click_in_the_menu_chooses_the_actuator(self, ini_daq_move_ui):
+        actuator, qtbot, widget = ini_daq_move_ui
+        ui = actuator.ui
+        ui.actuators = ['PI', 'CookbookDll']
+        plugin_menu = next(action.menu() for action in ui.actuator_selector.menu.actions()
+                           if action.text() == 'Plugin')
+        with qtbot.waitSignal(ui.command_sig, timeout=1000) as blocker:
+            plugin_menu.actions()[0].trigger()
+        assert blocker.args[0].attribute == 'PI'
+        assert ui.actuator == 'PI'

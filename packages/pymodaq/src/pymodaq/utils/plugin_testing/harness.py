@@ -16,8 +16,9 @@ with the same public methods, and run the real plugin class against the fake::
         actuator.close()
 
 What the Dashboard does and the helpers reproduce: the target given to the plugin is expressed in the axis unit of the
-actuator, ``move_done_signal`` is only emitted after ``poll_moving`` has been called, and a slave axis of a multi-axes
-controller is given the controller of its master.
+actuator, ``move_done_signal`` is emitted after ``poll_moving`` has been called for ``move_abs`` and ``move_rel``
+but only by the plugin itself (``move_done``) for ``move_home``, and a slave axis of a multi-axes controller is given
+the controller of its master.
 """
 from time import perf_counter, sleep
 from typing import Callable, Optional, Union
@@ -146,8 +147,16 @@ def move_rel_and_wait(plugin, shift: Union[float, DataActuator], timeout_ms: int
 
 
 def move_home_and_wait(plugin, timeout_ms: int = TIMEOUT_MS) -> DataActuator:
-    """Send the actuator home and return the position reported at the end"""
-    return _move_and_wait(plugin, plugin.move_home, timeout_ms)
+    """Send the actuator home and return the position reported at the end
+
+    As in ``ActuatorWorker.move_home``, the position is not polled after ``move_home``: the plugin has to call
+    ``self.move_done()`` when the homing is finished, or a ``SignalTimeout`` is raised.
+    """
+    def start_home():
+        plugin.move_is_done = False
+        plugin.move_home()
+
+    return wait_for_signal(plugin.move_done_signal, start_home, timeout_ms)
 
 
 def grab_and_wait(plugin, naverage: int = 1, timeout_ms: int = TIMEOUT_MS, **kwargs) -> DataToExport:

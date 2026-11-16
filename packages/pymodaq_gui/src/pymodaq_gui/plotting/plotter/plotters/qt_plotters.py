@@ -67,9 +67,9 @@ class Plotter(PlotterBase):
 
 
 if __name__ == '__main__':
-    from pymodaq.utils import data as data_mod
+    from pymodaq_data import data as data_mod
     import numpy as np
-    from pymodaq.utils.math_utils import gauss1D
+    from pymodaq_utils.math_utils import gauss1D
 
 
     qapp = start_qapplication()

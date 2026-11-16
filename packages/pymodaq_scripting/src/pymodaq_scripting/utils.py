@@ -212,7 +212,7 @@ class LECOActuatorWrapper(LECODeviceWrapper):
 
         return future
 
-    def move_rel(self, value: 'DataActuator') -> Future['DataActuator']:
+    def move_rel(self, value: Union['DataActuator', int, float, str]) -> Future['DataActuator']:
         future = Future()
         self._move_done_future = future
 

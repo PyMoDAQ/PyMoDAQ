@@ -8,11 +8,11 @@ import numpy as np
 import pytest
 from pathlib import Path
 
-from pymodaq_data.h5modules import saving
+from pymodaq_data.h5modules import saving, backends
 from pymodaq_data.h5modules.data_saving import (
     DataLoader, AxisSaverLoader, DataSaverLoader, DataToExportSaver,
     DataEnlargeableSaver, DataToExportTimedSaver, SPECIAL_GROUP_NAMES, DataToExportExtendedSaver,
-    DataToExportEnlargeableSaver, DataExtendedSaver, DataLoader, BkgSaver, squeeze)
+    DataToExportEnlargeableSaver, DataExtendedSaver, DataLoader, BkgSaver, squeeze, DataBundle)
 from pymodaq_data.data import (Axis, DataWithAxes, DataSource, DataToExport, DataRaw,
                                DataDim, DataDistribution, Averaging)
 
@@ -92,6 +92,18 @@ def init_data_to_export():
     return data_to_export
 
 @pytest.fixture()
+def h5saver_swmr(tmp_path):
+    """H5SaverLowLevel on a fresh file opened with swmr_mode=True (h5py backend only),
+    with flushing on every write so tick_flush's effect is observable immediately."""
+    h5saver = saving.H5SaverLowLevel(backend='h5py')
+    h5saver.init_file(file_name=tmp_path.joinpath('h5file_swmr.h5'), new_file=True,
+                      swmr_mode=True)
+    h5saver.set_swmr_flush_interval(1)
+    yield h5saver
+    h5saver.close_file()
+
+
+@pytest.fixture()
 def create_h5_with_data_to_export(h5saver_lowlevel, init_data_to_export):
     dte = init_data_to_export
     data_saver = DataToExportSaver(h5saver_lowlevel)
@@ -131,6 +143,41 @@ class TestAxisSaverLoader:
             else:
                 assert axis_node.attrs[attr] == attrs_values[ind]
         assert axis_node.read() == pytest.approx(axis.get_data())
+
+    def test_axis_extra_attributes(self, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
+        axis_saver = AxisSaverLoader(h5saver)
+        axis = Axis('Photon energy', 'eV', data=np.linspace(1.5, 4., 20), index=0,
+                    quantity_kind='http://qudt.org/vocab/quantitykind/Energy',
+                    unit_iri='http://qudt.org/vocab/unit/EV')
+        assert axis.extra_attributes == ['quantity_kind', 'unit_iri']
+
+        axis_node = axis_saver.add_axis(h5saver.raw_group, axis)
+        assert axis_node.attrs['quantity_kind'] == axis.quantity_kind
+        assert axis_node.attrs['unit_iri'] == axis.unit_iri
+
+        loaded = axis_saver.load_axis(axis_node)
+        assert loaded.extra_attributes == ['quantity_kind', 'unit_iri']
+        assert loaded.quantity_kind == axis.quantity_kind
+        assert loaded.unit_iri == axis.unit_iri
+        assert loaded == axis
+
+    def test_axis_without_extra_attributes_has_none_after_loading(self, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
+        axis_saver = AxisSaverLoader(h5saver)
+        axis = Axis('x', 'ms', data=np.linspace(0, 1, 5), index=0)
+        loaded = axis_saver.load_axis(axis_saver.add_axis(h5saver.raw_group, axis))
+        assert loaded.extra_attributes == []
+
+    def test_axis_extra_attributes_through_data_saver(self, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
+        axis = Axis('wavelength', 'nm', data=np.linspace(400, 700, 30), index=0,
+                    quantity_kind='Wavelength')
+        dwa = DataRaw('spectrum', data=[np.arange(30.)], axes=[axis])
+        group = h5saver.get_set_group(h5saver.raw_group, 'det')
+        DataToExportSaver(h5saver).add_data(group, DataToExport('dte', data=[dwa]))
+        loaded = DataLoader(h5saver).load_all('/RawData', DataToExport('all'))
+        assert loaded[0].axes[0].quantity_kind == 'Wavelength'
 
     def test_load_axis(self, h5saver_lowlevel):
         h5saver = h5saver_lowlevel
@@ -576,9 +623,115 @@ class TestDataExtendedSaver:
         assert np.all(np.isnan(arr[2]))
 
 
+class TestUnitsAndExtraAttributesInAllSavers:
+    """The units and the extra attributes of a DataWithAxes must be written by every saver"""
+
+    @staticmethod
+    def _get_data():
+        data = DataRaw(name='mydata', data=[DATA0D for _ in range(2)], labels=['mylabel1', 'mylabel2'],
+                       units='V', dim='Data0D', distribution='uniform')
+        data.add_extra_attribute(semantic_iri='https://example.org/term', another=123)
+        return data
+
+    @staticmethod
+    def _check_attrs(node):
+        assert node.attrs['units'] == 'V'
+        assert node.attrs['semantic_iri'] == 'https://example.org/term'
+        assert node.attrs['another'] == 123
+
+    def test_simple_saver(self, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
+        DataSaverLoader(h5saver).add_data(h5saver.raw_group, self._get_data())
+        self._check_attrs(h5saver.get_node('/RawData/Data00'))
+
+    def test_extended_saver(self, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
+        data_saver = DataExtendedSaver(h5saver, (5,))
+        data = self._get_data()
+        data_saver.add_data(h5saver.raw_group, data, (0,))
+        self._check_attrs(h5saver.get_node('/RawData/Data00'))
+        self._check_attrs(h5saver.get_node('/RawData/Data01'))
+
+    def test_enlargeable_saver(self, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
+        data_saver = DataEnlargeableSaver(h5saver)
+        data_saver.add_data(h5saver.raw_group, self._get_data(), axis_values=(0.,))
+        self._check_attrs(h5saver.get_node('/RawData/EnlData00'))
+        self._check_attrs(h5saver.get_node('/RawData/EnlData01'))
+
+    def test_extended_saver_load_back(self, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
+        data_saver = DataExtendedSaver(h5saver, (3,))
+        data = self._get_data()
+        for ind in range(3):
+            data_saver.add_data(h5saver.raw_group, data, (ind,))
+        loaded = DataLoader(h5saver).load_data('/RawData/Data00', load_all=True)
+        assert loaded.units == 'V'
+        assert loaded.semantic_iri == 'https://example.org/term'
+        assert loaded.another == 123
+
+
 class TestDataToExportSaver:
     def test_save(self, create_h5_with_data_to_export):
         h5saver = create_h5_with_data_to_export
+
+
+class TestDataToExportSaverSettings:
+    """settings_as_xml of add_data is deprecated and ignored (issue #1489): nothing is written,
+    neither on the group nor on the data arrays (it used to land there as 'settings]')"""
+
+    SETTINGS = '<settings>some xml</settings>'
+
+    @staticmethod
+    def _data_nodes(h5saver, where):
+        return [node for node in h5saver.walk_nodes(where)
+                if 'data_type' in node.attrs and
+                node.attrs['data_type'] in ('data', 'Data', 'data_enlargeable', 'EnlData')]
+
+    @pytest.mark.parametrize('saver_kind', ['plain', 'enlargeable', 'timed', 'extended', 'bundle'])
+    def test_settings_deprecated_and_ignored(self, h5saver_lowlevel, init_data_to_export, saver_kind):
+        h5saver = h5saver_lowlevel
+        det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
+        with pytest.warns(DeprecationWarning, match='settings_as_xml'):
+            if saver_kind == 'plain':
+                DataToExportSaver(h5saver).add_data(det_group, init_data_to_export,
+                                                    settings_as_xml=self.SETTINGS)
+            elif saver_kind == 'enlargeable':
+                DataToExportEnlargeableSaver(h5saver).add_data(det_group, init_data_to_export,
+                                                               axis_values=[1.],
+                                                               settings_as_xml=self.SETTINGS)
+            elif saver_kind == 'timed':
+                DataToExportTimedSaver(h5saver).add_data(det_group, init_data_to_export,
+                                                         settings_as_xml=self.SETTINGS)
+            elif saver_kind == 'extended':
+                DataToExportExtendedSaver(h5saver, extended_shape=(3,)).add_data(
+                    det_group, init_data_to_export, indexes=(0,), settings_as_xml=self.SETTINGS)
+            else:
+                DataToExportSaver(h5saver).add_data_bundle(
+                    DataBundle(dte=init_data_to_export, node=det_group, settings=self.SETTINGS))
+
+        assert 'settings' not in h5saver.get_node(det_group).attrs.attrs_name
+        data_nodes = self._data_nodes(h5saver, det_group)
+        assert len(data_nodes) > 0
+        for node in data_nodes:
+            assert 'settings]' not in node.attrs.attrs_name
+            assert 'settings' not in node.attrs.attrs_name
+
+    def test_module_settings_untouched(self, h5saver_lowlevel, init_data_to_export):
+        h5saver = h5saver_lowlevel
+        det_group = h5saver.add_det_group(h5saver.raw_group, title='MyDet',
+                                          settings_as_xml='<All_settings/>')
+        with pytest.warns(DeprecationWarning):
+            DataToExportSaver(h5saver).add_data(det_group, init_data_to_export,
+                                                settings_as_xml=self.SETTINGS)
+        assert h5saver.get_node(det_group).attrs['settings'] == '<All_settings/>'
+
+    def test_no_warning_without_settings(self, h5saver_lowlevel, init_data_to_export, recwarn):
+        h5saver = h5saver_lowlevel
+        det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
+        DataToExportSaver(h5saver).add_data(det_group, init_data_to_export)
+        assert not [w for w in recwarn if issubclass(w.category, DeprecationWarning)
+                    and 'settings_as_xml' in str(w.message)]
 
 
 class TestDataToExportEnlargeableSaver:
@@ -852,3 +1005,53 @@ class TestDataLoader:
                     dwa_loaded = data_loader.load_data_from_name_origin(
                         name='aunknown name', origin='and_origin',
                     )
+
+
+@pytest.mark.skipif('h5py' not in backends.backends_available,
+                    reason='SWMR is only supported with the h5py backend')
+class TestSWMRActivation:
+    """DataToExportEnlargeableSaver/TimedSaver/ExtendedSaver must actually turn on
+    SWMR writer mode (via the shared _activate_swmr_and_tick_flush) once their file
+    was opened with swmr_mode=True, not just leave it 'prepared' - otherwise a
+    concurrent reader opening the file in SWMR mode sees nothing, and periodic
+    flushing (tick_flush) never kicks in since it no-ops while SWMR is inactive."""
+
+    def test_enlargeable_saver_activates_swmr(self, h5saver_swmr, init_data_to_export):
+        h5saver = h5saver_swmr
+        assert not h5saver.is_swmr_active
+
+        det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
+        data_saver = DataToExportEnlargeableSaver(h5saver)
+        data_saver.add_data(det_group, init_data_to_export, axis_value=1.)
+
+        assert h5saver.is_swmr_active
+
+    def test_timed_saver_activates_swmr(self, h5saver_swmr, init_data_to_export):
+        h5saver = h5saver_swmr
+        assert not h5saver.is_swmr_active
+
+        det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
+        data_saver = DataToExportTimedSaver(h5saver)
+        data_saver.add_data(det_group, init_data_to_export)
+
+        assert h5saver.is_swmr_active
+
+    def test_extended_saver_activates_swmr(self, h5saver_swmr, init_data_to_export):
+        h5saver = h5saver_swmr
+        assert not h5saver.is_swmr_active
+
+        det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
+        data_saver = DataToExportExtendedSaver(h5saver, extended_shape=(5,))
+        data_saver.add_data(det_group, init_data_to_export, indexes=(0,))
+
+        assert h5saver.is_swmr_active
+
+    def test_not_activated_without_swmr_mode(self, h5saver_lowlevel, init_data_to_export):
+        """A file not opened with swmr_mode=True must stay untouched: no attempt to
+        enable_swmr (which would raise), tick_flush stays a no-op."""
+        h5saver = h5saver_lowlevel
+        det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
+        data_saver = DataToExportEnlargeableSaver(h5saver)
+        data_saver.add_data(det_group, init_data_to_export, axis_value=1.)
+
+        assert not h5saver.is_swmr_active

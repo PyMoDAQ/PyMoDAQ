@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Optional
 
 from qtpy import QtCore
 
@@ -51,30 +51,35 @@ class WorkerThreadManager(QtCore.QObject):
         super().__init__(parent)
 
         self.worker_threads: dict[str, QtCore.QThread] = {}
-        self.workers: dict[str, ThreadWorker] = {}
+        self.workers: dict[str, Optional[ThreadWorker]] = {}
         self.n_jobs: dict[str, int] = {}
 
-        self.current_name: str = None
+        self.current_name: Optional[str] = None
 
     @property
-    def worker_thread(self) -> QtCore.QThread:
+    def worker_thread(self) -> Optional[QtCore.QThread]:
+        if self.current_name is None:
+            return None
         return self.worker_threads.get(self.current_name, None)
 
     @property
-    def worker(self) -> ThreadWorker:
+    def worker(self) -> Optional[ThreadWorker]:
+        if self.current_name is None:
+            return None
         return self.workers.get(self.current_name, None)
 
-    def get_worker(self, name: str) -> ThreadWorker:
+    def get_worker(self, name: str) -> Optional[ThreadWorker]:
         return self.workers.get(name, None)
 
-    def get_thread(self, name: str) -> QtCore.QThread:
+    def get_thread(self, name: str) -> Optional[QtCore.QThread]:
         return self.worker_threads.get(name, None)
 
     def create_thread_for_worker(self, name: str,
-                                 worker: ThreadWorker,
-                                 delete_if_exists=True,
-                                 start_thread=False,
-                                 thread: QtCore.QThread = None) -> QtCore.QThread:
+                                 worker: Optional[ThreadWorker],
+                                 delete_if_exists: bool = True,
+                                 start_thread: bool = False,
+                                 thread: Optional[QtCore.QThread] = None
+                                 ) -> Optional[QtCore.QThread]:
         """ Create a new thread (or return an existing one) for a worker, and move the worker to it
         I
         t is up to you to connect the worker methods with your main app using Signal/Slot connections
@@ -91,7 +96,8 @@ class WorkerThreadManager(QtCore.QObject):
                 thread = QtCore.QThread()
             self.worker_threads[name] = thread
             self.workers[name] = worker
-            self.workers[name].moveToThread(self.worker_threads[name])
+            if worker is not None:
+                worker.moveToThread(thread)
 
         self.n_jobs[name] = 0
 
@@ -100,35 +106,36 @@ class WorkerThreadManager(QtCore.QObject):
 
         return self.worker_threads.get(name)
 
-    def exit_worker_threads(self, delete_worker=False):
+    def exit_worker_threads(self, delete_worker: bool = False) -> None:
         while len(self.worker_threads) > 0:
             self.exit_worker_thread(self.get_last_name(),
                                     delete_worker=delete_worker)
 
-    def exit_runner_thread(self, duration: int = 5000):
+    def exit_runner_thread(self, duration: int = 5000) -> None:
         """ for back compatibility """
         self.exit_worker_thread(self.current_name, duration)
 
     @property
-    def runner_thread(self) -> QtCore.QThread:
+    def runner_thread(self) -> Optional[QtCore.QThread]:
         """ for back compatibility """
-        return self.get_thread(self.get_last_name())
+        last_name = self.get_last_name()
+        return None if last_name is None else self.get_thread(last_name)
 
     @runner_thread.setter
-    def runner_thread(self, runner: QtCore.QThread):
+    def runner_thread(self, runner: QtCore.QThread) -> None:
         self.create_thread_for_worker('default', None,
                                       delete_if_exists=False,
                                       start_thread=False,
                                       thread=runner)
 
     def exit_worker_thread(self,
-                           runner_name: str = None,
-                           duration : int = 5000,
-                           delete_worker=False):
+                           runner_name: Optional[str] = None,
+                           duration: int = 5000,
+                           delete_worker: bool = False) -> None:
         if runner_name is None:
             runner_name = self.current_name
-        runner_thread = self.worker_threads.pop(runner_name, None)
-        worker = self.workers.pop(runner_name, None)
+        runner_thread = self.worker_threads.pop(runner_name, None) if runner_name is not None else None
+        worker = self.workers.pop(runner_name, None) if runner_name is not None else None
         if runner_thread is not None:
             runner_thread.quit()
             terminated = runner_thread.wait(duration)
@@ -136,7 +143,7 @@ class WorkerThreadManager(QtCore.QObject):
                 runner_thread.terminate()
                 runner_thread.wait()
             runner_thread.deleteLater()
-            if delete_worker:
+            if delete_worker and worker is not None:
                 worker.deleteLater()
         self.current_name = self.get_last_name()
 
@@ -147,7 +154,9 @@ class WorkerThreadManager(QtCore.QObject):
         else:
             return None
 
-    def start_thread(self, name: str = None):
+    def start_thread(self, name: Optional[str] = None) -> None:
         if name is None:
             name = self.current_name
-        self.get_thread(name).start()
+        thread = self.get_thread(name) if name is not None else None
+        if thread is not None:
+            thread.start()

@@ -24,9 +24,8 @@ class AddButtonPlaceholder(SeqEltBase):
 
     def create_widget(self, parent=None) -> QtWidgets.QWidget:
         return MenuButton('Add Element',
-                          [elt.capitalize() for elt in seq_factory.elements if not
-                          (elt == AddButtonPlaceholder.elt_name or
-                           elt == RootElt.elt_name)],
+                          seq_factory.categorized_elt_names(
+                              exclude=(AddButtonPlaceholder.elt_name, RootElt.elt_name)),
                           update_button_text=False,
                           parent=parent)
 

@@ -107,9 +107,9 @@ __ https://github.com/PyMoDAQ/PyMoDAQ/
 
 .. note::
 	The important branches (and naming rules) of the PyMoDAQ repository are as follow:
-		* **4.4.x** is the last stable version (in october 2024 :) ). It will remain as a long term support version. Pull request on this branch are just for bug fixes. If you update the documentation in this branch, it will update the 4.4.x version of the documentation.
-		* **5.0.x** when it's available as a stable release.
-		* **5.0.x_dev** is the last development version as mentionned previously updating the documentation in this branch only update the corresponding version of the website documentation. Improvements and new features should be send on this branch. The owner of the repository will test all the changes that has been suggested in the corresponding dev branch (ie: 5.0.x_dev) before sending them into the stable branch (ie: 5.0.x)
+		* **5.3.x** is the last stable version (in october 2026 :) ). Pull request on this branch are just for bug fixes. If you update the documentation in this branch, it will update the 5.3.x version of the documentation.
+		* **5.4.x** when it's available as a stable release.
+		* **dev** is the last development version as mentionned previously updating the documentation in this branch only updates the corresponding version of the website documentation. Improvements and new features should be sent to this branch. The owner of the repository will test all the changes that have been suggested in the dev branch before sending them into the stable branch (ie: 5.4.x)
 
 .. note::
 	Here is how to check the different versions of the documentation on the website :
@@ -180,7 +180,7 @@ Let’s take a practical case, and suppose we want to add a tutorial about "How 
 .. figure:: /image/write_documentation/sphinx_source_directory.svg
     :width: 200
 
-    Sphinx source directory. It contains *index.rst* which defines the welcome page of the website and the table of contents. It contains also the *conf.py* file which defines the configuration of Sphinx. In the subfolders are others .rst file defining other pages. The /image folder is where one can store the images that are included in the pages.
+    Sphinx source directory. It contains *index.rst* which defines the welcome page of the website and the table of contents. It contains also the *conf.py* file which defines the configuration of Sphinx. In the subfolders are other .rst files defining other pages. The /image folder is where one can store the images that are included in the pages.
 
 The *index.rst* file defines the welcome page of the website, add also the table of contents that you see on the left column.
 
@@ -189,7 +189,7 @@ The *index.rst* file defines the welcome page of the website, add also the table
 
     In the *index.rst* file, the toctree tag defines the first level of the table of contents.
 
-We clearly have to go in the *tutorial* folder. Here we found the *plugin_development.rst* file where is written the tutorial "Story of an instrument plugin development".
+We clearly have to go into the *tutorial* folder. Here we find the *plugin_development.rst* file where the tutorial "Story of an instrument plugin development" is written.
 
 Let’s just create a new .rst file named *write_documentation.rst*. We will copy the introduction of the other file, just replacing the name of the label (first line) and the title.
 

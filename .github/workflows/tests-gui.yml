@@ -3,16 +3,20 @@ name: Test for pymodaq_gui
 on:
   workflow_dispatch:
   workflow_call:
+  schedule:
+    - cron: '0 3 * * 0'  # every Sunday: the whole test matrix
 
   pull_request:
     paths:
       - 'packages/pymodaq_gui/**'
+      - '.github/workflows/tests-gui.yml'
     branches:
     - '*'
     - '!badges' # to exclude execution if someone PR on this branch (shouldn't happen)
   push:
     paths:
       - 'packages/pymodaq_gui/**'
+      - '.github/workflows/tests-gui.yml'
     branches:
     - '*'
     - '!badges' # to exclude execution if someone pushes on this branch (shouldn't happen)
@@ -20,19 +24,21 @@ on:
 concurrency:
   # github.workflow: name of the workflow
   # github.event.pull_request.number || github.ref: pull request number or branch name if not a pull request
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  # the weekly run has its own group: a push on the same branch must not cancel it, a cancelled run skips the badge update
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ github.event_name == 'schedule' && 'weekly' || 'push' }}
   # Cancel in-progress runs when a new workflow with the same group name is triggered
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name != 'schedule' }}
 
 jobs:
   tests:
     continue-on-error: true
+    timeout-minutes: 45  # a hanging job must fail instead of blocking the badge update for hours
     strategy:
       fail-fast: false
-      matrix:
-        os: ["ubuntu-latest", "windows-latest"]
-        python-version: ["3.13", "3.12"]#["3.10", "3.11", "3.12", "3.13"]
-        qt-backend: ["pyside6"]#["pyqt5", "pyqt6", "pyside6"]
+      # pull requests and pushes: the two ends of the supported Python range on PyQt6, one PySide6 job (the slowest)
+      # and one Windows job. The whole matrix runs every week (schedule) and on manual dispatch.
+      matrix: >-
+        ${{ fromJSON((github.event_name == 'pull_request' || github.event_name == 'push') && '{"include": [{"os": "ubuntu-latest", "python-version": "3.10", "qt-backend": "pyqt6"}, {"os": "ubuntu-latest", "python-version": "3.13", "qt-backend": "pyqt6"}, {"os": "ubuntu-latest", "python-version": "3.12", "qt-backend": "pyside6"}, {"os": "windows-latest", "python-version": "3.12", "qt-backend": "pyqt6"}]}' || '{"os": ["ubuntu-latest", "windows-latest"], "python-version": ["3.10", "3.11", "3.12", "3.13"], "qt-backend": ["pyqt6", "pyside6"]}') }}
     runs-on: ${{ matrix.os }}
     env:
       PYTEST_QT_API: ${{ matrix.qt-backend }}

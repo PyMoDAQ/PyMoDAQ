@@ -16,6 +16,7 @@ import numpy as np
 
 from pymodaq_utils.abstract import ABCMeta, abstract_attribute
 from pymodaq_utils.enums import enum_checker
+from pymodaq_utils.warnings import deprecation_msg
 from pymodaq_data.data import (Axis, DataDim, DataWithAxes, DataToExport, DataDistribution,
                                DataDimError, squeeze)
 from .saving import DataType, H5SaverLowLevel
@@ -36,7 +37,7 @@ class DataBundle:
     """Convenience class to hold data to be saved or plotted"""
     dte: DataToExport
     node: str = None
-    settings: str = ''
+    settings: str = ''  # deprecated and ignored: settings are written when the group is created
     indexes: list[int] = None  # indexes within an eventual Extended array (see DAQ_Scan)
     axis_values: list[float | np.ndarray] = None  # axis values within an eventual Enlargeable array (see Optimizers)
     distribution: DataDistribution = field(
@@ -222,6 +223,13 @@ class DataManagement(metaclass=ABCMeta):
         return nodes
 
 
+#: attributes written by PyMoDAQ on an axis node; any other attribute is an extra attribute of the Axis
+AXIS_NODE_ATTRIBUTES = ('TITLE', 'CLASS', 'VERSION', 'backend', 'data_dimension', 'data_type',
+                        'distribution', 'dtype', 'subdtype', 'shape', 'size', 'EXTDIM', 'path',
+                        'timestamp', 'label', 'units', 'index', 'offset', 'scaling',
+                        'spread_order')
+
+
 class AxisSaverLoader(DataManagement):
     """Specialized Object to save and load Axis object to and from a h5file
 
@@ -252,13 +260,15 @@ class AxisSaverLoader(DataManagement):
         enlargeable: bool
             Specify if the underlying array will be enlargebale
         """
+        metadata = dict(size=axis.size, label=axis.label, units=axis.units,
+                        index=axis.index, offset=axis.offset, scaling=axis.scaling,
+                        distribution='uniform' if axis.is_axis_linear() else 'spread',
+                        spread_order=axis.spread_order)
+        for name in axis.extra_attributes:
+            metadata[name] = getattr(axis, name)
         array = self._h5saver.add_array(where, self._get_next_node_name(where), self.data_type, title=axis.label,
                                         array_to_save=axis.get_data(), data_dimension=DataDim['Data1D'],
-                                        enlargeable=enlargeable,
-                                        metadata=dict(size=axis.size, label=axis.label, units=axis.units,
-                                                      index=axis.index, offset=axis.offset, scaling=axis.scaling,
-                                                      distribution='uniform' if axis.is_axis_linear() else 'spread',
-                                                      spread_order=axis.spread_order))
+                                        enlargeable=enlargeable, metadata=metadata)
         return array
 
     def load_axis(self, where: Union[Node, str]) -> Axis:
@@ -276,9 +286,12 @@ class AxisSaverLoader(DataManagement):
         axis_node = self._get_node(where)
         if not self._is_node_of_data_type(axis_node):
             raise AxisError(f'Could not create an Axis object from this node: {axis_node}')
+        extra_attributes = axis_node.attrs.to_dict()
+        for name in AXIS_NODE_ATTRIBUTES:
+            extra_attributes.pop(name, None)
         return Axis(label=axis_node.attrs['label'], units=axis_node.attrs['units'],
                     data=squeeze(axis_node.read()), index=axis_node.attrs['index'],
-                    spread_order=axis_node.attrs['spread_order'])
+                    spread_order=axis_node.attrs['spread_order'], **extra_attributes)
 
     def get_axes(self, where: Union[Node, str]) -> List[Axis]:
         """Return a list of Axis objects from the Axis Nodes hanging from (or among) a given Node
@@ -337,6 +350,31 @@ class DataSaverLoader(DataManagement):
         """ Get the opened status of the underlying hdf5 file"""
         return self._h5saver.isopen()
 
+    @staticmethod
+    def _get_data_metadata(data: DataWithAxes, ind_data: int, **metadata) -> dict:
+        """Metadata saved as attributes of the h5 array holding the ind_data-th array of a DataWithAxes
+
+        Common to all the savers so that they all write the same attributes: the ones listed below, the
+        ``units`` of the data and the values of its ``extra_attributes`` (see
+        :meth:`DataWithAxes.add_extra_attribute`).
+
+        Parameters
+        ----------
+        data: DataWithAxes
+        ind_data: int
+            index of the array within the data
+        metadata: dict
+            specific entries (``nav_indexes``, ``distribution``...), they take precedence over the defaults
+        """
+        meta = dict(timestamp=data.timestamp, label=data.labels[ind_data],
+                    source=data.source.name, distribution=data.distribution.name,
+                    origin=data.origin, units=data.units,
+                    nav_indexes=tuple(data.nav_indexes) if data.nav_indexes is not None else None)
+        meta.update(metadata)
+        for name in data.extra_attributes:
+            meta[name] = getattr(data, name)
+        return meta
+
     def add_data(self, where: Union[Node, str], data: DataWithAxes, save_axes=True, **kwargs):
         """Adds Array nodes to a given location adding eventually axes as others nodes and metadata
 
@@ -349,15 +387,7 @@ class DataSaverLoader(DataManagement):
         """
 
         for ind_data in range(len(data)):
-            metadata = dict(timestamp=data.timestamp, label=data.labels[ind_data],
-                            source=data.source.name, distribution=data.distribution.name,
-                            origin=data.origin,
-                            units=data.units,
-                            nav_indexes=tuple(data.nav_indexes)
-                            if data.nav_indexes is not None else None)
-            metadata.update(kwargs)
-            for name in data.extra_attributes:
-                metadata[name] = getattr(data, name)
+            metadata = self._get_data_metadata(data, ind_data, **kwargs)
             self._h5saver.add_array(where, self._get_next_node_name(where), self.data_type,
                                     title=data.name, array_to_save=data[ind_data],
                                     data_dimension=data.dim.name, metadata=metadata)
@@ -628,12 +658,9 @@ class DataEnlargeableSaver(DataSaverLoader):
                                         array_type=data[ind_data].dtype,
                                         enlargeable=True,
                                         data_dimension=data.dim.name,
-                                        metadata=dict(timestamp=data.timestamp,
-                                                      label=data.labels[ind_data],
-                                                      source=data.source.name,
-                                                      distribution='spread',
-                                                      origin=data.origin,
-                                                      nav_indexes=tuple(nav_indexes)))
+                                        metadata=self._get_data_metadata(data, ind_data,
+                                                                         distribution='spread',
+                                                                         nav_indexes=tuple(nav_indexes)))
                 if data.errors is not None:
                     error_dwa = data.errors_as_dwa()
                     self._h5saver.add_array(where,
@@ -645,12 +672,9 @@ class DataEnlargeableSaver(DataSaverLoader):
                                             array_type=error_dwa[ind_data].dtype,
                                             enlargeable=True,
                                             data_dimension=error_dwa.dim.name,
-                                            metadata=dict(timestamp=error_dwa.timestamp,
-                                                          label=error_dwa.labels[ind_data],
-                                                          source=error_dwa.source.name,
-                                                          distribution='spread',
-                                                          origin=error_dwa.origin,
-                                                          nav_indexes=tuple(nav_indexes)))
+                                            metadata=self._get_data_metadata(error_dwa, ind_data,
+                                                                             distribution='spread',
+                                                                             nav_indexes=tuple(nav_indexes)))
 
             if add_enl_axes:
                 for ind_enl_axis in range(self._n_enl_axes):
@@ -781,10 +805,9 @@ class DataExtendedSaver(DataSaverLoader):
                                         scan_shape=self.extended_shape,
                                         add_scan_dim=True,
                                         data_dimension=data.dim.name,
-                                        metadata=dict(timestamp=data.timestamp, label=data.labels[ind_data],
-                                                      source=data.source.name, distribution=distribution.name,
-                                                      origin=data.origin,
-                                                      nav_indexes=tuple(nav_indexes)))
+                                        metadata=self._get_data_metadata(data, ind_data,
+                                                                         distribution=distribution.name,
+                                                                         nav_indexes=tuple(nav_indexes)))
 
                 if data.errors is not None:
                     error_dwa = data.errors_as_dwa()
@@ -798,10 +821,9 @@ class DataExtendedSaver(DataSaverLoader):
                                             scan_shape=self.extended_shape,
                                             add_scan_dim=True,
                                             data_dimension=error_dwa.dim.name,
-                                            metadata=dict(timestamp=error_dwa.timestamp, label=error_dwa.labels[ind_data],
-                                                          source=error_dwa.source.name, distribution=distribution.name,
-                                                          origin=error_dwa.origin,
-                                                          nav_indexes=tuple(nav_indexes)))
+                                            metadata=self._get_data_metadata(error_dwa, ind_data,
+                                                                             distribution=distribution.name,
+                                                                             nav_indexes=tuple(nav_indexes)))
 
 
             if save_axes:
@@ -862,6 +884,7 @@ class DataToExportSaver:
         self._h5saver = h5saver
         self._data_saver = DataSaverLoader(self._h5saver)
         self._bkg_saver = BkgSaver(self._h5saver)
+        self._swmr_activated = False
 
     @property
     def h5saver(self) -> H5SaverLowLevel:
@@ -907,6 +930,21 @@ class DataToExportSaver:
     def add_data_bundle(self, data: DataBundle):
         self.add_data(data.node, data.dte, data.settings)
 
+    @staticmethod
+    def _warn_settings_deprecated(settings_as_xml=''):
+        """Warn if settings are given to ``add_data``: they are ignored
+
+        The settings of a module, a scan or an extension are written as the ``settings`` attribute
+        of its group when this group is created (``add_det_group``, ``add_act_group``,
+        ``add_scan_group``, ``add_incremental_group``...), not when data is added.
+        """
+        if settings_as_xml not in ('', b'', None):
+            deprecation_msg('The settings_as_xml argument of DataToExportSaver.add_data (and '
+                            'DataBundle.settings) is deprecated and ignored: give the settings '
+                            'when creating the group, with the settings_as_xml argument of '
+                            'H5SaverLowLevel.add_incremental_group (add_det_group, add_act_group, '
+                            'add_scan_group...)', stacklevel=4)
+
     def add_data(self, where: Union[Node, str], data: DataToExport, settings_as_xml='', **kwargs):
         """
 
@@ -916,15 +954,14 @@ class DataToExportSaver:
             the path of a given node or the node itself
         data: DataToExport
         settings_as_xml: str
-            The settings parameter as an XML string
+            deprecated and ignored, settings are written when the group is created
         Keyword Arguments:
-            all extra metadata to be saved in the group node where data will be saved
+            all extra metadata to be saved as attributes of each data array
 
         """
 
+        self._warn_settings_deprecated(settings_as_xml)
         dims = data.get_dim_presents()
-        if settings_as_xml != '' and 'settings' not in kwargs:
-            kwargs['settings]'] = settings_as_xml
         for dim in dims:
             dim_group = self._h5saver.get_set_group(where, dim)
             for ind, dwa in enumerate(data.get_data_from_dim(dim)):
@@ -946,6 +983,27 @@ class DataToExportSaver:
                 # dwa_group = self._get_node_from_title(dim_group, dwa.name)
                 if dwa_group is not None:
                     self._bkg_saver.add_data(dwa_group, dwa, save_axes=False)
+
+    def _activate_swmr_and_tick_flush(self):
+        """Turn on SWMR writer mode on the first call once the file structure exists,
+        then perform a periodic flush, so concurrently-opened readers (another
+        process's H5Browser, for instance) see data as it's written instead of only
+        once the file is closed.
+
+        Subclasses used for continuous/ongoing saving (DataToExportEnlargeableSaver,
+        DataToExportExtendedSaver, and their subclasses) must call this at the end of
+        their own add_data, after all data/structure for that write has been created:
+        h5py requires the relevant datasets to already exist before SWMR can be
+        enabled. Not called by the base add_data: a one-shot save that closes its file
+        right after writing has no concurrent reader to serve.
+        """
+        if (self._h5saver._swmr_mode and not self._swmr_activated
+                and self._h5saver.is_swmr_capable):
+            self._h5saver.flush()
+            self._h5saver.enable_swmr()
+            self._swmr_activated = True
+
+        self._h5saver.tick_flush()
 
     def add_error(self, where: Union[Node, str], data: DataToExport):
         dims = data.get_dim_presents()
@@ -1019,9 +1077,9 @@ class DataToExportEnlargeableSaver(DataToExportSaver):
         axis_value: float or np.ndarray #deprecated in 4.2.0, use axis_values
             The next value (or values) of the enlarged axis
         settings_as_xml: str
-            The settings parameter as an XML string
+            deprecated and ignored, settings are written when the group is created
         Keyword Arguments:
-            all extra metadata to be saved in the group node where data will be saved
+            all extra metadata to be saved as attributes of each data array
         """
 
         if axis_values is None and axis_value is not None:
@@ -1046,6 +1104,8 @@ class DataToExportEnlargeableSaver(DataToExportSaver):
                               expand=False)
             if not self._h5saver.is_swmr_active:
                 axis_array.attrs['size'] += 1
+
+        self._activate_swmr_and_tick_flush()
 
 
 class DataToExportTimedSaver(DataToExportEnlargeableSaver):
@@ -1087,7 +1147,6 @@ class DataToExportExtendedSaver(DataToExportSaver):
         super().__init__(h5saver)
         self._data_saver = DataExtendedSaver(h5saver, extended_shape, fill_value=fill_value)
         self._nav_axis_saver = AxisSaverLoader(h5saver)
-        self._swmr_activated = False
 
     def add_nav_axes(self, where: Union[Node, str], axes: List[Axis]):
         """Used to add navigation axes related to the extended array
@@ -1122,11 +1181,12 @@ class DataToExportExtendedSaver(DataToExportSaver):
             indexes where to save data in the init h5array (should have the same length as
             extended_shape and with values coherent with this shape
         settings_as_xml: str
-            The settings parameter as an XML string
+            deprecated and ignored, settings are written when the group is created
         Keyword Arguments:
-            all extra metadata to be saved in the group node where data will be saved
+            not used by this saver
 
         """
+        self._warn_settings_deprecated(settings_as_xml)
         dims = data.get_dim_presents()
         for dim in dims:
             dim_group = self._h5saver.get_set_group(where, dim)
@@ -1137,14 +1197,7 @@ class DataToExportExtendedSaver(DataToExportSaver):
                 self._data_saver.add_data(dwa_group, dwa, indexes=indexes,
                                           distribution=distribution)
 
-        # Enable SWMR after first data point created all structure
-        if (self._h5saver._swmr_mode and not self._swmr_activated
-                and self._h5saver.is_swmr_capable):
-            self._h5saver.flush()
-            self._h5saver.enable_swmr()
-            self._swmr_activated = True
-
-        self._h5saver.tick_flush()
+        self._activate_swmr_and_tick_flush()
 
 
 class DataLoader:

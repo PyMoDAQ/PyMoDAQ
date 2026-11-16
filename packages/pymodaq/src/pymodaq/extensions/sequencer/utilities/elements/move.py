@@ -15,7 +15,8 @@ from pymodaq.utils.scanner.scanner import Orientation
 from pymodaq_data import DataToExport, Q_
 from pymodaq_gui.parameter.pymodaq_ptypes import GroupParameter, registerParameterType
 from pymodaq_gui.parameter import Parameter, ParameterTree
-from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltBase, SeqEltFactory, ElementError
+from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltBase, SeqEltFactory, ElementError, \
+    SeqEltCategory
 
 from pymodaq.extensions.sequencer.utilities.widget_with_toolbar import WidgetWithToolbar
 
@@ -97,6 +98,7 @@ class ActuatorsValuesUnits:
 class MoveElt(SeqEltBase):
 
     elt_name = 'move'
+    elt_category = SeqEltCategory.ACTIONS
     children_allowed = False
 
     def __init__(self, *args, **kwargs):
@@ -194,16 +196,12 @@ class MoveElt(SeqEltBase):
             dte_move,
             mode=MoveType.ABS,
             callback=self._on_move_done,
-            do_connect_modules=True)
+            do_connect_modules=True,
+            detach_after_callback=True)
         if not self._wait_move_done:
             self.done_signal.emit()
 
     def _on_move_done(self, dte: DataToExport):
-        self.dashboard.modules_manager.forget_callback(
-            self._on_move_done,
-            module_type=ModuleType.Actuator,
-            disconnect_modules=True)
-
         self.save_data(dte, done=False)  # to log the data, done_signal handled below
         if self._wait_move_done:
             self.done_signal.emit()

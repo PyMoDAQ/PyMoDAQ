@@ -12,7 +12,8 @@ from pymodaq.utils.scanner.scanner import Orientation
 from pymodaq_data import DataToExport
 from pymodaq_gui.parameter.pymodaq_ptypes.itemselect import ItemSelect
 from pymodaq_gui.utils.widgets import SpinBox
-from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltBase, SeqEltFactory, ElementError
+from pymodaq.extensions.sequencer.utilities.element_factory import SeqEltBase, SeqEltFactory, ElementError, \
+    SeqEltCategory
 from pymodaq.extensions.sequencer.utilities.elements.repeat import RepeatElt
 from pymodaq.extensions.sequencer.utilities.widget_with_toolbar import WidgetWithToolbar
 from qt_themes import get_theme
@@ -31,6 +32,7 @@ ser_factory = SerializableFactory()
 class ScannerElt(SeqEltBase):
 
     elt_name = 'scanner'
+    elt_category = SeqEltCategory.ACTIONS
     children_allowed = True
 
     def __init__(self, *args, **kwargs):
@@ -104,7 +106,8 @@ class ScannerElt(SeqEltBase):
                 dte_act = next_values,
                 mode= MoveType.ABS,
                 callback = self._on_move_done,
-                do_connect_modules=True)
+                do_connect_modules=True,
+                detach_after_callback=True)
 
             """ This will execute the children state and its bundled elements n_repeat times"""
             self._ind_execute += 1
@@ -125,10 +128,6 @@ class ScannerElt(SeqEltBase):
             Contains the actuators dwa at the moment when the move has been set as done
             (may be slightly different from the actual target dwa due to epsilon)
         """
-        self.dashboard.modules_manager.forget_callback(self._on_move_done,
-                                                       module_type = ModuleType.Actuator,
-                                                       disconnect_modules = True
-                                                       )
         self.save_data(self.scanner.positions_at(self._ind_execute), done=False)
 
         self.children_signal.emit()  # triggers the execution of this elt's first child

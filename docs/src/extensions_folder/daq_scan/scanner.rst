@@ -191,6 +191,13 @@ detectors. You can then pick the Data0D one you want to use as the Adaptive feed
 three Data0D are available, one from a 0D detector (CH000) and 2 from the Measurements ROIs of a 1D detector. In that case the
 CH000 data has been selected and will therefore be use as feedback for the Adaptive algorithm.
 
+.. _module_manager_fig:
+
+.. figure:: /image/managers/module_manager.PNG
+   :alt: module_manager_fig
+
+   The modules manager user interface with selectable detectors and actuators, with probed data feature and actuators testing.
+
 Loss
 ####
 
