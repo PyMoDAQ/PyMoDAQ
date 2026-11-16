@@ -237,10 +237,10 @@ class TestSWMRSaving:
 
 class TestSWMRCloseFileReconciles:
     """Regression tests for GH issue #1477: enlargeable arrays saved in SWMR mode
-    kept stale 'shape' attrs (and a 'size' attr that was never reconciled) because
+    kept stale 'shape' attrs (and, for axis nodes, a stale 'size' attr) because
     nothing in production ever called finalize_swmr; only tests did. close_file()
     must now reconcile on its own, without the caller having to know about
-    finalize_swmr, and the dead 'size' attribute must no longer be written at all.
+    finalize_swmr.
     """
 
     def test_close_file_reconciles_shape_without_explicit_finalize(self, tmp_path):
@@ -272,7 +272,8 @@ class TestSWMRCloseFileReconciles:
     def test_enlargeable_data_and_axis_reconciled_on_plain_close(self, tmp_path):
         """Full reproduction of the reported issue: an enlargeable data array and
         its enlargeable navigation axis both end up with correct 'shape' after a
-        plain close_file(), and neither has a stale (nor any) 'size' attribute."""
+        plain close_file(), and the axis's 'size' is reconciled to shape[0]
+        rather than left stale."""
         from pymodaq_data.h5modules.saving import H5SaverLowLevel
         from pymodaq_data.h5modules.data_saving import DataToExportEnlargeableSaver
         from pymodaq_data.data import DataToExport, DataRaw
@@ -300,12 +301,12 @@ class TestSWMRCloseFileReconciles:
             if 'CLASS' not in node.attrs or node.attrs['CLASS'] not in ('EARRAY', 'VLARRAY'):
                 continue
             assert node.attrs['shape'] == node.node.shape
-            assert 'size' not in node.attrs.attrs_name
             if node.attrs.get('data_type') == 'data_enlargeable':
                 assert node.node.shape == (3, 8, 8)
                 found_data = True
             elif node.attrs.get('data_type') == 'axis':
                 assert node.node.shape == (3,)
+                assert node.attrs['size'] == node.node.shape[0] == 3
                 found_axis = True
         assert found_data and found_axis
         saver.close_file()
@@ -1815,6 +1816,32 @@ class TestSWMRErrorHandling:
 
         reader.close()
         saver.close_file()
+
+    def test_close_file_closes_even_if_reconcile_raises(self, tmp_path, monkeypatch):
+        """finalize_swmr wraps the reopen/reconcile steps in try/finally: if
+        reconcile_swmr_attrs raises, close_file() must still close the reopened
+        file rather than propagate the exception while leaving it open."""
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'close_reconcile_raises.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        earr = saver.create_earray(saver.root(), 'data',
+                                   dtype=np.float64, data_shape=(3,))
+        saver.flush()
+        saver.enable_swmr()
+        earr.append(np.array([1.0, 2.0, 3.0]))
+
+        def raise_on_reconcile():
+            raise RuntimeError('boom')
+
+        monkeypatch.setattr(saver, 'reconcile_swmr_attrs', raise_on_reconcile)
+
+        with pytest.raises(RuntimeError, match='boom'):
+            saver.close_file()
+
+        assert not saver.isopen()
 
 
 class TestIsSwmrCompatibleProperty:

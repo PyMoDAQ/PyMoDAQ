@@ -69,6 +69,17 @@ class ModuleSaver(metaclass=ABCMeta):
         keep_open: bool
             if True, leaves the file open so this module can keep writing to it;
             if False (default), closes the file after reconciling
+
+        Notes
+        -----
+        With ``keep_open=True``, the reopened file is a new file object: any
+        ``Node``/``GROUP`` reference held across this call (by this saver, a
+        subclass, or an external caller) is tied to the now-closed file object and
+        must be re-resolved by path afterward (see :func:`snapshot_path` and
+        :meth:`H5SaverBase.get_node`), the same way :class:`ExtensionSaver` refreshes
+        ``module_group``/``current_nodes``. ``DetectorSaver``/``ActuatorSaver`` are
+        unaffected because they refetch their node on every call instead of caching
+        it.
         """
         self._h5saver.finalize_swmr(keep_open=keep_open)
 

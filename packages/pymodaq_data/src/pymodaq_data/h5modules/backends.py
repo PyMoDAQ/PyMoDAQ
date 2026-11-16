@@ -672,6 +672,12 @@ class H5Backend:
         Equivalent to ``finalize_swmr(keep_open=False)``: see that method for why
         this is needed. Every caller of ``close_file`` gets correct attrs for free,
         with no need to remember to call ``finalize_swmr`` explicitly.
+
+        If SWMR was active, this is not a plain close: the file gets closed, then
+        reopened in append mode and its nodes walked to reconcile the attrs SWMR
+        deferred, then closed again. On a large file this reopen-and-walk makes
+        ``close_file()`` noticeably more expensive than before, in exchange for
+        correct attrs on disk with no extra call required.
         """
         self.finalize_swmr(keep_open=False)
 
@@ -778,7 +784,8 @@ class H5Backend:
         return self.backend in SWMR_CAPABLE_BACKENDS
 
     def reconcile_swmr_attrs(self):
-        """Walk all EARRAY/VLARRAY nodes and update attrs['shape'] from actual data.
+        """Walk all EARRAY/VLARRAY nodes and update attrs['shape'] (and, for axis
+        nodes, attrs['size']) from actual data.
 
         Called after SWMR is ended (file closed and reopened in 'a' mode) to fix
         deferred attribute writes that were skipped during SWMR.
@@ -794,6 +801,8 @@ class H5Backend:
                 if node_class in ('EARRAY', 'VLARRAY'):
                     actual_shape = node.node.shape
                     node.attrs['shape'] = actual_shape
+                    if node.attrs.get('data_type') == 'axis':
+                        node.attrs['size'] = actual_shape[0]
 
     def finalize_swmr(self, keep_open=False):
         """End an active SWMR session, reconciling the attrs it deferred, then close
@@ -815,14 +824,28 @@ class H5Backend:
             If True, leaves the file open in 'a' mode after reconciling, e.g. for a
             caller that wants to pause SWMR writing and keep adding data to the same
             file afterward. If False (default), closes the file after reconciling.
+
+        Notes
+        -----
+        The reopen and reconciliation steps are wrapped in a ``try``/``finally``: if
+        either raises, the file is still closed (unless ``keep_open``) rather than
+        left open on an exception.
+
+        With ``keep_open=True``, the reopen produces a new file object: any
+        ``Node``/``GROUP`` a caller holds onto across this call is tied to the
+        now-closed file object and must be re-resolved by path afterward (snapshot
+        the path with :func:`snapshot_path` before calling, then :meth:`get_node`
+        it back) rather than reused directly.
         """
-        if self._swmr_enabled:
-            file_path = Path(self.file_path)
-            self._flush_and_close()
-            self.open_file(file_path, mode='a')
-            self.reconcile_swmr_attrs()
-        if not keep_open:
-            self._flush_and_close()
+        try:
+            if self._swmr_enabled:
+                file_path = Path(self.file_path)
+                self._flush_and_close()
+                self.open_file(file_path, mode='a')
+                self.reconcile_swmr_attrs()
+        finally:
+            if not keep_open:
+                self._flush_and_close()
 
     def _flush_and_close(self):
         """Flush and close the h5file, with no SWMR handling: the raw primitive
