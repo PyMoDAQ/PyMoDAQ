@@ -142,7 +142,7 @@ class HardwareRegistry:
         ``gc.collect()`` runs first, deliberately: starting a QThread while Python's cyclic GC
         happens to sweep a leftover, thread-affinitized QTimer/QThread from some earlier, unrelated
         device - its own cleanup already correct, just not yet collected - was found to crash
-        (reproduced on Linux/PySide6; see device_module_status.md). Collecting first, on this
+        (reproduced on Linux/PySide6; see the hardware README, section 8). Collecting first, on this
         thread, before a new one starts, keeps that collection from ever racing a thread's startup.
         """
         gc.collect()
@@ -175,13 +175,12 @@ class HardwareRegistry:
         test double that skips that step - but the check itself is Qt's own thread-identity
         rule, not a test-only carve-out.
 
-        A move-back-to-the-main-thread fix was tried here (and inside close_hardware) and
-        reverted: moveToThread() must be called from the object's own current thread, so it has
-        to happen from inside close_hardware - but changing self's own thread affinity from
-        within a slot that is itself running via BlockingQueuedConnection corrupts Qt's own
-        return-to-caller bookkeeping for that call, breaking later, unrelated
-        QMetaObject.invokeMethod() calls (confirmed: this regressed PyQt6, previously 100%
-        reliable, to a different fatal crash). See device_module_status.md.
+        Don't move the HardwareThread back to the main thread here (or inside close_hardware):
+        moveToThread() must be called from the object's own current thread, so it would have to
+        happen inside close_hardware - but changing self's own thread affinity from within a slot
+        that is itself running via BlockingQueuedConnection corrupts Qt's return-to-caller
+        bookkeeping for that call, breaking later, unrelated QMetaObject.invokeMethod() calls
+        (a fatal crash on PyQt6).
         """
         entry.controller.close()
         thread_obj = entry.thread

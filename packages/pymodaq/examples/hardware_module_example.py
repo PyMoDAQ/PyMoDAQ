@@ -67,15 +67,15 @@ class FakeSpectrometer:
     ``temperature`` never calls ``read()`` at all, it calls ``_read_temperature()`` directly.
 
     ``trigger`` and ``exposure`` both answer their read with ``get=STORED`` instead - reading back
-    whatever the quantity's own attribute already holds. What's new is that the attribute no longer
-    needs the plugin to maintain it by hand: every control's write is stored as ``plugin.<name>``
-    automatically, by the device thread, once it succeeds (see ``HardwareThread.request_write``).
+    whatever the quantity's own attribute already holds. The plugin doesn't maintain that attribute
+    by hand: every control's write is stored as ``plugin.<name>`` automatically, by the device
+    thread, once it succeeds (see ``apply_write``).
     ``trigger`` has nothing else to say, so that's its entire write path - no setter, no ``write()``
     branch. ``exposure`` still has a side effect (turning ``averaging`` off above 500 ms), so it adds
     ``post_set='_clamp_averaging'`` for just that - sugar for ``lambda plugin, value:
     plugin._clamp_averaging(value)``, called after the value is already stored, so the method could
-    read ``self.exposure`` back if it needed to. Neither needs a ``write()`` branch any more, and the
-    plugin defines no ``write()`` at all - nothing is left that would call it. ``get=STORED`` is the
+    read ``self.exposure`` back if it needed to. Neither needs a ``write()`` branch, so the plugin
+    defines no ``write()`` at all. ``get=STORED`` is the
     last command sent, never a device reading: fine for this fake device, which applies both values
     exactly and immediately, so neither declares a ``readback=``.
 

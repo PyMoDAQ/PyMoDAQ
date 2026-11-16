@@ -318,12 +318,11 @@ control with no settling lag needs no readback at all.
   `action_failed(channel, action_name, msg)` mirror the write done/failed shape. `interrupts=True`
   on an `Action` (what `stop=` sets automatically) resolves whatever write timeout is pending on
   that control, the same way a real `write_done` would.
-- **Timeouts, both directions:** every write and every single read now has its own timer, owned by
+- **Timeouts, both directions:** every write and every single read has its own timer, owned by
   `Controller` (`WRITE_TIMEOUT_S`/`READ_TIMEOUT_S`, `pymodaq_utils.config`'s `[hardware_module]`
   section - not hardcoded). A write that never gets `write_done`/`write_failed` within the window
-  emits `write_failed` itself; a read that never resolves emits the new, per-channel
-  `read_failed(channel, message)` - previously a read failure only had a generic, channel-less
-  `error`.
+  emits `write_failed` itself; a read that never resolves emits the per-channel
+  `read_failed(channel, message)`.
 - **Settings sync** is two separate, deliberately asymmetric paths so neither loops back into the
   other: a GUI/script edit goes through `update_settings`, applied under a `QSignalBlocker` before
   `commit_settings` runs; the plugin changing its own settings (inside `commit_settings` itself, or

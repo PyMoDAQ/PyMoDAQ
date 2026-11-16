@@ -101,9 +101,8 @@ class TestWrite:
         assert blocker.args == ['exposure', 20.0]
 
     def test_the_getter_reflects_a_confirmed_write_without_a_separate_read(self, registry, qtbot):
-        """The getter is documented as returning the latest value received - previously only
-        _on_reading (a poll/one-shot read) ever updated _last_values, so a write's own confirmed
-        value was never reflected until some later, unrelated read happened to land."""
+        """The getter returns the latest value received, and a confirmed write is one: it doesn't
+        wait for a later poll or one-shot read to land."""
         key, ctrl = attach(registry)
         ctrl.thread.ini_hardware()
         with qtbot.waitSignal(ctrl.written, timeout=2000):
@@ -112,8 +111,8 @@ class TestWrite:
 
     def test_writing_while_closed_raises_immediately(self, registry):
         """Every other access path (poll/read/read_blocking/run_action) raises right away via
-        _require_open when the device isn't open - the property setter used to skip that check
-        and silently queue a write doomed to time out instead."""
+        _require_open when the device isn't open, and so does the property setter, instead of
+        queueing a write doomed to time out."""
         key, ctrl = attach(registry)
         with pytest.raises(RuntimeError, match='not open'):
             ctrl.exposure = 20.0
@@ -594,8 +593,7 @@ class TestGuiSettingsRelay:
 class TestConfigDefaults:
     """WRITE_TIMEOUT_S/READ_TIMEOUT_S come from config_template.toml's [hardware_module] section,
     not a hardcoded literal - but stay plain module globals (not read fresh on every call) so
-    the rest of this file can keep monkeypatching them directly, as it did before this moved to
-    config."""
+    the rest of this file can monkeypatch them directly."""
 
     def test_write_timeout_comes_from_config(self):
         from pymodaq_utils.config import GlobalConfig as Config

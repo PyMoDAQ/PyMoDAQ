@@ -272,8 +272,12 @@ class Quantity:
             raise ValueError('a quantity has either values (discrete) or lo/hi/epsilon (continuous), not both')
         if self.lo is not None and self.hi is not None and self.lo > self.hi:
             raise ValueError(f'lo ({self.lo}) is greater than hi ({self.hi})')
-        if self.get is True:
-            raise ValueError('get=True was replaced by get=STORED (from capabilities), which only a control accepts')
+        for keyword in ('get', 'set', 'pre_set', 'post_set'):
+            value = getattr(self, keyword)
+            if not (value is None or isinstance(value, str) or callable(value)
+                    or (keyword == 'get' and value is STORED)):
+                accepted = 'a callable, a method name or STORED' if keyword == 'get' else 'a callable or a method name'
+                raise ValueError(f'{keyword}= must be {accepted}, got {value!r}')
         if self.get is STORED and self.access is not Access.CONTROL:
             raise ValueError(
                 'get=STORED is only for a control: nothing writes a measurement, so nothing stores '
@@ -322,15 +326,11 @@ class Quantity:
 
     def __get__(self, instance: Any, owner: type | None = None) -> Any:
         """Makes every quantity a live attribute: ``plugin.position`` reads/writes storage owned
-        here, not by the plugin. Class-level access (``Plugin.position``) still returns the
-        declaration itself, and ``Capabilities.from_device`` reads ``vars(cls)`` directly, so
-        neither is affected.
+        here, not by the plugin. Class-level access (``Plugin.position``) returns the declaration
+        itself, which is what ``Capabilities.from_device`` collects.
 
-        Unconditional, for every quantity: before this existed, a never-written ``plugin.<name>``
-        returned this object instead of a value - a silent footgun, since nothing forced a plugin to
-        initialize it first. For a quantity that doesn't otherwise rely on this storage, this is the
-        same storage key plain instance-attribute shadowing already used, so the behavior there is
-        unchanged.
+        Unconditional, for every quantity: a never-written ``plugin.<name>`` returns ``None``, never
+        the declaration object, so a plugin doesn't have to initialize every quantity first.
         """
         if instance is None:
             return self

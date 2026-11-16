@@ -32,8 +32,8 @@ class RepresentationRule:
     the Qt property that holds the device value, and the signal meaning "the user committed an edit"
     - deliberately explicit, not auto-detected from Qt's own property-change notify signal, because
     that's the wrong signal here: a spinbox's registered NOTIFY for 'value' is valueChanged, which
-    fires on every keystroke, not editingFinished, which is what a write actually wants (see
-    device_module_status.md for why the write direction needs "committed," not "changed").
+    fires on every keystroke, not editingFinished, which is what a write actually wants: one
+    write per committed edit, not one per keystroke.
 
     ``to_widget``/``from_widget`` convert between the device value and the widget property's own
     value, where they differ (a selector's property is an index, a toggle's is a bool) - identity for

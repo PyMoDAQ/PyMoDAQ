@@ -421,9 +421,10 @@ class TestStoredAndMethodNameSugar:
         with pytest.raises(ValueError, match='only for a control'):
             measurement(units='K', get=STORED)
 
-    def test_get_true_is_rejected_with_a_pointer_to_stored(self):
-        with pytest.raises(ValueError, match='replaced by get=STORED'):
-            control(get=True)
+    @pytest.mark.parametrize('keyword', ['get', 'set', 'pre_set', 'post_set'])
+    def test_a_callback_that_is_neither_callable_nor_a_method_name_is_rejected(self, keyword):
+        with pytest.raises(ValueError, match=f'{keyword}= must be'):
+            control(**{keyword: 3})
 
     def test_stored_is_not_mistaken_for_a_method_name(self):
         assert not isinstance(STORED, str)

@@ -222,10 +222,9 @@ class TestStoppingThreads:
 
     def test_a_stalled_thread_is_waited_for_unconditionally_not_abandoned(self, qapp):
         """A 2 s wait timing out must never make detach() return while the thread might still be
-        running - that used to be handled by stashing a reference "to keep it alive", but that
-        reference died with the registry the moment its caller dropped it, same problem one step
-        removed (this is the real fix for the cross-process crash logged in
-        device_module_status.md). detach() must instead fall back to an unconditional wait."""
+        running. Stashing a reference "to keep it alive" is not enough: that reference dies with
+        the registry the moment its caller drops it. detach() falls back to an unconditional
+        wait instead."""
         registry = HardwareRegistry()
         plugin_class = stub_plugin_class()
         key = key_for(hardware_class=plugin_class, controller_id=2)

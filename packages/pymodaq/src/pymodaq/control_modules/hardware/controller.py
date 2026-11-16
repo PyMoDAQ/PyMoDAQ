@@ -189,7 +189,7 @@ class Controller(QObject):
     # No lambda on the timeout connection: PyQt/PySide only auto-drops a connection once its
     # receiver is destroyed when that receiver is a bound method connected directly - a lambda
     # is just a generic callable to the binding, so it gets no such protection, and calling
-    # through one into an already-destroyed Controller is exactly how this used to crash. kind/
+    # through one into an already-destroyed Controller crashes. kind/
     # name travel as Qt properties on the timer itself instead, read back via sender() in one
     # plain bound-method slot.
 
