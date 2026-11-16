@@ -263,7 +263,7 @@ class HardwareThread(QObject):
         *checked* is a ``checkable`` action's new button state, passed to the callback as a second
         argument (``callback(plugin, checked)``); ``None`` for a plain action.
 
-        See ``device_module_connections.md`` ("Actions") for how the GUI side uses ``action_done`` /
+        See ``control_modules/HARDWARE_MODULE.md`` (section 6) for how the GUI side uses ``action_done`` /
         ``action_failed`` (e.g. why only ``stop`` clears a row's pending state).
         """
         action = self._actions_of.get(channel, {}).get(action_name)

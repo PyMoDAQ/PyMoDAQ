@@ -871,8 +871,7 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
         widget sync (a read alone never does that - only a confirmed write does, see
         ``_on_written``), which is the whole point here. A control declaring none has no way to be
         known from here at all - nothing above the hardware thread can read the plugin directly
-        (see ``device_module_connections.md``) - so its widget just keeps its construction default,
-        same as always.
+        (see ``HARDWARE_MODULE.md``) - so its widget just keeps its construction default.
         """
         name = quantity.name
         if quantity.get is not None:

@@ -874,9 +874,8 @@ class TestSettle:
         widget.release()
 
     def test_a_pending_settle_does_not_survive_a_disconnect(self, registry, qtbot):
-        # Found while writing device_module_connections.md: a write/settle in flight when the device
-        # drops used to stay pending/rejected forever, even after reconnecting, since nothing was left
-        # to ever confirm or fail it.
+        # a write/settle in flight when the device drops is cleared: nothing is left to ever confirm
+        # or fail it, so it would otherwise stay pending/rejected forever, even after reconnecting.
         widget = make_module(registry, qtbot, SettlingStage, 16, initialize=True)
         spin = widget._value_widgets['z']
         spin.setValue(20.0)

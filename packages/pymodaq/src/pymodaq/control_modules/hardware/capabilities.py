@@ -561,14 +561,14 @@ def control(
     button for it. ``stop=`` is shorthand for a conventionally-iconed ``'stop'`` entry in ``actions``;
     both may be given together. With ``readback`` and ``epsilon`` set, a write's pending state also
     waits for the readback to settle, so ``stop`` has something meaningful to interrupt - see
-    ``device_module_connections.md`` ("Writing and settling", "Actions") for the full
+    ``control_modules/HARDWARE_MODULE.md`` (sections 3 and 6) for the full
     action/settle/LED interaction and why only ``stop`` clears a pending row.
 
     ``merge_into`` folds this control into another quantity's own row (a control's or a measurement's)
     as a checkable action, instead of giving it a row of its own - e.g. an axis's enable button next to
     its move controls. Needs exactly two ``values``, the same requirement as ``widget='toggle'`` above;
     still dispatches through the normal write path, only where it is drawn changes. See
-    ``device_module_connections.md`` ("merge_into") for the rendering details.
+    ``control_modules/HARDWARE_MODULE.md`` (section 7, ``merge_into``) for the rendering details.
     """
     return Quantity(Access.CONTROL, units=units, label=label, lo=lo, hi=hi, epsilon=epsilon,
                     values=values, docs=docs, ui_add=ui_add, ui_remove=ui_remove, widget=widget,
