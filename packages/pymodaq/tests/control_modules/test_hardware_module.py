@@ -11,7 +11,10 @@ from qtpy.QtCore import Property, Qt, Signal
 from pymodaq.control_modules.hardware import controller
 from pymodaq.control_modules.hardware.capabilities import STORED, Action, control, measurement
 from pymodaq.control_modules.hardware_module import (
-    HardwareModule, SLIDER_WIDTH, DEFAULT_GRAB_PERIOD_MS, SETTLE_POLL_MS, SETTLE_TIMEOUT_S, _colors)
+    HardwareModule, SLIDER_WIDTH, DEFAULT_GRAB_PERIOD_MS, SETTLE_POLL_MS, SETTLE_TIMEOUT_S, _colors,
+    _viewer_type)
+from pymodaq_data.data import DataDim
+from pymodaq_gui.plotting.data_viewers.base import ViewersEnum
 from pymodaq.control_modules.hardware.hardware_registry import HardwareKey, HardwareRegistry
 
 
@@ -1201,3 +1204,11 @@ class TestWidgetSync:
         axis.controller.x = 10.0
         qtbot.waitUntil(lambda: axis._value_widgets['x'].value() == 10.0, timeout=2000)
         assert axis._sliders['x'].value() == 200
+
+
+@pytest.mark.parametrize('shape, viewer', [
+    ((1,), ViewersEnum.Viewer0D), ((256,), ViewersEnum.Viewer1D), (DataDim.Data1D, ViewersEnum.Viewer1D),
+    ((32, 32), ViewersEnum.Viewer2D), (DataDim.Data2D, ViewersEnum.Viewer2D),
+])
+def test_the_viewer_follows_the_quantitys_dim(shape, viewer):
+    assert _viewer_type(measurement(shape=shape)) is viewer

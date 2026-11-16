@@ -2,6 +2,7 @@
 import json
 
 import pytest
+from pymodaq_data.data import DataDim
 
 from pymodaq.control_modules.hardware.capabilities import (
     Access,
@@ -931,3 +932,33 @@ class TestFromDeviceLeavesTheClassAlone:
         assert base.measurements[0].get(self.Device()) == 1.0
         assert sub.measurements[0].get(Sub()) == 2.0
         assert [m.name for m in sub.measurements] == ['temperature', 'position_readback']
+
+
+class TestDim:
+    """Quantity.dim: the DataDim of a reading, from shape; shape= also accepts a DataDim."""
+
+    @pytest.mark.parametrize('shape, dim', [
+        ((1,), DataDim.Data0D), ((1024,), DataDim.Data1D), ((None,), DataDim.Data1D),
+        ((32, 32), DataDim.Data2D), ((4, 4, 3), DataDim.DataND),
+    ])
+    def test_dim_follows_the_number_of_dimensions(self, shape, dim):
+        assert measurement(shape=shape).dim is dim
+
+    @pytest.mark.parametrize('dim, shape', [
+        (DataDim.Data0D, (1,)), (DataDim.Data1D, (None,)), (DataDim.Data2D, (None, None)),
+    ])
+    def test_shape_accepts_a_datadim_with_sizes_unknown(self, dim, shape):
+        q = measurement(shape=dim)
+        assert q.shape == shape and q.dim is dim
+
+    def test_datand_is_rejected_as_a_shape(self):
+        with pytest.raises(ValueError, match='how many dimensions'):
+            measurement(shape=DataDim.DataND)
+
+    def test_a_datadim_shape_survives_serialization(self):
+        q = Quantity.from_dict(measurement(shape=DataDim.Data1D).to_dict())
+        assert q.shape == (None,) and q.dim is DataDim.Data1D
+
+    def test_a_datadim_spectrum_gets_the_array_widgets(self):
+        assert 'snap' in toolbar_widgets(measurement(shape=DataDim.Data1D))
+        assert 'read' in toolbar_widgets(measurement(shape=DataDim.Data0D))

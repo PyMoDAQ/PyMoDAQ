@@ -29,7 +29,7 @@ from qtpy.QtGui import QColor
 
 from pymodaq_utils.config import GlobalConfig as Config
 
-from pymodaq_data.data import DataRaw, DataWithAxes
+from pymodaq_data.data import DataDim, DataRaw, DataWithAxes
 
 from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_gui.plotting.data_viewers.base import ViewerBase, ViewersEnum
@@ -124,7 +124,7 @@ def _format(data) -> str:
 
 
 def _viewer_type(quantity: Quantity) -> ViewersEnum:
-    """Which standard data viewer a quantity's trace should use, from its declared shape -
+    """Which standard data viewer a quantity's trace should use, from its ``dim`` (its declared shape) -
     the same scalar/array split :func:`toolbar_widgets` already makes for ``read``/``snap``.
 
     This only picks the dock to build before any reading has arrived - a reading that answers with
@@ -139,14 +139,12 @@ def _viewer_type(quantity: Quantity) -> ViewersEnum:
     :meth:`HardwareModule._fill_channel_toolbar`), so this fails at construction, before the device
     even opens, rather than later as an uncaught ``ViewerError`` deep inside a Qt paint callback.
     """
-    if len(quantity.shape) > 2:
+    if quantity.dim is DataDim.DataND:
         raise ValueError(
             f'{quantity.name!r}: shape has {len(quantity.shape)} dimensions, got {quantity.shape} - '
             f'this module only has Viewer0D/Viewer1D/Viewer2D wired up so far, so a plain scalar, a '
             f'1D array or a 2D image - nothing higher yet')
-    if len(quantity.shape) >= 2:
-        return ViewersEnum.Viewer2D
-    return ViewersEnum.Viewer0D if quantity.shape[0] == 1 else ViewersEnum.Viewer1D
+    return ViewersEnum[quantity.dim.name.replace('Data', 'Viewer')]
 
 
 class HardwareModule(QtWidgets.QMainWindow, ActionManager):

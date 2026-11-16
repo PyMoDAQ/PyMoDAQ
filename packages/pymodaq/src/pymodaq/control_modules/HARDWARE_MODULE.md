@@ -31,7 +31,7 @@ registry, `Controller` itself).
   until it actually connects, so a click can never silently reach a hardware thread that's not
   running yet.
 - **Views** (right): one dock per quantity with **Show Graph** open, picked by shape -
-  `Viewer0D`/`Viewer1D`/`Viewer2D` for a scalar/1D/2D reading (`_viewer_type`, by `len(shape)`;
+  `Viewer0D`/`Viewer1D`/`Viewer2D` for a scalar/1D/2D reading (`_viewer_type`, from `Quantity.dim`;
   anything past 2D is rejected at construction, in `_fill_channel_toolbar`, not later inside a
   paint callback). A reading that's already a real `DataWithAxes`/`DataRaw` (several labeled
   curves, a real axis) is passed straight through, unexamined - see `get=`'s own docstring in

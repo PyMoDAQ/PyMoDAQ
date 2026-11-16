@@ -27,6 +27,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable
 
+from pymodaq_data.data import DataDim
+
 
 __all__ = [
     'Access',
@@ -162,7 +164,7 @@ def toolbar_widgets(quantity: 'Quantity') -> list[str]:
       buttonless" belongs where it's declared, not in the same knob that suppresses a free default.
     """
     if quantity.access is Access.MEASUREMENT and quantity.domain is Domain.CONTINUOUS:
-        scalar = len(quantity.shape) == 1 and quantity.shape[0] == 1
+        scalar = quantity.dim is DataDim.Data0D
         defaults = _DEFAULT_WIDGETS[(Access.MEASUREMENT, Domain.CONTINUOUS, 'scalar' if scalar else 'array')]
     else:
         defaults = _DEFAULT_WIDGETS[(quantity.access, quantity.domain)]
@@ -194,7 +196,7 @@ class Quantity:
         units: str = '',
         label: str = '',
         dtype: str = 'float64',
-        shape: tuple[int | None, ...] = (1,),
+        shape: tuple[int | None, ...] | DataDim = (1,),
         lo: float | None = None,
         hi: float | None = None,
         epsilon: float = 0.0,
@@ -218,7 +220,7 @@ class Quantity:
         self.units = units
         self.label = label
         self.dtype = dtype
-        self.shape = tuple(shape)
+        self.shape = _shape_of(shape)
         self.lo = lo
         self.hi = hi
         self.epsilon = float(epsilon)
@@ -341,6 +343,17 @@ class Quantity:
     def domain(self) -> Domain:
         return Domain.DISCRETE if self.values else Domain.CONTINUOUS
 
+    @property
+    def dim(self) -> DataDim:
+        """The PyMoDAQ dimensionality of this quantity's readings, from :attr:`shape`.
+
+        ``(1,)`` is ``Data0D``, any other one-dimensional shape ``Data1D``, a two-dimensional one
+        ``Data2D``, anything more ``DataND`` - the same split as ``DataDim.from_data_array``.
+        """
+        if len(self.shape) == 1:
+            return DataDim.Data0D if self.shape[0] == 1 else DataDim.Data1D
+        return DataDim.Data2D if len(self.shape) == 2 else DataDim.DataND
+
     def __repr__(self) -> str:
         return f'Quantity({self.name!r}, access={self.access.value!r}, domain={self.domain.value!r})'
 
@@ -397,7 +410,7 @@ def measurement(
     units: str = '',
     label: str = '',
     dtype: str = 'float64',
-    shape: tuple[int | None, ...] = (1,),
+    shape: tuple[int | None, ...] | DataDim = (1,),
     values: tuple | list = (),
     docs: str = '',
     ui_add: tuple | list = (),
@@ -432,6 +445,13 @@ def measurement(
     ``read()``'s ``DataToExport`` already works - not a separate keyword that would just have to
     repeat what the return value already carries. ``shape`` still describes the single-curve default
     case, used to pick the right dock before the first reading ever arrives.
+
+    ``shape`` is a tuple of sizes, ``None`` for a size not known in advance: ``(1,)`` (the default)
+    for a scalar, ``(1024,)`` or ``(None,)`` for a spectrum, ``(480, 640)`` for an image. Only the
+    number of dimensions is used so far (see :attr:`Quantity.dim`), so a
+    :class:`~pymodaq_data.data.DataDim` is accepted too: ``shape=DataDim.Data1D`` is
+    ``shape=(None,)``, ``Data0D`` is ``(1,)`` and ``Data2D`` is ``(None, None)``. ``DataND`` is
+    rejected: it doesn't say how many dimensions.
 
     ``actions`` adds a button per entry, same as on :func:`control` (see there for the full shape,
     including ``checkable`` and ``button=False``): a measurement can trigger a plugin-side operation
@@ -593,6 +613,19 @@ def instr_get(method: Callable[[Any], Any], attr: str = 'controller') -> Callabl
 def instr_set(method: Callable[[Any, Any], None], attr: str = 'controller') -> Callable[[Any, Any], None]:
     """The ``set=``/``pre_set=``/``post_set=`` mirror of :func:`instr_get` - see there."""
     return lambda plugin, value: method(getattr(plugin, attr), value)
+
+
+def _shape_of(shape: tuple[int | None, ...] | DataDim) -> tuple[int | None, ...]:
+    """*shape* as a tuple of sizes; a ``DataDim`` becomes its number of dimensions, sizes unknown."""
+    if isinstance(shape, DataDim):
+        if shape is DataDim.DataND:
+            raise ValueError('shape=DataDim.DataND does not say how many dimensions: give a tuple, '
+                             'e.g. shape=(None, None, None)')
+        # not a dict lookup: BaseEnum defines __eq__ without __hash__, so a DataDim isn't hashable
+        if shape is DataDim.Data0D:
+            return (1,)
+        return (None,) if shape is DataDim.Data1D else (None, None)
+    return tuple(shape)
 
 
 def _readback_of(control: Quantity) -> Quantity:
