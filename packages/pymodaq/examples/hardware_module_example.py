@@ -8,8 +8,7 @@ adding a readback, settling, Stop, Enable and Home.
 
 What to try:
 - Ini. (instrument toolbar) opens the fake device; the status line shows "open".
-- exposure: type a value and press Enter. The device gets it, and Read/Snap/its own readback row all
-  show it back too.
+- exposure: type a value and press Enter. The device gets it, and Read shows it back too.
 - trigger: pick a value. The device gets it, and Read shows it back too.
 - spectrum: Snap reads the spectrum once; Show Graph opens a live view that polls it.
 - temperature: Read, or Show Graph for a live trace of the last 200 values.
@@ -21,13 +20,15 @@ What to try:
 
 temperature and status answer their read with ``get='_read_method_name'`` - a plugin method, called
 with no arguments, for a value that's genuinely computed each time. trigger and exposure both answer
-theirs with ``get=True`` instead - reading back whatever the last write stored, which happens
-automatically now for every control, no plugin code needed (see FakeSpectrometer's docstring).
+theirs with ``get=STORED`` instead - reading back whatever the last write stored, which happens
+automatically for every control, no plugin code needed (see FakeSpectrometer's docstring). That is
+the last command sent, not a device reading: right here because this fake device applies both
+exactly and immediately.
 exposure also keeps a side effect (clamping averaging above 500 ms), as ``post_set='_clamp_averaging'``
 - the plugin method ``post_set`` calls instead of a hand-written ``write()`` - the "more automatic way
 to access a Controller attribute [...] or method call" Seb5g's review of PR #1289 asked for.
-exposure's ``readback=True`` is answered by that same ``get=True``, for free: a control with no
-settling lag has nothing separate for a readback to report. spectrum alone keeps a real read(): it's
+Neither declares a ``readback=``: a control with no settling lag has nothing separate for a
+readback to report (the stage example has one that does). spectrum alone keeps a real read(): it's
 the channel that would share a batched read with others like it on a real instrument, so there's no
 single attribute or method call to point a shortcut at.
 """
@@ -38,7 +39,7 @@ import numpy as np
 from pymodaq_gui.qt_utils import mkQApp
 from pymodaq_gui.utils.shared_ui import SharedUI
 
-from pymodaq.control_modules.hardware.capabilities import control, measurement
+from pymodaq.control_modules.hardware.capabilities import STORED, control, measurement
 from pymodaq.control_modules.hardware_module import HardwareModule
 from pymodaq.control_modules.hardware.hardware_registry import HardwareKey, HardwareRegistry
 
@@ -65,7 +66,7 @@ class FakeSpectrometer:
     ``get='_read_status'`` - sugar for ``lambda plugin: plugin._read_temperature()`` etc.: a Grab of
     ``temperature`` never calls ``read()`` at all, it calls ``_read_temperature()`` directly.
 
-    ``trigger`` and ``exposure`` both answer their read with ``get=True`` instead - reading back
+    ``trigger`` and ``exposure`` both answer their read with ``get=STORED`` instead - reading back
     whatever the quantity's own attribute already holds. What's new is that the attribute no longer
     needs the plugin to maintain it by hand: every control's write is stored as ``plugin.<name>``
     automatically, by the device thread, once it succeeds (see ``HardwareThread.request_write``).
@@ -74,10 +75,9 @@ class FakeSpectrometer:
     ``post_set='_clamp_averaging'`` for just that - sugar for ``lambda plugin, value:
     plugin._clamp_averaging(value)``, called after the value is already stored, so the method could
     read ``self.exposure`` back if it needed to. Neither needs a ``write()`` branch any more, and the
-    plugin defines no ``write()`` at all - nothing is left that would call it. ``exposure`` also
-    declares ``readback=True``: since its own ``get=True`` already answers "what is the device doing
-    right now" exactly (no settling lag to report separately), the auto-created readback measurement
-    defaults to that same answer - no extra code for it either.
+    plugin defines no ``write()`` at all - nothing is left that would call it. ``get=STORED`` is the
+    last command sent, never a device reading: fine for this fake device, which applies both values
+    exactly and immediately, so neither declares a ``readback=``.
 
     ``spectrum`` alone keeps a real ``read()``: it's the channel that would share a batched read
     with others like it on a real multi-channel instrument, so there's no single attribute or method
@@ -94,10 +94,10 @@ class FakeSpectrometer:
                               get='_read_temperature')
     status = measurement(values=['idle', 'running'], label='Device state', docs='Device state',
                          get='_read_status')
-    exposure = control(units='ms', lo=1, hi=1000, epsilon=0.1, label='Exposure', docs='Exposure time',
-                      get=True, readback=True, post_set='_clamp_averaging')
+    exposure = control(units='ms', lo=1, hi=1000, label='Exposure', docs='Exposure time',
+                      get=STORED, post_set='_clamp_averaging')
     trigger = control(values=['internal', 'external'], label='Trigger source', docs='Trigger source',
-                      get=True)
+                      get=STORED)
 
     def __init__(self):
         self.exposure = 10.0  # a plain default; __init__ may still set one, it just isn't required to

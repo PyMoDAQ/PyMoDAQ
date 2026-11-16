@@ -17,7 +17,7 @@ role in how several channels can end up on one plot, both at the bottom).
 | Form | Resolves to | What the plugin needs | Shown in |
 |---|---|---|---|
 | nothing (default) | `read(names, fresh)` | one shared `read()` handling every name it's given | `temperature` (minimal), `spectrum`/`motion` (stage) |
-| `get=True` | `lambda plugin: plugin.<name>` | **control**: nothing extra - storage is automatic (see below). **measurement**: the plugin must assign `self.<name>` itself somewhere, nothing does it for you | `exposure`, `trigger` (spectrometer, control); `uptime` (catalog, measurement - `_advance()` assigns it itself) |
+| `get=STORED` (controls only) | `lambda plugin: plugin.<name>`: the last value written, no device access | nothing extra - storage is automatic (see below). Right only if the device applies the value exactly and immediately | `exposure`, `trigger` (spectrometer); `setpoint` (catalog) |
 | `get='_method_name'` | `lambda plugin: plugin._method_name()` | that no-arg method | `temperature`, `status` (spectrometer): `_read_temperature`, `_read_status` |
 | `get=callable` | used as-is | whatever the callable needs | `gain` (catalog) - a real lambda, for exactly the case one no-arg method call can't express: a calculation combined with the method call, inline |
 
@@ -41,7 +41,7 @@ A write to a control is never *only* "however the value reaches the device" - th
 | `set='_method_name'` | sugar for `lambda plugin, value: plugin._method_name(value)` | that one-arg method | `calibration_offset` (catalog) |
 
 Whichever applies (or none), storage is unconditional: after a successful write, the device thread
-always does `plugin.<name> = value` too - this is what makes `get=True` safe to read back from, and
+always does `plugin.<name> = value` too - this is what `get=STORED` reads back, and
 what makes a control with no dispatch at all still useful ("just an attribute"). `pre_set=`/
 `post_set=` hook into *that* storage step, for the control that needs a little more than plain
 storage but not a whole `set=` of its own - mutually exclusive with `set=`, not stackable with it:
@@ -58,12 +58,10 @@ storage but not a whole `set=` of its own - mutually exclusive with `set=`, not 
 | `readback=True` | `<name>_readback` | that one is used untouched - nothing auto-created |
 | `readback='custom_name'` | that name | same |
 
-The auto-created one defaults its own `get` to the control's `get`, if the control has one: right
-when the control has no real settling lag, so its own answer already *is* the readback's answer
-(`exposure` in the spectrometer example - `get=True` on both ends up reading the same attribute
-twice, for free). A control with no `get` - the laggy case, e.g. a target vs. the axis's actual
-position - gets an empty auto-created readback instead, answered through the plugin's own `read()`,
-exactly like the stage example's `x`/`y`/`z` and their positions.
+The auto-created one is answered through the plugin's own `read()`, exactly like the stage
+example's `x`/`y`/`z` and their positions. It never reuses the control's own `get`: with
+`get=STORED` that would make the readback the setpoint itself. A control with no settling lag
+(`exposure` in the spectrometer example) needs no readback at all.
 
 ## Wrapping an existing instrument object: inherit or compose
 

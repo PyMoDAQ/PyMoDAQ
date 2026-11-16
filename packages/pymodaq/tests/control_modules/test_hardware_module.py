@@ -9,7 +9,7 @@ from qtpy import QtWidgets
 from qtpy.QtCore import Property, Qt, Signal
 
 from pymodaq.control_modules.hardware import controller
-from pymodaq.control_modules.hardware.capabilities import Action, control, measurement
+from pymodaq.control_modules.hardware.capabilities import STORED, Action, control, measurement
 from pymodaq.control_modules.hardware_module import (
     HardwareModule, SLIDER_WIDTH, DEFAULT_GRAB_PERIOD_MS, SETTLE_POLL_MS, SETTLE_TIMEOUT_S, _colors)
 from pymodaq.control_modules.hardware.hardware_registry import HardwareKey, HardwareRegistry
@@ -179,7 +179,7 @@ class TestDevice:
         (0.0) - without the fix, the widget would show 0.0 until a write confirmation corrected
         it, which nothing here ever triggers either."""
         class GetScope(Camera):
-            gain = control(units='dB', lo=0, hi=20, get=True)
+            gain = control(units='dB', lo=0, hi=20, get=STORED)
 
             def __init__(self):
                 super().__init__()
@@ -335,23 +335,18 @@ class TestViews:
         assert not module.get_action('temperature_show_graph').isChecked()
 
     def test_a_plain_scalar_value_reaches_the_viewer_without_crashing(self, registry, qtbot):
-        """A plain Python/numpy scalar - not pre-wrapped in an array - is exactly what a control's
-        own get=True gives a readback measurement defaulting to it (see capabilities.py's
-        _readback_of): np.asarray()-ing it alone gives a 0-d array, which DataWithAxes rejects
+        """A plain Python/numpy scalar - not pre-wrapped in an array - is what a get= returning
+        a plain float gives: np.asarray()-ing it alone gives a 0-d array, which DataWithAxes rejects
         outright ("non-empty list of non-empty numpy arrays"). Regression test for that -
         _on_reading uses np.atleast_1d instead, same as Channel._emit already does.
         """
         class ScalarGetScope(Camera):
-            setpoint = control(units='V', lo=-10, hi=10, get=True, readback=True)
-
-            def __init__(self):
-                super().__init__()
-                self.setpoint = 0.0  # a plain float, the same shape a GUI spin edit gives it
+            level = measurement(units='V', get=lambda plugin: 0.0)  # a plain float
 
         widget = make_module(registry, qtbot, ScalarGetScope, 24, initialize=True)
-        widget.get_action('setpoint_readback_show_graph').trigger()
-        widget.get_action('setpoint_readback_read').trigger()
-        history = widget._viewers['setpoint_readback'].view.data_displayer._data
+        widget.get_action('level_show_graph').trigger()
+        widget.get_action('level_read').trigger()
+        history = widget._viewers['level'].view.data_displayer._data
         qtbot.waitUntil(lambda: history.size == 1, timeout=2000)
         widget.release()
 

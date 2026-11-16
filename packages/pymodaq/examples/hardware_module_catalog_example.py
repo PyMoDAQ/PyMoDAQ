@@ -23,22 +23,17 @@ What to try, and what each one is for:
   rejected unless the (fixed, for this example) interlock flag is set; any accepted write is also
   logged by ``post_set``, which reads ``plugin.heater_power`` back to prove the value was already
   stored by the time it runs.
-- gain: a measurement with ``get=`` an actual lambda, not the ``True``/string sugar for it - the
+- gain: a measurement with ``get=`` an actual lambda, not the method-name string sugar for it - the
   case that needs a real callable because it does more than forward to one plugin method:
   ``20 * log10(plugin._raw_amplitude())``, combining a method call with a calculation inline.
   ``_raw_amplitude`` also depends on ``calibration_offset``, so the two rows interact: change one,
   watch the other's Grab trace move.
-- uptime: a measurement with ``get=True`` - the measurement side of that sugar, not shown elsewhere
-  (the other examples only use it on controls, where the write side keeps the attribute populated
-  for free). A measurement's attribute is never kept live automatically; here the plugin does it
-  itself, in ``_advance()``, as a side effect of computing ``gain``'s own reading.
-- setpoint: a control with ``get=True`` *and* ``readback=True``, with nothing else - the no-settling-
-  lag case (same shape as the spectrometer's ``exposure``): since ``get=True`` already answers "what
-  is it doing right now" exactly, the auto-created ``setpoint_readback`` measurement defaults to that
-  same answer for free, no plugin code needed for it at all. Also notice it already reads 3.5 V the
-  moment Ini. opens the device, before anything is written - a one-shot read right after connecting
-  pushes a ``get=``-backed control's real starting value into its own widget, instead of leaving it
-  at 0.0, the spinbox's own construction default.
+- setpoint: a control with ``get=STORED`` and nothing else - the no-settling-lag case (same shape as
+  the spectrometer's ``exposure``): a read answers the last value written, with no device access and
+  no plugin code. No ``readback=``: there is nothing separate for one to report. Also notice it
+  already reads 3.5 V the moment Ini. opens the device, before anything is written - a one-shot read
+  right after connecting pushes a ``get=``-backed control's real starting value into its own widget,
+  instead of leaving it at 0.0, the spinbox's own construction default.
 - stage_target / stage_actual_position: the opposite, laggy case - a one-axis motor stage, same idea
   as the stage example's axes but named differently on purpose (``readback='stage_actual_position'``,
   not the default ``stage_target_readback``), to show that the readback's name is independent of the
@@ -86,7 +81,7 @@ from pymodaq_data.data import Axis, DataRaw
 from pymodaq_gui.qt_utils import mkQApp
 from pymodaq_gui.utils.shared_ui import SharedUI
 
-from pymodaq.control_modules.hardware.capabilities import control, instr_get, instr_set, measurement
+from pymodaq.control_modules.hardware.capabilities import STORED, control, instr_get, instr_set, measurement
 from pymodaq.control_modules.hardware_module import HardwareModule
 from pymodaq.control_modules.hardware.hardware_registry import HardwareKey
 
@@ -164,11 +159,9 @@ class CatalogDevice(_RelayDriver):
                            pre_set='_check_power_range', post_set='_log_power_change')
     gain = measurement(units='dB', label='Gain', docs='get= a real lambda, not True/string sugar',
                        get=lambda plugin: np.array([20 * np.log10(max(plugin._raw_amplitude(), 1e-9))]))
-    uptime = measurement(units='s', label='Uptime', docs='get=True on a measurement', get=True)
     setpoint = control(units='V', lo=-10, hi=10, label='Setpoint',
-                       docs='get=True and readback=True together: no settling lag, so the auto-'
-                            'created readback defaults to the same get=True answer for free',
-                       get=True, readback=True)
+                       docs='get=STORED: a read answers the last value written, no device access',
+                       get=STORED)
     stage_target = control(units='mm', lo=0, hi=50, epsilon=0.05, label='Stage target',
                            docs='Laggy case: readback is a differently-named measurement, '
                                 'answered through read() since there is no single get= for it',
@@ -192,7 +185,6 @@ class CatalogDevice(_RelayDriver):
     def __init__(self):
         self._start = time.monotonic()
         self._elapsed_s = 0.0
-        self.uptime = np.array([0.0])
         self._offset = 0.0  # what _apply_offset actually applies; calibration_offset itself still
         # stores the raw value you typed, automatically, same as every other control
         self._interlock_ok = True  # pretend a real interlock relay reports this; fixed here for the example
@@ -230,12 +222,10 @@ class CatalogDevice(_RelayDriver):
         return _Reading(arrays)
 
     def _advance(self) -> None:
-        """Wall-clock elapsed time, and the one place ``uptime`` - a measurement, so nothing stores
-        it for free the way a control's write does - gets kept live. Called from ``_raw_amplitude``
-        rather than from ``read()``, since neither ``gain`` nor ``uptime`` goes through it.
+        """Wall-clock elapsed time. Called from ``_raw_amplitude`` rather than from ``read()``,
+        since ``gain`` doesn't go through it.
         """
         self._elapsed_s = time.monotonic() - self._start
-        self.uptime = np.array([self._elapsed_s])
 
     def _raw_amplitude(self) -> float:
         self._advance()

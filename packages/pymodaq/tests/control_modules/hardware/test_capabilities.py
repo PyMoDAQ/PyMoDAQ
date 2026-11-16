@@ -9,6 +9,7 @@ from pymodaq.control_modules.hardware.capabilities import (
     Capabilities,
     Domain,
     Quantity,
+    STORED,
     apply_write,
     check_plugin,
     control,
@@ -289,17 +290,15 @@ class TestReadback:
         assert readback.lo is None  # a readback has no limits
         assert readback.get is None  # the control has no get= of its own to default to
 
-    def test_the_auto_created_readback_defaults_to_the_controls_own_get(self):
-        # A control answering its own read directly has nothing separate for a readback to report -
-        # exactly the exposure_readback case: no plugin code needed beyond readback=True.
-        getter = lambda plugin: plugin.exposure
+    def test_the_auto_created_readback_never_copies_the_controls_own_get(self):
+        # A readback reports what the device does; copying a get=STORED would make it the setpoint.
         class Stage:
-            exposure = control(units='ms', readback=True, get=getter)
+            exposure = control(units='ms', readback=True, get=lambda plugin: plugin.exposure)
+            position = control(units='mm', readback=True, get=STORED)
 
         caps = Capabilities.from_device(Stage)
-        readback = caps.measurements[0]
-        assert readback.name == 'exposure_readback'
-        assert readback.get is getter
+        assert [m.name for m in caps.measurements] == ['exposure_readback', 'position_readback']
+        assert all(m.get is None for m in caps.measurements)
 
     def test_a_pre_declared_readback_is_not_overridden_by_the_default(self):
         own_getter = lambda plugin: plugin.other_source
@@ -399,32 +398,34 @@ class TestGetSet:
         assert 'get' not in q.to_dict() and 'set' not in q.to_dict()
 
 
-class TestGetTrueAndMethodNameSugar:
-    """get=True and the str form of get/set/pre_set/post_set: both pure sugar, resolved by
+class TestStoredAndMethodNameSugar:
+    """get=STORED and the str form of get/set/pre_set/post_set: both pure sugar, resolved by
     Capabilities.__post_init__ into a real callable, never by Quantity/control()/measurement()
     themselves - same pattern readback=True already uses."""
 
-    def test_a_bare_quantity_does_not_resolve_get_true_itself(self):
-        q = control(get=True)
-        assert q.get is True
+    def test_a_bare_quantity_does_not_resolve_stored_itself(self):
+        q = control(get=STORED)
+        assert q.get is STORED
 
-    def test_get_true_reads_the_controls_own_attribute(self):
+    def test_stored_reads_the_controls_own_attribute(self):
         class Stage:
-            position = control(units='mm', get=True)
+            position = control(units='mm', get=STORED)
 
         caps = Capabilities.from_device(Stage)
         plugin = Stage()
         plugin.position = 3.0
         assert caps.controls[0].get(plugin) == 3.0
 
-    def test_get_true_reads_a_measurements_own_attribute_too(self):
-        class Sensor:
-            temperature = measurement(units='K', get=True)
+    def test_stored_is_rejected_on_a_measurement(self):
+        with pytest.raises(ValueError, match='only for a control'):
+            measurement(units='K', get=STORED)
 
-        caps = Capabilities.from_device(Sensor)
-        plugin = Sensor()
-        plugin.temperature = 295.0
-        assert caps.measurements[0].get(plugin) == 295.0
+    def test_get_true_is_rejected_with_a_pointer_to_stored(self):
+        with pytest.raises(ValueError, match='replaced by get=STORED'):
+            control(get=True)
+
+    def test_stored_is_not_mistaken_for_a_method_name(self):
+        assert not isinstance(STORED, str)
 
     def test_get_string_calls_the_named_method_with_no_argument(self):
         class Sensor:
@@ -463,16 +464,6 @@ class TestGetTrueAndMethodNameSugar:
         caps.controls[0].pre_set(plugin, 5.0)
         caps.controls[0].post_set(plugin, 5.0)
         assert plugin.validated == 5.0 and plugin.after == 5.0
-
-    def test_the_readback_default_sees_a_resolved_get_not_the_literal_true_or_string(self):
-        class Sensor:
-            exposure = control(units='ms', readback=True, get=True)
-
-        plugin = Sensor()
-        plugin.exposure = 7.0
-        caps = Capabilities.from_device(Sensor)
-        readback = caps.measurements[0]
-        assert callable(readback.get) and readback.get(plugin) == 7.0
 
 
 class TestInstrGetSet:
@@ -898,7 +889,7 @@ class TestCheckPlugin:
 
     def test_get_or_push_measurements_and_write_only_controls_need_no_read(self):
         class Device:
-            uptime = measurement(get=True)
+            uptime = measurement(get=lambda plugin: 0.0)
             frames = measurement(push=True)
             trigger = control(values=['internal', 'external'])
 

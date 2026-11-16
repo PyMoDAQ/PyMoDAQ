@@ -32,6 +32,7 @@ __all__ = [
     'Domain',
     'Quantity',
     'Capabilities',
+    'STORED',
     'Action',
     'apply_write',
     'check_plugin',
@@ -57,6 +58,22 @@ class Domain(str, Enum):
     CONTINUOUS = 'continuous'
     DISCRETE = 'discrete'
 
+
+class _Stored:
+    """The type of :data:`STORED`: a marker, deliberately not a string (a string ``get=`` is a
+    method name)."""
+
+    def __repr__(self) -> str:
+        return 'STORED'
+
+
+STORED = _Stored()
+"""``control(get=STORED)``: answer a read with the last value written, ``plugin.<name>``.
+
+No device access happens: the value is the last command sent, not what the device reports. Right
+for a control the device applies exactly and immediately; for one it rounds, clamps or applies with
+a delay, read the device instead (``get=``/``read()``) or declare a ``readback=``.
+"""
 
 _IDENTIFIER = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
 
@@ -188,7 +205,7 @@ class Quantity:
         widget_class: type | None = None,
         push: bool = False,
         readback: bool | str = False,
-        get: Callable[[Any], Any] | bool | str | None = None,
+        get: Callable[[Any], Any] | _Stored | str | None = None,
         set: Callable[[Any, Any], None] | str | None = None,
         pre_set: Callable[[Any, Any], None] | str | None = None,
         post_set: Callable[[Any, Any], None] | str | None = None,
@@ -256,6 +273,12 @@ class Quantity:
             raise ValueError('a quantity has either values (discrete) or lo/hi/epsilon (continuous), not both')
         if self.lo is not None and self.hi is not None and self.lo > self.hi:
             raise ValueError(f'lo ({self.lo}) is greater than hi ({self.hi})')
+        if self.get is True:
+            raise ValueError('get=True was replaced by get=STORED (from capabilities), which only a control accepts')
+        if self.get is STORED and self.access is not Access.CONTROL:
+            raise ValueError(
+                'get=STORED is only for a control: nothing writes a measurement, so nothing stores '
+                'its value - use get=<callable or method name>, read(), or push=True')
         if self.readback and self.access is not Access.CONTROL:
             raise ValueError('only a control can have a readback')
         if self.set is not None and self.access is not Access.CONTROL:
@@ -383,7 +406,7 @@ def measurement(
     ui_add: tuple | list = (),
     ui_remove: tuple | list = (),
     push: bool = False,
-    get: Callable[[Any], Any] | bool | str | None = None,
+    get: Callable[[Any], Any] | str | None = None,
     actions: dict[str, Callable | Action] | None = None,
 ) -> Quantity:
     """Declare a read-only quantity: a sensor reading, a detector channel, a status.
@@ -396,19 +419,11 @@ def measurement(
     only for channels without their own ``get``; channels with one are read individually, so declaring
     it opts a channel out of the plugin's batching.
 
-    ``get=True`` is sugar for the common case of a ``get`` that's nothing but
-    ``lambda plugin: plugin.<name>`` - answering from the quantity's own attribute (thanks to
-    ``Quantity.__get__``, that attribute is live from the moment the class is declared, no ``__init__``
-    assignment needed first). There's no equivalent keyword-free default the way a control's write has
-    (see :func:`control`'s ``pre_set``/``post_set``), since a measurement is never written, so there's
-    nothing that automatically keeps the attribute populated - the plugin still has to assign it itself
-    somewhere.
-
-    A string is sugar of a different kind: ``get='_read_temperature'`` is
-    ``lambda plugin: plugin._read_temperature()`` - a plugin method, called with no arguments, for a
-    value that's genuinely computed rather than just stored (the case ``get=True`` doesn't cover).
-    Still needs a real callback (or ``read()``) for anything needing more than one plain call - a
-    value built from several internal pieces, or one taking an argument of its own.
+    A string is sugar for calling a plugin method: ``get='_read_temperature'`` is
+    ``lambda plugin: plugin._read_temperature()``, called with no arguments. Still needs a real
+    callback (or ``read()``) for anything needing more than one plain call - a value built from
+    several internal pieces, or one taking an argument of its own. :data:`STORED` is rejected here: a
+    measurement is never written, so nothing stores its value.
 
     What ``get``/``read`` return is normally a plain array or scalar, which ``HardwareModule`` wraps
     into a single-array, single-label :class:`~pymodaq_data.data.DataWithAxes` on the way to the
@@ -446,7 +461,7 @@ def control(
     widget: str | None = None,
     widget_class: type | None = None,
     readback: bool | str = False,
-    get: Callable[[Any], Any] | bool | str | None = None,
+    get: Callable[[Any], Any] | _Stored | str | None = None,
     set: Callable[[Any, Any], None] | str | None = None,
     pre_set: Callable[[Any, Any], None] | str | None = None,
     post_set: Callable[[Any, Any], None] | str | None = None,
@@ -482,10 +497,9 @@ def control(
 
     ``get`` and ``set`` answer a read or a write of this quantity directly: ``get(plugin)`` returns the
     value, ``set(plugin, value)`` applies it, instead of ``read``/``write``. See :func:`measurement` for
-    how ``get`` interacts with periodic batching, and for ``get=True`` - the common case of a control
-    with no settling lag answering its read straight from ``plugin.<name>``, the same attribute the
-    write side below already stores into for free, so the two end up reading each other for nothing
-    more than ``get=True``.
+    how ``get`` interacts with periodic batching. ``get=STORED`` (:data:`STORED`) answers the read from
+    ``plugin.<name>``, the value the write side below stores: the last command sent, with no device
+    access - right only for a control the device applies exactly and immediately.
 
     A write is never only ``write()``/``set()``, though: whichever of ``set`` or ``write()`` actually
     applies the value (if either does - see below), the device thread then always stores it as
@@ -516,10 +530,8 @@ def control(
     ``readback`` declares the measurement that reports the actual value, which the GUI shows in the same row.
     ``True`` names it ``<name>_readback``; a string names it. If a measurement of that name is already
     declared, it is used; otherwise it is created with the units, shape and values of the control, and
-    with the control's own ``get`` as its ``get`` too, if it has one (see :func:`_readback_of`) - right
-    for a control with no real settling lag, where the control's own answer already is the readback's
-    answer. A control with no ``get`` (the laggy case) gets an empty auto-created readback instead,
-    answered through ``read()`` the same way the control's own value is.
+    answered through ``read()`` (see :func:`_readback_of`). It never reuses the control's own ``get``:
+    a readback reports what the device does, and a control with no settling lag needs no readback.
 
     ``actions`` adds a button per entry, named after its key, calling ``callback(plugin)``: opt-in,
     for the controls that need one (e.g. a motor axis) - the same kwarg exists on :func:`measurement`
@@ -593,18 +605,13 @@ def _readback_of(control: Quantity) -> Quantity:
     a plugin that needs the readback answered differently from the control just declares it itself,
     which skips this entirely.
 
-    Defaults its ``get`` to the control's own ``get``, if it has one: a control answering its own read
-    directly (rather than through ``read()``) is, by that same choice, saying there's nothing for a
-    separate readback to report that it doesn't already - the common case for a quantity with no real
-    settling lag (e.g. ``exposure``). A control with no ``get`` (the laggy case - a motor's target vs.
-    its actual position, read separately through ``read()``) gets no default here either, since there
-    is no single callable to copy; the plugin answers the readback itself, through ``read()``, as the
-    stage example already does.
+    Never copies the control's own ``get``: with ``get=STORED`` that would make the readback the
+    setpoint itself, so settling within ``epsilon`` would compare the setpoint with itself and always
+    pass. The plugin answers the readback through ``read()``, as the stage example does.
     """
     readback = Quantity(Access.MEASUREMENT, units=control.units,
                         label=f'{control.label} readback' if control.label else '',
-                        dtype=control.dtype, shape=control.shape, values=control.values,
-                        get=control.get)
+                        dtype=control.dtype, shape=control.shape, values=control.values)
     readback.name = control.readback
     return readback
 
@@ -624,16 +631,14 @@ class Capabilities:
         duplicates = sorted({n for n in names if names.count(n) > 1})
         if duplicates:
             raise ValueError(f'quantity names must be unique, duplicated: {duplicates}')
-        # get=True is sugar for the common case of answering a read straight from the quantity's own
-        # attribute; a string on get/set/pre_set/post_set is sugar for calling a plugin method by
-        # name instead of writing a one-line lambda just to forward to it - both resolved here,
-        # before anything below, so _readback_of (next) sees a real callable to default a readback's
-        # own get to, same as a hand-written lambda would give it.
+        # get=STORED answers a read from the quantity's own attribute; a string on
+        # get/set/pre_set/post_set is sugar for calling a plugin method by name instead of writing a
+        # one-line lambda just to forward to it - both resolved here into plain callables.
         for quantity in self.measurements + self.controls:
             for keyword in ('get', 'set', 'pre_set', 'post_set'):
                 if isinstance(getattr(quantity, keyword), str):
                     quantity.callback_names[keyword] = getattr(quantity, keyword)
-            if quantity.get is True:
+            if quantity.get is STORED:
                 quantity.get = lambda plugin, name=quantity.name: getattr(plugin, name)
             elif isinstance(quantity.get, str):
                 quantity.get = lambda plugin, method=quantity.get: getattr(plugin, method)()

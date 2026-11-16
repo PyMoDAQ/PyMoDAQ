@@ -801,9 +801,9 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
             self._viewers[name].show_data(data)
             return
         quantity = self._quantities[name]
-        # atleast_1d, not asarray: a plain Python/numpy scalar (e.g. a control's own get=True
-        # answering straight from plugin.<name>, or a readback defaulting to that same get - see
-        # _readback_of) asarray()s to a 0-d array, which DataWithAxes._check_data_type rejects
+        # atleast_1d, not asarray: a plain Python/numpy scalar (e.g. a control's own get=STORED
+        # answering straight from plugin.<name>, or any get= returning a plain float) asarray()s
+        # to a 0-d array, which DataWithAxes._check_data_type rejects
         # outright ("non-empty list of non-empty numpy arrays"); atleast_1d is what Channel._emit
         # already uses for exactly this reason, on the ModulesManager-facing path.
         values = np.atleast_1d(data)

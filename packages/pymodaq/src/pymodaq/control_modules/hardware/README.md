@@ -91,7 +91,7 @@ from the hardware thread's own code.
 This directly answers a question raised during review: for
 
 ```python
-trigger = control(values=['internal', 'external'], get=True)
+trigger = control(values=['internal', 'external'], get=STORED)
 ```
 
 what does `controller.trigger = 'external'` actually do, and what does `controller.trigger` read
@@ -122,7 +122,7 @@ sequenceDiagram
 
     Caller->>C: controller.poll trigger, 200
     C->>T: subscribe_requested
-    Note over T: get is True, resolved at declaration time
+    Note over T: get is STORED, resolved at declaration time
     Note over T: to getattr of plugin, trigger
     T->>P: getattr plugin, trigger
     P->>T: external
@@ -132,12 +132,14 @@ sequenceDiagram
 
 So: **`<channel>` in the write-storage box above is literally the quantity's own name** - here
 `plugin.trigger`, set by `HardwareThread.request_write` every time a write to `trigger` succeeds,
-regardless of whether `set=`/a plain `write()` also ran. And **`get=True` is sugar
+regardless of whether `set=`/a plain `write()` also ran. And **`get=STORED` is sugar
 resolved once, in `Capabilities.__post_init__`, to `lambda plugin: getattr(plugin, 'trigger')`** -
 so a `poll`/`read`/periodic batch asks the plugin for `plugin.trigger` directly, which is exactly
 the attribute the unconditional storage above just set. That's the whole trick behind "`trigger`
 needs nothing else at all": the write side stores for free, the read side is told to answer from
-the same place.
+the same place. The price: what it reads back is the last command sent, never a device reading.
+That is right only for a control the device applies exactly and immediately; `STORED` is a named
+marker (not `True`) so that a reader of the declaration sees no device access happens.
 
 One nuance worth being explicit about, since it is easy to assume otherwise: **touching the
 `Controller` property only ever returns the *cached* last reading** (`_last_values.get(name)`,
@@ -275,7 +277,7 @@ already run, so assigning `self.controller` there rather than in `__init__` (sam
 section 5 above) are two different attributes on two different objects, so there's nothing left to
 collide.
 
-A `proxy='_instr'` kwarg on `control()`/`measurement()` itself - generalizing `get=True` from
+A `proxy='_instr'` kwarg on `control()`/`measurement()` itself - generalizing `get=STORED` from
 "answer from `plugin.<name>`" to "answer from `getattr(plugin, proxy).<name>`," so a quantity could
 skip naming `get=`/`set=` at all - was considered and rejected: it only pays for itself
 when the driver's own attribute name matches the PyMoDAQ quantity name exactly, it would need a
@@ -291,7 +293,7 @@ left to keep in sync.
 | Form of `get=` | Resolves to | Effect on periodic batching |
 |---|---|---|
 | nothing (default) | the channel is answered through `plugin.read(names, fresh)`, shared with every other channel at the same poll period | included in the shared batch |
-| `get=True` | `lambda plugin: getattr(plugin, name)` | **opts the channel out of batching** - read individually |
+| `get=STORED` (controls only) | `lambda plugin: getattr(plugin, name)`: the last value written | **opts the channel out of batching** - read individually |
 | `get='_method_name'` | `lambda plugin: plugin._method_name()` | opts out, same as above |
 | `get=callable` | used as-is | opts out, same as above |
 
@@ -303,12 +305,10 @@ decision to stop sharing hardware transactions with the others at that period, n
 of where the value comes from.
 
 `readback=True`/`readback='name'` on a `control()` auto-creates a measurement that answers "what is
-the device actually doing." Its own `get` defaults to the control's `get`, if the control has one -
-right when the control has no real settling lag, so the control's own answer already is the
-readback's answer (exactly `exposure`'s case in the spectrometer example: `get=True` on both ends
-up reading the same attribute twice, for free). A control with no `get` of its own - the case with
-real lag, e.g. a target vs. a motor's actual position - gets an empty auto-created readback
-instead, answered through the plugin's own `read()`.
+the device actually doing," answered through the plugin's own `read()` (or declare the measurement
+yourself to answer it differently). It never reuses the control's own `get`: with `get=STORED` that
+would make the readback the setpoint itself, and settling within `epsilon` would always pass. A
+control with no settling lag needs no readback at all.
 
 ## 7. Actions and timeouts
 
