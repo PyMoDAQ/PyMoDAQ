@@ -80,8 +80,8 @@ left for any of those to do once `setting=` already answers both directions. A t
 Settings-dock edit, or the plugin changing the entry internally (`operating_mode`'s own
 `discover_calibrate_mode` action, in the catalog example) all keep the toolbar and the dock in sync
 with each other, through whichever of the three actually happened - see `hardware/README.md`,
-"`setting=`," for the full read/write/sync story, and `control_modules/HARDWARE_MODULE.md` for how
-this resolved the dock↔toolbar asymmetry that was still an open gap there.
+"`setting=`," for the full read/write/sync story, and `control_modules/HARDWARE_MODULE.md` (section 9)
+for the dock side.
 
 ## Wrapping an existing instrument object: inherit or compose
 

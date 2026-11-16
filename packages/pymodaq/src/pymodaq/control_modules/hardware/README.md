@@ -188,6 +188,22 @@ raises a `ValueError` if one of these names is not a method of the class, or if 
 measurement (no `get=`, not `push=True`) needs a `read()` the plugin doesn't define. Without it, both
 would only fail at the first read or write, on the hardware thread.
 
+### `setting=`: a quantity backed by an entry of the plugin's own settings
+
+`measurement(setting='x')` / `control(setting='x')` keep the value in the `params` entry named `x`
+(found by leaf name, inside groups too) instead of a plugin attribute, so the toolbar and the
+Settings dock show one value:
+
+| | |
+|---|---|
+| Domain | derived from the entry, never declared: `'list'` → `values` (a dict's keys), `'bool'` → `[False, True]`, `'float'`/`'int'`/`'slide'` → `lo`/`hi` from `limits` or `min`/`max`; any other type raises |
+| Excludes | `get=`/`set=`/`pre_set=`/`post_set=`/`values=`/`lo=`/`hi=`: the entry answers both directions |
+| Read | the entry's `Parameter` value, in the hardware thread's settings tree |
+| Write | `apply_write(plugin, caps, name, value, settings)`: checked against the domain (pyqtgraph's `setValue` only coerces the type), set with the tree's signals blocked, then `commit_settings(param)`; the confirmed value is the `Parameter`'s own afterwards |
+| Dock edit | of a control: rerouted through `write_requested`, the same pending/timeout/`written` path as a toolbar edit. Of a measurement: fanned out like a pushed reading |
+| Plugin changes it | forwarded to the dock as any settings change; a measurement's entry also fans out as a pushed reading (`setting=` implies `push=True`) |
+| Readback | `readback=True` or `readback='name'`, when no measurement of that name is declared but a usable settings entry is, creates a `setting=`-backed readback (the PID setpoint/temperature pair in the catalog example) |
+
 ### Wrapping an existing instrument object (pymeasure or otherwise): compose, don't inherit
 
 A question worth answering explicitly, since the "written in the pymeasure style" wording at the

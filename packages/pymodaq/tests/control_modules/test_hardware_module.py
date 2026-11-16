@@ -1218,10 +1218,8 @@ class TestSettingBackedControl:
     in sync with each other, through whichever of the three actually happened."""
 
     def test_the_toolbar_shows_the_real_value_on_connect(self, registry, qtbot):
-        """setting=/get= are mutually exclusive, so _sync_initial_value's old get=-only check was
-        always a no-op for a setting=-backed control - its widget kept its construction default
-        (0) instead of the settings tree's own real value, here restored from params_state-free
-        'value': 42 declared on the param itself, until the first edit happened to correct it."""
+        """A setting=-backed control has no get=, so _sync_initial_value reads its settings entry
+        instead: the widget shows the entry's 'value': 42, not its construction default (0)."""
         class Stage(Camera):
             params = [{'name': 'setpoint', 'type': 'float', 'limits': [0, 100], 'value': 42.0}]
             setpoint = control(setting='setpoint')
@@ -1263,7 +1261,7 @@ class TestSettingBackedControl:
 
     def test_a_plain_settings_dock_edit_is_unaffected(self, registry, qtbot):
         """A 'value' change on a param that backs no declared quantity keeps going through the
-        plain update_settings/commit_settings path, exactly as before setting= existed."""
+        plain update_settings/commit_settings path."""
         class Stage(Camera):
             params = [{'name': 'gain', 'type': 'float', 'value': 1.0}]
 
@@ -1295,14 +1293,14 @@ class TestSettingBackedControl:
         widget.release()
 
     def test_a_pid_shaped_setpoint_and_readback_settle_correctly(self, registry, qtbot):
-        """The PID scenario from the design discussion: a setpoint control and a temperature
+        """The PID scenario: a setpoint control and a temperature
         measurement, both setting=-backed, living as siblings in one settings group. The
         temperature measurement's plugin-side updates (simulating a real sensor loop) feed the
         same settle-watch (_check_settled) any other readback would, unaffected by setting=/push=
         underneath - a one-shot read, never a wait on anything. Named 'actual_temperature', not
         'temperature' - Camera already declares a plain 'temperature' measurement, which would
-        otherwise collide with the readback name and make tier 1 ("an existing measurement of
-        that name wins") apply instead of the tier-2 setting= derivation this test means to cover."""
+        otherwise collide with the readback name: an existing measurement of that name wins over
+        the settings entry, and this test covers the settings-entry case."""
         class PidStage(Camera):
             params = [{'name': 'group', 'type': 'group', 'children': [
                 {'name': 'setpoint', 'type': 'float', 'limits': [0, 100], 'value': 0},

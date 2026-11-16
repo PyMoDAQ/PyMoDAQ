@@ -1076,6 +1076,53 @@ class TestApplyWrite:
         assert device.extra == 3
 
 
+class TestApplyWriteToASetting:
+    """A setting=-backed control's write goes to its settings entry - no thread, no Qt event loop."""
+
+    class Device:
+        params = [{'name': 'count', 'type': 'int', 'limits': [0, 10], 'value': 0}]
+        count = control(setting='count')
+
+        def __init__(self):
+            self.committed = []
+
+        def commit_settings(self, param):
+            self.committed.append((param.name(), param.value()))
+
+    def _open(self):
+        from pymodaq.control_modules.hardware.hardware_thread import make_plugin_settings
+        settings = make_plugin_settings(self.Device)
+        return self.Device(), Capabilities.from_device(self.Device), settings
+
+    def test_the_entry_is_written_and_committed(self):
+        device, caps, settings = self._open()
+        assert apply_write(device, caps, 'count', 4, settings) == 4
+        assert settings.child('count').value() == 4
+        assert device.committed == [('count', 4)]
+
+    def test_the_confirmed_value_is_the_entrys_own(self):
+        device, caps, settings = self._open()
+        assert apply_write(device, caps, 'count', 3.7, settings) == 3  # an 'int' entry truncates
+
+    def test_a_value_outside_the_derived_domain_is_rejected(self):
+        device, caps, settings = self._open()
+        with pytest.raises(ValueError, match='outside'):
+            apply_write(device, caps, 'count', 11, settings)
+        assert settings.child('count').value() == 0 and device.committed == []
+
+    def test_the_settings_tree_is_required(self):
+        device, caps, _ = self._open()
+        with pytest.raises(ValueError, match='needs the settings tree'):
+            apply_write(device, caps, 'count', 4)
+
+    def test_listeners_of_the_tree_do_not_see_the_write_as_the_plugins_own_change(self):
+        device, caps, settings = self._open()
+        seen = []
+        settings.sigTreeStateChanged.connect(lambda *args: seen.append(args))
+        apply_write(device, caps, 'count', 4, settings)
+        assert seen == []
+
+
 class TestStorePushedReadings:
     """Outside the hardware thread, a pushed reading lands on the plugin's own attribute."""
 
