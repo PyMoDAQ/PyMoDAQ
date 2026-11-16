@@ -21,6 +21,7 @@ Either access can have either domain: a discrete measurement is a status readbac
 """
 from __future__ import annotations
 
+import copy
 import re
 from dataclasses import dataclass, field
 from enum import Enum
@@ -245,10 +246,6 @@ class Quantity:
         # needs to replace this whole shape instead of just hooking into it.
         self.pre_set = pre_set
         self.post_set = post_set
-        # keyword -> method name, for each of get/set/pre_set/post_set given as a string: kept by
-        # Capabilities when it replaces the string with a callable, so check_plugin can still
-        # check the name against the plugin class afterwards.
-        self.callback_names: dict[str, str] = {}
         # Named actions, each its own button in this control's own row (see Action).
         self.actions: dict[str, Action] = {
             name: value if isinstance(value, Action) else Action(callback=value)
@@ -635,9 +632,6 @@ class Capabilities:
         # get/set/pre_set/post_set is sugar for calling a plugin method by name instead of writing a
         # one-line lambda just to forward to it - both resolved here into plain callables.
         for quantity in self.measurements + self.controls:
-            for keyword in ('get', 'set', 'pre_set', 'post_set'):
-                if isinstance(getattr(quantity, keyword), str):
-                    quantity.callback_names[keyword] = getattr(quantity, keyword)
             if quantity.get is STORED:
                 quantity.get = lambda plugin, name=quantity.name: getattr(plugin, name)
             elif isinstance(quantity.get, str):
@@ -698,17 +692,14 @@ class Capabilities:
 
     @classmethod
     def from_device(cls, device: type | Any) -> Capabilities:
-        """Collect the quantities declared on *device* and its base classes."""
+        """Collect the quantities declared on *device* and its base classes.
+
+        Works on copies: resolving them (method names, ``readback=True``...) never changes the
+        declarations on the class, which every subclass shares. Each call returns new objects, and
+        a subclass is resolved against itself, not against whichever class was collected first.
+        """
         klass = device if isinstance(device, type) else type(device)
-        declared: dict[str, Quantity] = {}
-        # __mro__ runs most-derived class first, object last; reversed() walks it base-to-derived
-        # so a subclass's own Quantity overwrites same-named dict entry last, same as normal
-        # attribute lookup - a subclass redeclaring a parent's control/measurement wins.
-        for base in reversed(klass.__mro__):
-            for name, value in vars(base).items():
-                if isinstance(value, Quantity):
-                    declared[name] = value
-        quantities = list(declared.values())
+        quantities = [_copy_quantity(q) for q in _declared_quantities(klass).values()]
         return cls(
             measurements=[q for q in quantities if q.access is Access.MEASUREMENT],
             controls=[q for q in quantities if q.access is Access.CONTROL],
@@ -738,6 +729,27 @@ class Capabilities:
         return next((q for q in self.controls if q.name == name), None)
 
 
+def _declared_quantities(klass: type) -> dict[str, Quantity]:
+    """The ``Quantity`` declarations of *klass* and its base classes, by name, unresolved."""
+    declared: dict[str, Quantity] = {}
+    # __mro__ runs most-derived class first, object last; reversed() walks it base-to-derived
+    # so a subclass's own Quantity overwrites same-named dict entry last, same as normal
+    # attribute lookup - a subclass redeclaring a parent's control/measurement wins.
+    for base in reversed(klass.__mro__):
+        for name, value in vars(base).items():
+            if isinstance(value, Quantity):
+                declared[name] = value
+    return declared
+
+
+def _copy_quantity(quantity: Quantity) -> Quantity:
+    """A copy of a declaration that ``Capabilities`` can resolve without touching the original."""
+    duplicate = copy.copy(quantity)
+    duplicate.values = list(quantity.values)
+    duplicate.actions = dict(quantity.actions)
+    return duplicate
+
+
 def check_plugin(plugin_class: type) -> None:
     """Raise a ``ValueError`` now for what would otherwise fail at the first read or write.
 
@@ -750,12 +762,13 @@ def check_plugin(plugin_class: type) -> None:
     Signatures are not checked: ``inspect.signature`` fails on many driver methods (C extensions,
     decorated or pymeasure ``fget`` methods).
     """
-    caps = Capabilities.from_device(plugin_class)
     problems = []
-    for quantity in caps.measurements + caps.controls:
-        for keyword, method in quantity.callback_names.items():
-            if not callable(getattr(plugin_class, method, None)):
-                problems.append(f'{quantity.name}: {keyword}={method!r} is not a method of the class')
+    for name, quantity in _declared_quantities(plugin_class).items():
+        for keyword in ('get', 'set', 'pre_set', 'post_set'):
+            method = getattr(quantity, keyword)
+            if isinstance(method, str) and not callable(getattr(plugin_class, method, None)):
+                problems.append(f'{name}: {keyword}={method!r} is not a method of the class')
+    caps = Capabilities.from_device(plugin_class)
     polled = [q.name for q in caps.measurements if q.get is None and not q.push]
     if polled and not callable(getattr(plugin_class, 'read', None)):
         problems.append(f'{polled} have no get= and are not push=True, so they need a read() method')

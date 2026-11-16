@@ -133,7 +133,7 @@ sequenceDiagram
 So: **`<channel>` in the write-storage box above is literally the quantity's own name** - here
 `plugin.trigger`, set by `HardwareThread.request_write` every time a write to `trigger` succeeds,
 regardless of whether `set=`/a plain `write()` also ran. And **`get=STORED` is sugar
-resolved once, in `Capabilities.__post_init__`, to `lambda plugin: getattr(plugin, 'trigger')`** -
+resolved in `Capabilities.__post_init__` to `lambda plugin: getattr(plugin, 'trigger')`** -
 so a `poll`/`read`/periodic batch asks the plugin for `plugin.trigger` directly, which is exactly
 the attribute the unconditional storage above just set. That's the whole trick behind "`trigger`
 needs nothing else at all": the write side stores for free, the read side is told to answer from
@@ -176,9 +176,10 @@ hooks and no `write()`.
 
 A string on any of `get=`/`set=`/`pre_set=`/`post_set=` is sugar for calling that plugin method by
 name with the natural arguments (`post_set='_clamp_averaging'` instead of writing
-`lambda plugin, value: plugin._clamp_averaging(value)`), resolved once in
-`Capabilities.__post_init__`, before anything else that reads `quantity.get`/`.set`/etc. sees it -
-including the readback default below.
+`lambda plugin, value: plugin._clamp_averaging(value)`), resolved in
+`Capabilities.__post_init__`, before anything else that reads `quantity.get`/`.set`/etc. sees it.
+`Capabilities.from_device` resolves copies of the declarations: the `Quantity` objects on the class
+(shared by every subclass) keep the strings and `readback=True` exactly as written.
 
 `check_plugin(plugin_class)` (run by `HardwareRegistry.attach`, before the hardware thread starts)
 raises a `ValueError` if one of these names is not a method of the class, or if a polled

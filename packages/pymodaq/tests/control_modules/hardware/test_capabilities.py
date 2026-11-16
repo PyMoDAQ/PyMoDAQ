@@ -894,3 +894,40 @@ class TestCheckPlugin:
             trigger = control(values=['internal', 'external'])
 
         check_plugin(Device)
+
+
+class TestFromDeviceLeavesTheClassAlone:
+    """from_device resolves copies: the declarations on the class, shared by every subclass, are
+    never changed, so the result never depends on which class was collected first."""
+
+    class Device:
+        temperature = measurement(get='_read_temperature')
+        position = control(lo=0, hi=10, readback=True, get=STORED, actions={'home': lambda plugin: None})
+
+        def _read_temperature(self):
+            return 1.0
+
+    def test_declarations_keep_their_original_values(self):
+        Capabilities.from_device(self.Device)
+        assert vars(self.Device)['temperature'].get == '_read_temperature'
+        assert vars(self.Device)['position'].get is STORED
+        assert vars(self.Device)['position'].readback is True
+
+    def test_each_call_returns_new_quantities(self):
+        first = Capabilities.from_device(self.Device)
+        second = Capabilities.from_device(self.Device)
+        assert first.controls[0] is not second.controls[0]
+        assert first.controls[0].actions is not second.controls[0].actions
+        first.controls[0].values.append('x')
+        assert second.controls[0].values == []
+
+    def test_a_subclass_is_resolved_on_its_own(self):
+        class Sub(self.Device):
+            def _read_temperature(self):
+                return 2.0
+
+        base = Capabilities.from_device(self.Device)
+        sub = Capabilities.from_device(Sub)
+        assert base.measurements[0].get(self.Device()) == 1.0
+        assert sub.measurements[0].get(Sub()) == 2.0
+        assert [m.name for m in sub.measurements] == ['temperature', 'position_readback']

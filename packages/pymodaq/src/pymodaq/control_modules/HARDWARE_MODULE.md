@@ -164,7 +164,7 @@ watcher left to ever confirm or fail it, so the row goes back to idle rather tha
 
 ## 7. `merge_into`: a control inside another row
 
-Resolved once, in `Capabilities.__post_init__` (the other README's own scope): the target must be
+Checked in `Capabilities.__post_init__` (the other README's own scope): the target must be
 a declared quantity, a control can't merge into itself, and merges can't chain. At render time,
 the merged button writes through the exact same path as a row of its own (`_write`), just drawn
 inside another quantity's toolbar, with its checked state bound `FROM_SYNC` to that quantity's own
