@@ -985,6 +985,22 @@ class TestSettingBackedDispatch:
         thread_obj._plugin_settings.child('temperature').setValue(21.5)
         assert thread_obj._read_channel('temperature') == 21.5
 
+    def test_a_polled_setting_backed_control_answers_from_the_parameter_too(self, qapp):
+        """A control is never pushed, so a poll of one goes through the periodic read - which
+        must answer from its Parameter, as a one-shot read does, not ask plugin.read() for it."""
+        thread_obj, plugin = self._thread()
+        thread_obj._plugin_settings.child('setpoint').setValue(42.0)
+        sub = Subscription('setpoint', 100.0)
+        got, failed = Collector(), Collector()
+        sub.data_ready.connect(got)
+        thread_obj.read_failed.connect(failed)
+        thread_obj.subscribe(sub)
+        thread_obj._on_period_tick(100.0)
+        assert failed.count == 0
+        assert got.last()[0] == 42.0
+        assert plugin.query_calls == []
+        thread_obj.unsubscribe(sub)
+
     def test_a_plugin_driven_change_fans_out_to_an_active_subscriber(self, qapp):
         """setting= on a measurement implies push=True: no timer is ever created for it (see
         subscribe()'s own self._pushed check), yet an active subscriber still gets every value

@@ -321,7 +321,8 @@ channel's own `get` if it has one. A *periodic* read (`HardwareThread._read_peri
 channel sharing a poll period into one `plugin.read(names=[...], fresh=True)` call, but only for
 the channels *without* their own `get` - declaring `get=` on one channel is therefore also a
 decision to stop sharing hardware transactions with the others at that period, not only a question
-of where the value comes from.
+of where the value comes from. A `setting=` channel never goes through `plugin.read`: a periodic
+read answers it from its `Parameter`, exactly as a single-channel request does.
 
 `readback=True` on a `control()` auto-creates `<name>_readback`, a measurement that answers "what is
 the device actually doing," answered through the plugin's own `read()` (or declare the measurement

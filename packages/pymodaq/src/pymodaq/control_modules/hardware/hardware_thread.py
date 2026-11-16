@@ -429,35 +429,50 @@ class HardwareThread(QObject):
 
     @_when_open
     def _read_period(self, period_ms: float) -> None:
-        """One read for the channels sharing this period.
-
-        One batched ``read`` call answers the channels without their own ``get``. A channel that
-        declares one is read individually instead, since declaring it opts that channel out of
-        the plugin's batching.
-        """
+        """One read for the channels sharing this period (see :meth:`_read_channels`)."""
         subs = self._subscriptions_at(period_ms)
         if not subs:
             return
         channels = sorted({sub.channel for sub in subs} - self._pushed)
         if not channels:
             return
-        batched = [channel for channel in channels if channel not in self._get_of]
-        try:
-            dte = self._plugin.read(names=batched, fresh=True) if batched else None
-        except Exception as exc:
-            logger.exception(f'batched read of {batched} failed')
-            for channel in batched:
-                self.read_failed.emit(channel, str(exc))
-            return
-        for channel in channels:
-            getter = self._get_of.get(channel)
+        readings, errors = self._read_channels(channels)
+        for channel, message in errors.items():
+            self.read_failed.emit(channel, message)
+        for channel, data in readings.items():
+            self._deliver(channel, data, period_ms)
+
+    def _read_channels(self, channels: list[str]) -> tuple[dict[str, object], dict[str, str]]:
+        """Read *channels* once: ``(readings, errors)``, both keyed by channel, in *channels*' order.
+
+        Each channel is answered the way :meth:`_read_channel` answers it alone: a ``setting=``
+        from its own ``Parameter``, a ``get=`` by calling it (declaring one opts that channel out
+        of the plugin's batching), every other one from one batched ``read`` call shared by all of
+        them. A batched read that raises fails every channel it was asked for.
+        """
+        batched = [channel for channel in channels
+                   if channel not in self._get_of and channel not in self._setting_of]
+        readings: dict[str, object] = {}
+        errors: dict[str, str] = {}
+        dte = None
+        if batched:
             try:
-                data = getter(self._plugin) if getter is not None else dte.get_data_from_name(channel)
+                dte = self._plugin.read(names=batched, fresh=True)
+            except Exception as exc:
+                logger.exception(f'batched read of {batched} failed')
+                errors.update({channel: str(exc) for channel in batched})
+        for channel in channels:
+            if channel in errors:
+                continue
+            try:
+                if channel in batched:
+                    readings[channel] = dte.get_data_from_name(channel)
+                else:
+                    readings[channel] = self._read_channel(channel)
             except Exception as exc:
                 logger.exception(f'read of {channel!r} failed')
-                self.read_failed.emit(channel, str(exc))
-                continue
-            self._deliver(channel, data, period_ms)
+                errors[channel] = str(exc)
+        return readings, errors
 
     def _deliver(self, channel: str, data: object, period_ms: float) -> None:
         """Send one channel's data to its subscriptions at *period_ms* only."""
