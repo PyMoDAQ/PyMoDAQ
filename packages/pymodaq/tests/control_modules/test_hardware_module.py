@@ -780,6 +780,7 @@ class TestNamedReadback:
         class Stage:
             params: list = []
             z = control(units='mm', lo=0, hi=10, readback='my_z_readback')
+            my_z_readback = measurement(units='mm')
             readings = {'my_z_readback': 4.5}
 
             def open(self, settings):

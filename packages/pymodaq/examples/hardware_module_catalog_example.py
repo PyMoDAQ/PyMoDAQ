@@ -37,7 +37,7 @@ What to try, and what each one is for:
 - stage_target / stage_actual_position: the opposite, laggy case - a one-axis motor stage, same idea
   as the stage example's axes but named differently on purpose (``readback='stage_actual_position'``,
   not the default ``stage_target_readback``), to show that the readback's name is independent of the
-  control's. ``stage_target`` has no ``get`` (there is real settling time to model), so it's answered
+  control's. A named readback is declared as its own measurement, next to the control. ``stage_target`` has no ``get`` (there is real settling time to model), so it's answered
   through ``read()`` instead, same as the stage example's axes. Move it with ``epsilon=0.05`` set:
   the row stays pending (orange) until ``stage_actual_position`` catches up; Stop freezes it where it
   currently is.
@@ -167,6 +167,7 @@ class CatalogDevice(_RelayDriver):
                                 'answered through read() since there is no single get= for it',
                            readback='stage_actual_position', set='_set_stage_target',
                            stop=_stop_stage)
+    stage_actual_position = measurement(units='mm', label='Stage actual position')
     channels = measurement(units='counts', shape=(64,), label='Two channels',
                            docs='get= returning a ready-made DataRaw: two channels, one Viewer1D',
                            get='_read_channels')

@@ -53,10 +53,10 @@ storage but not a whole `set=` of its own - mutually exclusive with `set=`, not 
 
 ## `readback=`: the measurement that answers "what is it actually doing"
 
-| Form | Names it | If a measurement of that name already exists |
+| Form | Names it | If no measurement of that name is declared |
 |---|---|---|
-| `readback=True` | `<name>_readback` | that one is used untouched - nothing auto-created |
-| `readback='custom_name'` | that name | same |
+| `readback=True` | `<name>_readback` | one is auto-created (a declared one is used untouched) |
+| `readback='custom_name'` | that name | `ValueError`: declare the measurement on the class |
 
 The auto-created one is answered through the plugin's own `read()`, exactly like the stage
 example's `x`/`y`/`z` and their positions. It never reuses the control's own `get`: with

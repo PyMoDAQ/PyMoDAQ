@@ -545,9 +545,10 @@ def control(
     argument shape, or logic that belongs inline rather than behind a named method.
 
     ``readback`` declares the measurement that reports the actual value, which the GUI shows in the same row.
-    ``True`` names it ``<name>_readback``; a string names it. If a measurement of that name is already
-    declared, it is used; otherwise it is created with the units, shape and values of the control, and
-    answered through ``read()`` (see :func:`_readback_of`). It never reuses the control's own ``get``:
+    ``True`` names it ``<name>_readback``: a measurement of that name is used if declared, otherwise it
+    is created with the units, shape and values of the control, and answered through ``read()`` (see
+    :func:`_readback_of`). A string names a measurement that must be declared on the class (a
+    ``ValueError`` otherwise, so a typo is caught when the device class is collected). It never reuses the control's own ``get``:
     a readback reports what the device does, and a control with no settling lag needs no readback.
 
     ``actions`` adds a button per entry, named after its key, calling ``callback(plugin)``: opt-in,
@@ -631,7 +632,8 @@ def _shape_of(shape: tuple[int | None, ...] | DataDim) -> tuple[int | None, ...]
 def _readback_of(control: Quantity) -> Quantity:
     """The measurement that reports *control*'s actual value: same units, shape and values, no limits.
 
-    Only auto-created when nothing of that name was declared already (see the loop that calls this);
+    Only auto-created for ``readback=True`` when nothing of that name was declared already (see the
+    loop that calls this);
     a plugin that needs the readback answered differently from the control just declares it itself,
     which skips this entirely.
 
@@ -681,7 +683,8 @@ class Capabilities:
         for control in self.controls:
             if not control.readback:
                 continue
-            if control.readback is True:
+            auto_named = control.readback is True
+            if auto_named:
                 control.readback = f'{control.name}_readback'
             if control.readback in readback_owner:
                 raise ValueError(
@@ -699,9 +702,17 @@ class Capabilities:
                     f'declared control'
                 )
             readback_owner[control.readback] = control.name
-            if control.readback not in measured:
-                self.measurements.append(_readback_of(control))
-                measured.add(control.readback)
+            if control.readback in measured:
+                continue
+            if not auto_named:
+                # only readback=True creates a measurement: a string must name a declared one, so a
+                # typo fails here instead of becoming a measurement nothing answers
+                raise ValueError(
+                    f'{control.name!r} declares readback {control.readback!r}, which is not a declared '
+                    f'measurement: declare it, or use readback=True for {control.name + "_readback"!r}'
+                )
+            self.measurements.append(_readback_of(control))
+            measured.add(control.readback)
         # the target's own row is just where this control's button is drawn; a measurement's row
         # is as good a home for it as another control's, since the write still goes through this
         # control's own set path either way (e.g. a channel's enable, merged into that
@@ -836,3 +847,4 @@ def apply_write(plugin: Any, caps: Capabilities, name: str, value: Any) -> None:
     setattr(plugin, name, value)
     if post_set is not None:
         post_set(plugin, value)
+

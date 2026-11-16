@@ -311,13 +311,14 @@ class TestReadback:
         assert len(caps.measurements) == 1  # linked, not duplicated - same as any declared readback
         assert caps.measurements[0].get is own_getter  # the control's get= never touches it
 
-    def test_a_string_names_the_created_measurement(self):
+    def test_a_string_must_name_a_declared_measurement(self):
         class Stage:
-            x = control(readback='x_position')
+            x = control(readback='x_positoin')  # typo
+            x_position = measurement(units='mm')
 
-        caps = Capabilities.from_device(Stage)
-        assert [q.name for q in caps.measurements] == ['x_position']
-        assert caps.controls[0].readback == 'x_position'
+        with pytest.raises(ValueError, match="'x' declares readback 'x_positoin', which is not a declared "
+                                              "measurement"):
+            Capabilities.from_device(Stage)
 
     def test_a_declared_measurement_is_linked_not_duplicated(self):
         class Stage:
@@ -346,6 +347,7 @@ class TestReadback:
     def test_any_string_names_the_readback(self):
         class Stage:
             z = control(units='mm', readback='my_z_readback')
+            my_z_readback = measurement(units='mm')
 
         caps = Capabilities.from_device(Stage)
         assert caps.controls[0].readback == 'my_z_readback'
@@ -355,6 +357,7 @@ class TestReadback:
         class Stage:
             x = control(units='mm', readback='position')
             y = control(units='mm', readback='position')
+            position = measurement(units='mm')
 
         with pytest.raises(ValueError, match="readback 'position' is declared by both 'x' and 'y'"):
             Capabilities.from_device(Stage)

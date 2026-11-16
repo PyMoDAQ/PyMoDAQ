@@ -105,6 +105,7 @@ class FakeStage:
     x_enable, x = _axis_controls('x', 0, 50)
     y_enable, y = _axis_controls('y', 0, 50)
     z_enable, z = _axis_controls('z', 0, 10, readback='my_z_readback')
+    my_z_readback = measurement(units='mm', label='Z readback')  # a named readback is declared
     motion = measurement(values=['idle', 'moving'], label='Motion')
 
     AXES = ('x', 'y', 'z')

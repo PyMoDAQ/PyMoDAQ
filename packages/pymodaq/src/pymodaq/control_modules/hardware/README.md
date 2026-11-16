@@ -305,9 +305,10 @@ the channels *without* their own `get` - declaring `get=` on one channel is ther
 decision to stop sharing hardware transactions with the others at that period, not only a question
 of where the value comes from.
 
-`readback=True`/`readback='name'` on a `control()` auto-creates a measurement that answers "what is
+`readback=True` on a `control()` auto-creates `<name>_readback`, a measurement that answers "what is
 the device actually doing," answered through the plugin's own `read()` (or declare the measurement
-yourself to answer it differently). It never reuses the control's own `get`: with `get=STORED` that
+yourself to answer it differently). `readback='name'` links a measurement that must be declared on
+the class; an undeclared name raises, so a typo can't silently become a measurement nothing answers. It never reuses the control's own `get`: with `get=STORED` that
 would make the readback the setpoint itself, and settling within `epsilon` would always pass. A
 control with no settling lag needs no readback at all.
 
