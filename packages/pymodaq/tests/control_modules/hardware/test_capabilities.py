@@ -13,6 +13,7 @@ from pymodaq.control_modules.hardware.capabilities import (
     STORED,
     apply_write,
     check_device_class,
+    store_pushed_readings,
     control,
     instr_get,
     instr_set,
@@ -834,6 +835,35 @@ class TestApplyWrite:
         apply_write(device, Capabilities.from_device(self.Device), 'extra', 3)
         assert device.calls == [('write', 'extra', 3)]
         assert device.extra == 3
+
+
+class TestStorePushedReadings:
+    """Outside the hardware thread, a pushed reading lands on the plugin's own attribute."""
+
+    class Sensor:
+        level = measurement(units='V', push=True)
+
+        def on_sdk_event(self, value):
+            self.push_reading('level', value)
+
+    def test_a_pushed_reading_is_stored_on_the_plugin(self):
+        sensor = self.Sensor()
+        store_pushed_readings(sensor)
+        sensor.on_sdk_event(2.5)
+        assert sensor.level == 2.5
+
+    def test_a_push_from_another_thread_is_stored_too(self):
+        import threading
+        sensor = self.Sensor()
+        store_pushed_readings(sensor)
+        worker = threading.Thread(target=sensor.on_sdk_event, args=(7.0,))
+        worker.start()
+        worker.join()
+        assert sensor.level == 7.0
+
+    def test_the_class_is_left_alone(self):
+        store_pushed_readings(self.Sensor())
+        assert not hasattr(self.Sensor, 'push_reading')
 
 
 class TestCheckDeviceClass:

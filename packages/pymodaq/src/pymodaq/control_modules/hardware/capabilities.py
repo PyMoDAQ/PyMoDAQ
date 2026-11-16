@@ -39,6 +39,7 @@ __all__ = [
     'Action',
     'apply_write',
     'check_device_class',
+    'store_pushed_readings',
     'measurement',
     'control',
     'instr_get',
@@ -848,3 +849,14 @@ def apply_write(plugin: Any, caps: Capabilities, name: str, value: Any) -> None:
     if post_set is not None:
         post_set(plugin, value)
 
+
+def store_pushed_readings(plugin: Any) -> None:
+    """Give *plugin* a ``push_reading`` that stores each reading as ``plugin.<channel>``.
+
+    ``push_reading`` is not a method of the plugin: whoever runs the plugin provides it. The hardware
+    thread provides its own (delivering the reading to subscribers); this one is for a plain script or
+    test, with no thread and no Qt, so that a ``push=True`` measurement can be checked as an attribute
+    like any other. Safe to call from the plugin's own threads (an SDK callback): it is one attribute
+    assignment.
+    """
+    plugin.push_reading = lambda channel, data: setattr(plugin, channel, data)

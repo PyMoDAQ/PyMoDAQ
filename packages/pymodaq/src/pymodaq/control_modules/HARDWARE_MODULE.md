@@ -175,7 +175,9 @@ confirmed value like any other widget.
 A measurement declared `push=True` is delivered through `plugin.push_reading(channel, data)`,
 callable from *any* thread (e.g. an SDK's own callback thread) - never given a poll timer, and
 never batched with anything else. The hardware thread queues it to itself via a signal, then fans
-it out exactly like a periodic reading would.
+it out exactly like a periodic reading would. Outside the thread (a script, a unit test),
+`capabilities.store_pushed_readings(plugin)` provides a `push_reading` that stores each reading as
+`plugin.<channel>`.
 
 ## 9. Settings: GUI edits vs. the plugin changing itself
 

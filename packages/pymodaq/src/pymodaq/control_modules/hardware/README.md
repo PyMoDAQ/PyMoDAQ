@@ -172,7 +172,9 @@ with `set=`, not stackable with it:
 All of this lives in `capabilities.apply_write(plugin, caps, name, value)`, which needs no thread and
 no Qt; `request_write` just calls it on the hardware thread. To drive a plugin from a plain script or
 test, call `apply_write` yourself. A bare `plugin.exposure = 50` only stores the value: it runs no
-hooks and no `write()`.
+hooks and no `write()`. The plugin's `push_reading` is provided by whoever runs it: the hardware
+thread, or `capabilities.store_pushed_readings(plugin)` in a script or test, which stores each pushed
+reading as `plugin.<channel>`.
 
 A string on any of `get=`/`set=`/`pre_set=`/`post_set=` is sugar for calling that plugin method by
 name with the natural arguments (`post_set='_clamp_averaging'` instead of writing
