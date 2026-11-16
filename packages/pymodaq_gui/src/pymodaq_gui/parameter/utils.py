@@ -1,7 +1,7 @@
 from __future__ import annotations
 from contextlib import contextmanager
 import inspect
-from typing import Any, Dict, Iterable, Iterator, List, Sequence, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, Iterator, List, Mapping, Sequence, Optional, Tuple, Union
 import numpy as np
 from collections import OrderedDict
 from pymodaq_utils.utils import find_keys_from_val
@@ -350,6 +350,53 @@ def get_param_dict_from_name(parent_list: List[Dict[str, Any]], name: str,
             if ch is not None:
                 return ch
     return None
+
+
+def _split_param_key(param: Parameter, key: Union[str, Sequence[str]]) -> Tuple[str, ...]:
+    """Path of a key of set_param_values: a tuple/list, a name or a 'a/b' path (a child named with a '/' wins)"""
+    if isinstance(key, str):
+        if '/' in key and key not in param.names:
+            return tuple(key.split('/'))
+        return (key,)
+    return tuple(key)
+
+
+def set_param_values(param: Parameter, values: Mapping[Union[str, Sequence[str]], Any],
+                     ignore_unknown: bool = False) -> None:
+    """Set the values of children of a Parameter from a (possibly nested) dict
+
+    Parameters
+    ----------
+    param: Parameter
+        The parent parameter, for instance the settings tree
+    values: Mapping
+        The keys are the names of the children, 'a/b' paths or tuples of names ('a', 'b'). A value is either the value
+        of that child, or, for a group (or any parameter with children), a dict handled the same way, relative to it.
+    ignore_unknown: bool
+        If False (default), a key naming no child raises a KeyError listing the valid children. If True, it is skipped.
+
+    Examples
+    --------
+    >>> set_param_values(settings, {'bounds': {'is_bounds': True, 'max_bound': 5.},
+    ...                             'scaling/use_scaling': False, ('main_settings', 'Nviewers'): 2})
+    """
+    for key, value in values.items():
+        path = _split_param_key(param, key)
+        child = param
+        for name in path:
+            if name not in child.names:
+                if ignore_unknown:
+                    child = None
+                    break
+                raise KeyError(f'{child.name()!r} has no child named {name!r} (key {key!r}); '
+                               f'valid children are: {list(child.names)}')
+            child = child.child(name)
+        if child is None:
+            continue
+        if isinstance(value, Mapping) and (child.hasChildren() or 'group' in child.type()):
+            set_param_values(child, value, ignore_unknown=ignore_unknown)
+        else:
+            child.setValue(value)
 
 
 def set_param_from_param(param_old: Parameter, param_new: Parameter) -> None:

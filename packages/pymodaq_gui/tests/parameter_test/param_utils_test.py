@@ -299,3 +299,58 @@ def test_tree_change_blocker(monkeypatch, has_keep, keep, expected):
         settings['a_float'] = 1.
     assert {change[1] for change in emitted} == expected
     assert settings['a_float'] == 1.
+
+
+def _settings_for_set_values():
+    return Parameter.create(name='settings', type='group', children=[
+        {'name': 'a_float', 'type': 'float', 'value': 0.},
+        {'name': 'group', 'type': 'group', 'children': [
+            {'name': 'an_int', 'type': 'int', 'value': 0},
+            {'name': 'sub', 'type': 'group', 'children': [
+                {'name': 'a_str', 'type': 'str', 'value': ''}]}]},
+        {'name': 'a/slash', 'type': 'bool', 'value': False},
+        {'name': 'a_list', 'type': 'list', 'limits': {'one': {'x': 1}, 'two': {'x': 2}}},
+    ])
+
+
+def test_set_param_values_leaves_and_nested_dicts():
+    settings = _settings_for_set_values()
+    putils.set_param_values(settings, {'a_float': 1.5, 'group': {'an_int': 3, 'sub': {'a_str': 'hello'}}})
+    assert settings['a_float'] == 1.5
+    assert settings['group', 'an_int'] == 3
+    assert settings['group', 'sub', 'a_str'] == 'hello'
+
+
+def test_set_param_values_paths():
+    settings = _settings_for_set_values()
+    putils.set_param_values(settings, {'group/an_int': 4, ('group', 'sub', 'a_str'): 'path'})
+    assert settings['group', 'an_int'] == 4
+    assert settings['group', 'sub', 'a_str'] == 'path'
+    putils.set_param_values(settings, {'group/sub': {'a_str': 'path then dict'}})
+    assert settings['group', 'sub', 'a_str'] == 'path then dict'
+    putils.set_param_values(settings.child('group'), {'sub/a_str': 'relative'})
+    assert settings['group', 'sub', 'a_str'] == 'relative'
+
+
+def test_set_param_values_name_with_a_slash_wins_over_a_path():
+    settings = _settings_for_set_values()
+    putils.set_param_values(settings, {'a/slash': True})
+    assert settings['a/slash'] is True
+
+
+def test_set_param_values_dict_value_of_a_leaf_is_set_as_is():
+    settings = _settings_for_set_values()
+    putils.set_param_values(settings, {'a_list': {'x': 2}})
+    assert settings['a_list'] == {'x': 2}
+
+
+@pytest.mark.parametrize('values, missing', [({'not_there': 1}, 'not_there'),
+                                             ({'group': {'nope': 1}}, 'nope'),
+                                             ({'group/sub/nope': 1}, 'nope')])
+def test_set_param_values_unknown_name(values, missing):
+    settings = _settings_for_set_values()
+    with pytest.raises(KeyError, match=missing) as excinfo:
+        putils.set_param_values(settings, values)
+    assert 'valid children' in str(excinfo.value)
+    putils.set_param_values(settings, {**values, 'a_float': 2.}, ignore_unknown=True)
+    assert settings['a_float'] == 2.
