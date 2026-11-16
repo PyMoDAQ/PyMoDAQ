@@ -154,3 +154,33 @@ class TestNaverage:
         assert bundle.indexes == [1, 0]  # [average index, scan index]
         nav_axes = scan_acquisition.saver_worker.nav_axes_signal.emit.call_args[0][0]
         assert {axis.label: axis.index for axis in nav_axes} == {'Average': 0, 'x': 1}
+
+
+class TestDoScan:
+    """do_scan must not raise whatever the state of the START action (issue #1503)"""
+
+    @pytest.fixture
+    def scan(self):
+        scan = Mock()
+        scan.get_action.side_effect = lambda name: self.actions[name]
+        return scan
+
+    @pytest.fixture(autouse=True)
+    def actions(self):
+        from pymodaq_gui.utils.custom_app import WorkFlowActions
+        self.actions = {WorkFlowActions.START: Mock(), WorkFlowActions.STOP: Mock()}
+        self.workflow = WorkFlowActions
+
+    def test_start_when_enabled(self, scan):
+        scan.is_action_enabled.return_value = True
+        DAQScan.do_scan(scan, True)
+        self.actions[self.workflow.START].trigger.assert_called_once()
+
+    def test_start_when_disabled_does_nothing(self, scan):
+        scan.is_action_enabled.return_value = False
+        DAQScan.do_scan(scan, True)
+        self.actions[self.workflow.START].trigger.assert_not_called()
+
+    def test_stop(self, scan):
+        DAQScan.do_scan(scan, False)
+        self.actions[self.workflow.STOP].trigger.assert_called_once()

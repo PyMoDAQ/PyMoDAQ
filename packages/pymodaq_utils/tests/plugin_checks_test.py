@@ -47,3 +47,17 @@ def test_resolve_file_outside_a_plugin(tmp_path):
     (tmp_path / 'daq_move_Foo.py').write_text('')
     with pytest.raises(ValueError, match='pymodaq_plugins_'):
         pc.resolve_file(tmp_path / 'daq_move_Foo.py')
+
+
+def test_resolve_target_prefers_src_over_a_repository_named_as_its_package(tmp_path, monkeypatch):
+    repo = tmp_path / 'pymodaq_plugins_foo'  # the repository folder has the name of the package
+    (repo / 'src' / 'pymodaq_plugins_foo').mkdir(parents=True)
+    (repo / 'src' / 'pymodaq_plugins_foo' / '__init__.py').write_text('')
+    (repo / '__init__.py').write_text('')  # a stray, empty __init__.py at the root of the repository
+    (repo / 'pyproject.toml').write_text('')
+    monkeypatch.setattr(sys, 'path', list(sys.path))
+    monkeypatch.chdir(repo)
+    package, project = pc.resolve_target()
+    assert package == 'pymodaq_plugins_foo'
+    assert sys.path[0] == str(repo / 'src')
+    assert project == repo

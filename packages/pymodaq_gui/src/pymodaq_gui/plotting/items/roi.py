@@ -83,6 +83,9 @@ class ROIBase:
     def _emitCopyRequest(self):
         self.sigCopyRequested.emit(self)
 
+    def _emitRemoveRequest(self):
+        self.sigRemoveRequested.emit(self)
+
     def mouseDoubleClickEvent(self, ev):
         if ev.button() == QtCore.Qt.MouseButton.LeftButton:
             ev.accept()
@@ -368,7 +371,7 @@ class LinearROI(pgLinearROI, ROIBase):
         if self.menu is None:
             self.menu = QtWidgets.QMenu()
             self.menu.setTitle(translate("ROI", "ROI"))
-            self.menu.addAction('Copy ROI to clipboard', self.copy_clipboard)
+            self.menu.addAction('Copy ROI slice to clipboard', self.copy_clipboard)
             self.menu.addAction("Copy ROI", self._emitCopyRequest)
             self.menu.addAction("Remove ROI", self._emitRemoveRequest)
         return self.menu

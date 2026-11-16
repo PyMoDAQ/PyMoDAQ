@@ -24,13 +24,15 @@ on:
 concurrency:
   # github.workflow: name of the workflow
   # github.event.pull_request.number || github.ref: pull request number or branch name if not a pull request
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  # the weekly run has its own group: a push on the same branch must not cancel it, a cancelled run skips the badge update
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ github.event_name == 'schedule' && 'weekly' || 'push' }}
   # Cancel in-progress runs when a new workflow with the same group name is triggered
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name != 'schedule' }}
 
 jobs:
   tests:
     continue-on-error: true
+    timeout-minutes: 45  # a hanging job must fail instead of blocking the badge update for hours
     strategy:
       fail-fast: false
       # pull requests and pushes: the two ends of the supported Python range on PyQt6, one PySide6 job (the slowest)

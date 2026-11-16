@@ -137,6 +137,31 @@ class TestDAQMove:
                 thread.join(timeout=5.0)
         QtWidgets.QApplication.processEvents()
 
+    def test_axis_change_reads_the_position_of_the_new_axis(self, ini_daq_move_ui):
+        """The position of the new axis is asked after the axis was sent to the plugin thread, without a move
+
+        The hardware thread is not started: the commands are recorded where the module emits them (a real thread
+        sends a Parameter through a signal, and PySide6 6.11 aborts at random when its wrapper is deleted there).
+        """
+        daq_move, qtbot, widget = ini_daq_move_ui
+        daq_move.actuator = 'Mock'
+        sent = []
+        daq_move._update_settings_signal.connect(lambda change: sent.append(('update', change['param'].name())))
+        daq_move.command_hardware.connect(lambda cmd: sent.append((cmd.command,)))
+        second_axis = daq_move.axis_names[1]
+
+        daq_move.axis_name = second_axis  # not initialized: nothing to read
+        assert ('update', 'axis') in sent
+        assert (ControlToHardwareMove.GET_ACTUATOR_VALUE,) not in sent
+
+        sent.clear()
+        daq_move._controller_and_thread.initialized = True
+        try:
+            daq_move.axis_name = daq_move.axis_names[0]
+        finally:
+            daq_move._controller_and_thread.initialized = False
+        assert sent == [('update', 'axis'), (ControlToHardwareMove.GET_ACTUATOR_VALUE,)]
+
     def test_axis_management(self, ini_daq_move_ui):
         daq_move, qtbot, widget = ini_daq_move_ui
         daq_move.actuator = 'Mock'
@@ -152,3 +177,54 @@ def test_continuous_save_toolbar_group(ini_daq_move_ui):
                   if child.defaultAction() is ui.get_action('continuous_save'))
     assert [action.text() for action in button.menu().actions()] == ['New file', 'Browse file']
     assert ui.get_action('continuous_save').isCheckable()
+
+
+class TestActuatorSelection:
+    @staticmethod
+    def menu_tree(menu):
+        """The menu as nested lists: the name of an action, or {submenu: [...]}"""
+        tree = []
+        for action in menu.actions():
+            if action.menu() is not None:
+                tree.append({action.text(): TestActuatorSelection.menu_tree(action.menu())})
+            else:
+                tree.append(action.text())
+        return tree
+
+    def test_actuators_are_grouped_in_the_menu_as_the_add_menus(self, ini_daq_move_ui):
+        actuator, qtbot, widget = ini_daq_move_ui
+        ui = actuator.ui
+        ui.actuators = ['PI', 'BSPiezoMirror', 'CookbookDll', 'TCPServer', 'Mock']
+
+        assert self.menu_tree(ui.actuator_selector.menu) == [
+            {'Remote': ['TCPServer']},
+            {'Mock': ['BSPiezoMirror', 'Mock', {'Cookbook': ['CookbookDll']}]},
+            {'Plugin': ['PI']},
+        ]
+        assert sorted(ui.actuators) == ['BSPiezoMirror', 'CookbookDll', 'Mock', 'PI', 'TCPServer']
+
+    def test_the_first_actuator_is_selected_and_shown_by_its_name(self, ini_daq_move_ui):
+        actuator, qtbot, widget = ini_daq_move_ui
+        ui = actuator.ui
+        ui.actuators = ['PI', 'CookbookDll']
+        assert ui.actuator == 'CookbookDll'  # the first one of the groups, as the menu shows them
+        assert ui.actuator_selector.text() == 'CookbookDll'
+
+    def test_choosing_an_actuator_is_sent_to_the_module(self, ini_daq_move_ui):
+        actuator, qtbot, widget = ini_daq_move_ui
+        ui = actuator.ui
+        ui.actuators = ['PI', 'CookbookDll']
+        with qtbot.waitSignal(ui.command_sig, timeout=1000) as blocker:
+            ui.actuator = 'PI'
+        assert blocker.args[0].attribute == 'PI'
+
+    def test_a_click_in_the_menu_chooses_the_actuator(self, ini_daq_move_ui):
+        actuator, qtbot, widget = ini_daq_move_ui
+        ui = actuator.ui
+        ui.actuators = ['PI', 'CookbookDll']
+        plugin_menu = next(action.menu() for action in ui.actuator_selector.menu.actions()
+                           if action.text() == 'Plugin')
+        with qtbot.waitSignal(ui.command_sig, timeout=1000) as blocker:
+            plugin_menu.actions()[0].trigger()
+        assert blocker.args[0].attribute == 'PI'
+        assert ui.actuator == 'PI'

@@ -106,6 +106,12 @@ Text version:
    ``False`` (after telling the user) while the extension is running to refuse to quit, and ``True`` otherwise: the base
    implementation returns ``None``, which prevents the extension from closing. The base ``quit_fun`` then exits the worker
    threads, closes the window and shows the Dashboard again.
+   The extension is registered in the Dashboard's ``ExtensionManager`` when ``create_extension`` builds it (whether it comes
+   from the Dashboard, ``dashboard -e`` or a script) and removed from it when it has quit, so closing the Dashboard
+   calls ``quit_fun(external_call=True)`` on every extension left. If the ``extension_close_all`` option of the
+   ``[extensions]`` section of the configuration is true (see :ref:`extensions_closing`), ``quit_fun`` of an extension
+   asks the Dashboard to quit instead, which quits all the extensions: the ``external_call`` argument prevents them from
+   calling the Dashboard back.
 
 .. _extension_threads:
 

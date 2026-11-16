@@ -557,6 +557,44 @@ The ``param`` method argument is of the type ``Parameter`` (from ``pyqtgraph``):
                 err = self.controller.SetWavelengthSR(0, self.settings.child('spectro_settings','spectro_wl').value())
                 self.emit_status(ThreadCommand('close_splash'))
 
+Buttons (``action`` and ``action_led`` parameters)
+**************************************************
+
+A click on the button of an ``action`` or ``action_led`` parameter is sent to the plugin, in its thread, like a change
+of value: the ``sigActivated`` signal of the parameter *of the plugin* is emitted, and
+``commit_settings`` is called with the parameter. A plugin can then connect a method to the signal and show the result
+on the LED of an ``action_led`` parameter, with the states of the ``Status`` workflow (see ``StatusPalette`` in
+``pymodaq_gui.utils.status_palette``): grey (``OFF``) not activated, blue (``RUNNING``) in progress, green (``IDLE``)
+done, orange (``ERROR``) failed. What the plugin sets on the parameter during the activation is sent back to the
+UI like any other change.
+
+.. code-block:: python
+
+    from pymodaq_gui.utils.status_palette import Status
+
+    params = [
+        {'title': 'Calibrate', 'name': 'calibrate', 'type': 'action_led', 'value': Status.OFF, 'label': 'Go',
+         'limits': [Status.OFF, Status.RUNNING, Status.IDLE, Status.ERROR], 'checkable': True},
+    ]
+
+    def ini_attributes(self):
+        self.settings.child('calibrate').sigActivated.connect(self.calibrate)
+
+    def calibrate(self, param):
+        if not param.opts['checked']:  # the button has been released
+            param.setValue(Status.OFF)
+            return
+        param.setValue(Status.RUNNING)
+        try:
+            self.controller.calibrate()
+        except Exception:
+            param.setValue(Status.ERROR)
+            param.setOpts(checked=False)  # release the button
+        else:
+            param.setValue(Status.IDLE)
+
+``checkable`` is optional: without it the button is a simple push button and ``param.opts['checked']`` does not exist.
+
 
 
 .. _data_emission:
@@ -754,6 +792,53 @@ controller provides an efficient method to do it (that will save time) then you 
         #is True else averaging is done software wise
 
 
+.. note::
+
+    When the averaging is done by the DAQ_Viewer (``hardware_averaging`` left to ``False``), the DAQ_Viewer also
+    computes the **standard error of the mean** (``sigma / sqrt(N)``, with ``sigma`` the standard
+    deviation of the ``N`` acquisitions) for each point of the data, and attaches it to the averaged data in their
+    ``errors`` attribute (see :meth:`pymodaq_data.data.DataWithAxes.accumulate`). It is then displayed
+    (*errors* action of the 1D viewer) and saved with the data.
+
+    If ``hardware_averaging`` is ``True``, the averaging, hence the statistics, is done by the instrument and the
+    DAQ_Viewer cannot know the dispersion of the acquisitions. It is then the responsibility of the plugin to fill the
+    ``errors`` attribute of the :class:`~pymodaq_data.data.DataWithAxes` it emits, if the instrument provides this
+    information:
+
+    .. code-block:: python
+
+        dwa = DataFromPlugins(name='spectrum', data=[mean_spectrum], errors=[standard_error_spectrum])
+
+    When the plugin averages acquisitions itself, one after the other, :meth:`pymodaq_data.data.DataWithAxes.accumulate`
+    (and :meth:`pymodaq_data.data.DataToExport.accumulate`) computes the running mean and sets its standard error as
+    ``errors``. This is what the DAQ_Viewer does for the software averaging (``DetectorWorker.data_ready``): the first
+    acquisition is kept as it is, then each new one is accumulated with the running mean:
+
+    .. code-block:: python
+
+        if n_done == 0:
+            mean = acquisition.deepcopy()
+        else:  # n_done acquisitions are already averaged in mean
+            mean = acquisition.accumulate(mean, n_done)
+        n_done += 1
+        # after Naverage acquisitions, mean.errors is the standard error of the mean: emit mean
+
+    When the instrument or its buffer gives all the acquisitions at once, stacked in one array,
+    :meth:`pymodaq_data.data.DataWithAxes.mean_with_errors` (and :meth:`pymodaq_data.data.DataToExport.mean_with_errors`)
+    does it in one call. The ``axis`` argument (0 by default) is the index of the axis along which the acquisitions are
+    stacked: it does not have to be the first one. This axis is removed from the result, the other ones are kept. For a
+    ``DataToExport``, the acquisitions have to be stacked along the same ``axis`` in all its ``DataWithAxes``.
+
+    .. code-block:: python
+
+        # frames: array (Naverage, ny, nx) read from the buffer, the acquisitions being along axis 0
+        raw = DataRaw('frames', data=[frames], nav_indexes=(0,))
+        mean = raw.mean_with_errors()  # shape (ny, nx), errors are the standard error of the mean
+
+        # if the buffer is (ny, Naverage, nx), the acquisitions are along axis 1
+        mean = DataRaw('frames', data=[frames_yfx], nav_indexes=(1,)).mean_with_errors(axis=1)
+
+
 .. _live_mode:
 
 Live Mode
@@ -797,6 +882,25 @@ grab or snap data. The MockCamera plugin illustrates this feature:
                 QThread.msleep(kwargs.get('wait_time', 100))
                 self.dte_signal.emit(data)
                 QtWidgets.QApplication.processEvents()
+
+In live mode the DAQ_Viewer calls ``grab_data`` **once**: the plugin keeps emitting data until the DAQ_Viewer calls its
+``stop`` method, which ends the loop of ``grab_data``. The DAQ_Viewer then emits the *grab stopped* status by itself. If
+``live_mode_available`` is ``False``, the DAQ_Viewer calls ``grab_data`` again for each data to emit.
+
+.. note::
+
+    ``live_mode_available`` and ``hardware_averaging`` (see :ref:`hardware_averaging`) are independent:
+
+    * ``live_mode_available`` tells **who repeats the acquisition**: the plugin (``True``) or the DAQ_Viewer (``False``).
+    * ``hardware_averaging`` tells **who averages**: if ``True``, each data emitted by the plugin is already the average
+      of the ``Naverage`` acquisitions asked in ``grab_data``; if ``False``, the DAQ_Viewer averages the data it
+      receives, also when the plugin streams. A plugin that averages the acquisitions itself (a camera that averages
+      its frames, for instance) must set ``hardware_averaging`` to ``True``, otherwise the DAQ_Viewer averages the
+      already averaged data a second time. The plugin should then add the standard error of the mean to the
+      ``errors`` of the data before emitting it (see :ref:`hardware_averaging`). When it averages successive
+      acquisitions itself, :meth:`pymodaq_data.data.DataWithAxes.accumulate` (or
+      :meth:`pymodaq_data.data.DataToExport.accumulate`) does it step by step: it gives the running mean and sets its
+      standard error as ``errors``, while :meth:`~pymodaq_data.data.DataWithAxes.average` only gives the mean.
 
 
 
@@ -900,22 +1004,9 @@ Modifying the UI from the instrument plugin class
 -------------------------------------------------
 
 The user interface control module and the instrument plugin class are not in the same thread, moreover, the plugin
-class is not aware of the UI object (``DAQ_Move`` or ``DAQ_Viewer``).
-The following shows, how the instrument plugin class ``DAQ_Move_MyPluginClass`` relates to ``DAQ_Move``:
-
-.. code-block:: python
-
-   class DAQ_Move:
-      def init_hardware(self...):
-         hardware: DAQ_Move_Hardware
-         hardware.moveToThread()
-
-   class DAQ_Move_Hardware:
-      hardware: DAQ_Move_Base
-
-   class DAQ_Move_MyPluginClass(DAQ_Move_Base):
-      """Plugin class defined in a plugins repository."""
-
+class is not aware of the UI object (``DAQ_Move`` or ``DAQ_Viewer``). The control module creates a worker
+(``ActuatorWorker`` or ``DetectorWorker``) that is moved to the plugin thread and creates the plugin instance
+``DAQ_Move_MyPluginClass``. The diagrams of :ref:`plugin_workflow` show who calls what, and in which thread.
 
 Therefore, you'll find below ways to interact with the UI from the plugin class.
 

@@ -895,8 +895,10 @@ class DAQ_Move_base(PluginBase):
             try:
                 self.current_value = self.get_actuator_value()
             except Exception as e:
-                logger.error(str(e))
+                logger.exception(str(e))
                 self.poll_timer.stop()
+                self.emit_status(ThreadCommand(ThreadStatus.ERROR, f'check_target_reached: {e}'))
+                return
 
             self.emit_value(self._current_value)
             logger.debug(f'Current value: {self._current_value}')
@@ -907,7 +909,12 @@ class DAQ_Move_base(PluginBase):
                 logger.info('Timeout activated')
         else:
             self.poll_timer.stop()
-            self.current_value = self.get_actuator_value()
+            try:
+                self.current_value = self.get_actuator_value()
+            except Exception as e:
+                logger.exception(str(e))
+                self.emit_status(ThreadCommand(ThreadStatus.ERROR, f'check_target_reached: {e}'))
+                return
             logger.debug(f'Current value: {self._current_value}')
             self.move_done(self._current_value)
 

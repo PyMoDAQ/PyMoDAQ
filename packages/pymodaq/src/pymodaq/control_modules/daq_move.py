@@ -638,6 +638,17 @@ class DAQ_Move(ParameterControlModule):
         super()._reload_plugin_settings()
         self.update_default_values()
 
+    def value_changed(self, param: Parameter):
+        """Handle any settings value change, then read the position of the new axis
+
+        The read is sent after the base class passed the new axis to the plugin thread, so that the worker handles
+        them in this order. A read is used and not ``move_done``, which emits ``move_done_signal``, read by the
+        extensions as the end of a move.
+        """
+        super().value_changed(param)
+        if param.name() == 'axis' and self.initialized_state:
+            self.get_actuator_value()
+
     def _module_value_changed(self, param: Parameter):
         """Handle actuator-specific parameter changes."""
         if param.name() == "refresh_timeout":
@@ -727,6 +738,11 @@ class DAQ_Move(ParameterControlModule):
                 self._controller_and_thread.initialized = False
                 if self.ui is not None:
                     self.ui.actuator_init = False
+                if not status.attribute.get('closed', False):  # a failed initialization, not a deinitialization
+                    info = str(status.attribute['info']) or 'initialization failed'
+                    self._set_in_error(True, info)
+                    if self.ui is not None:
+                        self.ui.update_init_icon(False, 'ini_actuator', failed=True)
             if self._controller_and_thread.initialized:
                 self.get_actuator_value()
             self.init_signal.emit(self._controller_and_thread.initialized)
@@ -1042,7 +1058,7 @@ class ActuatorWorker(HardwareWorkerBase):
             else:  # custom commands for particular plugins
                 self._dispatch_custom_command(command)
         except Exception as e:
-            self.logger.exception(str(e))
+            self.report_error(e, str(command.command))
 
     def stop_motion(self):
         """Stop hardware motion."""

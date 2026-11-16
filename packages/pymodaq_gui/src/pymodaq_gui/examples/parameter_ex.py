@@ -89,7 +89,7 @@ class ParameterEx(ParameterManager):
              'label': 'Run'},
             {'title': 'Multi-state LED', 'name': 'amultistateled', 'type': 'multistate_led',
              'value': 'idle',
-             'states': [('idle', '#888888'), ('running', '#00b400'), ('error', '#c80000')],
+             'limits': [('idle', '#888888'), ('running', '#00b400'), ('error', '#c80000')],
              'tip': 'Click to cycle states, or set programmatically via param.setValue("running")'},
         ]},
 

@@ -10,6 +10,9 @@ import pint.errors
 import pytest
 from pytest import approx, mark
 import time
+import datetime
+import warnings
+from pathlib import Path
 
 from pymodaq_utils import math_utils as mutils
 from pymodaq_utils.units import nm2eV, eV2nm
@@ -488,6 +491,137 @@ class TestDataBase:
 
         assert data_p.abs() == data_p
         assert data_m.abs() == data_p
+
+    def test_deepcopy_with_new_data_keeps_errors_of_the_right_shape(self):
+        dwa = init_data(data=DATA1D, Ndata=1)
+        new_data = [2 * DATA1D]
+
+        copy = dwa.deepcopy_with_new_data(new_data, errors=[np.ones_like(DATA1D)])
+        assert copy.errors[0] == approx(np.ones_like(DATA1D))
+
+        copy = dwa.deepcopy_with_new_data(new_data, errors=[np.ones(DATA1D.size + 1)])
+        assert copy.errors is None
+
+    def test_accumulate(self):
+        n_acquisitions = 12
+        rng = np.random.default_rng(5)
+        acquisitions = rng.normal(loc=-1., scale=0.8, size=(n_acquisitions, 7))
+
+        averaged = init_data(data=acquisitions[0], Ndata=1)
+        assert averaged.errors is None
+        for ind in range(1, n_acquisitions):
+            new = init_data(data=acquisitions[ind], Ndata=1)
+            averaged = new.accumulate(averaged, ind)
+
+        assert averaged.n_averaged == n_acquisitions
+        assert averaged.data[0] == approx(acquisitions.mean(axis=0))
+        assert averaged.errors[0] == approx(acquisitions.std(axis=0, ddof=1) / np.sqrt(n_acquisitions))
+
+    def test_accumulate_ignores_errors_of_the_first_acquisition(self):
+        first = init_data(data=np.array([1., 2.]), Ndata=1)
+        first.errors = [np.array([10., 10.])]
+        second = init_data(data=np.array([3., 2.]), Ndata=1)
+
+        averaged = second.accumulate(first, 1)
+
+        assert averaged.errors[0] == approx(np.array([1., 0.]))
+
+    def test_accumulate_needs_the_previous_errors(self):
+        previous_average = init_data(data=np.array([1., 2.]), Ndata=1)
+        new = init_data(data=np.array([3., 2.]), Ndata=1)
+
+        assert new.accumulate(previous_average, 3).errors is None
+
+    def test_mean_with_errors_of_a_buffer(self):
+        n_acquisitions = 12
+        rng = np.random.default_rng(5)
+        acquisitions = rng.normal(loc=-1., scale=0.8, size=(n_acquisitions, 7))
+        buffer = data_mod.DataRaw('buffer', data=[acquisitions], nav_indexes=(0,),
+                         axes=[data_mod.Axis('frames', data=np.arange(n_acquisitions), index=0),
+                               data_mod.Axis('x', data=np.arange(7), index=1)])
+
+        averaged = buffer.mean_with_errors()
+
+        assert averaged.n_averaged == n_acquisitions
+        assert averaged.shape == (7,)
+        assert averaged.data[0] == approx(acquisitions.mean(axis=0))
+        assert averaged.errors[0] == approx(acquisitions.std(axis=0, ddof=1) / np.sqrt(n_acquisitions))
+
+    def test_mean_with_errors_of_a_buffer_whose_acquisitions_are_on_the_second_axis(self):
+        n_acquisitions = 9
+        rng = np.random.default_rng(11)
+        acquisitions = rng.normal(loc=2., scale=0.5, size=(7, n_acquisitions))
+        buffer = data_mod.DataRaw('buffer', data=[acquisitions], nav_indexes=(1,),
+                         axes=[data_mod.Axis('x', data=np.arange(7), index=0),
+                               data_mod.Axis('frames', data=np.arange(n_acquisitions), index=1)])
+
+        averaged = buffer.mean_with_errors(axis=1)
+
+        assert averaged.n_averaged == n_acquisitions
+        assert averaged.shape == (7,)
+        assert [axis.label for axis in averaged.axes] == ['x']  # the axis of the acquisitions is removed
+        assert averaged.data[0] == approx(acquisitions.mean(axis=1))
+        assert averaged.errors[0] == approx(acquisitions.std(axis=1, ddof=1) / np.sqrt(n_acquisitions))
+
+    def test_mean_with_errors_gives_the_same_as_accumulate(self):
+        rng = np.random.default_rng(3)
+        acquisitions = rng.normal(size=(6, 5))
+        accumulated = init_data(data=acquisitions[0], Ndata=1)
+        for ind in range(1, 6):
+            accumulated = init_data(data=acquisitions[ind], Ndata=1).accumulate(accumulated, ind)
+
+        averaged = data_mod.DataRaw('buffer', data=[acquisitions], nav_indexes=(0,)).mean_with_errors()
+
+        assert averaged.data[0] == approx(accumulated.data[0])
+        assert averaged.errors[0] == approx(accumulated.errors[0])
+
+    def test_mean_with_errors_of_a_single_acquisition(self):
+        averaged = data_mod.DataRaw('buffer', data=[np.arange(4.).reshape((1, 4))], nav_indexes=(0,)).mean_with_errors()
+
+        assert averaged.errors is None
+        assert averaged.data[0] == approx(np.arange(4.))
+
+    def test_combine_with_errors(self):
+        first = init_data(data=np.array([1., 4.]), Ndata=1)
+        first.errors = [np.array([1., 2.])]
+        second = init_data(data=np.array([3., 4.]), Ndata=1)
+        second.errors = [np.array([1., 1.])]
+
+        combined = first.combine_with_errors(second)
+
+        assert combined.data[0] == approx(np.array([2., 4.]))
+        assert combined.errors[0] == approx(np.array([1 / np.sqrt(2), 2 / np.sqrt(5)]))
+        assert combined.errors[0] == approx(first.errors[0] * second.errors[0]
+                                            / np.sqrt(first.errors[0] ** 2 + second.errors[0] ** 2))
+        assert first.data[0] == approx(np.array([1., 4.]))  # self is left untouched
+
+    def test_combine_with_errors_gives_more_weight_to_the_smaller_error(self):
+        precise = init_data(data=np.array([1.]), Ndata=1)
+        precise.errors = [np.array([0.1])]
+        rough = init_data(data=np.array([2.]), Ndata=1)
+        rough.errors = [np.array([1.])]
+
+        assert precise.combine_with_errors(rough).data[0][0] == approx((100 * 1. + 1 * 2.) / 101)
+
+    def test_combine_with_errors_needs_errors_and_same_units(self):
+        with_errors = init_data(data=np.array([1., 2.]), Ndata=1)
+        with_errors.errors = [np.array([1., 1.])]
+        without_errors = init_data(data=np.array([1., 2.]), Ndata=1)
+        other_units = with_errors.deepcopy()
+        other_units.force_units('mm')
+        zero_error = with_errors.deepcopy()
+        zero_error.errors = [np.array([0., 1.])]
+
+        with pytest.raises(ValueError):
+            with_errors.combine_with_errors(without_errors)
+        with pytest.raises(data_mod.DataUnitError):
+            with_errors.combine_with_errors(other_units)
+        with pytest.raises(ValueError):
+            with_errors.combine_with_errors(zero_error)
+
+    def test_average_is_unchanged_by_the_errors(self):
+        data = init_data(data=DATA2D, Ndata=2)
+        assert data.average(data, 2).errors is None
 
     def test_average(self):
         WEIGHT = 5
@@ -1580,6 +1714,22 @@ class TestDataToExport:
         assert (N - data1)[0] == N - dat1
         assert (N / data1)[0] == N / dat1
 
+    def test_mean_with_errors(self):
+        rng = np.random.default_rng(11)
+        buffer1 = rng.normal(size=(8, 5))
+        buffer2 = rng.normal(size=(8, 3, 2))
+        dwa1 = data_mod.DataRaw('buffer1', data=[buffer1], nav_indexes=(0,))
+        dwa2 = data_mod.DataRaw('buffer2', data=[buffer2], nav_indexes=(0,))
+        dte = data_mod.DataToExport('toexport', data=[dwa1, dwa2])
+
+        averaged = dte.mean_with_errors()
+
+        assert [dwa.name for dwa in averaged] == ['buffer1', 'buffer2']
+        for dwa, buffer in zip(averaged, (buffer1, buffer2)):
+            assert dwa.n_averaged == 8
+            assert dwa.data[0] == approx(buffer.mean(axis=0))
+            assert dwa.errors[0] == approx(buffer.std(axis=0, ddof=1) / np.sqrt(8))
+
     def test_average(self):
         dat1 = init_data(data=DATA2D, Ndata=2, name='data2D1')
         dat2 = init_data(data=0.2 * DATA2D, Ndata=2, name='data2D2')
@@ -1594,6 +1744,25 @@ class TestDataToExport:
 
         assert data1[0] == dat1.average(dat3, WEIGHT)
         assert data1[1] == dat2.average(dat2, WEIGHT)
+
+    def test_accumulate(self):
+        n_acquisitions = 8
+        rng = np.random.default_rng(3)
+        acquisitions = rng.normal(loc=2., scale=0.3, size=(n_acquisitions, 2, 5))  # two arrays of 5 points
+
+        averaged = None
+        for ind, acquisition in enumerate(acquisitions):
+            dwa = data_mod.DataToExport('toexport', data=[
+                init_data(data=acquisition[0], Ndata=1, name='first'),
+                init_data(data=acquisition[1], Ndata=1, name='second')])
+            averaged = dwa.deepcopy() if ind == 0 else dwa.accumulate(averaged, ind)
+
+        expected_mean = acquisitions.mean(axis=0)
+        expected_error = acquisitions.std(axis=0, ddof=1) / np.sqrt(n_acquisitions)
+        for ind_dwa, dwa in enumerate(averaged):
+            assert dwa.n_averaged == n_acquisitions
+            assert dwa.data[0] == approx(expected_mean[ind_dwa])
+            assert dwa.errors[0] == approx(expected_error[ind_dwa])
 
     def test_average_does_not_mutate_self(self):
         """average() used to shallow-copy self, aliasing the underlying list
@@ -1978,3 +2147,109 @@ class TestEq:
         assert dat1 == dat2
 
 
+
+
+class TestAxisExtraAttributes:
+    def test_init_and_add(self):
+        axis = data_mod.Axis('x', 'nm', data=np.arange(5.), quantity_kind='Wavelength')
+        assert axis.quantity_kind == 'Wavelength'
+        assert axis.extra_attributes == ['quantity_kind']
+        axis.add_extra_attribute(unit_iri='nm_iri', quantity_kind='Length')
+        assert axis.extra_attributes == ['quantity_kind', 'unit_iri']
+        assert axis.quantity_kind == 'Length'
+
+    def test_copy_is_independent(self):
+        axis = data_mod.Axis('x', 'nm', data=np.arange(5.), quantity_kind='Wavelength')
+        other = axis.copy()
+        other.add_extra_attribute(unit_iri='u')
+        assert other.quantity_kind == 'Wavelength'
+        assert axis.extra_attributes == ['quantity_kind']
+
+
+class TestExtraAttributeTypesWarning:
+    """add_extra_attribute warns when a value cannot be saved in a h5 file, read back and transmitted"""
+
+    @pytest.mark.parametrize('value', [1.5, 'text', None, np.float32(1), np.arange(3), {1, 2}, Path('/a'),
+                                       datetime.datetime(2026, 1, 1), [1, (2, 'a')]])
+    @pytest.mark.parametrize('factory', [
+        lambda: data_mod.DataRaw('data', data=[np.arange(3.)]),
+        lambda: data_mod.Axis('axis', data=np.arange(3.)),
+        lambda: data_mod.DataToExport('dte'),
+    ])
+    def test_supported_types_do_not_warn(self, factory, value):
+        obj = factory()
+        with warnings.catch_warnings():
+            warnings.simplefilter('error')
+            obj.add_extra_attribute(my_attr=value)
+        assert obj.my_attr is value or np.all(obj.my_attr == value)
+
+    @pytest.mark.parametrize('value', [object(), [1, object()], np.array([None]), slice(2)])
+    @pytest.mark.parametrize('factory', [
+        lambda: data_mod.DataRaw('data', data=[np.arange(3.)]),
+        lambda: data_mod.Axis('axis', data=np.arange(3.)),
+        lambda: data_mod.DataToExport('dte'),
+    ])
+    def test_unsupported_types_warn_but_are_added(self, factory, value):
+        obj = factory()
+        with pytest.warns(UserWarning, match='my_attr'):
+            obj.add_extra_attribute(my_attr=value)
+        assert 'my_attr' in obj.extra_attributes
+
+
+class TestUnitsHistory:
+    """The conversions of units are listed in the extra attribute units_history"""
+
+    def make_axis(self):
+        return data_mod.Axis('wavelength', 'nm', data=np.linspace(400., 700., 4), index=1, spread_order=2,
+                             unit_iri='http://qudt.org/vocab/unit/NanoM')
+
+    def test_axis_units_as_inplace_keeps_attributes_and_records(self):
+        axis = self.make_axis()
+        axis.units_as('eV', inplace=True, context='spectroscopy')
+        axis.units_as('THz', inplace=True, context='spectroscopy')
+
+        assert axis.units == 'THz'
+        assert axis.units_history == 'nm->eV->THz'
+        assert axis.unit_iri == 'http://qudt.org/vocab/unit/NanoM'  # kept, see units_history
+        assert 'units_history' in axis.extra_attributes
+
+    def test_axis_new_object_has_extra_attributes_index_and_history(self):
+        axis = self.make_axis()
+        for name, new_axis in [('units_as', axis.units_as('m', inplace=False)),
+                               ('to_base_units', axis.to_base_units())]:
+            assert new_axis is not axis
+            assert new_axis.unit_iri == axis.unit_iri, name
+            assert new_axis.index == 1 and new_axis.spread_order == 2, name
+            assert new_axis.units_history == f'nm->{new_axis.units}', name
+        assert 'units_history' not in axis.extra_attributes  # the source is not modified
+        assert axis.units == 'nm'
+
+        reduced = axis.to_reduced_units()  # nm is already reduced: nothing converted, nothing recorded
+        assert reduced.unit_iri == axis.unit_iri and 'units_history' not in reduced.extra_attributes
+
+    def test_no_history_without_conversion(self):
+        axis = self.make_axis()
+        axis.units_as('nm', inplace=True)
+        assert 'units_history' not in axis.extra_attributes
+        axis.force_units('mm')
+        assert 'units_history' not in axis.extra_attributes
+
+    def test_data_conversion(self):
+        dwa = data_mod.DataRaw('d', units='mm', data=[np.arange(4.)])
+        dwa.add_extra_attribute(unit_iri='http://qudt.org/vocab/unit/MilliM')
+        dwa.units_as('m', inplace=True)
+        assert dwa.units_history == 'mm->m'
+        new = dwa.units_as('cm', inplace=False)
+        assert new.units_history == 'mm->m->cm'
+        assert dwa.units_history == 'mm->m'
+        assert new.unit_iri == dwa.unit_iri
+        base = dwa.to_base_units()
+        assert base.units_history == 'mm->m'  # already in base units
+
+    def test_history_is_saved_and_transmitted(self):
+        axis = self.make_axis()
+        axis.units_as('eV', inplace=True, context='spectroscopy')
+        from pymodaq_utils.serialize.factory import SerializableFactory
+        factory = SerializableFactory()
+        axis_back = factory.get_apply_deserializer(factory.get_apply_serializer(axis))
+        assert axis_back.units_history == 'nm->eV'
