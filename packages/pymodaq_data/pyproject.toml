@@ -38,12 +38,14 @@ dependencies = [
 
 [project.optional-dependencies]
 xarray = ["xarray>=2024.10"]
+semantics = ["rdflib>=7.0"]
 dev = [
     "hatch", 
     "flake8",
     "h5py>=2.5.0",
     "tables>=3.10",
     "pytest",
+    "rdflib>=7.0",
     "pytest-cov",
     "pytest-xdist",
 ]

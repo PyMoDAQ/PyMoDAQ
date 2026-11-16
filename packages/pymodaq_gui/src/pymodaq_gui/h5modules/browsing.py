@@ -30,6 +30,7 @@ from pymodaq_data.h5modules.browsing import H5BrowserUtil
 
 from pymodaq_gui.parameter import ioxml
 from pymodaq_gui.utils.widgets.tree_layout import TreeLayout
+from pymodaq_data.h5modules import representations
 from pymodaq_gui.utils.utils import h5tree_to_QTree, pngbinary2Qlabel
 from pymodaq_gui.utils.file_io import select_file, select_file_filter
 from pymodaq_gui.plotting.data_viewers.viewerND import ViewerND
@@ -43,9 +44,28 @@ config = Config()
 logger = set_logger(get_module_name(__file__))
 
 
+HIERARCHY_MODE = representations.HIERARCHY_MODE
+OTHER_FILE = '__other_file__'  # key of the semantics choice asking for an RDF file
+NO_SEMANTICS = ''
+MAX_ONTOLOGY_FILES = 10
+
+
+def rep_item_to_qtree(item: representations.RepItem) -> QtWidgets.QTreeWidgetItem:
+    """Convert a RepItem tree into a QTreeWidgetItem tree with the same columns as h5tree_to_QTree:
+    [name, '', h5 path], the path being empty for items that do not stand for a node."""
+    qitem = QtWidgets.QTreeWidgetItem([item.label, '', item.path or ''])
+    if item.tooltip:
+        qitem.setToolTip(0, item.tooltip)
+    for child in item.children:
+        qitem.addChild(rep_item_to_qtree(child))
+    return qitem
+
+
 class View(QObject):
     item_clicked_sig = Signal(object)
     item_double_clicked_sig = Signal(object)
+    mode_changed_sig = Signal(str)  # name of the selected representation mode
+    semantics_changed_sig = Signal(str)  # key of the selected semantics ('' none, OTHER_FILE, a name...)
     
     def __init__(self, widget: QtWidgets.QWidget, settings_tree, settings_attributes_tree):
         super().__init__()
@@ -73,7 +93,24 @@ class View(QObject):
         self.h5file_tree.item_clicked_sig.connect(self.item_clicked_sig.emit)
         self.h5file_tree.item_double_clicked_sig.connect(self.item_double_clicked_sig.emit)
         
-        v_splitter.addWidget(widget)
+        # selector of the representation mode of the file content (hierarchy, by concept...)
+        self.mode_combo = QtWidgets.QComboBox()
+        self.mode_combo.setToolTip('How the content of the file is organised in the tree')
+        self.mode_combo.currentIndexChanged.connect(
+            lambda _: self.mode_changed_sig.emit(self.mode_combo.currentData()))
+        tree_container = QtWidgets.QWidget()
+        tree_layout = QtWidgets.QVBoxLayout()
+        tree_layout.setContentsMargins(0, 0, 0, 0)
+        tree_layout.addWidget(self.mode_combo)
+        self.semantics_combo = QtWidgets.QComboBox()
+        self.semantics_combo.setToolTip('Ontology giving the labels and the hierarchy of the concepts')
+        self.semantics_combo.activated.connect(
+            lambda _: self.semantics_changed_sig.emit(self.semantics_combo.currentData()))
+        tree_layout.addWidget(self.semantics_combo)
+        tree_layout.addWidget(widget)
+        tree_container.setLayout(tree_layout)
+
+        v_splitter.addWidget(tree_container)
         v_splitter.addWidget(settings_attributes_tree)
 
         h_splitter.addWidget(v_splitter)
@@ -112,6 +149,24 @@ class View(QObject):
 
     def clear(self):
         self.h5file_tree.tree.clear()
+
+    def set_semantics_choices(self, choices: List[Tuple[str, str]], current: str):
+        """Fill the semantics selector with (key, title) pairs, then 'Other file...' (no signal emitted)"""
+        self.semantics_combo.blockSignals(True)
+        self.semantics_combo.clear()
+        for key, title in choices + [(OTHER_FILE, 'Other file...')]:
+            self.semantics_combo.addItem(title, key)
+        self.semantics_combo.setCurrentIndex(max(self.semantics_combo.findData(current), 0))
+        self.semantics_combo.blockSignals(False)
+
+    def set_modes(self, modes: List[Tuple[str, str]], current: str):
+        """Fill the mode selector with (identifier, title) pairs, without emitting mode_changed_sig"""
+        self.mode_combo.blockSignals(True)
+        self.mode_combo.clear()
+        for name, title in modes:
+            self.mode_combo.addItem(title, name)
+        self.mode_combo.setCurrentIndex(max(self.mode_combo.findData(current), 0))
+        self.mode_combo.blockSignals(False)
 
     def add_base_item(self, base_tree_item):
         self.h5file_tree.tree.addTopLevelItem(base_tree_item)
@@ -170,6 +225,12 @@ class H5Browser(CustomApp):
         self._swmr = swmr
         self._file_is_external = False  # True when h5file was passed by caller (shared handle)
         self.current_node_path = None
+        self.semantics_key = NO_SEMANTICS  # selected ontology: '' (none), a registered name or a file path
+        self._semantics = None  # the corresponding provider (None: default behaviour)
+        self.mode = HIERARCHY_MODE  # representation of the file content, see pymodaq_data representations
+
+        self._restore_mode()
+        self._restore_semantics()
 
         self.settings_attributes = ParameterManager()
 
@@ -189,6 +250,8 @@ class H5Browser(CustomApp):
                          settings_attributes_tree=self.settings_attributes.settings_tree)
         self.view.item_clicked_sig.connect(self.show_h5_attributes)
         self.view.item_double_clicked_sig.connect(self.show_h5_data)
+        self.view.mode_changed_sig.connect(self.set_mode)
+        self.view.semantics_changed_sig.connect(self.set_semantics_choice)
         self.hyper_viewer = ViewerND(self.view.viewer_widget)
 
     def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar):
@@ -212,10 +275,13 @@ class H5Browser(CustomApp):
                                                                                    ' substraction if possible',
                         auto_toolbar=False)
 
+        self.add_action('copy_path', 'Copy node path', 'file_copy', tip='Copy the full h5 path of the node to the clipboard',
+                        auto_toolbar=False)
+
         self.view.add_actions([self.get_action('export'), self.get_action('comment'),
                                self.get_action('plot_node'), self.get_action('plot_nodes'),
                                self.get_action('plot_node_with_bkg'),
-                               self.get_action('plot_nodes_with_bkg')])
+                               self.get_action('plot_nodes_with_bkg'), self.get_action('copy_path')])
 
         self.add_action('load', 'Load File', 'file_open', tip='Open a new file', menu=MenuToolbarNames.FILE)
         self.add_action('save', 'Save File as', 'file_save', tip='Save as another file', menu=MenuToolbarNames.FILE)
@@ -229,6 +295,8 @@ class H5Browser(CustomApp):
         self.connect_action('load', lambda: self.load_file(None, None))
         self.connect_action('save', self.save_file)
         self.connect_action('refresh', self.refresh_file)
+        self.connect_action('copy_path', self.copy_node_path)
+        self.view.h5file_tree.tree.currentItemChanged.connect(lambda *_: self._update_copy_path_action())
 
         self.connect_action('plot_node', lambda: self.get_node_and_plot(False))
         self.connect_action('plot_nodes', lambda: self.get_node_and_plot(False, True))
@@ -362,6 +430,16 @@ class H5Browser(CustomApp):
         except Exception as e:
             logger.exception(str(e))
 
+    def copy_node_path(self):
+        """Copy the full h5 path of the selected node to the clipboard (all representation modes)"""
+        path = self.get_tree_node_path()
+        if path:
+            QtWidgets.QApplication.clipboard().setText(path)
+
+    def _update_copy_path_action(self):
+        # items that only group (a concept, a unit...) do not point to a node
+        self.get_action('copy_path').setEnabled(bool(self.get_tree_node_path()))
+
     def get_tree_node_path(self):
         """Get the node path of the currently selected node in the UI"""
         return self.view.current_node_path()
@@ -408,6 +486,8 @@ class H5Browser(CustomApp):
     def show_h5_attributes(self, item=None):
         try:
             self.current_node_path = self.get_tree_node_path()
+            if not self.current_node_path:  # item not standing for a node (a concept, a unit...)
+                return
 
             attr_dict, settings, scan_settings, pixmaps = self.h5utils.get_h5_attributes(self.current_node_path)
 
@@ -470,6 +550,8 @@ class H5Browser(CustomApp):
         try:
             if item is None:
                 self.current_node_path = self.get_tree_node_path()
+            if not self.get_tree_node_path():  # item not standing for a node (a concept, a unit...)
+                return
             self.show_h5_attributes()
             node = self.h5utils.get_node(self.current_node_path)
             self.data_node_signal.emit(self.current_node_path)
@@ -485,6 +567,90 @@ class H5Browser(CustomApp):
         except Exception as e:
             logger.exception(str(e))
 
+    def set_semantics_choice(self, key: str):
+        """Select the ontology used to label and organise the concepts: '' for none, the name of a
+        registered provider, a path to an RDF file, or OTHER_FILE to ask for such a file."""
+        if key == OTHER_FILE:
+            path = select_file(save=False, filter="RDF files (*.ttl *.rdf *.owl *.xml *.jsonld *.nt);;"
+                                                   "All files (*.*)")
+            key = str(path) if path else self.semantics_key  # cancelled: keep the previous choice
+        try:
+            if key == NO_SEMANTICS:
+                self._semantics = None
+            elif key in representations.semantics_names():
+                self._semantics = representations.get_semantics(key)
+            else:
+                self._semantics = representations.get_semantics('rdf', sources=key)
+            self.semantics_key = key
+            self._remember_semantics(key)
+        except Exception as e:  # unreadable file, rdflib missing...
+            logger.exception(str(e))
+            messagebox(severity='warning', title='Ontology', text=f'Could not use the ontology {key}:\n{e}')
+        self.populate_tree()
+        self.view.h5file_tree.expand_all()
+
+    def _restore_mode(self):
+        """Use the representation mode chosen last time (first of the config list), if still available"""
+        try:
+            mode = config('gui', 'h5browser', 'representation')[0]
+        except Exception:
+            return
+        if mode == HIERARCHY_MODE or mode in representations.mode_names():
+            self.mode = mode
+
+    def _remember_mode(self, mode: str):
+        """Put the chosen mode first in the config list, keeping the others (and the modes registered
+        since) after it"""
+        try:
+            names = [HIERARCHY_MODE] + representations.mode_names()
+            known = [m for m in config('gui', 'h5browser', 'representation') if m in names]
+            others = [m for m in dict.fromkeys(known + names) if m != mode]
+            config['gui', 'h5browser', 'representation'] = [mode] + others
+        except Exception as e:  # a config problem must not prevent browsing
+            logger.warning(f'Could not store the representation mode: {e}')
+
+    def _remember_semantics(self, key: str):
+        """Store the choice in the user config: it is selected again at the next start and the files
+        chosen are kept in the list"""
+        try:
+            config['gui', 'h5browser', 'last_ontology'] = key
+            if key not in [NO_SEMANTICS] + representations.semantics_names():
+                files = [key] + [f for f in self._ontology_files() if f != key]
+                config['gui', 'h5browser', 'ontology_files'] = files[:MAX_ONTOLOGY_FILES]
+        except Exception as e:  # a config problem must not prevent browsing
+            logger.warning(f'Could not store the ontology choice: {e}')
+
+    @staticmethod
+    def _ontology_files() -> List[str]:
+        """Remembered RDF files that still exist"""
+        try:
+            return [f for f in config('gui', 'h5browser', 'ontology_files') if Path(f).is_file()]
+        except Exception:
+            return []
+
+    def _restore_semantics(self):
+        """Select again the ontology used last time, if still available"""
+        try:
+            key = config('gui', 'h5browser', 'last_ontology')
+        except Exception:
+            return
+        if key and (key in representations.semantics_names() or Path(key).is_file()):
+            try:
+                self._semantics = (representations.get_semantics(key) if key in representations.semantics_names()
+                                   else representations.get_semantics('rdf', sources=key))
+                self.semantics_key = key
+            except Exception as e:  # rdflib missing, file not readable any more...
+                logger.warning(f'Could not restore the ontology {key}: {e}')
+
+    def set_mode(self, mode: str):
+        """Display the file content with another representation mode (name of a registered mode or
+        'hdf5' for the standard hierarchy). Data are still shown as before on double-click."""
+        if mode != self.mode:
+            self.mode = mode
+            self._remember_mode(mode)
+            self.populate_tree()
+            self.view.h5file_tree.expand_all()
+
     def populate_tree(self):
         """
             | Init the ui-tree and store data into calling the h5_tree_to_Qtree convertor method
@@ -497,9 +663,23 @@ class H5Browser(CustomApp):
             if self.h5utils.h5file is not None:
                 self.view.clear()
                 base_node = self.h5utils.root()
-                base_tree_item, pixmap_items = h5tree_to_QTree(base_node)
-                self.view.add_base_item(base_tree_item)
-                self.view.add_widget_to_tree(pixmap_items)
+                self.view.set_modes([(HIERARCHY_MODE, 'HDF5 hierarchy')] +
+                                    [(name, representations.mode_title(name)) for name in representations.mode_names()],
+                                    self.mode)
+                known = [(name, name) for name in representations.semantics_names()]
+                files = self._ontology_files()
+                if self.semantics_key not in [NO_SEMANTICS] + [name for name, _ in known] + files:
+                    files.append(self.semantics_key)  # current choice, even if not stored
+                known += [(file, Path(file).name) for file in files]
+                self.view.set_semantics_choices([(NO_SEMANTICS, 'No ontology')] + known, self.semantics_key)
+                self.view.semantics_combo.setEnabled(self.mode != HIERARCHY_MODE)
+                if self.mode == HIERARCHY_MODE or self.mode not in representations.mode_names():
+                    base_tree_item, pixmap_items = h5tree_to_QTree(base_node)
+                    self.view.add_base_item(base_tree_item)
+                    self.view.add_widget_to_tree(pixmap_items)
+                else:
+                    infos = representations.data_infos(base_node, Path(self.h5utils.h5_file_name or '').stem)
+                    self.view.add_base_item(rep_item_to_qtree(representations.build_mode(self.mode, infos, self._semantics)))
 
         except Exception as e:
             logger.exception(str(e))
