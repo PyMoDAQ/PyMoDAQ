@@ -38,7 +38,7 @@ __all__ = [
     'STORED',
     'Action',
     'apply_write',
-    'check_plugin',
+    'check_device_class',
     'measurement',
     'control',
     'instr_get',
@@ -783,7 +783,7 @@ def _copy_quantity(quantity: Quantity) -> Quantity:
     return duplicate
 
 
-def check_plugin(plugin_class: type) -> None:
+def check_device_class(plugin_class: type) -> None:
     """Raise a ``ValueError`` now for what would otherwise fail at the first read or write.
 
     Checks that every method name given as a string to ``get=``/``set=``/``pre_set=``/``post_set=``

@@ -181,7 +181,7 @@ name with the natural arguments (`post_set='_clamp_averaging'` instead of writin
 `Capabilities.from_device` resolves copies of the declarations: the `Quantity` objects on the class
 (shared by every subclass) keep the strings and `readback=True` exactly as written.
 
-`check_plugin(plugin_class)` (run by `HardwareRegistry.attach`, before the hardware thread starts)
+`check_device_class(plugin_class)` (run by `HardwareRegistry.attach`, before the hardware thread starts)
 raises a `ValueError` if one of these names is not a method of the class, or if a polled
 measurement (no `get=`, not `push=True`) needs a `read()` the plugin doesn't define. Without it, both
 would only fail at the first read or write, on the hardware thread.

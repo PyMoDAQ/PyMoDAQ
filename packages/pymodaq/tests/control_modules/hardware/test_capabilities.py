@@ -12,7 +12,7 @@ from pymodaq.control_modules.hardware.capabilities import (
     Quantity,
     STORED,
     apply_write,
-    check_plugin,
+    check_device_class,
     control,
     instr_get,
     instr_set,
@@ -832,8 +832,8 @@ class TestApplyWrite:
         assert device.extra == 3
 
 
-class TestCheckPlugin:
-    """check_plugin catches at attach what would otherwise fail at the first read or write."""
+class TestCheckDeviceClass:
+    """check_device_class catches at attach what would otherwise fail at the first read or write."""
 
     def test_a_complete_plugin_passes(self):
         class Device:
@@ -846,7 +846,7 @@ class TestCheckPlugin:
             def _after(self, value):
                 pass
 
-        check_plugin(Device)
+        check_device_class(Device)
 
     def test_a_misnamed_method_is_reported_with_quantity_and_keyword(self):
         class Device:
@@ -856,7 +856,7 @@ class TestCheckPlugin:
                 pass
 
         with pytest.raises(ValueError, match=r"Device: exposure: post_set='_aftr' is not a method"):
-            check_plugin(Device)
+            check_device_class(Device)
 
     def test_still_caught_after_from_device_resolved_the_strings(self):
         class Device:
@@ -864,7 +864,7 @@ class TestCheckPlugin:
 
         Capabilities.from_device(Device)
         with pytest.raises(ValueError, match="get='_missing'"):
-            check_plugin(Device)
+            check_device_class(Device)
 
     def test_a_name_that_is_a_quantity_not_a_method_is_reported(self):
         class Device:
@@ -872,21 +872,21 @@ class TestCheckPlugin:
             exposure = control(lo=1, hi=10, set='gain')
 
         with pytest.raises(ValueError, match="set='gain'"):
-            check_plugin(Device)
+            check_device_class(Device)
 
     def test_a_polled_measurement_needs_read(self):
         class Device:
             temperature = measurement(units='K')
 
         with pytest.raises(ValueError, match=r"\['temperature'\] .* need a read\(\) method"):
-            check_plugin(Device)
+            check_device_class(Device)
 
     def test_a_laggy_auto_created_readback_needs_read(self):
         class Device:
             position = control(lo=0, hi=10, readback=True)
 
         with pytest.raises(ValueError, match='position_readback'):
-            check_plugin(Device)
+            check_device_class(Device)
 
     def test_get_or_push_measurements_and_write_only_controls_need_no_read(self):
         class Device:
@@ -894,7 +894,7 @@ class TestCheckPlugin:
             frames = measurement(push=True)
             trigger = control(values=['internal', 'external'])
 
-        check_plugin(Device)
+        check_device_class(Device)
 
 
 class TestFromDeviceLeavesTheClassAlone:
