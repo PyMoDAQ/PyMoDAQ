@@ -146,7 +146,7 @@ def main_widget():
 
 
 def main_parameter():
-    from pymodaq.utils.managers.parameter_manager import ParameterManager
+    from pymodaq_gui.managers.parameter_manager import ParameterManager
     data = np.arange(128 * 256).reshape((256, 128))
     data = data / np.max(data) * 255
     data = data.astype(np.uint8)

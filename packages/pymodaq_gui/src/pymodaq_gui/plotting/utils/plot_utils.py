@@ -742,12 +742,20 @@ class DetachablePanel:
     is_shown: Callable[[], bool]
         Returns whether the panel is currently supposed to be visible; used to decide
         whether an attach/detach toggle should immediately re-render it
+    owner: QWidget or None
+        If given, `widget` is released from this panel when the owner is destroyed. A floating (or not yet
+        shown) widget has no parent: its signal would keep the panel, and the UI, alive
+
+        .. versionadded:: 5.3.9
     """
     def __init__(self, widget: QtWidgets.QWidget, dock: Union[Dock, None], title: str,
                 detached: bool, orientation=QtCore.Qt.Orientation.Horizontal,
                 layout_config_path: Union[Tuple[str, ...], None] = None,
-                is_shown: Callable[[], bool] = lambda: False):
+                is_shown: Callable[[], bool] = lambda: False,
+                owner: Union[QtWidgets.QWidget, None] = None):
         self.widget = widget
+        if owner is not None:
+            owner.destroyed.connect(self._release_widget)
         self.dock = dock
         self.title = title
         self._orientation = orientation
@@ -770,6 +778,19 @@ class DetachablePanel:
         if self.is_shown():
             self.show(True)
 
+    def _release_widget(self):
+        """Cut what links the widget to the UI: they would keep the panel and the UI alive
+
+        The widget is not deleted here: it is when nothing refers to it any more (deleting it explicitly makes
+        PySide6 free its actions twice in some cases).
+        """
+        try:
+            self.widget.sig_attach_detach.disconnect(self._set_detached)
+            self.widget.sig_close.disconnect()
+        except (TypeError, RuntimeError):  # already disconnected, or deleted with its parent
+            pass
+        self.widget.__dict__.pop('closeEvent', None)  # an override defined by the UI
+
     def show(self, show: bool = True):
         if self._detached or self.dock is None:
             if self.dock is not None:
@@ -779,3 +800,16 @@ class DetachablePanel:
             self.widget.setVisible(show)
         else:
             display_in_dock(show, self.widget, self.dock, orientation=self.orientation)
+
+    def close(self):
+        """Close the widget outright, whatever its current attach state
+
+        A detached (floating) widget has no parent: merely closing the window that
+        hosts this panel leaves it open and visible, which keeps that window - and the
+        whole application, if it is the last one open - from quitting. Call this during
+        teardown to actually get rid of it.
+        """
+        if self.dock is not None:
+            self.dock.removeWidget(self.widget, close=False)
+        self.widget.close()
+        self.widget.deleteLater()

@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+from numbers import Number
 from pathlib import Path
 from typing import Union, Any, TYPE_CHECKING, Sequence
 
@@ -179,11 +180,18 @@ class SettingsManagerModel(TableModel):
                 elif index.column() == 2:
                     dat = entry.setting.parameter.title()
                 elif index.column() == 3:
-                    suffix = ''
-                    if entry.setting.parameter.opts.get('suffix', None) is not None:
-                        suffix = f' {entry.setting.parameter.opts.get("suffix")}'
-                    val, prefix = get_si_prefix(entry.setting.parameter.value())
-                    dat = f"{val} {prefix}{suffix}"
+                    value = entry.setting.parameter.value()
+                    if isinstance(value, Number):
+                        suffix = entry.setting.parameter.opts.get('suffix', '')
+                        if suffix is None:
+                            suffix = ''
+                        if isinstance(value, float):
+                            value, prefix = get_si_prefix(value)
+                            dat = f"{value} {prefix}{suffix}"
+                        else:
+                            dat = f"{value} {suffix}"
+                    else:
+                        dat = f'{value}'
                 else:
                     dat = ''
                 return dat
@@ -254,8 +262,8 @@ class SettingsManagerModel(TableModel):
         else:
             for child in entry.setting.parameter.children():
                 if child.opts.get(VALID_FOR_CONFIGURATION, True) :  # only add the ones specifying they are configurable
-                    pwp = ParameterWithPath(parameter=child, path=entry.setting.path + [child.name()])
-                    config_entry = SubEntry(entry.entry_type, entry.module_name, entry.module_type, pwp)
+                    pwp = ParameterWithPath(parameter=child, path=list(entry.setting.path) + [child.name()])
+                    config_entry = SubEntry(entry.entry_type, entry.module_name, pwp)
                     self.split_entry(config_entry, entries)
         return entries
 
@@ -359,7 +367,7 @@ class SettingsManagerTableView(QtWidgets.QTableView):
 
     def setmenu(self, status):
         if status:
-            self.menu = QtWidgets.QMenu()
+            self.menu = QtWidgets.QMenu(self)  # owned by the table: its slots would keep the table alive
             special_menu = self.menu.addMenu('Add Special Configuration')
 
             for entry in special_entry_factory.entries:

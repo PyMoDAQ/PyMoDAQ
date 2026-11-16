@@ -8,6 +8,7 @@ from pymodaq.extensions import get_extensions, ExtensionEnum
 from pymodaq.utils.custom_ext import CustomExt
 from pymodaq.utils.gui_utils.loader_utils import create_extension
 from pymodaq_gui.managers.manager_base import ManagerBase, ManagerActions
+from pymodaq.utils.dashboard_mixin import DashboardMixin
 from pymodaq_utils import set_logger
 from pymodaq_utils.logger import get_module_name
 
@@ -17,14 +18,14 @@ if TYPE_CHECKING:
 logger = set_logger(get_module_name(__file__))
 
 
-class ExtensionManager(ManagerBase):
+class ExtensionManager(DashboardMixin, ManagerBase):
     entry_type = 'extension'
     entry_extension = '.xml'
     icon_name = 'extension'
 
     def __init__(self, dashboard: 'DashBoard' = None):
         self.extension_catalog = get_extensions()
-        self.loaded_extensions: dict[ExtensionEnum, CustomExt] = {}
+        self.loaded_extensions: dict[ExtensionEnum | str, CustomExt] = {}
         self._internal_dashboard_ui = None
 
         super().__init__(dashboard=dashboard)
@@ -52,6 +53,9 @@ class ExtensionManager(ManagerBase):
     def _update_entry(self, entry_path: Path) -> None:
         """Extensions don't need file updates."""
         return NotImplemented
+
+    def can_execute_entry(self) -> bool:
+        return self.is_dashboard_available
 
     def _execute_entry(self, entry_path: Path = None, **kwargs) -> bool:
         """Load and display the selected extension."""
@@ -81,6 +85,26 @@ class ExtensionManager(ManagerBase):
 
         super().execute_entry(entry_path, **kwargs)
 
+    def register_extension(self, extension: CustomExt) -> None:
+        """Keep track of an extension, however it has been created (from the Dashboard, a script, the command line)
+
+        The Dashboard then quits it with itself. The key is the :class:`ExtensionEnum` of the extension if it is
+        a known one, else the name of its class.
+        """
+        self.loaded_extensions[self._key_of(extension)] = extension
+
+    def unregister_extension(self, extension: CustomExt) -> None:
+        """Forget an extension, to be called when it has quit"""
+        for key, ext in list(self.loaded_extensions.items()):
+            if ext is extension:
+                self.loaded_extensions.pop(key)
+
+    def _key_of(self, extension: CustomExt) -> ExtensionEnum | str:
+        for ext_enum, info in self.extension_catalog.items():
+            if type(extension) is info.klass:
+                return ext_enum
+        return type(extension).__name__
+
     def load_extension(self, ext_enum: ExtensionEnum,
                       win: QtWidgets.QMainWindow = None) -> CustomExt | None:
         """Load and display an extension."""
@@ -91,7 +115,6 @@ class ExtensionManager(ManagerBase):
                 window=win,
             )
 
-            self.loaded_extensions[ext_enum] = ext_module
             ext_module.shared_ui = shared_ui
             ext_module.status_signal.connect(self.update_status)
             shared_ui.show()
@@ -134,11 +157,15 @@ class ExtensionManager(ManagerBase):
             self.connect_action(ExtensionEnum[ext_name],
                                lambda e=ExtensionEnum[ext_name]: self.load_extension(e))
 
+    def _is_quit_by_dashboard(self, extension: CustomExt) -> bool:
+        return self.dashboard is not None and any(extension is ext for ext in self.dashboard.extensions.values())
+
     def quit_fun(self):
         """Clean up extensions and internal dashboard."""
         try:
-            for ext in self.loaded_extensions.values():
-                if hasattr(ext, 'quit_fun'):
+            for ext in list(self.loaded_extensions.values()):
+                # the extensions of the Dashboard are quit by it
+                if hasattr(ext, 'quit_fun') and not self._is_quit_by_dashboard(ext):
                     ext.quit_fun()
         except Exception as e:
             logger.exception(str(e))

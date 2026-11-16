@@ -6,6 +6,7 @@ from pymodaq_data import DataToExport, DataDim
 from pymodaq.extensions.sequencer.utilities.choice_models.factory import ChoiceModelFactory
 from pymodaq.extensions.sequencer.utilities.choice_models.model import ChoiceModelBase
 from pymodaq.extensions.sequencer.utilities.element_factory import ElementError
+from pymodaq.extensions.sequencer.utilities.holders.modules_manager_binding import ModulesManagerBinding
 
 
 ser_factory = SerializableFactory()
@@ -30,10 +31,10 @@ class ThresholdChoiceModel(ChoiceModelBase):
                                           selected=self.modules_manager.detectors_name)
 
     def updated_module_manager(self):
-        """ called whenever the parent modules manager is updated
-        """
-        self.settings['detectors'] = dict(all_items=self.modules_manager.detectors_name,
-                                          selected=self.modules_manager.detectors_name)
+        """ called whenever the parent modules manager is updated """
+        available = self.modules_manager.detectors_name
+        selected = ModulesManagerBinding.filter_selected(self.settings['detectors']['selected'], available)
+        self.settings['detectors'] = dict(all_items=available, selected=selected)
 
     def probe_data(self):
         self.modules_manager.selected_detectors_name = self.settings['detectors']['selected']
@@ -43,7 +44,7 @@ class ThresholdChoiceModel(ChoiceModelBase):
         if len(data0D_names) > 0:
             self.settings['data_name'] = data0D_names[0]
 
-    def execute(self, dte: DataToExport):
+    def evaluate(self, dte: DataToExport) -> bool:
         if len(self.settings['detectors']['selected']) > 0:
             self.modules_manager.selected_detectors_name = self.settings['detectors']['selected']
             self.modules_manager.connect_detectors()
@@ -52,9 +53,7 @@ class ThresholdChoiceModel(ChoiceModelBase):
         else:
             dte = DataToExport('Grab')
 
-        boolean_result = self.process_dte(dte)
-        self.parent_elt.go_to_signal.emit(boolean_result)
-        pass
+        return self.process_dte(dte)
 
     def process_dte(self, dte: DataToExport) -> bool:
         dwa = dte.get_data_from_full_name(self.settings['data_name'])

@@ -16,6 +16,11 @@ class CustomConfig(config_mod.BaseConfig):
     config_name = f"custom_settings"
 
 
+def test_manager_section_in_the_gui_config():
+    from pymodaq_utils.config import GlobalConfig
+    assert GlobalConfig()('gui', 'manager', 'ask_before_executing_unsaved') is False
+
+
 class TestGetSet:
     def test_get_set_roi_path(self):
         local_path = config_mod.get_set_local_dir()

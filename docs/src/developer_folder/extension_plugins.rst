@@ -33,10 +33,28 @@ For your package to be considered as a PyMoDAQ's dashboard extension, you should
   * CLASS_NAME: a string giving the name of the extension class
   * a class deriving from the ``CustomExt`` base class (see :ref:`custom_app`). ``CustomExt`` itself extends
     ``CustomApp`` with what deals with instruments and the Dashboard (``dashboard``, ``modules_manager``,
-    experiment and state managers, Dashboard toolbar)
+    experiment and state managers, Dashboard toolbar), through the ``DashboardMixin`` (see :ref:`dashboard_mixin`)
 
 The *pymodaq_plugins_template* contains already all this, so make sure to start from there when you wish to build an
 extension.
+
+``check_plugin`` (see :ref:`instrument_plugin_doc`) also reads the modules of the *extensions* folder, without importing
+them, and reports the codes PMQ330 to PMQ339: missing ``EXTENSION_NAME`` or ``CLASS_NAME``, a class that does not derive
+from ``CustomExt``, deprecated imports and hooks, managers created by the extension instead of those of the Dashboard, an
+``__init__`` that does not take ``(parent, dashboard)`` or never calls ``self.setup_ui()``, a ``_quit_fun`` missing or
+never returning ``True``. ``_quit_fun`` is the guard of ``quit_fun``: return ``False`` while something is left running
+(threads, workers...) and ``True`` when everything is released, otherwise the extension is never closed. Do not override ``quit_fun`` itself: it calls the guard, then closes the
+window and shows the Dashboard again.
+
+To check an extension while you write it, without the rest of the package, or an extension of PyMoDAQ itself, use the
+``check_extension`` command on a file or a folder::
+
+    check_extension src/pymodaq_plugins_xxxx/extensions/my_extension.py
+    check_extension [--fail-on error|warning|todo] [--core] [--color auto|always|never] path [path ...]
+
+Like ``check_plugin`` it returns 1 if there are findings of the ``--fail-on`` level, and it reads the sources without
+importing them. The extensions of PyMoDAQ (``pymodaq/extensions``) are recognized from their path and need not define
+``EXTENSION_NAME`` and ``CLASS_NAME`` (PMQ330 is then not reported, ``--core`` forces it).
 
   .. _extension_entrypoint_fig:
 
@@ -90,6 +108,40 @@ extensions. Then you'll have to code the inners of your extension following the 
 ``CustomApp`` (see :ref:`custom_app`). The big difference between extensions and Standalone apps resides in the fact that your
 dashboard instance is available here, hence all the control modules it contains. You'll be able to use all their
 functionalities only focusing on your extension layout!
+
+.. _testing_extension:
+
+Testing an extension
+--------------------
+
+The tools of ``pymodaq.utils.plugin_testing`` (see :ref:`instrument_plugin_doc` for those testing instrument plugins)
+load an extension in an empty Dashboard, without hardware and without showing any window, and close everything cleanly
+afterwards (the windows are deleted: left alive, they slow down all the tests run after them).
+
+.. versionadded:: 5.3.7
+
+``loaded_extension`` is a context manager giving the Dashboard and the extension instance, to write the test of the
+behaviour of your extension. ``PluginExtensionChecks`` is a pytest mixin that adds, for free, one test per extension of
+your package, checking that it loads and closes:
+
+.. code-block:: python
+
+    from pymodaq.utils.plugin_testing import loaded_extension, PluginExtensionChecks
+    from pymodaq_plugins_myplugin.extensions.my_extension import MyExtension
+
+
+    class TestExtensions(PluginExtensionChecks):  # package_name is found from the folder if omitted
+        pass
+
+
+    def test_do_something():
+        with loaded_extension(MyExtension) as (dashboard, extension):
+            extension.settings.child('main_settings', 'do_something').setValue(True)
+            assert extension.settings.child('other_settings', 'something_done').value()
+
+The Dashboard is empty: no instrument is loaded in it. Set ``strict_imports = True`` on the mixin in the CI of your plugin, so that an extension
+that cannot be imported fails instead of being skipped. The extensions of PyMoDAQ itself are tested with the same
+function (``packages/pymodaq/tests/extensions``).
 
 .. _plugin_models:
 

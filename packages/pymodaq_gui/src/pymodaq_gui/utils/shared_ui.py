@@ -95,7 +95,7 @@ class SharedUI(CustomApp):
 
     _help_dialog: QtWidgets.QDialog | None = None
 
-    def __init__(self, widget: Union[QtWidgets.QWidget, DockArea],
+    def __init__(self, widget: Union[QtWidgets.QMainWindow, QtWidgets.QWidget, DockArea],
                  show=True, title: str = None):
 
         if isinstance(widget, QtWidgets.QMainWindow):
@@ -267,6 +267,8 @@ class SharedUI(CustomApp):
 
             if res and self.mainwindow is not None:
                 self.mainwindow.close()
+            if res is not False:  # some apps return None once quit
+                self.delete_actions()
 
         except Exception as e:
             logger.exception(str(e))

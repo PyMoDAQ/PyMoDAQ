@@ -55,14 +55,10 @@ the command line where you *cd* within the cloned package.
 This command will install the package but any change you apply on the local folder will be applied on the package.
 Then just add a new python file in the correct location.
 
-Once you're ready with a working plugin, you can then:
-
-#. Have your repo hosted in the PyMoDAQ GitHub organization (you stay its official maintainer): a plugin owned by a
-   single person is lost when this person moves on, in the organization someone can always take over. See
-   :ref:`plugin_hosting` for the reason and the transfer procedure.
-#. Publish your repo on pypi (just by doing a release on github will trigger the creation
-   of a pypi repository)
-#. do a pull request on the initial repository to merge your new implementations.
+Once you're ready with a working plugin, have your repo hosted in the PyMoDAQ GitHub organization (you stay its
+official maintainer): a plugin owned by a single person is lost when this person moves on, in the organization someone
+can always take over. See :ref:`plugin_hosting` for the reason, the transfer procedure and how the plugin is then
+released on PyPI.
 
 .. note::
 
@@ -113,7 +109,7 @@ available at three levels, from the quickest to the deepest. Start with the firs
 .. _check_plugin_command:
 
 The check_plugin command
-++++++++++++++++++++++++
+************************
 
 ``check_plugin`` analyses the source of the plugin with *static rules* (nothing is imported, so it also works when the
 instrument SDK is not installed) and checks the plugin modules that can be imported. It is the fastest way to know whether your
@@ -169,8 +165,18 @@ PMQ313   deprecated attribute ``current_position`` / ``target_position`` (use ``
 PMQ314   ``comon_parameters`` of the actuators used as a list: it is a function, the import fails
 PMQ315   invalid escape sequence in a string, such as ``"C:\Program Files"`` (use a raw string)
 PMQ316   settings group ``multiaxes`` / ``multi_status`` renamed ``controller`` / ``controller_status``
-PMQ317   code that only works on Windows and runs on import (``windll``, ``winreg``, drive path)
+PMQ317   code that only works on Windows and runs on import (``windll``, ``winreg``, drive path); not reported in the modules used only by instruments declaring ``supported_platforms = ('win32',)``
 PMQ318   deprecated ``ini_stage_init`` / ``ini_detector_init``; write ``if self.is_master: self.controller = AWrapper()`` / ``else: self.controller = controller``
+PMQ319   unknown value in ``supported_platforms`` / ``supported_architectures`` (see :ref:`plugin_platforms`)
+PMQ320   the ``Operating System`` classifiers of the ``pyproject.toml`` do not match ``supported_platforms``; ``check_plugin --fix-classifiers`` rewrites them
+PMQ330-1 extension (``extensions`` folder): ``EXTENSION_NAME`` / ``CLASS_NAME`` missing, so the Dashboard does not list it; ``CLASS_NAME`` is not a class of the module
+PMQ332   the extension class does not derive from ``CustomExt`` (a ``CustomApp`` has no access to the Dashboard)
+PMQ333   import from a deprecated module of pymodaq (``pymodaq.utils.parameter``, ``pymodaq.utils.messenger``, ``pymodaq.utils.math_utils``...) in an extension
+PMQ334   deprecated hooks ``setup_docks`` / ``setup_menu`` of an extension (use ``setup_docks_and_widgets`` / ``setup_menus_and_toolbars``)
+PMQ335   the extension creates its own ``ExperimentManager`` or ``StateManager`` instead of using the ones of the Dashboard
+PMQ336   ``__init__`` of the extension does not take ``(parent, dashboard)``. PMQ337: it never calls ``self.setup_ui()``
+PMQ338   a class deriving from ``CustomExt`` has no ``_quit_fun`` guard, or one that never returns ``True``: ``quit_fun`` then never closes the extension
+PMQ339   the extension class overrides ``quit_fun`` instead of ``_quit_fun`` (the guard called by ``quit_fun``)
 ======== =================================================================================================
 
 The functions behind this command (*check_package_layout*, *check_move_class*, *check_viewer_class*) return the list of
@@ -181,7 +187,7 @@ problems found and can be used from a script. To get a full report of an install
 
 
 Silencing a finding on purpose
-++++++++++++++++++++++++++++++
+******************************
 
 A finding that is intended (a plugin written to test an error, a deprecated name kept on purpose...) can be silenced, like
 ``# noqa`` for flake8, by a comment on the line the finding reports (its line is shown in the report)::
@@ -195,7 +201,7 @@ Only the codes listed are silenced, the other findings of the line are still rep
 .. _plugin_pytest_checks:
 
 The same checks as tests
-++++++++++++++++++++++++
+************************
 
 To run the same checks in your plugin repository, for instance in your CI, use a test module such as
 *tests/test_plugin.py*. The pytest mixin applying them is provided by ``pymodaq.utils.plugin_testing`` from PyMoDAQ
@@ -225,8 +231,8 @@ rules and codes as ``check_plugin``, and in particular:
 * the naming convention of the modules and of the classes (see above), and that no module is wrongly named
 * the plugin modules can be imported *without the instrument vendor SDK* (guard these imports with *try/except*)
 * the plugin class derives from the right base class and overrides the mandatory methods
-  (*ini_stage*, *get_actuator_value*, *close* for an actuator, and a warning if *stop_motion* is not implemented; *ini_detector*, *grab_data*, *stop*,
-  *close* for a detector)
+  (*ini_stage*, *get_actuator_value*, *close* for an actuator; *ini_detector*, *grab_data*, *stop*, *close* for a
+  detector), see :ref:`plugin_contract`
 * for an actuator, ``_axis_names``, ``_controller_units`` and ``_epsilons`` are consistent and the units are known
   from `pint`
 * ``params`` is a valid list of dict producing a settings tree
@@ -267,18 +273,25 @@ GUI, and fail with a ``SignalTimeout`` if the plugin never emits the expected si
         def close(self): pass
 
     def test_move_abs(monkeypatch):
-        monkeypatch.setattr(daq_move_Xxxx, 'XxxxWrapper', FakeWrapper)  # the name used in the plugin module
+        # 'XxxxWrapper' is the name of the wrapper that the plugin normally imports to control the instrument
+        # (as it appears in the plugin module): here it is replaced by the fake one
+        monkeypatch.setattr(daq_move_Xxxx, 'XxxxWrapper', FakeWrapper)
         actuator = make_actuator(daq_move_Xxxx.DAQ_Move_Xxxx)
         assert actuator.initialized
         position = move_abs_and_wait(actuator, 2.5)  # a float is in the axis unit of the actuator
         assert position.value() == pytest.approx(2.5, abs=actuator.epsilon)
         actuator.close()
 
+In this example ``XxxxWrapper`` stands for the wrapper of your instrument that ``daq_move_Xxxx`` imports and uses
+(``monkeypatch.setattr`` replaces that name in the plugin module, so use the exact name found there), and
+``FakeWrapper`` is the fake that takes its place during the test.
+
 ``move_rel_and_wait``, ``move_home_and_wait`` and ``make_detector`` / ``grab_and_wait`` / ``assert_units`` work the
 same way, and a slave axis of a multi-axes controller is created with ``make_actuator(plugin_class,
 controller=master.controller)``. The helpers reproduce what the Dashboard does around the plugin: the target is
 expressed in the axis unit before reaching ``move_abs``, and the end of a move is signalled once ``poll_moving`` has
-run. The tests of the helpers themselves (*tests/utils/plugin_harness_test.py* in the PyMoDAQ repository) contain
+run. After a ``move_home`` the position is not polled (as in PyMoDAQ): ``move_home_and_wait`` waits for the plugin to
+call ``self.move_done()`` and raises a ``SignalTimeout`` if it never does, see :ref:`move_home`. The tests of the helpers themselves (*tests/utils/plugin_harness_test.py* in the PyMoDAQ repository) contain
 complete fake actuators (single and multi-axes) and a fake detector to copy.
 
 .. note::
@@ -286,6 +299,85 @@ complete fake actuators (single and multi-axes) and a fake detector to copy.
     ``close``) against a fake that encodes what you believe the driver does. They say nothing about the device itself:
     timing, error replies, real ranges and units. A passing run is not a hardware validation, say in a contribution
     what was tested on the real instrument and what only against a fake.
+
+.. _plugin_contract:
+
+The methods of a plugin
+-----------------------
+
+These are the methods a plugin overrides. *Required* ones are checked by ``check_plugin`` and by the plugin tests: the
+others have a default in the base class that does nothing or raises ``NotImplementedError``, override them when your
+instrument can do it. The list is defined once, in ``pymodaq_utils.plugin_tools.contract``, and read by the checks, the
+tests and this table.
+
+.. include:: /developer_folder/plugin_contract_table.inc
+
+.. _plugin_platforms:
+
+Plugins working on some systems only
+------------------------------------
+
+A plugin for a Windows-only driver, or for the hardware of a Raspberry Pi, declares the systems it works on in the class
+of its instrument plugin, with two optional class attributes (``None``, the default of the base classes, means all the
+systems and all the architectures):
+
+.. code-block:: python
+
+    class DAQ_Move_Xxxx(DAQ_Move_base):
+        supported_platforms = ('win32',)   # a Windows driver
+
+    class DAQ_1DViewer_Yyyy(DAQ_Viewer_base):
+        supported_platforms = ('linux',)                       # a Raspberry Pi board
+        supported_architectures = ('aarch64', 'armv7l')
+
+On another system PyMoDAQ does not initialize the plugin and shows *This plugin only works on Windows (this computer:
+linux, x86_64)* in place of the usual information. ``check_plugin`` reads the declaration (it prints *Works on:
+Windows*) and checks it:
+
+* the ``Operating System`` classifiers of the ``pyproject.toml`` have to match it (PMQ320): run
+  ``check_plugin --fix-classifiers`` to write them, instead of the default *OS Independent*. When a package holds several
+  instruments the classifiers are those of all of them together. The architecture has no classifier: it is only used by
+  PyMoDAQ and ``check_plugin``. To avoid running it, let the build compute them (next paragraph);
+* the values have to be known (PMQ319). The accepted values and the classifier they give are:
+
+.. include:: /developer_folder/plugin_platforms_table.inc
+
+The same lists are in ``pymodaq_utils.plugin_tools.platforms`` (``PLATFORMS`` and ``ARCHITECTURES``). ``sys.platform``
+and ``platform.machine()`` give the values of the computer.
+
+When a plugin works on several systems, or on all but one, its module still has to be **importable on every system**,
+as PyMoDAQ lists all the plugins at startup (PMQ317 warns about Windows-only code run on import; it is not reported in the modules that
+are only used, directly or through other modules, by instruments declaring ``supported_platforms = ('win32',)``). Import the vendor SDK in a ``try/except`` (or under ``sys.platform``), and let ``ini_stage`` / ``ini_detector`` return
+``(message, False)`` when the SDK is missing (see PMQ317). In the ``pyproject.toml``, restrict the dependencies that
+only exist for these systems with an environment marker, so that ``pip`` does not try to install them elsewhere::
+
+    dependencies = [
+        "pymodaq>=5.3.1",
+        "RPi.GPIO; platform_machine == 'aarch64' or platform_machine == 'armv7l'",
+        "pywin32; sys_platform == 'win32'",
+    ]
+
+Computing the classifiers when building
+***************************************
+
+Instead of keeping the ``Operating System`` classifiers up to date by hand, the build can write them. Declare the
+``classifiers`` field as dynamic and move the other classifiers to ``[tool.pymodaq]``::
+
+    [project]
+    dynamic = ["version", "urls", "entry-points", "classifiers"]
+
+    [tool.pymodaq]
+    classifiers = [
+        "Development Status :: 5 - Production/Stable",
+        "Intended Audience :: Science/Research",
+    ]
+
+The metadata hook of the plugin (``hatch_build.py``, see the plugin template) then adds the Python classifiers
+(``Programming Language :: Python :: 3.11``...) of the versions supported by PyMoDAQ that ``requires-python`` accepts
+(``PYTHON_VERSIONS`` in ``pymodaq_utils.plugin_tools.platforms``), and the ``Operating System`` classifiers of the
+``supported_platforms`` declared in the plugin (*OS Independent* if there is none), so that the published package is
+always consistent with the code. This needs ``pymodaq_utils>=5.3.6`` in the ``requires`` of the
+``[build-system]``. ``check_plugin --fix-classifiers`` has nothing to write in that case.
 
 Adding an instrument to your plugin
 -----------------------------------
@@ -295,8 +387,8 @@ plugin repository:
 
 .. code-block:: bash
 
-    python -m pymodaq_utils.plugin_scaffold move Xxxx   # daq_move_Xxxx.py with the class DAQ_Move_Xxxx
-    python -m pymodaq_utils.plugin_scaffold 1D Xxxx     # daq_1Dviewer_Xxxx.py with the class DAQ_1DViewer_Xxxx
+    python -m pymodaq_utils.plugin_tools.scaffold move Xxxx   # daq_move_Xxxx.py with the class DAQ_Move_Xxxx
+    python -m pymodaq_utils.plugin_tools.scaffold 1D Xxxx     # daq_1Dviewer_Xxxx.py with the class DAQ_1DViewer_Xxxx
 
 (use ``--folder`` to give the *pymodaq_plugins_xxxx* package folder). The module derives from the right base class,
 declares the mandatory attributes and methods, and its ``TODO`` comments tell where to put your instrument code.
@@ -305,6 +397,8 @@ The static rules above list what is left to do.
 
 .. _hardware_settings:
 
+
+.. _value_reached:
 
 Value Reached?
 --------------
@@ -333,6 +427,44 @@ Here is a snippet of this calculation:
   where all quantities holds an information about their units, for instance `epsilon` could be expressed
   in *µm* (micron) (controller units) while _current_value (related to what is printed on the UI) could be expressed
   in *mm*. This feature is available naturally by using the PyMoDAQ DataManagement ecosystem with units compatibility.
+
+.. _move_home:
+
+Moving to the home position
+---------------------------
+
+The *Find Home* button of a :py:class:`DAQ_Move<pymodaq.control_modules.daq_move.DAQ_Move>` calls the ``move_home``
+method of the plugin. Its purpose is to let the actuator look for a reference (a physical limit, a switch, an index of
+the encoder...) so that the controller knows this position is the *home* (zero) position. Contrary to ``move_abs`` and
+``move_rel``, PyMoDAQ does not know the position to reach: there is no target, no ``epsilon`` check, no polling and no
+timeout after a ``move_home``. The plugin is therefore responsible for telling when the homing is over. Until it does,
+the UI stays in the *Moving* state and the displayed value is not refreshed.
+
+To do so, the plugin calls ``self.move_done()`` once the homing is finished. This method reads the position of the
+actuator using your ``get_actuator_value`` method, emits the ``move_done_signal`` with it (this updates the displayed
+value and the *Moving* state of the UI) and flags the move as done. The way to do it depends on the controller:
+
+* **blocking homing**: the controller method returns when the reference has been found. Call ``self.move_done()`` right
+  after it:
+
+  .. code-block:: python
+
+      def move_home(self):
+          self.controller.home()  # returns when the reference has been found
+          self.move_done()  # reads get_actuator_value() and signals the end of the move
+
+* **asynchronous homing**: the controller starts the homing and returns immediately, and notifies the end of it with a
+  callback (or an event, a status to poll...). Register a callback calling ``self.move_done()``. Note that the callback
+  may be called from a thread of the driver, make sure the controller can be queried from there:
+
+  .. code-block:: python
+
+      def move_home(self):
+          # the callback receives arguments from the driver, that must not be given to move_done
+          self.controller.home(callback=lambda *args: self.move_done())
+
+If the homing takes long, you can refresh the value displayed meanwhile with ``self.emit_value(position)``, see
+:ref:`DAQ_Move specific commands<daq_move_commands>`.
 
 Hardware Settings
 -----------------
@@ -424,6 +556,44 @@ The ``param`` method argument is of the type ``Parameter`` (from ``pyqtgraph``):
                 self.emit_status(ThreadCommand('show_splash', ["Setting wavelength"]))
                 err = self.controller.SetWavelengthSR(0, self.settings.child('spectro_settings','spectro_wl').value())
                 self.emit_status(ThreadCommand('close_splash'))
+
+Buttons (``action`` and ``action_led`` parameters)
+**************************************************
+
+A click on the button of an ``action`` or ``action_led`` parameter is sent to the plugin, in its thread, like a change
+of value: the ``sigActivated`` signal of the parameter *of the plugin* is emitted, and
+``commit_settings`` is called with the parameter. A plugin can then connect a method to the signal and show the result
+on the LED of an ``action_led`` parameter, with the states of the ``Status`` workflow (see ``StatusPalette`` in
+``pymodaq_gui.utils.status_palette``): grey (``OFF``) not activated, blue (``RUNNING``) in progress, green (``IDLE``)
+done, orange (``ERROR``) failed. What the plugin sets on the parameter during the activation is sent back to the
+UI like any other change.
+
+.. code-block:: python
+
+    from pymodaq_gui.utils.status_palette import Status
+
+    params = [
+        {'title': 'Calibrate', 'name': 'calibrate', 'type': 'action_led', 'value': Status.OFF, 'label': 'Go',
+         'limits': [Status.OFF, Status.RUNNING, Status.IDLE, Status.ERROR], 'checkable': True},
+    ]
+
+    def ini_attributes(self):
+        self.settings.child('calibrate').sigActivated.connect(self.calibrate)
+
+    def calibrate(self, param):
+        if not param.opts['checked']:  # the button has been released
+            param.setValue(Status.OFF)
+            return
+        param.setValue(Status.RUNNING)
+        try:
+            self.controller.calibrate()
+        except Exception:
+            param.setValue(Status.ERROR)
+            param.setOpts(checked=False)  # release the button
+        else:
+            param.setValue(Status.IDLE)
+
+``checkable`` is optional: without it the button is a simple push button and ``param.opts['checked']`` does not exist.
 
 
 
@@ -622,6 +792,53 @@ controller provides an efficient method to do it (that will save time) then you 
         #is True else averaging is done software wise
 
 
+.. note::
+
+    When the averaging is done by the DAQ_Viewer (``hardware_averaging`` left to ``False``), the DAQ_Viewer also
+    computes the **standard error of the mean** (``sigma / sqrt(N)``, with ``sigma`` the standard
+    deviation of the ``N`` acquisitions) for each point of the data, and attaches it to the averaged data in their
+    ``errors`` attribute (see :meth:`pymodaq_data.data.DataWithAxes.accumulate`). It is then displayed
+    (*errors* action of the 1D viewer) and saved with the data.
+
+    If ``hardware_averaging`` is ``True``, the averaging, hence the statistics, is done by the instrument and the
+    DAQ_Viewer cannot know the dispersion of the acquisitions. It is then the responsibility of the plugin to fill the
+    ``errors`` attribute of the :class:`~pymodaq_data.data.DataWithAxes` it emits, if the instrument provides this
+    information:
+
+    .. code-block:: python
+
+        dwa = DataFromPlugins(name='spectrum', data=[mean_spectrum], errors=[standard_error_spectrum])
+
+    When the plugin averages acquisitions itself, one after the other, :meth:`pymodaq_data.data.DataWithAxes.accumulate`
+    (and :meth:`pymodaq_data.data.DataToExport.accumulate`) computes the running mean and sets its standard error as
+    ``errors``. This is what the DAQ_Viewer does for the software averaging (``DetectorWorker.data_ready``): the first
+    acquisition is kept as it is, then each new one is accumulated with the running mean:
+
+    .. code-block:: python
+
+        if n_done == 0:
+            mean = acquisition.deepcopy()
+        else:  # n_done acquisitions are already averaged in mean
+            mean = acquisition.accumulate(mean, n_done)
+        n_done += 1
+        # after Naverage acquisitions, mean.errors is the standard error of the mean: emit mean
+
+    When the instrument or its buffer gives all the acquisitions at once, stacked in one array,
+    :meth:`pymodaq_data.data.DataWithAxes.mean_with_errors` (and :meth:`pymodaq_data.data.DataToExport.mean_with_errors`)
+    does it in one call. The ``axis`` argument (0 by default) is the index of the axis along which the acquisitions are
+    stacked: it does not have to be the first one. This axis is removed from the result, the other ones are kept. For a
+    ``DataToExport``, the acquisitions have to be stacked along the same ``axis`` in all its ``DataWithAxes``.
+
+    .. code-block:: python
+
+        # frames: array (Naverage, ny, nx) read from the buffer, the acquisitions being along axis 0
+        raw = DataRaw('frames', data=[frames], nav_indexes=(0,))
+        mean = raw.mean_with_errors()  # shape (ny, nx), errors are the standard error of the mean
+
+        # if the buffer is (ny, Naverage, nx), the acquisitions are along axis 1
+        mean = DataRaw('frames', data=[frames_yfx], nav_indexes=(1,)).mean_with_errors(axis=1)
+
+
 .. _live_mode:
 
 Live Mode
@@ -665,6 +882,25 @@ grab or snap data. The MockCamera plugin illustrates this feature:
                 QThread.msleep(kwargs.get('wait_time', 100))
                 self.dte_signal.emit(data)
                 QtWidgets.QApplication.processEvents()
+
+In live mode the DAQ_Viewer calls ``grab_data`` **once**: the plugin keeps emitting data until the DAQ_Viewer calls its
+``stop`` method, which ends the loop of ``grab_data``. The DAQ_Viewer then emits the *grab stopped* status by itself. If
+``live_mode_available`` is ``False``, the DAQ_Viewer calls ``grab_data`` again for each data to emit.
+
+.. note::
+
+    ``live_mode_available`` and ``hardware_averaging`` (see :ref:`hardware_averaging`) are independent:
+
+    * ``live_mode_available`` tells **who repeats the acquisition**: the plugin (``True``) or the DAQ_Viewer (``False``).
+    * ``hardware_averaging`` tells **who averages**: if ``True``, each data emitted by the plugin is already the average
+      of the ``Naverage`` acquisitions asked in ``grab_data``; if ``False``, the DAQ_Viewer averages the data it
+      receives, also when the plugin streams. A plugin that averages the acquisitions itself (a camera that averages
+      its frames, for instance) must set ``hardware_averaging`` to ``True``, otherwise the DAQ_Viewer averages the
+      already averaged data a second time. The plugin should then add the standard error of the mean to the
+      ``errors`` of the data before emitting it (see :ref:`hardware_averaging`). When it averages successive
+      acquisitions itself, :meth:`pymodaq_data.data.DataWithAxes.accumulate` (or
+      :meth:`pymodaq_data.data.DataToExport.accumulate`) does it step by step: it gives the running mean and sets its
+      standard error as ``errors``, while :meth:`~pymodaq_data.data.DataWithAxes.average` only gives the mean.
 
 
 
@@ -768,22 +1004,9 @@ Modifying the UI from the instrument plugin class
 -------------------------------------------------
 
 The user interface control module and the instrument plugin class are not in the same thread, moreover, the plugin
-class is not aware of the UI object (``DAQ_Move`` or ``DAQ_Viewer``).
-The following shows, how the instrument plugin class ``DAQ_Move_MyPluginClass`` relates to ``DAQ_Move``:
-
-.. code-block:: python
-
-   class DAQ_Move:
-      def init_hardware(self...):
-         hardware: DAQ_Move_Hardware
-         hardware.moveToThread()
-
-   class DAQ_Move_Hardware:
-      hardware: DAQ_Move_Base
-
-   class DAQ_Move_MyPluginClass(DAQ_Move_Base):
-      """Plugin class defined in a plugins repository."""
-
+class is not aware of the UI object (``DAQ_Move`` or ``DAQ_Viewer``). The control module creates a worker
+(``ActuatorWorker`` or ``DetectorWorker``) that is moved to the plugin thread and creates the plugin instance
+``DAQ_Move_MyPluginClass``. The diagrams of :ref:`plugin_workflow` show who calls what, and in which thread.
 
 Therefore, you'll find below ways to interact with the UI from the plugin class.
 
@@ -887,6 +1110,8 @@ variables:
   * *childAdded*: the object is a dictionary generated using SaveState of a given Parameter
 
 
+.. _daq_move_commands:
+
 DAQ_Move specific commands
 **************************
 
@@ -900,7 +1125,7 @@ Specifics commands for the :py:class:`DAQ_Move<pymodaq.control_modules.daq_move.
 * **move_done**: update the UI current value and emits the move_done signal
 * **outofbounds**: emits the bounds_signal signal with a True argument
 * **set_allowed_values**: used to change the behaviour of the spinbox controlling absolute values, see
-  :py:meth:`set_abs_spinbox_properties<pymodaq.control_modules.daq_move_ui.DAQ_Move_UI.set_abs_spinbox_properties>`
+  :py:meth:`set_abs_spinbox_properties<pymodaq.control_modules.daq_move_ui.ui_base.DAQMoveUI.set_abs_spinbox_properties>`
 * *stop*: stop the motion
 * *units*: update the UI units. The attribute argument should be a string specifying the new unit.
 
@@ -912,8 +1137,14 @@ In that case the printed value would show ``12.4 m``.
 
 You can also modify some SpinBox of the UI (the ones used to specify the absolute values) using the *set_allowed_values*
 command. In that case the attribute argument of the ThreadCommand should be a dictionary, see
-:py:meth:`set_abs_spinbox_properties<pymodaq.control_modules.daq_move_ui.DAQ_Move_UI.set_abs_spinbox_properties>`.
+:py:meth:`set_abs_spinbox_properties<pymodaq.control_modules.daq_move_ui.ui_base.DAQMoveUI.set_abs_spinbox_properties>`.
 
+
+The values of the red, green and relative spinboxes of the UI (the *Value Red*, *Value Green* and *Value Relative*
+entries of the main settings of the module) can also be set from the plugin with the
+:py:meth:`set_default_values<pymodaq.control_modules.move_utility_classes.DAQ_Move_base.set_default_values>` helper,
+for instance ``self.set_default_values(red=400., green=800.)``. It relies on the generic *update_main_settings*
+command, whose attribute is ``[['default_value_red'], 400., 'value']``.
 
 DAQ_Viewer specific commands
 ****************************

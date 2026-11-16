@@ -139,7 +139,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
          "limits": config("utils", "general", "debug_level")},
         {"title": "Loaded experiments", "name": "loaded_files", "type": "group",
          "children": [
-             {"title": "Preset file", "name": "preset_file", "type": "str", "value": "", "readonly": True,},
              {"title": "Overshoot file", "name": "overshoot_file", "type": "str", "value": "", "readonly": True,},
              {"title": "Layout file", "name": "layout_file", "type": "str", "value": "", "readonly": True},
              {"title": "ROI file", "name": "roi_file", "type": "str", "value": "", "readonly": True},
@@ -164,21 +163,14 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.extra_params = []
         self._docks_viewer: list[Dock] = []
         self.wait_time = 1000
-        self.log_module = None
-        self.pid_module = None
-        self.pid_window = None
-        self.retriever_module = None
-        self.database_module = None
-        self.extensions: dict[str, CustomExt] = dict([])
-        self.extension_windows = []
-        self.experiment_manager: ExperimentManager = None  # instanciation in do_things_after_ui_setup
-        self.state_manager: StateManager = None  # instanciation in do_things_after_ui_setup
-        self.overshooter: Overshooter = None  # instanciation in do_things_after_ui_setup
-        self.roi_manager: ROIManager = None  # instanciation in do_things_after_ui_setup
+
+        self.experiment_manager: ExperimentManager = None  # instantiation in do_things_after_ui_setup
+        self.state_manager: StateManager = None  # instantiation in do_things_after_ui_setup
+        self.overshooter: Overshooter = None  # instantiation in do_things_after_ui_setup
+        self.roi_manager: ROIManager = None  # instantiation in do_things_after_ui_setup
         self.dockarea.dock_signal.connect(self.save_layout_state_auto)
 
         self.title = ""
-
 
         self.remote_timer = QtCore.QTimer(self)
         self.remote_manager = None
@@ -346,21 +338,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
     ):
         self.module_creator.remove_modules(modules)
 
-    def load_extension(self, ext_enum: ExtensionEnum,
-                       win: QtWidgets.QMainWindow = None,
-                       ) -> 'CustomExt':
-        shared_ui, ext_module = create_extension(
-            self, extensions[ext_enum].klass,
-            window=win,
-        )
-        self.extensions[ext_enum] = ext_module
-        ext_module.shared_ui = shared_ui
-        ext_module.status_signal.connect(self.add_status)
-        shared_ui.show()
-        ext_module.set_action_checked('show_dashboard', True)
-
-        return ext_module
-
     def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
         """
         Create the menubar object looking like :
@@ -456,23 +433,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
     #                 self.get_action(self.get_action_from_file(file, ManagerEnums.remote))
     #             )
     #
-    # def create_remote(self):
-    #     try:
-    #         if self.preset_file is not None:
-    #             self.remote_manager.set_new_remote(self.preset_file.stem)
-    #             self.add_action(
-    #                 self.get_action_from_file(self.preset_file, ManagerEnums.remote),
-    #                 self.preset_file.stem,
-    #                 "",
-    #             )
-    #             self.setup_menu(self.menubar)
-    #             self.connect_action(
-    #                 self.get_action_from_file(self.preset_file, ManagerEnums.remote),
-    #                 self.create_menu_slot_remote(get_set_remote_path().joinpath(self.preset_file.name)),
-    #             )
-    #
-    #     except Exception as e:
-    #         logger.exception(str(e))
     #
     # def modify_remote(self):
     #     try:
@@ -497,27 +457,32 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.logger_widget.setVisible(show)
         self.logger_widget.closeEvent = lambda event: self.set_action_checked('show_log_widget', False)
 
-    # def create_menu_slot_roi(self, filename):
-    #     return lambda: self.set_roi_configuration(filename)
-    #
     # def create_menu_slot_remote(self, filename):
     #     return lambda: self.set_remote_configuration(filename)
 
     def create_extension_slot(self, extenum: ExtensionEnum):
-        return lambda: self.load_extension(extenum)
+        return lambda: self.extension_manager.load_extension(extenum)
+
 
     def quit_fun(self):
         """
         Quit the current instance of DashBoard and close on cascade move and detector modules.
+
+        Returns
+        -------
+        bool
+            True if the DashBoard (and its extensions) has been closed, False if an extension refused to quit or if
+            an error occurred.
 
         See Also
         --------
         quit_fun
         """
         try:
-            for ext in self.extensions:
-                if hasattr(self.extensions[ext], "quit_fun"):
-                    self.extensions[ext].quit_fun()
+            for extension in list(self.extensions.values()):  # a list as quitting unregisters the extension
+                if hasattr(extension, "quit_fun"):
+                    if not extension.quit_fun(external_call=True):
+                        return False
 
             self.connect_leco(connect=False)
             self.remote_timer.stop()
@@ -541,19 +506,20 @@ class DashBoard(CustomApp, LECOComponentMixin):
             self.experiment_manager.quit_fun()
             self.state_manager.quit_fun()
             self.overshooter.quit_fun()
+            self.roi_manager.quit_fun()
+            self.extension_manager.quit_fun()  # and the extensions loaded from its menu
 
             # Removing dock areas (I don't know what this is for)
             areas = self.dockarea.tempAreas[:]
             for area in areas:
                 area.win.close()
 
-            if self.pid_window is not None:
-                self.pid_window.close()
-
             super().quit_fun()
+            return True
 
         except Exception as e:
             logger.exception(str(e))
+            return False
         finally:
             QtWidgets.QApplication.processEvents()
 
@@ -590,7 +556,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
     def save_layout_state(self, file=None):
         """
         Save the current layout state in the select_file obtained pathname file.
-        Once done dump the pickle.
+        The layout is saved as json.
 
         See Also
         --------
@@ -949,6 +915,10 @@ class DashBoard(CustomApp, LECOComponentMixin):
                 logger.warning("Stopping the DAQScan for out of bounds")
                 self.extensions[ExtensionEnum.SCANNER].stop_scan()
 
+    @property
+    def extensions(self) -> dict[ExtensionEnum, 'CustomExt']:
+        return self.extension_manager.loaded_extensions
+
     def stop_moves(self, *args, **kwargs):
         """
         Foreach module of the move module object list, stop motion.
@@ -1154,7 +1124,7 @@ def load_dashboard_with_experiment(experiment_name: str,
         dashboard.experiment_manager.execute_entry(experiment_path)
 
         if extension_name in ExtensionEnum.names():
-            extension = dashboard.load_extension(ExtensionEnum[extension_name])
+            extension = dashboard.extension_manager.load_extension(ExtensionEnum[extension_name])
         else:
             extension = None
 

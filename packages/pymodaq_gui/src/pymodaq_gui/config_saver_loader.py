@@ -29,7 +29,7 @@ class ConfigSaverLoader:
     """
 
     def __init__(self, base_param: 'Parameter', config: BaseConfig,
-                 base_path: IterableType[str] = None):
+                 base_path: Optional[IterableType[str]] = None):
         self.config = config
         if base_path is None:
             base_path = []
@@ -37,7 +37,7 @@ class ConfigSaverLoader:
         self._base_param = base_param
 
     @property
-    def base_path(self):
+    def base_path(self) -> List[str]:
         """ Get/Set the iterable of string defining a particular configuration to be loaded/saved"""
         return self._base_path
 
@@ -46,7 +46,7 @@ class ConfigSaverLoader:
         self._base_path = list(recursive_iterable_flattening(path))
 
     @property
-    def base_param(self):
+    def base_param(self) -> Parameter:
         """ Get/Set the parent Parameter whose children should be saved in the config file"""
         return self._base_param
 
@@ -54,7 +54,7 @@ class ConfigSaverLoader:
     def base_param(self, param: 'Parameter'):
         self._base_param = param
 
-    def load_config(self, param: 'Parameter' = None):
+    def load_config(self, param: Optional[Parameter] = None) -> None:
         from pymodaq_gui.parameter import utils as putils
 
         if param is None:
@@ -73,7 +73,7 @@ class ConfigSaverLoader:
             else:
                 self.load_config(child)
 
-    def save_config(self, param_to_save: Optional[Parameter] = None):
+    def save_config(self, param_to_save: Optional[Parameter] = None) -> None:
         from pymodaq_gui.parameter import utils as putils
 
         for param in putils.iter_children_params(self.base_param, []):

@@ -10,7 +10,7 @@ class UserInput(ChoiceModelBase):
 
     params = []
 
-    def execute(self, dte: DataToExport):
+    def evaluate(self, dte: DataToExport) -> bool:
 
         msgBox = QtWidgets.QMessageBox()
         msgBox.setText("Previous steps are finished")
@@ -20,4 +20,4 @@ class UserInput(ChoiceModelBase):
         msgBox.setDefaultButton(button_proceed)
         msgBox.exec()
 
-        self.parent_elt.go_to_signal.emit(msgBox.clickedButton() == button_proceed)
+        return msgBox.clickedButton() == button_proceed

@@ -78,6 +78,26 @@ def create_viewerND(parent: QtWidgets.QWidget, title='',
 viewer_factory = ViewerFactory()
 
 
+def _delete_dock(dock: Dock):
+    """Delete a closed dock, its label and the widgets it holds
+
+    A closed pyqtgraph Dock is only unparented: it would stay alive (with the viewer it holds) as long as
+    a Python reference or a signal connection points to it.
+    """
+    dock.label.deleteLater()
+    dock.deleteLater()
+
+
+def _close_roi_panel(viewer: ViewerBase):
+    """Close a viewer's detachable roi panel, if it has one (e.g. not Viewer0D/ViewerND)
+
+    See :meth:`DetachablePanel.close` for why this is needed on top of closing the dock.
+    """
+    rois_panel = getattr(viewer.view, '_rois_panel', None)
+    if rois_panel is not None:
+        rois_panel.close()
+
+
 class ViewerDispatcher:
     """MixIn class to add easy control for adding multiple data viewers in docks depending on
     data to be plotted
@@ -162,8 +182,8 @@ class ViewerDispatcher:
             dock = self.viewer_docks.pop()
             dock.close()
             viewer = self.viewers.pop()
-            if hasattr(viewer.view, 'roi_widget') and viewer.view.roi_widget is not None:
-                self.rois_dock.removeWidget(viewer.view.roi_widget)
+            _close_roi_panel(viewer)
+            _delete_dock(dock)
             self.viewer_types.pop()
             QtWidgets.QApplication.processEvents()
         self.rois_dock.setVisible(False)
@@ -231,8 +251,11 @@ class ViewerDispatcher:
                 viewer_dock.showTitleBar()
 
     def close(self):
+        for viewer in self.viewers:
+            _close_roi_panel(viewer)
         for dock in self.viewer_docks:
             dock.close()
+            _delete_dock(dock)
 
     def show_data(self, data: DataToExport, **kwargs):
         """ Convenience method. Display each dwa in a dedicated data viewer"""

@@ -3,19 +3,21 @@ import sys
 import datetime
 import inspect
 import json
+import ast
 import functools
+from collections import OrderedDict
 import platform
 import time
 from packaging import version as version_mod
 from pathlib import Path
 import traceback
-from typing import Any, cast, List, Optional, Tuple
+from typing import Any, Callable, cast, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
 from pymodaq_utils import logger as logger_module
 from pymodaq_utils.config import GlobalConfig as Config
-from pymodaq_utils.warnings import deprecation_msg
+from pymodaq_utils.warnings import deprecation_msg, user_warning
 from serializall import SerializableFactory, SerializableBase
 
 from importlib import metadata
@@ -35,7 +37,8 @@ ser_factory = SerializableFactory()
 config = Config()
 
 
-def is_64bits():
+def is_64bits() -> bool:
+    """Return True if the running Python interpreter is a 64 bits one"""
     return sys.maxsize > 2**32
 
 
@@ -58,31 +61,242 @@ def get_version(package_name='pymodaq'):
     return metadata.version(package_name)
 
 
+class UnsafeExpressionError(ValueError):
+    """Raised when the text of a stored value is anything else than a plain value"""
+
+
+def _literal_value(node: ast.AST) -> Any:
+    """Rebuild a value from the ast of its ``repr`` without ever evaluating code
+
+    Only numbers, strings, bytes, booleans, None, signed and complex numbers, tuples, lists, dicts and sets of
+    these, and the constructors of ``_SAFE_CONSTRUCTORS`` (str, int, float, complex, set, frozenset, Path,
+    datetime, date, time, the numpy scalar types) given plain arguments are accepted.
+    """
+    if isinstance(node, ast.Constant):
+        if isinstance(node.value, (str, bytes, int, float, complex, bool, type(None))):
+            return node.value
+    elif isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.USub, ast.UAdd)):
+        operand = _literal_value(node.operand)
+        if isinstance(operand, (int, float)) and not isinstance(operand, bool):
+            return -operand if isinstance(node.op, ast.USub) else +operand
+    elif isinstance(node, ast.Name) and node.id in ('nan', 'inf'):
+        return float(node.id)
+    elif isinstance(node, ast.Attribute) and _dotted_name(node) in ('np.nan', 'numpy.nan'):
+        return np.nan
+    elif isinstance(node, ast.Attribute) and _dotted_name(node) in ('np.True_', 'numpy.True_'):
+        return np.True_
+    elif isinstance(node, ast.Attribute) and _dotted_name(node) in ('np.False_', 'numpy.False_'):
+        return np.False_
+    elif isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Add, ast.Sub)):
+        # the repr of a complex number: (1+2j)
+        left, right = _literal_value(node.left), _literal_value(node.right)
+        if (isinstance(left, (int, float)) and not isinstance(left, bool) and isinstance(right, complex)
+                and right.real == 0):
+            return left + right if isinstance(node.op, ast.Add) else left - right
+    elif isinstance(node, ast.Dict):
+        items = {}
+        for key, value in zip(node.keys, node.values):
+            if key is None:
+                raise UnsafeExpressionError('Unexpected unpacking in stored value')
+            items[_literal_value(key)] = _literal_value(value)
+        return items
+    elif isinstance(node, ast.Set):
+        return {_literal_value(elt) for elt in node.elts}
+    elif isinstance(node, ast.Tuple):
+        return tuple(_literal_value(elt) for elt in node.elts)
+    elif isinstance(node, ast.List):
+        return [_literal_value(elt) for elt in node.elts]
+    elif isinstance(node, ast.Call) and _dotted_name(node.func) in ('array', 'np.array', 'numpy.array'):
+        return _literal_array(node)
+    elif isinstance(node, ast.Call):
+        name = _dotted_name(node.func)
+        constructor = _SAFE_CONSTRUCTORS.get(name) if name is not None else None
+        if constructor is not None:
+            args = [_literal_value(arg) for arg in node.args]
+            kwargs = {}
+            for keyword in node.keywords:
+                if keyword.arg == 'tzinfo' and _dotted_name(keyword.value) == 'datetime.timezone.utc':
+                    kwargs['tzinfo'] = datetime.timezone.utc
+                elif keyword.arg == 'fold':
+                    kwargs['fold'] = _literal_value(keyword.value)
+                else:
+                    raise UnsafeExpressionError(f'Unexpected argument {keyword.arg}')
+            return constructor(*args, **kwargs)
+    raise UnsafeExpressionError(f'Unexpected content in stored value: {type(node).__name__}')
+
+
+_ARRAY_KINDS = 'biufcU'
+
+
+def _literal_array(node: ast.Call) -> np.ndarray:
+    """Rebuild a numpy array from the ``repr`` of an array of numbers, booleans or strings"""
+    if len(node.args) != 1 or any(keyword.arg != 'dtype' for keyword in node.keywords):
+        raise UnsafeExpressionError('Unexpected arguments for an array')
+    values = _literal_value(node.args[0])
+    dtype = None
+    for keyword in node.keywords:
+        dtype_name: Optional[str]
+        if isinstance(keyword.value, ast.Constant) and isinstance(keyword.value.value, str):
+            dtype_name = keyword.value.value
+        else:
+            dotted_name = _dotted_name(keyword.value)
+            dtype_name = dotted_name.split('.')[-1] if dotted_name is not None else None
+        try:
+            dtype = np.dtype(dtype_name)
+        except TypeError as e:
+            raise UnsafeExpressionError(f'Unexpected dtype {dtype_name}') from e
+        if dtype.kind not in _ARRAY_KINDS:
+            raise UnsafeExpressionError(f'Unexpected dtype {dtype_name}')
+    if dtype is not None and dtype.kind == 'U':
+        # the size of the strings is the one of the longest, never what the stored text asks for
+        array = np.array(values)
+        if array.dtype != dtype:
+            raise UnsafeExpressionError('Unexpected size of the strings of an array')
+    else:
+        array = np.array(values, dtype=dtype)
+    if array.dtype.kind not in _ARRAY_KINDS:
+        raise UnsafeExpressionError('Unexpected content in an array')
+    return array
+
+
+def _dotted_name(node: ast.AST) -> Optional[str]:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        base = _dotted_name(node.value)
+        return None if base is None else f'{base}.{node.attr}'
+    return None
+
+
+_SAFE_CONSTRUCTORS: Dict[str, Callable[..., Any]] = {
+    'datetime.datetime': datetime.datetime,
+    'datetime.date': datetime.date,
+    'datetime.time': datetime.time,
+    'str': str,
+    'int': int,
+    'float': float,
+    'OrderedDict': OrderedDict,
+    'collections.OrderedDict': OrderedDict,
+    'complex': complex,
+    'set': set,
+    'frozenset': frozenset,
+    'Path': Path,
+    'PosixPath': Path,
+    'WindowsPath': Path,
+    'pathlib.Path': Path,
+    'pathlib.PosixPath': Path,
+    'pathlib.WindowsPath': Path,
+}
+for _name in ('float16', 'float32', 'float64', 'int8', 'int16', 'int32', 'int64', 'uint8', 'uint16', 'uint32',
+              'uint64', 'complex64', 'complex128'):
+    _SAFE_CONSTRUCTORS[f'np.{_name}'] = getattr(np, _name)
+    _SAFE_CONSTRUCTORS[f'numpy.{_name}'] = getattr(np, _name)
+
+
+def safe_literal_eval(text: str) -> Any:
+    """Equivalent of eval for the repr of the values stored by :class:`JsonConverter`, that cannot run code"""
+    try:
+        return _literal_value(ast.parse(text.strip(), mode='eval').body)
+    except UnsafeExpressionError:
+        raise
+    except (SyntaxError, ValueError, TypeError, OverflowError, MemoryError, RecursionError) as e:
+        raise UnsafeExpressionError(str(e)) from e
+
+
 class JsonConverter:
+    """Convert simple python objects to and from a json string
+
+    The json string holds the module, type and ``repr`` of the object. Only the types listed in
+    :meth:`trusted_types` are rebuilt when converting back.
+    """
     def __init__(self):
         super().__init__()
 
     @classmethod
-    def trusted_types(cls):
-        return ['float', 'int', 'str', 'datetime', 'date', 'time', 'tuple', 'list', 'bool', 'bytes',
-                'float64']
+    def trusted_types(cls) -> list[str]:
+        """Names of the types :meth:`json2object` is allowed to rebuild
+
+        The single source of the types supported for the attributes (and ``extra_attributes``) is the
+        registry of the serialization factory (``serializall``): its builtin, numpy, datetime and pathlib
+        types.
+        """
+        names = []
+        for obj_type in SerializableFactory().get_serializables():
+            if obj_type.__module__ in cls._TRUSTED_MODULES and obj_type.__name__ not in names:
+                names.append(obj_type.__name__)
+        return names
+
+    _TRUSTED_MODULES = ('builtins', 'numpy', 'datetime', 'pathlib', 'pathlib._local', 'collections')
 
     @classmethod
-    def istrusted(cls, type_name):
+    def unsupported_type(cls, obj: Any) -> Optional[str]:
+        """Name of the first type, in ``obj`` or in the items it holds, that cannot be saved then read back
+
+        An object is supported if its type is in the registry of the serialization factory (transmitted
+        over the network) and in :meth:`trusted_types` (saved as an attribute of an h5 node).
+
+        Returns
+        -------
+        None if ``obj`` is supported, otherwise the name of the type that is not.
+        """
+        obj_type = type(obj)
+        if obj_type not in SerializableFactory().get_serializables():
+            return obj_type.__name__
+        if isinstance(obj, np.ndarray) and obj.dtype.kind not in _ARRAY_KINDS:
+            return f'ndarray of {obj.dtype}'
+        if not cls.istrusted(obj_type.__name__):
+            return obj_type.__name__
+        if isinstance(obj, dict):
+            items = list(obj.keys()) + list(obj.values())
+        elif isinstance(obj, (list, tuple, set, frozenset)):
+            items = list(obj)
+        else:
+            return None
+        for item in items:
+            name = cls.unsupported_type(item)
+            if name is not None:
+                return name
+        return None
+
+    @classmethod
+    def istrusted(cls, type_name: str) -> bool:
+        """Return True if ``type_name`` is one of the :meth:`trusted_types`"""
         return type_name in cls.trusted_types()
 
     @classmethod
-    def object2json(cls, obj):
-        dic = dict(module=type(obj).__module__, type=type(obj).__name__, data=repr(obj))
+    def object2json(cls, obj: Any) -> str:
+        """Return a json string with the module, type name and repr of ``obj``
+
+        A warning is emitted if ``obj`` is not of a type that can be read back (see
+        :meth:`unsupported_type`): it is then returned as a plain dict by :meth:`json2object`.
+        """
+        unsupported = cls.unsupported_type(obj)
+        if unsupported is not None:
+            user_warning(f'An attribute of type {unsupported} is saved but cannot be read back as such, '
+                         f'supported types are: {", ".join(cls.trusted_types())}', stacklevel=4)
+        with np.printoptions(threshold=sys.maxsize, linewidth=sys.maxsize, floatmode='unique'):
+            data = repr(obj)  # the whole content of arrays, with all their digits
+        dic = dict(module=type(obj).__module__, type=type(obj).__name__, data=data)
         return json.dumps(dic)
 
     @classmethod
-    def json2object(cls, jsonstring):
+    def json2object(cls, jsonstring: Any) -> Any:
+        """Rebuild an object from the json string created by :meth:`object2json`
+
+        Returns
+        -------
+        Any
+            The object if its type is trusted, otherwise the decoded dict. If ``jsonstring`` cannot be
+            decoded, it is returned unchanged.
+        """
         try:
             dic = json.loads(jsonstring)
             if isinstance(dic, dict):
                 if dic['type'] in cls.trusted_types():
-                    return eval(dic['data'])
+                    try:
+                        return safe_literal_eval(dic['data'])
+                    except UnsafeExpressionError:
+                        return dic
                 else:
                     return dic
             else:                                               # pragma: no cover
@@ -105,7 +319,8 @@ def capitalize(string, Nfirst=1):
     return string[:Nfirst].upper() + string[Nfirst:]
 
 
-def uncapitalize(string, Nfirst=1):
+def uncapitalize(string: str, Nfirst: int = 1) -> str:
+    """Return the same string but with its first ``Nfirst`` letters in lower case"""
     return string[:Nfirst].lower() + string[Nfirst:]
 
 
@@ -167,6 +382,7 @@ class ThreadCommand(SerializableBase):
 
     @staticmethod
     def serialize(obj: "ThreadCommand") -> bytes:  # type: ignore[override]
+        """Serialize the command, attribute, args and kwargs of a ThreadCommand into bytes"""
         serialize_factory = SerializableFactory()
         byte_string = b""
         byte_string += serialize_factory.get_apply_serializer(obj.command)
@@ -177,6 +393,13 @@ class ThreadCommand(SerializableBase):
 
     @staticmethod
     def deserialize(bytes_str: bytes) -> Tuple["ThreadCommand", bytes]:
+        """Rebuild a ThreadCommand from bytes created by :meth:`serialize`
+
+        Returns
+        -------
+        tuple
+            The ThreadCommand and the remaining bytes that were not consumed.
+        """
         serialize_factory = SerializableFactory()
         command, remaining = cast(
             Tuple[str, bytes],
@@ -219,6 +442,10 @@ def ensure_ndarray(data):
 
 
 def recursive_find_files_extension(ini_path, ext, paths=[]):
+    """Collect the paths of all files with the extension ``ext`` (without dot) below ``ini_path``
+
+    Note that ``paths`` is shared between calls when not given (mutable default): pass a new list.
+    """
     with os.scandir(ini_path) as it:
         for entry in it:
             if os.path.splitext(entry.name)[1][1:] == ext and entry.is_file():
@@ -230,6 +457,11 @@ def recursive_find_files_extension(ini_path, ext, paths=[]):
 
 def recursive_find_files(ini_path, exp='make_enum', paths=[],
                          filters=['build']):
+    """Collect the paths of all files below ``ini_path`` whose name (without extension) contains ``exp``
+
+    Paths containing one of the ``filters`` strings are skipped. As in
+    :func:`recursive_find_files_extension`, pass a new list as ``paths``.
+    """
     for child in Path(ini_path).iterdir():
         if child.is_dir():
             recursive_find_files(child, exp, paths, filters)
@@ -243,7 +475,13 @@ def recursive_find_files(ini_path, exp='make_enum', paths=[],
 def recursive_find_expr_in_files(ini_path, exp='make_enum', paths=[],
                                  filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation', '.tox'],
                                  replace=False, replace_str=''):
+    """Search the text ``exp`` in the files below ``ini_path``
 
+    Each match is appended to ``paths`` as ``[file path, line index, line]``. Paths containing one of the
+    ``filters`` strings are skipped and unreadable files are ignored. If ``replace`` is True the matches
+    are replaced in the files by ``replace_str``. As in :func:`recursive_find_files_extension`, pass a new
+    list as ``paths``.
+    """
     for child in Path(ini_path).iterdir():
         if not any(filt in str(child) for filt in filters):
             if child.is_dir():
@@ -271,6 +509,10 @@ def recursive_find_expr_in_files(ini_path, exp='make_enum', paths=[],
 
 
 def count_lines(ini_path, count=0, filters=['lextab', 'yacctab','pycache', 'pyc']):
+    """Count the lines of the python files below ``ini_path``, starting from ``count``
+
+    The names of the files skipped because of ``filters`` are printed.
+    """
     # if Path(ini_path).is_file():
     #     with Path(ini_path).open('r') as f:
     #         count += len(f.readlines())
@@ -320,6 +562,16 @@ def rint(x):
 
 
 def elt_as_first_element(elt_list, match_word='Mock'):
+    """Return a list of str with the first one containing ``match_word`` moved to the front
+
+    The first element is kept in front if none matches. Note that the matching element is removed from
+    ``elt_list`` itself, which is modified.
+
+    Raises
+    ------
+    TypeError
+        If ``elt_list`` is not an iterable of str.
+    """
     if not hasattr(elt_list, '__iter__'):
         raise TypeError('elt_list must be an iterable')
     if elt_list:
@@ -340,6 +592,13 @@ def elt_as_first_element(elt_list, match_word='Mock'):
 
 
 def elt_as_first_element_dicts(elt_list, match_word='Mock', key='name'):
+    """Same as :func:`elt_as_first_element` for a list of dicts, matching ``match_word`` in ``elt[key]``
+
+    Raises
+    ------
+    TypeError
+        If ``elt_list`` is not an iterable of dict.
+    """
     if not hasattr(elt_list, '__iter__'):
         raise TypeError('elt_list must be an iterable')
     if elt_list:
@@ -386,7 +645,7 @@ def find_object_if_matched_attr_name_val(obj, attr_name, attr_value):
     return False
 
 
-def find_objects_in_list_from_attr_name_val(objects: List[object], attr_name: str,
+def find_objects_in_list_from_attr_name_val(objects: Sequence[Any], attr_name: str,
                                             attr_value: object, return_first=True):
     """ lookup within a list of objects. Look for the objects within the list which has the correct attribute name,
     value pair
@@ -504,13 +763,14 @@ def get_entrypoints(group='pymodaq.plugins') -> List[metadata.EntryPoint]:
     group: str
         the name of the group
     """
+    discovered_entrypoints: Any
     try:
         discovered_entrypoints = metadata.entry_points(group=group)
     except TypeError:
         try:
             discovered_entrypoints = metadata.entry_points().select(group=group)
         except AttributeError:
-            discovered_entrypoints = metadata.entry_points().get(group, [])
+            discovered_entrypoints = metadata.entry_points().get(group, [])  # type: ignore[attr-defined]  # Python < 3.10
     if isinstance(discovered_entrypoints, tuple):  # API for python > 3.8
         discovered_entrypoints = list(discovered_entrypoints)
     if not isinstance(discovered_entrypoints, list):
@@ -518,7 +778,8 @@ def get_entrypoints(group='pymodaq.plugins') -> List[metadata.EntryPoint]:
     return discovered_entrypoints
 
 
-def check_vals_in_iterable(iterable1, iterable2):
+def check_vals_in_iterable(iterable1, iterable2) -> None:
+    """Assert that two iterables (list, tuple, ndarray...) have the same length and equal values"""
     assert len(iterable1) == len(iterable2)
     iterable1 = list(iterable1)  # so the assertion below is valid for any kind of iterable, list, tuple, ndarray...
     iterable2 = list(iterable2)
@@ -582,7 +843,15 @@ def zeros_aligned(n, align, dtype=np.uint32):
 # ########################
 # #File management
 
-def get_new_file_name(base_path: Path, base_name: str = 'tttr_data'):
+def get_new_file_name(base_path: Union[Path, str], base_name: str = 'tttr_data') -> Tuple[str, Path]:
+    """Get the name of a new file in the folder ``<base_path>/<year>/<date>`` (created if needed)
+
+    Returns
+    -------
+    tuple
+        The file name without extension, ``<base_name>_NNN`` with NNN the index following the last existing
+        file starting with ``base_name`` in the folder, and the path of the folder.
+    """
     if isinstance(base_path, str):
         base_path = Path(base_path)
 
@@ -614,16 +883,28 @@ def get_module_path(module_name: str) -> Path:
     """ Get Path of a given module represented by its name
 
     You get the name usually with the dunder __module__ on an object or class
+
+    Raises
+    ------
+    TypeError
+        If the module has no file (namespace package or built-in module)
     """
     module = sys.modules[module_name]
+    if module.__file__ is None:
+        raise TypeError(f'The module {module_name} has no file (namespace package or built-in module)')
     return Path(module.__file__)
 
 def format_dir_path(path: Path) -> str:
-        dir_trailing_symbol = '\\' if sys.platform == 'win32' else '/'
-        return f'{path}{dir_trailing_symbol if path.is_dir() else ""}'
+    """Return ``path`` as a str, with the separator of the OS appended if it is an existing folder"""
+    dir_trailing_symbol = '\\' if sys.platform == 'win32' else '/'
+    return f'{path}{dir_trailing_symbol if path.is_dir() else ""}'
 
 
 def read_binary_and_deserialize(fname: Path) -> list[SerializableBase]:
+    """Deserialize all the objects stored one after the other in a binary file
+
+    Returns an empty list if the file does not exist.
+    """
     if not fname.exists():
         return []
     with open(fname, 'rb') as file:

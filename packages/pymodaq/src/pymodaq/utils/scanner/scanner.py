@@ -227,9 +227,9 @@ class Scanner(QObject, ParameterManager):
     @actuators.setter
     def actuators(self, act_list: list[DAQ_Move]):
         self._actuators = act_list
-        for act in act_list:
-            if act not in self.actuators_all:
-                self._actuators_all.append(act)
+        missing = [act for act in act_list if act not in self._actuators_all]
+        if len(missing) > 0:  # a new list: the given one may be the Dashboard's own list of actuators
+            self._actuators_all = self._actuators_all + missing
         self.settings.child('actuators').setValue({'all_items': [actuator.title for actuator in self._actuators_all],
                                                    'selected': [actuator.title for actuator in act_list]})
         self.set_scanner()

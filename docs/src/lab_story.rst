@@ -9,3 +9,4 @@ Lab Stories
 
    lab_story_folder/arduino_ubuntu
    lab_story_folder/basler
+   lab_story_folder/smaract

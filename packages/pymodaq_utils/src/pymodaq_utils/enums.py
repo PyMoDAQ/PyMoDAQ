@@ -1,16 +1,15 @@
-import platform
-from packaging.version import Version
+import sys
 
-if Version(platform.python_version()) < Version('3.11'):
-    from strenum import StrEnum   # noqa  # pylint: disable=unused-import
+if sys.version_info < (3, 11):
+    from strenum import StrEnum as _StrEnum
 else:
-    from enum import StrEnum   # noqa  # pylint: disable=unused-import
+    from enum import StrEnum as _StrEnum
 
 from enum import Enum, auto   # noqa  # pylint: disable=unused-import
-from typing import List, Union
+from typing import List, Type, TypeVar, Union
 
 
-class StrEnum(StrEnum):  #to be imported in other modules
+class StrEnum(_StrEnum):  #to be imported in other modules
     @classmethod
     def names(cls) -> List[str]:
         """Returns all the names of the enum"""
@@ -60,7 +59,10 @@ class BaseEnum(Enum):
         return super().__eq__(other)
 
 
-def enum_checker(enum: BaseEnum, item: Union[BaseEnum, str]):
+EnumT = TypeVar('EnumT', bound=BaseEnum)
+
+
+def enum_checker(enum: Type[EnumT], item: Union[EnumT, str]) -> EnumT:
     """Check if the item parameter is a valid enum or at least one valid string name of the enum
 
     If a string, transforms it to a valid enum (case not important)
@@ -73,7 +75,8 @@ def enum_checker(enum: BaseEnum, item: Union[BaseEnum, str]):
 
     Returns
     -------
-    BaseEnum class or one of its derivated class
+    BaseEnum
+        The member of the ``enum`` class corresponding to item
     """
 
     if not isinstance(item, enum):

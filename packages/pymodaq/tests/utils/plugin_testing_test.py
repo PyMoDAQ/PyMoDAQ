@@ -3,9 +3,9 @@ import textwrap
 
 import pytest
 
-from pymodaq_utils import plugin_checks as pt
-from pymodaq_utils import plugin_rules as pt_rules
-from pymodaq_utils.plugin_rules import Severity
+from pymodaq_utils.plugin_tools import checks as pt
+from pymodaq_utils.plugin_tools import rules as pt_rules
+from pymodaq_utils.plugin_tools.rules import Severity
 from pymodaq.utils.plugin_testing import PluginPackageChecks
 
 
@@ -33,6 +33,8 @@ class DAQ_Move_Good(DAQ_Move_base):
     params = comon_parameters_fun(axis_names=_axis_names)
     def ini_stage(self, controller=None): return '', True
     def get_actuator_value(self): pass
+    def move_abs(self, value): pass
+    def move_rel(self, value): pass
     def stop_motion(self): pass
     def close(self): pass
 

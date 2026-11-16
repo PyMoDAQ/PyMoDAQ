@@ -1,5 +1,5 @@
 from time import perf_counter
-from typing import Iterable, TYPE_CHECKING, Callable
+from typing import Iterable, Optional, TYPE_CHECKING, Callable
 
 import numpy as np
 from qtpy import QtWidgets, QtCore
@@ -161,7 +161,6 @@ class RampExtension(CustomExt):
         self.update_n_steps()
         self.update_velocity()
 
-        self.enable_workflow_actions(False)
         self.h5_manager.connect_action(FileAction.LOAD,
                                        self.h5_manager.load_file,
                                        connect=False)
@@ -169,9 +168,6 @@ class RampExtension(CustomExt):
                                        lambda: self.h5_manager.load_file(mode='r'))
 
         self.h5_manager.file_loaded_signal.connect(lambda: self.set_action_enabled('update_histogram', True))
-
-        if self.experiment_manager.entry_applied:
-            self.enable_workflow_actions(True, other_actions='ini_positions')
 
     @property
     def _size_hint(self) -> QtCore.QSize:
@@ -212,16 +208,13 @@ class RampExtension(CustomExt):
         self.status_manager.create_permanent_widgets()
         self.status_manager.set_permanent_status('Waiting for instructions')
 
-    def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: bool = None):
+    def do_things_after_experiment_set(self, experiment_name: str, show_dashboard: Optional[bool] = None):
         super().do_things_after_experiment_set(experiment_name, show_dashboard)
         self.settings.child('actuator').setLimits(self.modules_manager.actuators_name)
         self.display_control_modules()
         self._module_and_data_saver = RampSaver(self)
 
-        try:
-            self.enable_workflow_actions(True, other_actions='ini_positions')
-        except KeyError: #actions may not yet be activated
-            pass
+        self.enable_workflow_actions(True, other_actions='ini_positions')
 
     def display_control_modules(self):
         selected = self.settings['detectors']['selected']
@@ -244,6 +237,7 @@ class RampExtension(CustomExt):
 
     def do_things_after_ui_setup(self):
         self.create_dashboard_toolbar(add_break=False)
+        self.enable_workflow_actions(False)  # enabled once an experiment is applied
 
     def setup_actions(self):
         """Method where to create actions to be subclassed. Mandatory
@@ -493,7 +487,8 @@ class RampingWorker(ExtensionWorker):
                                       data=self.app.q_from_param(('ramp', 'start')).magnitude,
                                       units=self.app.q_from_param(('ramp', 'start')).units, )]),
             mode=MoveType.ABS,
-            callback=callback
+            callback=callback,
+            detach_after_callback=True,
         )
 
 
@@ -504,10 +499,6 @@ class RampingWorker(ExtensionWorker):
         self.go_to_ini_ramp(callback=self._on_ini_ramp_done)
 
     def _on_ini_ramp_done(self, dte: DataToExport):
-        self.modules_manager.forget_callback(self._on_ini_ramp_done,
-                                             module_type=ModuleType.Actuator,
-                                             disconnect_modules=True)
-
         self.status_manager.set_permanent_status('Initializing Ramp')
         self.ini_things()
         self.connect_modules()

@@ -49,6 +49,9 @@ auto_show_live_plots = true  # automatically show the Live Plots dock when a sca
 wait_time = 0
 wait_time_between = 0
 
+[extensions]
+extension_close_all = false  # if true, closing an extension will close the DashBoard and all the other extensions
+
 [optimizer]
     n_iter = 100
 
@@ -73,3 +76,5 @@ grab_period_ms = 200.0  # HardwareModule: default polling period of a grabbed ch
 settle_poll_ms = 150.0  # HardwareModule: how often a settling control's readback is checked against its target
 settle_timeout_s = 10.0  # HardwareModule: give up waiting for a control to settle after this long
 
+[state]
+execution_timeout_s = 0 # when a state is executed in blocking mode, stop waiting after this time (0: wait for ever)

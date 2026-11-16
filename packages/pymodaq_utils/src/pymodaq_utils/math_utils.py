@@ -14,6 +14,7 @@ logger = set_logger(get_module_name(__file__))
 
 
 def get_si_prefix(number) -> tuple[Number, str]:
+    """ Get the Scaled SI prefix of a Number """
     if number == 0:
         return 0, ""
 
@@ -33,7 +34,8 @@ def get_si_prefix(number) -> tuple[Number, str]:
     # Calculate the scaled number component
     scaled_value = number / (10 ** exponent)
     prefix_symbol = prefixes[exponent]
-
+    if prefix_symbol == '':
+        scaled_value = number
     return scaled_value, prefix_symbol
 
 
@@ -172,7 +174,7 @@ def linspace_step_N(start, step, Npts):
     return linspace_step(start, stop, step)
 
 
-def find_index(x, threshold: Union[Number, List[Number]]) -> List[tuple]:
+def find_index(x, threshold: Union[float, Number, List[Union[float, Number]]]) -> List[tuple]:
     """find_index finds the index ix such that x(ix) is the closest from threshold
 
     Parameters

@@ -8,6 +8,7 @@ Demonstrates the menu and toolbar capabilities of ActionManager including:
 - Adding actions to both menus and toolbars
 - Using icons for both actions and submenus
 - Shared actions across menus and toolbars
+- Grouping related actions under one toolbar button (add_action_group)
 """
 
 import sys
@@ -42,6 +43,9 @@ class ActionManagerExample(QtWidgets.QMainWindow, ActionManager):
             "<li><b>Shared submenus</b> - 'Recent Files' appears in both File and Edit menus</li>"
             "<li><b>Shared actions</b> - Actions appear in multiple menus AND toolbars</li>"
             "<li><b>Toolbar management</b> - Create, retrieve, and populate toolbars dynamically</li>"
+            "<li><b>Grouped actions</b> - 'Continuous Save' in the File toolbar is a single "
+            "button: clicking its face toggles the primary action, its dropdown arrow reveals "
+            "'New file' and 'Browse file' without using extra toolbar space</li>"
             "</ul>"
             "<p>Try clicking any menu item or toolbar button to see action details!</p>",
         )
@@ -96,6 +100,24 @@ class ActionManagerExample(QtWidgets.QMainWindow, ActionManager):
         for i in range(1, 4):
             self.add_action(f'recent_{i}', f'Project_{i}.py',
                           menu=recent_menu)
+
+        file_toolbar.addSeparator()
+
+        # ========== Grouped actions demo (add_action_group) ==========
+        # Compare to 'new'/'open'/'save' above: those are 3 plain actions, each taking
+        # its own toolbar slot. A group takes exactly ONE slot: clicking the button's
+        # face triggers/toggles the primary action; the small dropdown arrow reveals
+        # the secondary actions, so related-but-infrequent actions don't crowd the bar.
+        self.add_action_group(
+            'continuous_save', 'Continuous Save', 'save', checkable=True,
+            tip='Toggle continuous saving',
+            toolbar=file_toolbar,
+            secondary_actions=[
+                {'short_name': 'new_file', 'name': 'New file', 'icon_name': 'NewFile',
+                 'tip': 'Start a fresh file for continuous saving'},
+                {'short_name': 'browse_file', 'name': 'Browse file', 'icon_name': 'Open',
+                 'tip': 'Open the current file in an H5Browser'},
+            ])
 
         # Add separator to file toolbar
         file_toolbar.addSeparator()

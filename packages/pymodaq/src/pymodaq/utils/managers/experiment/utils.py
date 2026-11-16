@@ -32,9 +32,9 @@ def make_actuator_controller_param(typ: str) -> dict:
     params_hardware = getattr(class_, 'params')
 
     controller_dict = get_param_dict_from_name(params_hardware, 'controller')
-    axis_dict = get_param_dict_from_name(controller_dict['children'], 'axis')
-    axis_names = axis_dict['limits']
-    axis_name = axis_dict['value']
+    axis_dict = get_param_dict_from_name(controller_dict['children'], 'axis')  # type: ignore[index]  # the plugin defines them
+    axis_names = axis_dict['limits']  # type: ignore[index]
+    axis_name = axis_dict['value']  # type: ignore[index]
     controller_dict = create_controller_param(axis_name=axis_name, axis_names=axis_names)
     controller_dict['expanded'] = False
     return controller_dict

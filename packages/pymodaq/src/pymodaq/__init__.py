@@ -24,7 +24,7 @@ try:
     try:
         logger = set_logger('pymodaq', add_handler=True, base_logger=True)
 
-        from pymodaq.utils.daq_utils import copy_experiment, get_instrument_plugins
+        from pymodaq.utils.daq_utils import copy_experiment, get_instrument_plugins, register_plugin_configs
 
         from pymodaq.utils.scanner.utils import register_scanners
         from pymodaq.control_modules.ui_utils import register_uis
@@ -81,6 +81,9 @@ try:
         logger.info(f"Done")
         logger.info('************************')
 
+        logger.info('*************************************************************************')
+        logger.info(f"Registering the configuration of the installed plugins...")
+        register_plugin_configs()  # any plugin package (instruments, extensions, models...), not only instruments
         logger.info('*************************************************************************')
         logger.info(f"Getting the list of instrument plugins...")
         logger.info('')
