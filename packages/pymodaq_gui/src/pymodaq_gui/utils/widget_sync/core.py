@@ -24,6 +24,58 @@ ConnectionInfo = dict[str, Any]  # Connection metadata dictionary
 InitFrom = Literal['sync', 'widget', None]  # Initialization source control
 
 
+def make_property_getter(widget_ref: ReferenceType, property_name: str) -> WidgetGetter:
+    """
+    Create a getter function for a Qt property with weak reference.
+
+    A free function (not a method) so it can be reused outside a sync instance - e.g. to build a
+    representation widget's getter from just a Qt property name, the same way :class:`BaseWidgetSync`
+    itself does internally.
+
+    Parameters
+    ----------
+    widget_ref : ReferenceType
+        Weak reference to the widget
+    property_name : str
+        Qt property name
+
+    Returns
+    -------
+    WidgetGetter
+        Getter function that safely accesses the property
+    """
+    def getter():
+        w = widget_ref()
+        return w.property(property_name) if w is not None else None
+    return getter
+
+
+def make_property_setter(widget_ref: ReferenceType, property_name: str) -> WidgetSetter:
+    """
+    Create a setter function for a Qt property with weak reference.
+
+    A free function (not a method) so it can be reused outside a sync instance - see
+    :func:`make_property_getter`.
+
+    Parameters
+    ----------
+    widget_ref : ReferenceType
+        Weak reference to the widget
+    property_name : str
+        Qt property name
+
+    Returns
+    -------
+    WidgetSetter
+        Setter function that safely sets the property
+    """
+    def setter(value):
+        w = widget_ref()
+        if w is not None:
+            w.setProperty(property_name, value)
+    return setter
+
+
 class SyncMode(Enum):
     """Synchronization modes for widget connections"""
     BIDIRECTIONAL = "bidirectional"  # Widget ↔ Sync (default)
@@ -168,47 +220,12 @@ class BaseWidgetSync(QObject):
             raise ValueError(f"Validation failed: {e}") from e
 
     def _make_property_getter(self, widget_ref: ReferenceType, property_name: str) -> WidgetGetter:
-        """
-        Create a getter function for a Qt property with weak reference.
-
-        Parameters
-        ----------
-        widget_ref : ReferenceType
-            Weak reference to the widget
-        property_name : str
-            Qt property name
-
-        Returns
-        -------
-        WidgetGetter
-            Getter function that safely accesses the property
-        """
-        def getter():
-            w = widget_ref()
-            return w.property(property_name) if w is not None else None
-        return getter
+        """Create a getter function for a Qt property with weak reference. See :func:`make_property_getter`."""
+        return make_property_getter(widget_ref, property_name)
 
     def _make_property_setter(self, widget_ref: ReferenceType, property_name: str) -> WidgetSetter:
-        """
-        Create a setter function for a Qt property with weak reference.
-
-        Parameters
-        ----------
-        widget_ref : ReferenceType
-            Weak reference to the widget
-        property_name : str
-            Qt property name
-
-        Returns
-        -------
-        WidgetSetter
-            Setter function that safely sets the property
-        """
-        def setter(value):
-            w = widget_ref()
-            if w is not None:
-                w.setProperty(property_name, value)
-        return setter
+        """Create a setter function for a Qt property with weak reference. See :func:`make_property_setter`."""
+        return make_property_setter(widget_ref, property_name)
 
     def _create_connection_info(
         self,
