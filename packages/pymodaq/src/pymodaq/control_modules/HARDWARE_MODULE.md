@@ -49,7 +49,9 @@ registry, `Controller` itself).
 - Enables the channel dock.
 - Re-starts Grab for any channel still in `_grabbing` (a disconnect clears pending/failed/reading
   state and stops every settle watch, but Grab itself restarts automatically on reconnect, since
-  `close_hardware` releases every subscription when the device closes).
+  `close_hardware` releases every subscription when the device closes), and checks its Grab
+  button again: closing with **Ini.** unchecks every Grab button while the device is closed, and
+  the grab resumes once it is open again.
 - Calls `_sync_initial_value` for every control: one with its own `get=` gets a cheap one-shot
   read whose result goes straight into the widget - unlike a plain Read, which never touches
   widget sync (only a confirmed write does, via `_on_written`). A control declaring no `get=` has

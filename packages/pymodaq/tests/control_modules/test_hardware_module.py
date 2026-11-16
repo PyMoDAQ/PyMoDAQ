@@ -381,6 +381,17 @@ class TestGrab:
         qtbot.waitUntil(lambda: not scope.controller.connected, timeout=2000)
         assert not scope.get_action('spectrum_grab').isChecked()
 
+    def test_reopening_with_ini_restarts_the_grab_and_checks_its_button_again(self, scope, qtbot):
+        """Ini. off unchecks Grab while the device is closed; Ini. on resumes the grab, and the
+        button must say so again - not poll behind a button showing unchecked."""
+        scope.get_action('spectrum_grab').trigger()
+        scope.get_action('ini').trigger()  # close
+        qtbot.waitUntil(lambda: not scope.controller.connected, timeout=2000)
+        assert not scope.get_action('spectrum_grab').isChecked()
+        scope.get_action('ini').trigger()  # open again
+        qtbot.waitUntil(lambda: 'spectrum' in scope.controller._polled, timeout=2000)
+        assert scope.get_action('spectrum_grab').isChecked()
+
     def test_grab_restarts_when_the_device_reopens(self, scope, qtbot):
         scope.get_action('spectrum_grab').trigger()
         scope.controller.thread.close_hardware()

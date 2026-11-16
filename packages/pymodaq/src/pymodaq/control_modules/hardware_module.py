@@ -782,6 +782,11 @@ class HardwareModule(QtWidgets.QMainWindow, ActionManager):
                     self._sync_initial_value(quantity)
             for name in self._grabbing:
                 self._start_grab(name)
+                # closing with Ini. unchecked it: the grab resumes, and its button says so again
+                action = self.get_action(f'{name}_grab')
+                action.blockSignals(True)
+                action.setChecked(True)
+                action.blockSignals(False)
 
     def _on_reading(self, name: str, data: object) -> None:
         self._reading.discard(name)
