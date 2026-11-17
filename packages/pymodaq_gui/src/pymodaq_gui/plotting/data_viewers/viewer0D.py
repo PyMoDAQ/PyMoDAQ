@@ -309,8 +309,8 @@ class View0D(ActionManager, QObject):
         self.add_action('clear', 'Clear plot', 'ink_eraser', 'Clear the current plots')
         self.add_widget('Nhistory', SpinBox, tip='Set the history length of the plot',
                         setters=dict(setMaximumWidth=100))
-        self.add_action('show_data_as_list', 'Show numbers', 'pin', 'If triggered, will display last data as numbers'
-                                                                       'in a side panel', checkable=True)
+        self.add_action('show_data_as_list', 'Show numbers', 'format_list_numbered_rtl', 'If triggered, will display last data as numbers'
+                                                                       ' in a side panel', checkable=True)
         self.add_action('show_min_max', 'Show Min/Max lines', 'contrast_square',
                         'If triggered, will display horizontal dashed lines for min/max of data', checkable=True)
         self.add_action('use_timestamps', 'Use Timestamps', 'timer_off',

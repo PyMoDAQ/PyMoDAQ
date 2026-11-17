@@ -506,11 +506,14 @@ class View1D(ActionManager, QObject):
         self.ROIselect.setVisible(self.is_action_checked('ROIselect'))
 
     def setup_actions(self):
+        # same ordering/grouping as View2D: ROI / crosshair, then data display, then view
         self.add_action('roi', 'ROI', 'calculate', tip='Show/Hide ROI panel', checkable=True)
         self._actions['do_math'] = self.get_action('roi')  # for backcompatibility
+        self.add_action('ROIselect', 'ROI Select', 'select',
+                        tip='Show/Hide ROI selection area', checkable=True)
         self.add_action('crosshair', 'Crosshair', 'add_2', 'Show data cursor', checkable=True)
-        self.add_action('aspect_ratio', 'AspectRatio', 'aspect_ratio', 'Fix the aspect ratio',
-                        checkable=True)
+        self.toolbar.addSeparator()
+
         self.add_action('scatter', 'Scatter', 'scatter_plot', 'Switch between line or scatter plots',
                         checkable=True)
         self.add_action('xyplot', 'XYPlotting', 'function',
@@ -525,8 +528,10 @@ class View1D(ActionManager, QObject):
         self.add_action('sort', 'Sort Data', 'sort',
                         'Display data in a sorted fashion with respect to axis',
                         checkable=True)
-        self.add_action('ROIselect', 'ROI Select', 'select',
-                        tip='Show/Hide ROI selection area', checkable=True)
+        self.toolbar.addSeparator()
+
+        self.add_action('aspect_ratio', 'AspectRatio', 'aspect_ratio', 'Fix the aspect ratio',
+                        checkable=True)
         self.add_action('x_label', 'x:')
         self.add_action('y_label', 'y:')
 
