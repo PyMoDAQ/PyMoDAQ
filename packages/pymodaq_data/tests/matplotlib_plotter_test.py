@@ -1,7 +1,7 @@
-import matplotlib
 import numpy as np
 import pytest
 
+matplotlib = pytest.importorskip('matplotlib')  # optional dependency of pymodaq_data, in the dev extras
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.collections import PolyCollection

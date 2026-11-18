@@ -46,6 +46,7 @@ dev = [
     "pytest",
     "pytest-cov",
     "pytest-xdist",
+    "matplotlib",  # tests of the matplotlib plotter
 ]
 
 [project.urls]
