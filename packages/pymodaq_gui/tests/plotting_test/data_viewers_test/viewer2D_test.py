@@ -1,6 +1,7 @@
 from typing import Tuple, Any, Generator
 from pytestqt.qtbot import QtBot
-from qtpy import QtWidgets, QtCore
+from qtpy import QtWidgets, QtCore, QtGui
+from unittest import mock
 
 from pymodaq_data import data as data_mod, DataDim
 from pymodaq_gui.plotting.data_viewers.viewer2D import Viewer2D
@@ -727,3 +728,85 @@ class TestMiscellanous:
 
         assert blocker.args[0] == approx(10.5)
         assert blocker.args[1] == approx(20.9)
+
+def click_legend_sample(legend: pg.LegendItem, item):
+    """Left click the legend sample of item, as a user would"""
+    sample = next(sample for sample, _label in legend.items if sample.item is item)
+    event = mock.Mock()
+    event.button.return_value = QtCore.Qt.MouseButton.LeftButton
+    sample.mouseClickEvent(event)
+
+
+class TestLegendClick:
+    """Clicking a channel in the legend should behave like its Red/Green/Blue action"""
+
+    def test_hiding_a_channel(self, init_prog_show_data):
+        prog, qtbot, data = init_prog_show_data
+        prog.view.get_action('legend').trigger()
+        red = prog.view.data_displayer.get_image('red')
+        green = prog.view.data_displayer.get_image('green')
+
+        click_legend_sample(prog.view.data_displayer.legend, red)
+
+        assert not red.isVisible()
+        assert not prog.view.is_action_checked('red')
+        # red no longer drawn: green becomes the base layer of the composition
+        assert green.paintMode == QtGui.QPainter.CompositionMode.CompositionMode_SourceOver
+
+    def test_showing_it_back(self, init_prog_show_data):
+        prog, qtbot, data = init_prog_show_data
+        prog.view.get_action('legend').trigger()
+        red = prog.view.data_displayer.get_image('red')
+        green = prog.view.data_displayer.get_image('green')
+
+        click_legend_sample(prog.view.data_displayer.legend, red)
+        click_legend_sample(prog.view.data_displayer.legend, red)
+
+        assert red.isVisible()
+        assert prog.view.is_action_checked('red')
+        assert green.paintMode == QtGui.QPainter.CompositionMode.CompositionMode_Plus
+
+
+def paint_sample(sample) -> QtGui.QImage:
+    image = QtGui.QImage(20, 20, QtGui.QImage.Format.Format_ARGB32)
+    image.fill(QtGui.QColor(0, 0, 0, 0))
+    painter = QtGui.QPainter(image)
+    try:
+        sample.paint(painter)
+    finally:
+        painter.end()
+    return image
+
+
+class TestLegendPaint:
+    """The legend of a View2D lists images, which pyqtgraph's default legend sample cannot paint"""
+
+    @pytest.mark.parametrize('key, color', [('red', (255, 0, 0)), ('green', (0, 255, 0)), ('blue', (0, 0, 255))])
+    def test_swatch_has_the_channel_colour(self, init_prog_show_data, key, color):
+        prog, qtbot, data = init_prog_show_data
+        prog.view.get_action('legend').trigger()
+        legend = prog.view.data_displayer.legend
+        image_item = prog.view.data_displayer.get_image(key)
+        sample = next(sample for sample, _label in legend.items if sample.item is image_item)
+
+        pixel = paint_sample(sample).pixelColor(10, 10)
+
+        assert (pixel.red(), pixel.green(), pixel.blue()) == color
+
+    def test_hidden_channel_paints(self, init_prog_show_data):
+        prog, qtbot, data = init_prog_show_data
+        prog.view.get_action('legend').trigger()
+        legend = prog.view.data_displayer.legend
+        red = prog.view.data_displayer.get_image('red')
+        click_legend_sample(legend, red)
+        sample = next(sample for sample, _label in legend.items if sample.item is red)
+
+        paint_sample(sample)
+
+    def test_single_channel_paints(self, init_viewer2d):
+        prog, qtbot = init_viewer2d
+        prog.show_data(init_data(1))
+        prog.view.get_action('legend').trigger()
+
+        for sample, _label in prog.view.data_displayer.legend.items:
+            paint_sample(sample)

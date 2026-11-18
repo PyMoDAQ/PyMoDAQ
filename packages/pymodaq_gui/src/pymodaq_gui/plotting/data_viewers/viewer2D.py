@@ -8,6 +8,8 @@ from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
+from pyqtgraph.graphicsItems.LegendItem import ItemSample
+from pyqtgraph.icons import invisibleEye
 from pyqtgraph import ROI as pgROI
 
 import pymodaq_data
@@ -96,12 +98,43 @@ def histogram_factory(image_item=None, gradient='red'):
     return histo
 
 
+class ImageLegendSample(ItemSample):
+    """Legend sample of an image channel: a swatch of the brightest colour of its lookup table
+
+    pyqtgraph's ItemSample paints from the ``opts`` (pen, symbol...) of plot items, which images do not have.
+    A click does not hide the image itself, it only emits ``sigClicked``: the View2D shows or hides the channel
+    through its action, so that the other channels are composed accordingly.
+    """
+
+    def paint(self, p, *args):
+        if not self.item.isVisible():
+            p.drawPixmap(QtCore.QPoint(1, 1), invisibleEye.qicon.pixmap(18, 18))
+            return
+        p.setPen(pg.mkPen(plot_foreground()))
+        p.setBrush(pg.mkBrush(self.swatch_color()))
+        p.drawRect(QtCore.QRectF(2, 2, 16, 16))
+
+    def swatch_color(self) -> QtGui.QColor:
+        lut = getattr(self.item, 'lut', None)
+        if callable(lut):  # the lookup table of a histogram, computed for the current image
+            lut = lut(self.item.image) if self.item.image is not None else None
+        if lut is None or len(lut) == 0:  # no lookup table: grey levels
+            return QtGui.QColor(255, 255, 255)
+        return QtGui.QColor(*[int(component) for component in lut[-1][:3]])
+
+    def mouseClickEvent(self, event):
+        if event.button() == QtCore.Qt.MouseButton.LeftButton:
+            self.sigClicked.emit(self.item)
+        event.accept()
+
+
 class ImageDisplayer(QObject):
     """
     This Object deals with the display of 2D data  with a plotitem
     """
 
     updated_item = Signal(dict)
+    channel_clicked = Signal(str)  # the key of the image whose legend sample was clicked
 
     def __init__(self, plotitem, data_distribution: DataDistribution):
         super().__init__()
@@ -186,9 +219,16 @@ class ImageDisplayer(QObject):
             self._plotitem.addItem(self._image_items[img_key])
 
             if ind < len(labels):
-                self.legend.addItem(self._image_items[img_key], labels[ind])
+                sample = ImageLegendSample(self._image_items[img_key])
+                sample.sigClicked.connect(lambda _item, key=img_key: self.channel_clicked.emit(key))
+                self.legend.addItem(sample, labels[ind])
         self.set_composition()
         self.updated_item.emit(self._image_items)
+
+    def update_legend(self):
+        """Repaint the legend samples, e.g. after a change of the lookup tables"""
+        for sample, _label in self.legend.items:
+            sample.update()
 
     def set_composition(self, images: list[str] = None):
         if images is None:
@@ -471,6 +511,8 @@ class View2D(ActionManager, QtCore.QObject):
         self.connect_action('auto_levels_sym', self.data_displayer.set_levels_sym)
         for key in IMAGE_TYPES:
             self.connect_action(key, self.notify_visibility_data_displayer)
+        # a click in the legend shows/hides the channel the same way as its action
+        self.data_displayer.channel_clicked.connect(lambda key: self.get_action(key).trigger())
 
         self.histogrammer.affect_histo_to_imageitems(self.data_displayer.get_images())
 
@@ -605,6 +647,8 @@ class View2D(ActionManager, QtCore.QObject):
             self.lineout_viewers[Lineouts.INT].update_colors(make_dashed_pens(colors[ind]), displayer=roi_name)
 
     def connect_things(self):
+        # the legend swatches show the colour of the lookup tables
+        self.histogrammer.gradient_changed.connect(lambda: self.data_displayer.update_legend())
         self.connect_action('histo', self.histogrammer.activated)
         self.connect_action('autolevels', self.histogrammer.set_autolevels)
         self.roi_manager.new_ROI_signal.connect(self.update_roi_channels)
