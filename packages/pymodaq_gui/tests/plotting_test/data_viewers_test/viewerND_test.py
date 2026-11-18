@@ -77,6 +77,46 @@ class TestSpread:
         pass
 
 
+class TestNavIntegrationRoiSelect:
+    """Moving a navigator ROIselect refreshes the signal integrated over the selected nav range"""
+
+    @staticmethod
+    def integrated_signal(viewer: ViewerND) -> float:
+        # the signal viewer gets the data at the crosshair plus the nav integrated data
+        return float(np.mean(viewer.viewer1D._raw_data[1]))
+
+    def test_navigator1D(self, init_viewernd):
+        viewer = init_viewernd
+        data_array = np.repeat(np.arange(10.)[:, None], 5, axis=1)  # value = nav index
+        dwa = data_mod.DataRaw('nav1D', data=[data_array], nav_indexes=(0,))
+        dwa.create_missing_axes()
+        viewer.show_data(dwa)
+        viewer.get_action('integrate_nav').trigger()
+        assert self.integrated_signal(viewer) == pytest.approx(4.5)  # whole nav range
+
+        viewer.navigator1D.view.get_action('ROIselect').trigger()
+        viewer.navigator1D.view.ROIselect.setRegion((2, 5))
+
+        assert self.integrated_signal(viewer) == pytest.approx(3.)  # nav indexes 2 to 4
+
+    def test_navigator2D(self, init_viewernd):
+        viewer = init_viewernd
+        ind_y, ind_x = np.meshgrid(np.arange(10.), np.arange(10.), indexing='ij')
+        data_array = np.repeat((10 * ind_y + ind_x)[:, :, None], 5, axis=2)
+        dwa = data_mod.DataRaw('nav2D', data=[data_array], nav_indexes=(0, 1))
+        dwa.create_missing_axes()
+        viewer.show_data(dwa)
+        viewer.get_action('integrate_nav').trigger()
+        assert self.integrated_signal(viewer) == pytest.approx(49.5)  # whole nav range
+
+        viewer.navigator2D.view.get_action('ROIselect').trigger()
+        viewer.navigator2D.view.ROIselect.setPos((2, 3))
+        viewer.navigator2D.view.ROIselect.setSize((3, 4))
+
+        # y nav indexes 3 to 6, x nav indexes 2 to 4
+        assert self.integrated_signal(viewer) == pytest.approx(48.)
+
+
 def test_data_5d(init_viewernd):
     viewer = init_viewernd
 
