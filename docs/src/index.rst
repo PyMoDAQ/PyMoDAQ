@@ -115,29 +115,31 @@ If you would like to get updated with the evolutions of the project, please subs
 `mailing list <https://listes.services.cnrs.fr/wws/info/pymodaq>`_.
 
 .. toctree::
-   :caption: Supported instruments
-
-   Supported instruments <https://github.com/PyMoDAQ/pymodaq_plugin_manager/blob/main/README.md>
-
-.. toctree::
-   :numbered:
    :maxdepth: 1
-   :caption: Documentation
+   :caption: Get Started
 
    quick_start
-   user
-   tutorials
-   lab_story
-   data_management
-   developer
-   glossary
-   api/api_doc
-   about
-   changelogs
 
 .. toctree::
-   :caption: Related projects
+   :maxdepth: 2
+   :caption: User Guide
 
-   PyMoDAQ Femto <https://pymodaq-femto.readthedocs.io/en/latest/>
-   PyMoDAQ Plugins DAQmx <https://pymodaq.github.io/pymodaq_plugins_daqmx/>
-   PyMoDAQ BeamShaping <https://pymodaq-plugins-beam-shaping.readthedocs.io/en/latest//>
+   user
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Developer Guide
+
+   developer
+
+.. toctree::
+   :maxdepth: 1
+   :caption: API Reference
+
+   api/api_doc
+
+.. toctree::
+   :maxdepth: 1
+   :caption: About/Community
+
+   about_community

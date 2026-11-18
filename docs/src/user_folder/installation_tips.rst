@@ -33,14 +33,13 @@ Qt backend
 -----------
 
 PyMoDAQ source code uses a python package called `qtpy`__ that add an abstraction layer between PyMoDAQ's code
-and the actual Qt python implementation (either PyQt6 or PySide6, but also PyQt5). Qtpy will look on what
-is installed on your environment and load PySide6 by default (see the :ref:`configfile`
-to change this default behaviour).
+and the actual Qt python implementation: either PyQt6 or PySide6, which are the two backends PyMoDAQ is tested
+against. Qtpy will look on what is installed on your environment and load PySide6 by default (see the
+:ref:`configfile` to change this default behaviour).
 This means you have to install one of these backends on your environment using either:
 
 * ``pip install pyside6``
 * ``pip install pyqt6``
-* ``pip install pyqt5``
 
 
 __ https://pypi.org/project/QtPy/

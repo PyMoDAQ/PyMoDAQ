@@ -129,7 +129,7 @@ We follow this procedure:
 
 * Install *Miniforge*.
 * Create a new Python environment with version 3.11 and activate it.
-* Install *pymodaq* **version 4.4.7** (*pip install pymodaq==4.4.7*) in the new environment and *pyqt5*
+* Install *pymodaq* **version 4.4.7** (*pip install pymodaq==4.4.7*) in the new environment and *pyqt6*
 * Let's be careful with the :ref:`few extra command lines <installation_tips>` for installing on Ubuntu.
 * Install *pymodaq_plugins_basler*
 
