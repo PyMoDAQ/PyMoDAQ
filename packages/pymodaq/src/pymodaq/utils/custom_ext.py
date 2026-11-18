@@ -3,6 +3,7 @@ from typing import Optional, Union, TYPE_CHECKING
 
 from qtpy import QtCore, QtWidgets
 
+from pymodaq_utils.config import GlobalConfig
 from pymodaq_gui.h5modules.saving import H5Saver
 
 from pymodaq_gui.utils import CustomApp, DockArea
@@ -14,6 +15,8 @@ from pymodaq_utils.utils import ThreadCommand
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
+
+config = GlobalConfig()
 
 
 class CustomExt(DashboardMixin, CustomApp):
@@ -88,21 +91,31 @@ class CustomExt(DashboardMixin, CustomApp):
         """
         raise NotImplementedError
 
-    def quit_fun(self) -> Optional[bool]:
+    def quit_fun(self, external_call=False) -> Optional[bool]:
         """Quit the extension, unless :meth:`_quit_fun` refuses it
 
         This method should not be reimplemented: reimplement :meth:`_quit_fun` to define what has to be done
         (and checked) before quitting. If it returns True, the quit proceeds (``CustomApp.quit_fun``), otherwise
         nothing is closed and False is returned.
-        """
-        if self._quit_fun():
-            res = super().quit_fun()
 
-            if self.dashboard is not None:
-                self.show_dashboard(True)  #make sure to show it if it was hidden
-            return res
+        Parameters
+        ----------
+        external_call: bool
+            Is True when the quit_fun is called from an external object, ie the DashBoard
+        """
+
+        if not external_call and config('pymodaq', 'extensions', 'extension_close_all') and self.dashboard is not None:
+            return self.dashboard.quit_fun()
         else:
-            return False
+            if self._quit_fun():
+                res = super().quit_fun()
+
+                if self.dashboard is not None:
+                    self.dashboard.extension_manager.unregister_extension(self)
+                    self.show_dashboard(True)  #make sure to show it if it was hidden
+                return res
+            else:
+                return False
 
     def _quit_fun(self) -> bool:
         """ To be reimplemented in order to properly quit your application

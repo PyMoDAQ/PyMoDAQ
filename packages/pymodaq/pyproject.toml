@@ -63,7 +63,7 @@ pyside6 = [
 ]
 
 pyqt6 = [
-    "pyqt6"
+    "pyqt6!=6.12.0",  # no PyQt6-WebEngine matches 6.12.0 yet: QtWebEngineCore fails to load
 ]
 
 pyqt5= [
@@ -80,6 +80,7 @@ daq_scan = "pymodaq.extensions.scan.daq_scan:main"
 daq_viewer = "pymodaq.control_modules.daq_viewer:main"
 dashboard = "pymodaq.dashboard:main"
 pymodaq = "pymodaq.launcher.launcher:main"
+pymodaq_migrate = "pymodaq.utils.migrate:main"
 ramping = "pymodaq.extensions.ramping.ramping:main"
 sequencer = "pymodaq.extensions.sequencer.sequencer:main"
 

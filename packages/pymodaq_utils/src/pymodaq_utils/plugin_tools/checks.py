@@ -19,6 +19,7 @@ To get a report without pytest, for any installed plugin package::
 """
 from __future__ import annotations
 
+import ast
 import importlib
 import importlib.util
 import inspect
@@ -308,6 +309,20 @@ def _is_environmental(error: Exception, package: str) -> bool:
     return False
 
 
+def _declared_unsupported_here(plugin_module: PluginModule) -> bool:
+    """Whether the plugin class declares (``supported_platforms``, ``supported_architectures``) that it does not
+    work on this computer: a failing import is then expected, not a defect"""
+    try:
+        spec = importlib.util.find_spec(plugin_module.import_path)
+        tree = ast.parse(Path(spec.origin).read_text(encoding='utf-8'))
+    except (ImportError, ValueError, SyntaxError, OSError, TypeError, AttributeError):
+        return False
+    for node in tree.body:
+        if isinstance(node, ast.ClassDef) and node.name == plugin_module.class_name:
+            return bool(platforms.unsupported_reason(*platforms.declared_in_class(node)))
+    return False
+
+
 def load_plugin_class(plugin_module: PluginModule) -> type:
     """Import a plugin module and return its plugin class
 
@@ -321,7 +336,8 @@ def load_plugin_class(plugin_module: PluginModule) -> type:
     except Exception as e:
         placeholder = isinstance(e, ImportError) and bool(PLACEHOLDER_NAMES_RE.search(getattr(e, 'name', None) or ''))
         raise PluginLoadError(f'{plugin_module.import_path} cannot be imported: {e!r}',
-                              not placeholder and _is_environmental(e, plugin_module.package), placeholder,
+                              not placeholder and (_is_environmental(e, plugin_module.package) or
+                                                   _declared_unsupported_here(plugin_module)), placeholder,
                               isinstance(e, SyntaxError)) from e
     klass = getattr(module, plugin_module.class_name, None)
     if klass is None:
@@ -546,7 +562,8 @@ def resolve_target(target: Optional[str] = None) -> tuple[str, Optional[Path]]:
     def packages_in(base: Path) -> list[Path]:
         return sorted(p for p in base.glob('pymodaq_plugins_*') if (p / '__init__.py').is_file())
 
-    if path.name.startswith('pymodaq_plugins_') and (path / '__init__.py').is_file():
+    if (path.name.startswith('pymodaq_plugins_') and (path / '__init__.py').is_file()
+            and not packages_in(path / 'src')):  # a repository named as its package has a src folder: use that one
         folders = [path]
     else:
         folders = packages_in(path / 'src') or packages_in(path)

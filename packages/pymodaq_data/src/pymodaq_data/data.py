@@ -29,8 +29,8 @@ from multipledispatch import dispatch
 
 
 from pymodaq_utils.enums import BaseEnum, enum_checker, StrEnum
-from pymodaq_utils.warnings import deprecation_msg
-from pymodaq_utils.utils import find_objects_in_list_from_attr_name_val
+from pymodaq_utils.warnings import deprecation_msg, user_warning
+from pymodaq_utils.utils import find_objects_in_list_from_attr_name_val, JsonConverter
 from pymodaq_utils.logger import set_logger, get_module_name
 
 from pymodaq_utils import math_utils as mutils
@@ -253,8 +253,56 @@ def _compute_slices_from_axis(axis: Axis, _slice, *ignored, is_index=True, **ign
     return _slice
 
 
+class ExtraAttributesMixin:
+    """Mixin for objects holding named extra attributes next to their regular ones
+
+    The classes using it must set ``self.extra_attributes = []`` in their ``__init__`` before
+    calling :meth:`add_extra_attribute`. The names listed in ``extra_attributes`` are the ones the
+    serializers and the h5 savers write and read back (see :class:`Axis`, :class:`DataBase` and
+    :class:`DataToExport`).
+
+    Attributes
+    ----------
+    extra_attributes: list of str
+        The names of the extra attributes
+    """
+    extra_attributes: List[str]
+
+    def add_extra_attribute(self, **kwargs):
+        """Add named attributes to this object, and remember their names in `extra_attributes`
+
+        A warning is emitted for a value (or an item it holds) whose type cannot be saved in a h5 file,
+        read back and transmitted: see :meth:`pymodaq_utils.utils.JsonConverter.trusted_types` for the
+        supported types. The attribute is added anyway.
+        """
+        for key in kwargs:
+            unsupported = JsonConverter.unsupported_type(kwargs[key])
+            if unsupported is not None:
+                user_warning(f'The extra attribute {key} of type {unsupported} cannot be saved and read back '
+                             f'or transmitted, supported types are: {", ".join(JsonConverter.trusted_types())}',
+                             stacklevel=3)
+            if key not in self.extra_attributes:
+                self.extra_attributes.append(key)
+            setattr(self, key, kwargs[key])
+
+    def _record_units_change(self, old_units: str, new_units: str):
+        """Keep track of a conversion in the extra attribute ``units_history`` (for instance ``'nm->eV->THz'``)
+
+        The extra attributes are kept by a conversion, but the ones that depend on the units (for instance the
+        IRI of the unit in an ontology) were set for the units before the conversion. ``units_history`` tells
+        that they may not describe the current units anymore.
+        """
+        if old_units == new_units:
+            return
+        history = getattr(self, UNITS_HISTORY, None) or old_units
+        self.add_extra_attribute(**{UNITS_HISTORY: f'{history}->{new_units}'})
+
+
+UNITS_HISTORY = 'units_history'  # name of the extra attribute listing the conversions of units
+
+
 @ser_factory.register_decorator()
-class Axis(SerializableBase):
+class Axis(ExtraAttributesMixin, SerializableBase):
     """Object holding info and data about physical axis of some data
 
     In case the axis's data is linear, store the info as a scale and offset else store the data
@@ -278,10 +326,16 @@ class Axis(SerializableBase):
     spread_order: int
         An integer needed in the case where data has a spread DataDistribution. It refers to the index along the data's
         spread_index dimension
+    kwargs: named parameters
+        All other parameters are stored dynamically using the name/value pair. The name of these
+        extra parameters are added into the extra_attributes attribute (same pattern as
+        :class:`DataWithAxes`). They are saved with the axis in the h5 files.
 
     Examples
     --------
     >>> axis = Axis('myaxis', units='seconds', data=np.array([1,2,3,4,5]), index=0)
+    >>> axis = Axis('wavelength', 'nm', data=np.linspace(400, 700, 100),
+    ...             quantity_kind='http://qudt.org/vocab/quantitykind/Wavelength')
     """
 
     base_type = 'Axis'
@@ -293,7 +347,7 @@ class Axis(SerializableBase):
         return super().__new__(cls)
 
     def __init__(self, label: str = '', units: str = '', data: Optional[Union[np.ndarray, pint.Quantity]] = None, index: int = 0,
-                 scaling=None, offset=None, size=None, spread_order: int = 0):
+                 scaling=None, offset=None, size=None, spread_order: int = 0, **kwargs):
         super().__init__()
 
         self.iaxis: SpecialSlicersData = SpecialSlicersData(self, False)
@@ -314,6 +368,8 @@ class Axis(SerializableBase):
         self.spread_order = spread_order
         if (scaling is None or offset is None or size is None) and data is not None:
             self.get_scale_offset_from_data(data)
+        self.extra_attributes: List[str] = []
+        self.add_extra_attribute(**kwargs)
 
     @staticmethod
     def serialize(axis: Axis):
@@ -337,6 +393,10 @@ class Axis(SerializableBase):
         * serialize the axis array
         * serialize the axis
         * serialize the axis spread_order
+        * serialize the dict of the extra attributes of the axis (name: value)
+
+        The extra attributes were added at the end of the sequence: a message holding an axis can only be read
+        by the same version of PyMoDAQ (the format has no version or length for the axis).
         """
         if not isinstance(axis, Axis):
             raise TypeError(f'{axis} should be a list, not a {type(axis)}')
@@ -347,6 +407,8 @@ class Axis(SerializableBase):
         bytes_string += ser_factory.get_apply_serializer(axis.get_data())
         bytes_string += ser_factory.get_apply_serializer(axis.index)
         bytes_string += ser_factory.get_apply_serializer(axis.spread_order)
+        bytes_string += ser_factory.get_apply_serializer(
+            {name: getattr(axis, name) for name in axis.extra_attributes})
         return bytes_string
 
     @staticmethod
@@ -366,9 +428,10 @@ class Axis(SerializableBase):
         axis_index, remaining_bytes = ser_factory.get_apply_deserializer(remaining_bytes, False)
         axis_spread_order, remaining_bytes = ser_factory.get_apply_deserializer(remaining_bytes,
                                                                                 False)
+        extra_attributes, remaining_bytes = ser_factory.get_apply_deserializer(remaining_bytes, False)
 
         axis = Axis(axis_label, axis_units, data=axis_array, index=axis_index,
-                    spread_order=axis_spread_order)
+                    spread_order=axis_spread_order, **extra_attributes)
         return axis, remaining_bytes
 
     @staticmethod
@@ -378,8 +441,10 @@ class Axis(SerializableBase):
                     index=index)
 
     def copy(self):
-        """Return a shallow copy of this axis"""
-        return copy.copy(self)
+        """Return a shallow copy of this axis (its extra attributes are copied too)"""
+        new_axis = copy.copy(self)
+        new_axis.extra_attributes = list(self.extra_attributes)
+        return new_axis
 
     def as_dwa(self, set_itself_as_axis=False) -> DataWithAxes:
         """Convert this axis to a DataRaw whose data are the axis values
@@ -421,52 +486,65 @@ class Axis(SerializableBase):
         units = check_units(units)
         self._units = units
 
+    def _converted(self, units: str, data) -> 'Axis':
+        """New axis in the given units: it has the extra attributes of this one, and the conversion is
+        recorded in its ``units_history``"""
+        new_axis = Axis(self.label, units, data=data)
+        new_axis.index = self.index
+        new_axis.spread_order = self.spread_order
+        for name in self.extra_attributes:
+            new_axis.add_extra_attribute(**{name: copy.deepcopy(getattr(self, name))})
+        new_axis._record_units_change(self.units, units)
+        return new_axis
+
     def units_as(self, units: str, inplace=True, context: Optional[str] = None, **context_kwargs):
         """Convert the axis to other units, optionally using a pint context
 
         If `inplace` is True the axis is modified and None is returned, else a new Axis is returned.
+        The extra attributes are kept, and the conversion is added to the extra attribute `units_history`
+        (for instance 'nm->eV'), as the extra attributes depending on the units may not describe the new units.
         """
-        if inplace:
-            #self._units = units
-            if context is None:
-                self.data = self.get_quantity().to(units).magnitude
-            else:
-                self.data = self.get_quantity().to(units, context, **context_kwargs).magnitude
-            self.force_units(units)
-            return
+        old_units = self.units
+        if context is None:
+            quantity = self.get_quantity().to(units)
         else:
-            if context is not None:
-                return Axis(self.label, units,
-                            data=self.get_quantity().to(units, context, **context_kwargs).magnitude)
-            else:
-                return Axis(self.label, units,
-                            data=self.get_quantity().to(units))
+            quantity = self.get_quantity().to(units, context, **context_kwargs)
+        if inplace:
+            self.data = quantity.magnitude
+            self.force_units(units)
+            self._record_units_change(old_units, units)
+        else:
+            return self._converted(units, quantity.magnitude)
 
     def to_reduced_units(self, inplace=False):
         """Convert the axis to reduced units (see :func:`dimensionless_aware_reduce_units`)
 
         If `inplace` is True the axis is modified and None is returned, else a new Axis is returned.
+        The conversion is recorded as in :meth:`units_as`.
         """
         quantity = dimensionless_aware_reduce_units(self.get_quantity())
         if inplace:
+            old_units = self.units
             self.data = quantity.magnitude
             self.force_units(str(quantity.units))
+            self._record_units_change(old_units, self.units)
         else:
-            return Axis(self.label, units=str(quantity.units),
-                        data=quantity.magnitude)
+            return self._converted(str(quantity.units), quantity.magnitude)
 
     def to_base_units(self, inplace=False):
         """Convert the axis to pint base units
 
         If `inplace` is True the axis is modified and None is returned, else a new Axis is returned.
+        The conversion is recorded as in :meth:`units_as`.
         """
         quantity = self.get_quantity().to_base_units()
         if inplace:
+            old_units = self.units
             self.data = quantity.magnitude
             self.force_units(str(quantity.units))
+            self._record_units_change(old_units, self.units)
         else:
-            return Axis(self.label, units=str(quantity.units),
-                        data=quantity.magnitude)
+            return self._converted(str(quantity.units), quantity.magnitude)
 
     @property
     def index(self) -> int:
@@ -774,7 +852,7 @@ class DataLowLevel:
         self._timestamp = timestamp
 
 
-class DataBase(DataLowLevel, NDArrayOperatorsMixin):
+class DataBase(ExtraAttributesMixin, DataLowLevel, NDArrayOperatorsMixin):
     """Base object to store homogeneous data and metadata generated by pymodaq's objects.
 
     To be inherited for real data
@@ -941,13 +1019,16 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
                 f'{e}')
 
         if inplace:
+            old_units = self._units
             self.data = arrays
             self._units = units
+            self._record_units_change(old_units, units)
             return self
         else:
             new_data = copy.deepcopy(self)
             new_data.data = arrays
             new_data._units = units
+            new_data._record_units_change(self._units, units)
             return new_data
 
     def force_units(self, units: str):
@@ -959,6 +1040,7 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
         data_quantities = [quantity.to_base_units() for quantity in self.quantities]
         dwa.data = [quantity.magnitude for quantity in data_quantities]
         dwa.force_units(str(data_quantities[0].units))
+        dwa._record_units_change(self.units, dwa.units)
         return dwa
 
     def value(self, units: Optional[str] = None) -> float:
@@ -1032,12 +1114,6 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
                                                    axes=deepcopy(self.axes),  # type: ignore[attr-defined]
                                                    units=self.units,
                                                    ) for ind, array in enumerate(self)])
-
-    def add_extra_attribute(self, **kwargs):
-        for key in kwargs:
-            if key not in self.extra_attributes:
-                self.extra_attributes.append(key)
-            setattr(self, key, kwargs[key])
 
     def get_full_name(self) -> str:
         """Get the data ful name including the origin attribute into the returned value
@@ -2128,6 +2204,7 @@ class DataWithAxes(DataBase, SerializableBase):
         * serialize the dim enum as a string
         * serialize the distribution enum as a string
         * serialize the list of numpy arrays
+        * serialize the units
         * serialize the list of labels
         * serialize the origin
         * serialize the nav_index tuple as a list of int
@@ -2372,6 +2449,126 @@ class DataWithAxes(DataBase, SerializableBase):
 
         return self._slicer(slices, False)
 
+    def accumulate(self, other: DataWithAxes, weight: int) -> DataWithAxes:
+        """ Compute the weighted average as :meth:`average` does, and set the standard error of the mean as the
+        ``errors`` of the result
+
+        It is meant to be used to average step by step N acquisitions, ``self`` being the new acquisition and ``other``
+        the average of the ``weight`` previous ones, as returned by this method (the first acquisition is just a copy of
+        itself). The standard error of the mean is updated from the one of ``other`` (Welford's algorithm), so no more
+        than the averaged data is needed to follow the statistics.
+
+        Parameters
+        ----------
+        other: DataWithAxes
+            The average of the ``weight`` previous acquisitions. If ``weight`` is larger than 1, it should carry the
+            ``errors`` set by the previous call, else the result has no ``errors``. The ``errors`` of the first
+            acquisition (``weight`` equal to 1) are not taken into account.
+        weight: int
+            The number of acquisitions averaged in ``other``
+
+        Returns
+        -------
+        DataWithAxes: the averaged data, its ``errors`` being sqrt(sum((x_i - mean)^2) / (N (N - 1))), with N = weight + 1
+
+        See Also
+        --------
+        average
+
+        Notes
+        -----
+        The update of the sum of squared deviations from the mean is Welford's online algorithm [1]_ [2]_, with
+        ``S_N = S_(N-1) + (x_N - mean_(N-1)) * (x_N - mean_N)`` (complex conjugate on the second factor for complex
+        data). The errors are then ``sqrt(S_N / (N (N - 1)))``, i.e. the sample standard deviation (``ddof=1``)
+        divided by ``sqrt(N)``.
+
+        ``self`` is taken as a single acquisition without errors (weight one). To combine two measurements that each
+        carry an error (inverse-variance weighting), see :meth:`combine_with_errors`.
+
+        References
+        ----------
+        .. [1] B. P. Welford, "Note on a method for calculating corrected sums of squares and products",
+           Technometrics 4 (1962) 419-420.
+        .. [2] D. E. Knuth, The Art of Computer Programming, vol. 2, section 4.2.2.
+        """
+        averaged_data = cast(DataWithAxes, self.average(other, weight))
+        n_data = weight + 1
+        if weight > 1 and other.errors is None:
+            averaged_data.errors = None
+            return averaged_data
+
+        errors = []
+        for ind, (new_array, old_mean, new_mean) in enumerate(zip(self.data, other.data, averaged_data.data)):
+            if weight > 1:
+                sum_sq_dev = other.errors[ind] ** 2 * weight * (weight - 1)  # type: ignore[index]
+            else:
+                sum_sq_dev = 0.
+            sum_sq_dev = sum_sq_dev + np.real((new_array - old_mean) * np.conj(new_array - new_mean))
+            errors.append(np.sqrt(sum_sq_dev / (n_data * (n_data - 1))))
+        averaged_data.errors = errors
+        return averaged_data
+
+    def combine_with_errors(self, other: DataWithAxes) -> DataWithAxes:
+        """ Combine two measurements of the same quantity, each carrying its own ``errors``, with an inverse-variance
+        weighted mean
+
+        With ``w_i = 1 / e_i**2``, the result is, for each point of each array::
+
+            mean = (w_1 * x_1 + w_2 * x_2) / (w_1 + w_2) = (x_1 * e_2**2 + x_2 * e_1**2) / (e_1**2 + e_2**2)
+            error = 1 / sqrt(w_1 + w_2) = e_1 * e_2 / sqrt(e_1**2 + e_2**2)
+
+        Use :meth:`accumulate` instead to average successive acquisitions into a running mean and its standard error.
+
+        Parameters
+        ----------
+        other: DataWithAxes
+            The other measurement, with the same shape, units and number of arrays as ``self``
+
+        Returns
+        -------
+        DataWithAxes: a copy of ``self`` holding the combined data and errors
+
+        Raises
+        ------
+        ValueError
+            If one of the two objects has no ``errors`` or if some of them are not strictly positive
+        DataUnitError
+            If the units of ``self`` and ``other`` differ
+        DataShapeError
+            If the arrays of ``self`` and ``other`` have different shapes
+
+        Notes
+        -----
+        The errors are taken as the standard deviations of independent, normally distributed measurements. The
+        weights are the inverse of their variances, the minimum-variance unbiased estimator [1]_ [2]_.
+
+        References
+        ----------
+        .. [1] P. R. Bevington and D. K. Robinson, Data Reduction and Error Analysis for the Physical Sciences,
+           McGraw-Hill, section on the weighted average.
+        .. [2] J. R. Taylor, An Introduction to Error Analysis, University Science Books, section on the weighted
+           average.
+        """
+        if self.errors is None or other.errors is None:
+            raise ValueError('Both data should carry errors to be combined')
+        if self.units != other.units:
+            raise DataUnitError(f'Cannot combine data in {self.units} with data in {other.units}')
+        if len(self) != len(other) or self.shape != other.shape:
+            raise DataShapeError('Cannot combine data of different shapes')
+
+        arrays = []
+        errors = []
+        for x_1, x_2, e_1, e_2 in zip(self.data, other.data, self.errors, other.errors):
+            if np.any(e_1 <= 0) or np.any(e_2 <= 0):
+                raise ValueError('The errors should be strictly positive to be used as weights')
+            w_1 = 1 / e_1 ** 2
+            w_2 = 1 / e_2 ** 2
+            arrays.append((w_1 * x_1 + w_2 * x_2) / (w_1 + w_2))
+            errors.append(1 / np.sqrt(w_1 + w_2))
+        combined = self.deepcopy_with_new_data(arrays)
+        combined.errors = errors
+        return combined
+
     def mean(self, axis: int = 0) -> DataWithAxes:
         """Process the mean of the data on the specified axis and returns the new data
 
@@ -2390,6 +2587,48 @@ class DataWithAxes(DataBase, SerializableBase):
                 mean = np.array([mean])
             dat_mean.append(mean)
         return self.deepcopy_with_new_data(dat_mean, remove_axes_index=axis)
+
+    def mean_with_errors(self, axis: int = 0) -> DataWithAxes:
+        """ Process the mean of the data on the specified axis, as :meth:`mean` does, and set the standard error of the
+        mean as the ``errors`` of the result
+
+        It is meant for a buffer that gives a series of N acquisitions at once (as the first axis of the data, a
+        navigation axis for instance), when :meth:`accumulate` which averages them one after the other is not needed.
+        The errors are the sample standard deviation (``ddof=1``) divided by ``sqrt(N)``, as :meth:`accumulate` gives.
+
+        Parameters
+        ----------
+        axis: int
+            The axis of the acquisitions
+
+        Returns
+        -------
+        DataWithAxes: the mean, its ``n_averaged`` being N. Its ``errors`` are None if N is 1
+
+        See Also
+        --------
+        mean, accumulate
+        """
+        means = []
+        errors = []
+        n_data = 1
+        for dat in self.data:
+            n_data = dat.shape[axis]
+            mean = np.mean(dat, axis=axis)
+            if n_data > 1:
+                error = np.sqrt(np.var(dat, axis=axis, ddof=1) / n_data)  # real, also for complex data
+            else:
+                error = None
+            if isinstance(mean, numbers.Number):
+                mean = np.array([mean])
+                if error is not None:
+                    error = np.array([error])
+            means.append(mean)
+            errors.append(error)
+        averaged_data = self.deepcopy_with_new_data(means, remove_axes_index=axis)
+        averaged_data.errors = errors if n_data > 1 else None
+        averaged_data.add_extra_attribute(**{Averaging.AVERAGED: True, Averaging.N_AVERAGED: n_data})
+        return averaged_data
 
     def moment(self) -> Tuple[DataWithAxes, DataWithAxes]:
         """ returns the two first moments of the data over the axis
@@ -2965,7 +3204,7 @@ class DataWithAxes(DataBase, SerializableBase):
                     return False
             return True
         try:
-            if errors is not None and check_errors(data, errors):
+            if errors is not None and not check_errors(data, errors):
                 errors = None
             old_data = self.data
             self._data = None  # type: ignore[assignment]  # restored at the end, avoids copying the old data
@@ -3342,7 +3581,7 @@ class DataFromRoi(DataCalculated):
 
 
 @ser_factory.register_decorator()
-class DataToExport(DataLowLevel, SerializableBase):
+class DataToExport(ExtraAttributesMixin, DataLowLevel, SerializableBase):
     """Object to store all raw and calculated DataWithAxes data for later exporting, saving, sending signal...
 
     Includes methods to retrieve data from dim, source...
@@ -3388,12 +3627,6 @@ class DataToExport(DataLowLevel, SerializableBase):
         self.extra_attributes: List[str] = []
         self.add_extra_attribute(**kwargs)
 
-    def add_extra_attribute(self, **kwargs):
-        for key in kwargs:
-            if key not in self.extra_attributes:
-                self.extra_attributes.append(key)
-            setattr(self, key, kwargs[key])
-
     @staticmethod
     def serialize(dte: DataToExport):
         """ Convert a DataToExport into a bytes string
@@ -3410,10 +3643,11 @@ class DataToExport(DataLowLevel, SerializableBase):
         -----
         The bytes sequence is constructed as:
 
-        * serialize the string type: 'DataToExport'
         * serialize the timestamp: float
         * serialize the name
         * serialize the list of DataWithAxes
+        * serialize the list of names of extra attributes
+        * serialize the extra attributes
         """
         bytes_string = b''
         bytes_string += ser_factory.get_apply_serializer(dte.timestamp)
@@ -3566,6 +3800,35 @@ class DataToExport(DataLowLevel, SerializableBase):
             return dwa.average(other_dwa, weight)  # type: ignore[return-value]
 
         return self._combine(other, average)
+
+    def accumulate(self, other: DataToExport, weight: int) -> DataToExport:
+        """ Same as :meth:`average` but the standard error of the mean is also set as the ``errors`` of each averaged
+        DataWithAxes, see :meth:`DataWithAxes.accumulate`
+
+        Parameters
+        ----------
+        other: DataToExport
+            The average of the ``weight`` previous acquisitions
+        weight: int
+            The weight the 'other_data' holds with respect to self
+        """
+        def average(dwa: DataWithAxes, other_dwa: DataWithAxes) -> DataWithAxes:
+            return dwa.accumulate(other_dwa, weight)  # type: ignore[return-value]
+
+        return self._combine(other, average)
+
+    def mean_with_errors(self, axis: int = 0) -> DataToExport:
+        """ Apply :meth:`DataWithAxes.mean_with_errors` to each DataWithAxes: the mean on ``axis`` of a buffer of
+        acquisitions given at once, with the standard error of the mean as ``errors``
+
+        The acquisitions have to be stacked on the same ``axis`` in all the DataWithAxes.
+
+        Parameters
+        ----------
+        axis: int
+            The axis of the acquisitions
+        """
+        return DataToExport(self.name, data=[dwa.mean_with_errors(axis) for dwa in self.data])
 
     def merge_as_dwa(self, dim: Union[str, DataDim], name: Optional[str] = None) -> Optional[DataWithAxes]:
         """ attempt to merge filtered dwa into one

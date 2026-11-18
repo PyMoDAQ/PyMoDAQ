@@ -1,5 +1,6 @@
 import datetime
 import os
+from unittest.mock import MagicMock
 from collections import OrderedDict
 import numpy as np
 
@@ -7,6 +8,7 @@ from qtpy import QtWidgets, QtCore
 import pytest
 from pytest import fixture, approx
 import qt_themes
+from pymodaq_data.data import DataToExport, DataRaw
 from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
 from pymodaq.utils.gui_utils.loader_utils import create_load_daq_viewer
 from pymodaq_gui.utils.dock import DockArea
@@ -15,6 +17,9 @@ from pymodaq.control_modules import daq_viewer as daqvm
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 from pymodaq.control_modules.viewer_utility_classes import HW_SETTINGS_KEY as DETECTOR_SETTINGS_KEY
 from pymodaq.control_modules.utils import ControlModule
+from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base
+from easydict import EasyDict as edict
+from pymodaq_gui.parameter import Parameter
 from pymodaq.control_modules.instruments import DET_TYPES, get_viewer_plugins
 from pymodaq.control_modules.enums import DAQTypesEnum
 from pymodaq.utils.conftests import qtbotskip, main_modules_skip
@@ -83,6 +88,67 @@ class TestWithoutUI:
         det_params, _class = get_viewer_plugins(prog.detector.daq_type.name, prog.detector.module_name)
         assert putils.iter_children(prog.settings.child(DETECTOR_SETTINGS_KEY), []) == \
             putils.iter_children(det_params, [])
+
+    def test_activation_of_an_action_reaches_the_plugin(self, ini_daq_viewer_without_ui):
+        prog, qtbot = ini_daq_viewer_without_ui
+        prog.detector = SelectedModule(DAQTypesEnum['DAQ1D'], 'Mock')
+        hw_settings = prog.settings.child(DETECTOR_SETTINGS_KEY)
+        hw_settings.addChild({'title': 'Go', 'name': 'go', 'type': 'action_led', 'value': 'false'})
+        sent = []
+        prog._update_settings_signal.connect(sent.append)
+
+        hw_settings.child('go').activate()
+
+        assert [(item['path'], item['change']) for item in sent] == [([DETECTOR_SETTINGS_KEY, 'go'], 'activated')]
+
+    def test_activation_received_by_the_plugin_emits_sigactivated(self):
+        class Plugin(DAQ_Viewer_base):
+            def ini_detector(self, controller=None):
+                return '', True
+
+            def close(self):
+                pass
+
+        plugin = Plugin()
+        plugin.settings.addChild({'title': 'Go', 'name': 'go', 'type': 'action_led', 'value': 'false'})
+        activated = []
+        plugin.settings.child('go').sigActivated.connect(activated.append)
+        gui_param = Parameter.create(name='go', type='action_led', value='false')
+
+        plugin.update_settings(edict(path=[DETECTOR_SETTINGS_KEY, 'go'], param=gui_param, change='activated'))
+
+        assert len(activated) == 1
+
+    def test_plugin_changes_made_while_activated_are_sent_to_the_gui(self):
+        class Plugin(DAQ_Viewer_base):
+            def ini_detector(self, controller=None):
+                return '', True
+
+            def close(self):
+                pass
+
+        plugin = Plugin()
+        plugin.settings.addChild({'title': 'Go', 'name': 'go', 'type': 'action_led', 'value': 'false',
+                                  'checkable': True})
+        go = plugin.settings.child('go')
+        pressed = []
+
+        def on_activated(param):
+            pressed.append(param.opts['checked'])
+            param.setValue('true')
+            param.setOpts(checked=False)  # the action failed: release the button
+
+        go.sigActivated.connect(on_activated)
+        sent = []
+        plugin.emit_status = lambda status: sent.append(status.attribute[1:])
+        gui_param = Parameter.create(name='go', type='action_led', value='false', checkable=True)
+        gui_param.setOpts(checked=True)
+
+        plugin.update_settings(edict(path=[DETECTOR_SETTINGS_KEY, 'go'], param=gui_param, change='activated'))
+
+        assert pressed == [True]
+        assert ['true', 'value'] in sent
+        assert [{'checked': False}, 'options'] in sent
 
     def test_main_settings_recall_detector(self, ini_daq_viewer_without_ui):
         prog, qtbot = ini_daq_viewer_without_ui
@@ -165,6 +231,75 @@ def test_viewers_roi_select_and_crosshair_forwarding(ini_daq_viewer_ui):
         form.close()
         form.deleteLater()
     QtWidgets.QApplication.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete)
+
+
+class TestSoftwareAveraging:
+    def test_errors_of_the_averaged_data(self, ini_daq_viewer_without_ui):
+        prog, qtbot = ini_daq_viewer_without_ui
+        n_average = 10
+        prog.detector = SelectedModule(DAQTypesEnum['DAQ1D'], 'Mock')
+        with qtbot.waitSignal(prog.init_signal, timeout=10000):
+            prog.init_hardware(True)
+        prog.settings.child('main_settings', 'Naverage').setValue(n_average)
+
+        with qtbot.waitSignal(prog.grab_done_signal, timeout=20000) as blocker:
+            prog.snap()
+
+        averaged_data = blocker.args[0]
+        assert averaged_data[0].n_averaged == n_average
+        assert averaged_data[0].errors is not None
+        assert averaged_data[0].errors[0].shape == averaged_data[0].data[0].shape
+        assert np.all(averaged_data[0].errors[0] >= 0)
+
+    def test_no_errors_without_averaging(self, ini_daq_viewer_without_ui):
+        prog, qtbot = ini_daq_viewer_without_ui
+        prog.detector = SelectedModule(DAQTypesEnum['DAQ1D'], 'Mock')
+        with qtbot.waitSignal(prog.init_signal, timeout=10000):
+            prog.init_hardware(True)
+
+        with qtbot.waitSignal(prog.grab_done_signal, timeout=20000) as blocker:
+            prog.snap()
+
+        assert blocker.args[0][0].errors is None
+
+
+class TestErrorsReplacedWarning:
+    @pytest.mark.parametrize('with_errors', [True, False])
+    def test_warning_only_if_the_plugin_provides_errors(self, with_errors):
+        worker = MagicMock()
+        worker.Naverage = 5
+        errors = [np.array([0.1, 0.1])] if with_errors else None
+        data = DataToExport('acquisition', data=[DataRaw('raw', data=[np.array([1., 2.])], errors=errors)])
+
+        daqvm.DetectorWorker._warn_if_errors_replaced(worker, data)
+
+        assert worker.logger.warning.called == with_errors
+        assert worker.status_sig.emit.called == with_errors
+
+
+class TestLiveAveraging:
+    def test_errors_of_the_live_averaged_data(self, ini_daq_viewer_ui):
+        prog, qtbot, dockarea = ini_daq_viewer_ui
+        n_acquisitions = 6
+        rng = np.random.default_rng(7)
+        acquisitions = rng.normal(loc=1., scale=0.2, size=(n_acquisitions, 9))
+        prog.settings.child('main_settings', 'show_data').setValue(False)
+        prog.settings.child('main_settings', 'live_averaging').setValue(True)
+
+        for acquisition in acquisitions:
+            prog.show_data(DataToExport('acquisition', data=[DataRaw('raw', data=[acquisition])]))
+
+        live_averaged = prog.current_data[0]
+        assert live_averaged.n_averaged == n_acquisitions
+        assert live_averaged.data[0] == approx(acquisitions.mean(axis=0))
+        assert live_averaged.errors[0] == approx(acquisitions.std(axis=0, ddof=1) / np.sqrt(n_acquisitions))
+
+    def test_errors_replaced_message(self):
+        data = DataToExport('acquisition', data=[DataRaw('raw', data=[np.array([1., 2.])])])
+        assert daqvm.errors_replaced_message(data, 'live averaging') is None
+        data[0].errors = [np.array([0.1, 0.1])]
+        assert 'live averaging' in daqvm.errors_replaced_message(data, 'live averaging')
+
 
 def test_continuous_save_toolbar_group_structure(ini_daq_viewer_ui):
     """The toolbar exposes one grouped button for continuous saving: the (now hidden)

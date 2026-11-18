@@ -2,6 +2,7 @@
 import os
 import sys
 import warnings
+from pathlib import Path
 from typing import cast, Union
 
 import qt_themes
@@ -32,6 +33,73 @@ class ThemeSignaller(QtCore.QObject):
 
 
 theme_signaller = ThemeSignaller()
+
+
+TOOLBAR_BUTTON_STYLES = {
+    'icon_only': QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly,
+    'text_only': QtCore.Qt.ToolButtonStyle.ToolButtonTextOnly,
+    'text_beside_icon': QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
+    'text_under_icon': QtCore.Qt.ToolButtonStyle.ToolButtonTextUnderIcon,
+    'follow_style': QtCore.Qt.ToolButtonStyle.ToolButtonFollowStyle,
+}
+
+
+def get_toolbar_button_style() -> QtCore.Qt.ToolButtonStyle | None:
+    """The toolbar button style set in the configuration, None if it is not set or not valid"""
+    name = config.get(('gui', 'style', 'toolbar_button_style'), [None])[0]
+    return TOOLBAR_BUTTON_STYLES.get(name)
+
+
+class ToolbarStyleSignaller(QtCore.QObject):
+    """Emits ``style_changed(style)`` each time the global toolbar button style changes."""
+    style_changed = QtCore.Signal(object)
+
+
+toolbar_style_signaller = ToolbarStyleSignaller()
+
+
+class ToolbarStyleChecks(QtCore.QObject):
+    """Keeps the checkable toolbar style actions in sync, lives as long as the menu it is parented to"""
+
+    def __init__(self, actions: dict[str, QtGui.QAction], parent: QtCore.QObject) -> None:
+        super().__init__(parent)
+        self._actions = actions
+        toolbar_style_signaller.style_changed.connect(self.sync)
+
+    @QtCore.Slot(object)
+    def sync(self, style: Qt.ToolButtonStyle) -> None:
+        for name, action in self._actions.items():
+            action.setChecked(TOOLBAR_BUTTON_STYLES[name] == style)
+
+
+class ThemeChecks(QtCore.QObject):
+    """Keeps the checkable theme actions in sync, lives as long as the menu it is parented to"""
+
+    def __init__(self, actions: dict[str, QtGui.QAction], themes: dict[str, qt_themes.Theme],
+                 parent: QtCore.QObject):
+        super().__init__(parent)
+        self._actions = actions
+        self._themes = themes
+        theme_signaller.theme_changed.connect(self.sync)
+
+    @QtCore.Slot(object)
+    def sync(self, theme: qt_themes.Theme):
+        for name, action in self._actions.items():
+            action.setChecked(self._themes[name] == theme)
+
+
+class MenuIconRefresher(QtCore.QObject):
+    """Rebuilds a menu icon on theme change, lives as long as the menu it is parented to"""
+
+    def __init__(self, icon_name: Union[str, Path], parent: QtWidgets.QMenu):
+        super().__init__(parent)
+        self._icon_name = icon_name
+        theme_signaller.theme_changed.connect(self.refresh)
+
+    @QtCore.Slot(object)
+    def refresh(self, _theme=None):
+        from pymodaq_gui.utils.styling import create_icon
+        self.parent().setIcon(create_icon(self._icon_name))
 
 
 class WhiteCheckboxStyle(QProxyStyle):
@@ -116,6 +184,10 @@ def center_widget_on_screen_and_show(widget: QtWidgets.QWidget):
 def start_qapplication(name='default_app') -> QtWidgets.QApplication:
     return mkQApp(name=name)
 
+#: dynamic property set on the QApplication once :func:`apply_theme` has styled it
+STYLED_PROPERTY = 'pymodaq_styled'
+
+
 def apply_theme(theme: Union[str, qt_themes.Theme], style: str = None,
                 app: QtWidgets.QApplication = None) -> Union[qt_themes.Theme, None]:
     """Apply a qt_themes theme to the running application, at startup or at any time later.
@@ -163,6 +235,8 @@ def apply_theme(theme: Union[str, qt_themes.Theme], style: str = None,
     if app is not None and theme.is_dark_theme():
         # Custom rules
         app.setStyle(WhiteCheckboxStyle(app.style()))
+    if app is not None:
+        app.setProperty(STYLED_PROPERTY, True)
 
     # Before emitting: plots restyle on theme_changed from the new plot colours
     from pymodaq_gui.plotting.plot_theme import apply_plot_theme
@@ -172,16 +246,25 @@ def apply_theme(theme: Union[str, qt_themes.Theme], style: str = None,
     return theme
 
 
-def apply_styling_rules(app : QtWidgets.QApplication):
+def apply_styling_rules(app: QtWidgets.QApplication):
+    """Apply the theme and style of the configuration to the application
+
+    Restyling an application repolishes every live widget and replaces the application style (deleting the previous
+    one): call it only to (re)apply the theme on purpose, :func:`mkQApp` does it once per application.
+    """
     theme = cast(qt_themes.Theme, qt_themes.get_theme(config('gui', 'style', 'theme')[0]))
     style = config('gui', 'style', 'style')[0]
     apply_theme(theme, style=style, app=app)
 
 
-def mkQApp(name: str):
+def mkQApp(name: str) -> QtWidgets.QApplication:
+    """Return the QApplication, creating it if needed, styled with the PyMoDAQ theme
+
+    Idempotent: the styling is applied only the first time it is called for a given application (also if the
+    application was created by someone else, like pytest-qt), later calls just return the existing application. Use
+    :func:`apply_styling_rules` to apply the theme again on purpose.
+    """
     app = mkQApppg(name)
-    apply_styling_rules(app)
-
+    if not app.property(STYLED_PROPERTY):
+        apply_styling_rules(app)
     return app
-
-

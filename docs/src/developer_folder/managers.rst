@@ -528,6 +528,20 @@ The Parameter Manager simplifies pyqtgraph's change handling by routing differen
             min_val, max_val = data
             print(f"{param.name()} limits changed to [{min_val}, {max_val}]")
 
+        def param_activated(self, param):
+            """Called when the button of an 'action' or 'action_led' parameter is clicked"""
+            if param.name() == 'start':
+                print("Start button clicked")
+
+The activation of an ``action`` or ``action_led`` parameter (a click on its button) is not a change of value: it is
+routed to ``param_activated``, and not to ``value_changed``. The ``action_led`` type adds a LED to the button, as does
+the ``multistate_led`` type alone. The LED is set with ``param.setValue(state_name)``, and its states are the ``limits``
+of the parameter (the former ``states`` option is deprecated): either a list of ``(name, color)`` pairs, or ``'status'``
+/ a list of names of the ``Status`` workflow (``pymodaq_gui.utils.status_palette``), coloured by the ``StatusPalette``
+(``param.setValue(Status.RUNNING)``). They can be changed with ``param.setLimits``. With ``checkable=True`` the button of
+an ``action_led`` is a toggle: ``param.opts['checked']`` tells whether the activation is a press or a release, and
+``param.setOpts(checked=False)`` releases it.
+
 **Comparison to pyqtgraph:** Instead of handling all changes in a single ``sigTreeStateChanged`` handler, the Parameter Manager automatically routes changes to specific methods based on type.
 
 XML Persistence

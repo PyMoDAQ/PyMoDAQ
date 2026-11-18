@@ -1,7 +1,6 @@
 from abc import abstractmethod
 from typing import TYPE_CHECKING
 
-from qtpy.QtWidgets import QComboBox
 from pint import DimensionalityError
 from qtpy import QtWidgets, QtCore, QtGui
 from typing import Union, List
@@ -21,24 +20,15 @@ from pymodaq_gui.plotting.data_viewers import ViewerDispatcher
 from pymodaq_gui.utils import (DockArea, QSpinBoxWithShortcut,
                                PushButtonIcon, QSpinBox_ro,
                                Dock)
-from pymodaq_gui.utils.widgets import LabelWithFont, MultistateLED, StatusPalette, Status
+from pymodaq_gui.utils.widgets import LabelWithFont
 from pymodaq_gui.plotting.utils.plot_utils import DetachablePanel
-from pymodaq_utils.enums import StrEnum
 
 
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq.control_modules.daq_move_ui.utils import UiType
 from pymodaq_gui.utils.styling import ThemeColor
+from pymodaq.control_modules.daq_move_ui.actuator_selector import ActuatorSelector
 config = Config()
-
-
-class MoveLedState(StrEnum):
-    """States of the DAQ_Move status LED."""
-    UNINITIALIZED = 'uninitialized'
-    IDLE = 'idle'
-    MOVING = 'moving'
-    ERROR = 'error'
-
 
 
 class DAQMoveUI(ControlModuleUI):
@@ -90,14 +80,14 @@ class DAQMoveUI(ControlModuleUI):
         self.controls_dock = controls_dock
         self.title = title
         self._unit = ''
+        self._moving = False
 
-        self.actuators_combo: QComboBox = None
+        self.actuator_selector: ActuatorSelector = None
         self.abs_value_sb: QSpinBoxWithShortcut = None
         self.abs_value_sb_green: QSpinBoxWithShortcut = None
         self.abs_value_sb_2: QSpinBoxWithShortcut = None
         self.abs_value_sb_red: QSpinBoxWithShortcut = None
         self.abs_value_sb_bis: QSpinBoxWithShortcut = None
-        self.status_led: MultistateLED = None
         self.current_value_sb: QSpinBox_ro = None
         self.find_home_pb: PushButtonIcon = None
         self.move_rel_plus_pb: PushButtonIcon = None
@@ -127,7 +117,9 @@ class DAQMoveUI(ControlModuleUI):
     @actuator_init.setter
     def actuator_init(self, status):
         self._ini_state = status
-        self.status_led.set_state(MoveLedState.IDLE if status else MoveLedState.UNINITIALIZED)
+        if not status:
+            self._moving = False  # a closed actuator is not moving
+        self.update_status_led()
         self.enable_move_buttons(status)
         self.update_init_icon(status, 'ini_actuator')
         if self.has_action('ini_actuator'):
@@ -135,29 +127,33 @@ class DAQMoveUI(ControlModuleUI):
 
     @property
     def actuator(self):
-        return self.actuators_combo.currentText()
+        return self.actuator_selector.actuator
 
     @actuator.setter
     def actuator(self, act_name: str):
-       self.actuators_combo.setCurrentText(act_name)
+        self.actuator_selector.actuator = act_name
 
     @property
     def actuators(self):
-        return [self.actuators_combo.itemText(ind) for ind in range(self.actuators_combo.count())]
+        return self.actuator_selector.actuators
 
     @actuators.setter
     def actuators(self, actuators: List[str]):
-        self.actuators_combo.clear()
-        self.actuators_combo.addItems(actuators)
+        """Fill the selection, grouped as in the add menus (Remote, Mock, Plugin...)"""
+        self.actuator_selector.actuators = actuators
 
     @property
     def move_done(self):
         """bool: True when the actuator is idle (not moving)."""
-        return self.status_led.get_state() != MoveLedState.MOVING
+        return not self._moving
 
     @move_done.setter
     def move_done(self, status):
-        self.status_led.set_state(MoveLedState.IDLE if status else MoveLedState.MOVING)
+        self._moving = not status
+        self.set_error_state(False)  # a move order or the end of a move clears the error of a previous command
+
+    def _is_busy(self) -> bool:
+        return self._moving
 
     def quit_fun(self) -> bool | None:
         return self.app.quit_fun()
@@ -180,7 +176,7 @@ class DAQMoveUI(ControlModuleUI):
             is_shown=lambda: self.is_action_checked('show_controls'))
         self.parent.layout().setContentsMargins(0, 0, 0, 0)
 
-        self.actuators_combo = QComboBox()
+        self.actuator_selector = ActuatorSelector()
         self.abs_value_sb = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('pymodaq', 'actuator', 'siprefix'))
         self.abs_value_sb.setStyleSheet("background-color : lightgreen; color: black")
         self.abs_value_sb.setValue(config('pymodaq', 'actuator', 'default_value_green'))
@@ -192,15 +188,7 @@ class DAQMoveUI(ControlModuleUI):
         self.abs_value_sb_red = self.abs_value_sb_2
 
         self.abs_value_sb_bis = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('pymodaq', 'actuator', 'siprefix'))
-        self.status_led = MultistateLED(
-            states=[
-                (MoveLedState.UNINITIALIZED, StatusPalette.color(Status.OFF)),
-                (MoveLedState.IDLE,          StatusPalette.color(Status.IDLE)),
-                (MoveLedState.MOVING,        StatusPalette.color(Status.RUNNING)),
-                (MoveLedState.ERROR,         StatusPalette.color(Status.CRITICAL)),
-            ],
-            readonly=True,
-        )
+        self._setup_status_led()
         self.current_value_sb = QSpinBox_ro(font_size=10, min_height=20,
                                             siPrefix=config('pymodaq', 'actuator', 'siprefix'),
                                             )
@@ -266,13 +254,13 @@ class DAQMoveUI(ControlModuleUI):
         if toolbar is None:
             toolbar = self.toolbar
         self._setup_name_widget(toolbar=toolbar)
-        self.add_widget('actuators_combo', self.actuators_combo, toolbar=toolbar)
+        self.add_widget('status_led', self.status_led, toolbar=toolbar)
+        self.add_widget('actuators_combo', self.actuator_selector, toolbar=toolbar)
         self._setup_init_action(toolbar=toolbar, action_name='ini_actuator',
                                 display_name='Ini. Actuator', tip='Connect to selected actuator')
         self._setup_settings_action(toolbar=toolbar)
         toolbar.addSeparator()
         self.add_widget('current', self.current_value_sb, toolbar=toolbar)
-        self.add_widget('move_done', self.status_led, toolbar=toolbar)
 
         self.add_action('stop', 'Stop', 'stop_circle', "Stop Motion",
                         toolbar=toolbar, icon_color=ThemeColor.RED)
@@ -362,7 +350,7 @@ class DAQMoveUI(ControlModuleUI):
 
     def cleanup_ui(self):
         try:
-            self.actuators_combo.currentTextChanged.disconnect()
+            self.actuator_selector.actuator_changed.disconnect()
         except TypeError:
             pass
         if 'move_abs_green' in self.actions_names:
@@ -433,7 +421,7 @@ class DAQMoveUI(ControlModuleUI):
         self.stop_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.STOP, )))
         self.get_value_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.GET_VALUE, )))
 
-        self.actuators_combo.currentTextChanged.connect(
+        self.actuator_selector.actuator_changed.connect(
             lambda act: self.command_sig.emit(ThreadCommand(UiToMainMove.ACTUATOR_CHANGED, act)))
 
     # -------------------------------------------------------------------------
@@ -541,9 +529,9 @@ class DAQMoveUI(ControlModuleUI):
     # -------------------------------------------------------------------------
 
     def send_init(self, checked: bool):
-        self.actuators_combo.setEnabled(not checked)
+        self.actuator_selector.setEnabled(not checked)
         self.command_sig.emit(ThreadCommand(UiToMainMove.INIT, [checked,
-                                                                self.actuators_combo.currentText()]))
+                                                                self.actuator_selector.actuator]))
 
     def emit_move_abs(self, spinbox):
         spinbox.editingFinished.emit()
@@ -571,9 +559,9 @@ class DAQMoveUI(ControlModuleUI):
 
     def close(self):
         self.parent.close()
-        for widget in (self.graph_widget, self.control_widget):  # floating windows: no parent to delete them
-            widget.close()
-            widget.deleteLater()
+        self._controls_panel.close()
+        self.graph_widget.close()  # floating window: no parent to delete it
+        self.graph_widget.deleteLater()
         super().close()
 
 

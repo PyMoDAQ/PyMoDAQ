@@ -181,7 +181,7 @@ inside a Dashboard. :numref:`custom_app_classes` shows who brings what.
      rankdir=BT; node [shape=box, fontname="Helvetica", fontsize=10];
      QObject;
      ActionManager [label="ActionManager\n(pymodaq_gui.managers)\nadd_action, add_menu, add_toolbar,\nconnect_action, set_action_enabled"];
-     ParameterManager [label="ParameterManager\n(pymodaq_gui.managers)\nparams, settings, settings_tree,\nvalue_changed, child_added, param_deleted"];
+     ParameterManager [label="ParameterManager\n(pymodaq_gui.managers)\nparams, settings, settings_tree,\nvalue_changed, child_added, param_deleted,\nparam_activated"];
      CustomApp [label="CustomApp\n(pymodaq_gui.utils)\ndockarea, mainwindow, docks, menubar,\nstatusbar, thread_manager, h5_manager,\nsetup_ui, quit_fun"];
      DashboardMixin [label="DashboardMixin\n(pymodaq.utils.dashboard_mixin)\ndashboard, is_dashboard_available, modules_manager,\nexperiment_manager, state_manager,\ncreate_dashboard_toolbar, show_dashboard"];
      CustomExt [label="CustomExt\n(pymodaq.utils.custom_ext)"];
@@ -197,7 +197,8 @@ Text version of the diagram:
 * ``ActionManager`` brings the actions, and their placement in the toolbars and menus: ``add_action``, ``add_menu``,
   ``add_toolbar``, ``connect_action``, ``set_action_enabled``, ``set_action_checked``.
 * ``ParameterManager`` brings the settings tree: the class attribute ``params``, the ``settings`` Parameter, the
-  ``settings_tree`` widget and the callbacks ``value_changed``, ``child_added`` and ``param_deleted``.
+  ``settings_tree`` widget and the callbacks ``value_changed``, ``child_added``, ``param_deleted`` and ``param_activated`` (the button of an
+  ``action`` or ``action_led`` parameter has been clicked).
 * ``CustomApp`` itself brings the dock area (``dockarea``, ``docks``), the optional ``mainwindow``, the menu and
   status bars, the ``h5_manager`` and the ``thread_manager``, and the ``setup_ui`` sequence.
 * ``DashboardMixin`` lives in ``pymodaq.utils.dashboard_mixin`` and holds everything dealing with the Dashboard, see
@@ -289,7 +290,7 @@ Lifecycle
      - ``do_things_after_ui_setup``
      - Optional last touches. The window is then resized to ``_size_hint``.
    * - run
-     - ``value_changed``, ``child_added``, ``param_deleted``
+     - ``value_changed``, ``child_added``, ``param_deleted``, ``param_activated``
      - React to the user's changes in the settings tree.
    * - end
      - ``quit_fun`` (``CustomExt``: ``_quit_fun``)

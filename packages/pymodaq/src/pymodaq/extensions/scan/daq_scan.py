@@ -1408,11 +1408,18 @@ class DAQScan(CustomExt):
             self.status_manager.set_permanent_status('Running acquisition')
 
     def do_scan(self, start_scan=True):
-        """Public method to start the scan programmatically"""
+        """Public method to start or stop the scan programmatically
+
+        Parameters
+        ----------
+        start_scan: bool
+            If True, trigger the START action. If the START action is disabled (a scan is already running), nothing
+            is done and a warning is logged. If False, trigger the STOP action.
+        """
         if start_scan:
             if not self.is_action_enabled(WorkFlowActions.START):
-                self.get_action('set_scan').trigger()
-                QtWidgets.QApplication.processEvents()
+                logger.warning('Cannot start a scan: the start action is disabled (a scan is probably running)')
+                return
             self.get_action(WorkFlowActions.START).trigger()
         else:
             self.get_action(WorkFlowActions.STOP).trigger()

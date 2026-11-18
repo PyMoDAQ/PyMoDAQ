@@ -455,6 +455,7 @@ class ParameterManager:
         - 'parent': A parameter was removed (parent changed to None)
         - 'options': Parameter options were modified
         - 'limits': Parameter limits were changed
+        - 'activated': A parameter of type 'action' or 'action_led' was activated (its button clicked)
         """
         for param, change, data in changes:
             path = self._settings.childPath(param)
@@ -475,6 +476,9 @@ class ParameterManager:
 
             elif change == 'contextMenu':
                 self.menu_changed(param, data)
+
+            elif change == 'activated':
+                self.param_activated(param)
 
     def value_changed(self, param: Parameter) -> None:
         """Non-mandatory method to be subclassed for actions to perform when a parameter value changes.
@@ -633,6 +637,20 @@ class ParameterManager:
             The parameter whose menu has been changed
         data: str
             The selected menu string
+        """
+        pass
+
+    def param_activated(self, param: Parameter) -> None:
+        """Non-mandatory method to be subclassed for actions to perform when a parameter is activated.
+
+        This method is called automatically when the button of a parameter of type ``action`` or ``action_led`` is
+        clicked (or when its ``activate`` method is called). The activation is not a change of value, so it is not
+        given to :meth:`value_changed`.
+
+        Parameters
+        ----------
+        param : Parameter
+            The parameter that has just been activated
         """
         pass
 
