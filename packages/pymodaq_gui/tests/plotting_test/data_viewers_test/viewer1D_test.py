@@ -3,7 +3,7 @@ import pyqtgraph as pg
 import numpy as np
 import pytest
 
-from qtpy import QtWidgets
+from qtpy import QtWidgets, QtCore
 from pyqtgraph import ROI
 from unittest import mock
 from collections import OrderedDict
@@ -206,3 +206,48 @@ class TestViewer1D:
         data = data_mod.DataRaw('mydata', data=[y],
                                 axes=[data_mod.Axis('myaxis', 'units', data=x)])
         prog.show_data(data)
+
+
+def click_legend_sample(legend: pg.LegendItem, item):
+    """Left click the legend sample of item, as a user would"""
+    sample = next(sample for sample, _label in legend.items if sample.item is item)
+    event = mock.Mock()
+    event.button.return_value = QtCore.Qt.MouseButton.LeftButton
+    sample.mouseClickEvent(event)
+
+
+class TestLegendClick:
+    @staticmethod
+    def show_data_with_errors(prog):
+        x = np.linspace(0, 200, 201)
+        data = data_mod.DataRaw(
+            'mydata', data=[gauss1D(x, 75, 25), gauss1D(x, 120, 50, 2)],
+            axes=[data_mod.Axis('myaxis', 'units', data=x, index=0)],
+            errors=(np.random.random_sample(x.shape), np.random.random_sample(x.shape)))
+        prog.view.get_action('errors').trigger()
+        prog.show_data(data)
+        return prog.view.data_displayer
+
+    def test_hiding_a_curve_hides_its_error_band(self, init_viewer1d):
+        prog, _ = init_viewer1d
+        displayer = self.show_data_with_errors(prog)
+        curve = displayer.get_plot_item(0)
+        band = [*displayer._boundary_items[0], displayer._fill_items[0]]
+
+        click_legend_sample(displayer.legend, curve)
+
+        assert not curve.isVisible()
+        assert not any(item.isVisible() for item in band)
+        # the other curve and its band are untouched
+        assert all(item.isVisible() for item in [*displayer._boundary_items[1], displayer._fill_items[1]])
+
+    def test_showing_it_back(self, init_viewer1d):
+        prog, _ = init_viewer1d
+        displayer = self.show_data_with_errors(prog)
+        curve = displayer.get_plot_item(0)
+
+        click_legend_sample(displayer.legend, curve)
+        click_legend_sample(displayer.legend, curve)
+
+        assert curve.isVisible()
+        assert all(item.isVisible() for item in [*displayer._boundary_items[0], displayer._fill_items[0]])
