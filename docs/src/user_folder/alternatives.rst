@@ -57,28 +57,28 @@ In short
        synchronized live
    * - **QCoDeS**
      - Lab experiment
-     - A Python data acquisition framework (instrument drivers, parameters, measurement contexts, a SQLite database),
-       widely used in quantum and condensed matter devices labs
-     - you work mostly in Jupyter notebooks or scripts, sweeping parameters and recording to a database
+     - A Python data acquisition framework (instrument drivers, parameters, measurement contexts, a database of runs),
+       developed by a consortium of quantum computing groups (Copenhagen, Delft, Sydney, Microsoft)
+     - you write your measurements as Python code, sweeping parameters and recording every run to a database
      - you need a ready-made multi-instrument GUI, or your instruments are mostly cameras and optical devices
    * - **Tango Controls**
      - Facility
-     - A distributed, device-oriented control system (device servers, a database, C++, Python and Java), used in many
-       synchrotrons and large research facilities
+     - A free and open-source device-oriented control system with device servers, with full support for C++, Python and
+       Java, used by tens of sites, mostly large research facilities
      - you operate a facility with many devices and users and need a common control system
      - you are a single lab starting from a handful of USB or Ethernet instruments
    * - **Bluesky / Ophyd**
      - Facility
-     - Libraries to run experiments (plans executed by a RunEngine) on top of device abstractions, developed at
-       synchrotron facilities, with EPICS as a main control system
-     - you run a beamline, with EPICS, a queue of experiments, several users and a data catalog
+     - Libraries to run experiments (plans executed by a RunEngine) on top of device abstractions (Ophyd), developed
+       at Brookhaven National Laboratory and mostly used with EPICS
+     - you run a beamline or a facility, mostly with EPICS, and want reusable plans with rich metadata and streaming data
      - you are a single lab starting from a handful of USB or Ethernet instruments
 
 PyVISA and pylablib: the driver level
 -------------------------------------
 
-`PyVISA <https://pyvisa.readthedocs.io>`_ opens a session to an instrument (through the NI-VISA library or the pure
-Python ``pyvisa-py`` backend) and lets you write and read messages. It is the right tool to learn what an instrument
+`PyVISA <https://pyvisa.readthedocs.io>`_ opens a session to an instrument (through a VISA library supplied by an
+instrument vendor, or the pure Python ``pyvisa-py`` backend) and lets you write and read messages. It is the right tool to learn what an instrument
 answers, or to write a ten-line script. `pylablib <https://pylablib.readthedocs.io>`_ provides device classes for many
 instruments, in particular cameras and translation stages, and some helpers to process and store data.
 
@@ -103,9 +103,9 @@ other extensions work with any of them, and the data model (:doc:`/data_manageme
 plugin to the HDF5 file.
 
 `QCoDeS <https://microsoft.github.io/Qcodes/>`_ models instruments as collections of *parameters*, defines
-measurements as sweeps of parameters, and stores every run in a SQLite database with its metadata. It comes with many
-drivers for electronic instruments (source meters, lock-in amplifiers, cryogenic equipment...) and is typically driven
-from Jupyter notebooks or scripts. QCoDeS is code first and database centered, PyMoDAQ is GUI first and file (HDF5)
+measurements as sweeps of parameters, and stores every run in a database. It comes with drivers for
+instruments from many vendors (Keysight, Keithley, Rohde & Schwarz, Zurich Instruments...) and live plotting with
+Plottr. QCoDeS is code first and database centered, PyMoDAQ is GUI first and file (HDF5)
 centered. PyMoDAQ can be scripted (:doc:`/user_folder/scripting`), but if you never want a GUI and already have QCoDeS
 drivers for all your instruments, QCoDeS is the more direct path.
 
@@ -115,13 +115,13 @@ Tango and Bluesky: facility scale
 `Tango Controls <https://www.tango-controls.org>`_ is a free, open-source, device-oriented control system with full
 support for C++, Python and Java, used by tens of sites, mostly large research facilities, to run accelerators and
 experiments around the clock. `Bluesky <https://blueskyproject.io/bluesky/>`_ separates *what to do* (plans, written as
-Python generators) from *how to do it* (a RunEngine acting on `Ophyd <https://blueskyproject.io/ophyd/>`_ devices) and
-emits a stream of documents that can be saved to a catalog; it is mostly used with EPICS.
+Python generators) from *how to do it* (a RunEngine, the interpreter of plans, acting on
+`Ophyd <https://blueskyproject.io/ophyd/>`_ devices) and streams metadata and data to callbacks (plots, databases, files) as it runs; Ophyd implements the device interface
+for EPICS hardware.
 
-These systems are built for many devices, many users, and queued and monitored experiments, and they come with an
-infrastructure to set up (device servers and a database, or EPICS and a data store) that is more than a lab with a few
-instruments needs. PyMoDAQ is installed with ``pip`` and is usable within the hour on a laptop connected to the
-instruments. The levels are complementary rather than exclusive: a laboratory setup can be one of the clients of a
+These systems are built for installations with many devices running continuously, and they come with an
+infrastructure to set up (device servers, or EPICS and the services around Bluesky) that is more than a lab with a few
+instruments usually needs. PyMoDAQ is installed with ``pip`` and runs on a laptop connected to the instruments. The levels are complementary rather than exclusive: a laboratory setup can be one of the clients of a
 facility control system. There is today no plugin exposing Tango devices in PyMoDAQ, and how to use Tango or Bluesky
 devices from PyMoDAQ is an open question being explored. PyMoDAQ can itself be driven remotely, through
 :doc:`/user_folder/leco`.
