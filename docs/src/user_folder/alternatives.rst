@@ -95,32 +95,37 @@ no saving. PyMoDAQ does not compete with them, it builds on them: many PyMoDAQ i
 library, and add what is missing on top (see :doc:`/developer_folder/plugin_cookbook`). If you already have driver
 code for an instrument, wrapping it in a plugin gives you the GUI, the scans and the saving for it.
 
-PyMeasure, NOMAD CAMELS and QCoDeS: the closest tools
------------------------------------------------------
+PyMeasure, NOMAD CAMELS and QCoDeS: measurements as procedures
+--------------------------------------------------------------
 
-`PyMeasure <https://pymeasure.readthedocs.io>`_ is the closest to PyMoDAQ in spirit: a package that makes
-measurements easy to set up and run with limited coding. It has a repository of instrument classes and an experiment
-API where a *procedure* (its parameters, how it runs) is turned into a GUI with live graphs and a queue of
-experiments. It is well suited to an experiment that is a sweep over parameters of electrical instruments.
+These three tools are organized around the *measurement procedure*: you describe what a measurement does (the
+parameters to sweep, the quantities to record), and the tool runs it and records the results.
 
-`NOMAD CAMELS <https://fau-lap.github.io/NOMAD-CAMELS/>`_ also gives a GUI to operate instruments without programming.
-Measurements are protocols built from steps (loops, sweeps, conditions, function calls), run with their instrument
-settings and code recorded in an HDF5 file, with an emphasis on FAIR metadata and on the NOMAD platform for research
-data management. It can connect to EPICS and to generic drivers (including cameras through openCV and pylablib).
+`PyMeasure <https://pymeasure.readthedocs.io>`_ is a package that makes measurements easy to set up and run with
+limited coding. It has a repository of instrument classes and an experiment API where a *procedure* (its parameters,
+how it runs) is turned into a GUI with live graphs and a queue of experiments. It is well suited to an experiment that
+is a sweep over parameters of electrical instruments.
 
-PyMoDAQ differs by its data model and its live display. Whatever the instrument produces (an electrical signal, a
+`NOMAD CAMELS <https://fau-lap.github.io/NOMAD-CAMELS/>`_ is of the same family, with the procedure built graphically:
+a protocol is assembled from steps (loops, sweeps, conditions, function calls) without programming, and run with its
+instrument settings and code recorded in an HDF5 file, with an emphasis on FAIR metadata and on the NOMAD platform for
+research data management. It can connect to EPICS and to generic drivers (including cameras through openCV and
+pylablib).
+
+`QCoDeS <https://microsoft.github.io/Qcodes/>`_ models instruments as collections of *parameters*, defines
+measurements as sweeps of parameters, and stores every run in a database. It comes with drivers for
+instruments from many vendors (Keysight, Keithley, Rohde & Schwarz, Zurich Instruments...) and live plotting with
+Plottr. QCoDeS is code first and database centered, PyMoDAQ is GUI first and file (HDF5) centered. PyMoDAQ can be
+scripted (:doc:`/user_folder/scripting`), but if you never want a GUI and already have QCoDeS drivers for all your
+instruments, QCoDeS is the more direct path.
+
+PyMoDAQ is organized differently: around the instruments and the data they produce rather than around the procedure.
+Its strength is the data model and the live display. Whatever the instrument produces (an electrical signal, a
 pressure, a waveform, an image, a hyperspectral cube), it is an instance of the same generic data object, with its
 axes and units, from the plugin to the HDF5 file, through the graphical viewers and the data analysis tools
 (:doc:`/data_management/data_objects`). Together with acquisition in real time, this makes the live visualization of
 data of any dimension a basic feature rather than an add-on. Instruments are handled through a common contract
 (actuators and detectors), so that scans, loggers and other extensions work with any of them.
-
-`QCoDeS <https://microsoft.github.io/Qcodes/>`_ models instruments as collections of *parameters*, defines
-measurements as sweeps of parameters, and stores every run in a database. It comes with drivers for
-instruments from many vendors (Keysight, Keithley, Rohde & Schwarz, Zurich Instruments...) and live plotting with
-Plottr. QCoDeS is code first and database centered, PyMoDAQ is GUI first and file (HDF5)
-centered. PyMoDAQ can be scripted (:doc:`/user_folder/scripting`), but if you never want a GUI and already have QCoDeS
-drivers for all your instruments, QCoDeS is the more direct path.
 
 Tango and Bluesky: facility scale
 ---------------------------------
