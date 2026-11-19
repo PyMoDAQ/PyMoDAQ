@@ -81,6 +81,13 @@ In short
      - you run a beamline or a facility, mostly with EPICS, and want reusable plans with rich metadata and streaming data
      - you are a single lab starting from a handful of USB or Ethernet instruments
 
+.. note::
+
+   This comparison tries to be fair and is based on the public documentation of each project, but it may be
+   incomplete, outdated or wrong on some points, and it comes from the PyMoDAQ side. Each of these tools evolves:
+   check their documentation, and `open an issue <https://github.com/PyMoDAQ/PyMoDAQ/issues>`_ or a pull request if
+   you find an error.
+
 PyVISA and pylablib: the driver level
 -------------------------------------
 
