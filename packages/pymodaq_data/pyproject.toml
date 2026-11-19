@@ -7,7 +7,7 @@ name = "pymodaq_data"
 dynamic = [
     "version",
 ]
-description = "Modular Data Acquisition with Python"
+description = "Data model (typed data with axes and units), HDF5 saving and loading of PyMoDAQ, usable on its own"
 readme = "README.rst"
 license = { file="LICENSE" }
 requires-python = ">=3.10"
