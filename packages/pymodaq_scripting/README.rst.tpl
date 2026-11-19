@@ -58,15 +58,15 @@ PyMoDAQ Scripting
    :alt: shortcut
 
 
-PyMoDAQ__, Modular Data Acquisition with Python, is a set of **python** modules used to interface any kind of
-experiments. It simplifies the interaction with detector and actuator hardware to go straight to the data acquisition
-of interest.
+PyMoDAQ__ (Modular Data Acquisition with Python) is a free and open-source Python framework to control scientific
+instruments (cameras, spectrometers, motorized stages, power meters, digitizers...) and acquire data, from a
+graphical Dashboard or from scripts, with live data viewers, scans, logging and saving in HDF5 files. This package, ``pymodaq_scripting``, lets you drive a running Dashboard from a script.
 
 __ https://pymodaq.readthedocs.io/en/stable/?badge=latest
 
 `PyMoDAQ Scripting`__ is a set of utilities (mainly objects) that are used
 to provide direct emulation of the DashBoard set of Control Modules but from a script in
-another process. Communication is handled by the lecco protocol.
+another process. Communication is handled by the LECO protocol.
 
 __ https://pymodaq.cnrs.fr/en/latest/user_folder/scripting.html
 
