@@ -60,9 +60,9 @@ PyMoDAQ Utils
    :alt: shortcut
 
 
-PyMoDAQ__, Modular Data Acquisition with Python, is a set of **python** modules used to interface any kind of
-experiments. It simplifies the interaction with detector and actuator hardware to go straight to the data acquisition
-of interest.
+PyMoDAQ__ (Modular Data Acquisition with Python) is a free and open-source Python framework to control scientific
+instruments (cameras, spectrometers, motorized stages, power meters, digitizers...) and acquire data, from a
+graphical Dashboard or from scripts, with live data viewers, scans, logging and saving in HDF5 files. This package, ``pymodaq_utils``, holds the utilities shared by all the others.
 
 __ https://pymodaq.readthedocs.io/en/stable/?badge=latest
 

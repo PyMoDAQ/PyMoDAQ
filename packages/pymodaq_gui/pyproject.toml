@@ -7,7 +7,7 @@ name = "pymodaq_gui"
 dynamic = [
     "version",
 ]
-description = "User Interface components for PyMoDAQ"
+description = "Qt components of PyMoDAQ: data viewers, parameter trees, ROI and action managers"
 readme = "README.rst"
 license = { file="LICENSE" }
 requires-python = ">=3.10"
