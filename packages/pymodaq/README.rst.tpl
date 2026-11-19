@@ -162,4 +162,4 @@ Published under the MIT FREE SOFTWARE LICENSE
 
 GitHub repo: https://github.com/PyMoDAQ
 
-Documentation: http://pymodaq.cnrs.fr/
+Homepage and documentation: https://pymodaq.cnrs.fr/en/latest/
