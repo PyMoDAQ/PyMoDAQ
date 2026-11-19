@@ -64,7 +64,7 @@ PyMoDAQ__ (Modular Data Acquisition with Python) is a free and open-source Pytho
 instruments (cameras, spectrometers, motorized stages, power meters, digitizers...) and acquire data, from a
 graphical Dashboard or from scripts, with live data viewers, scans, logging and saving in HDF5 files. This package, ``pymodaq_utils``, holds the utilities shared by all the others.
 
-__ https://pymodaq.readthedocs.io/en/stable/?badge=latest
+__ https://pymodaq.cnrs.fr/en/latest/
 
 This present repository `pymodaq_utils` is a set of utilities (constants, methods and classes) that are used in the
 various subpackages of PyMoDAQ (PyMoDAQ itself, but also plugins and data management and user interfaces modules)
@@ -81,4 +81,4 @@ Published under the MIT FREE SOFTWARE LICENSE
 
 GitHub repo: https://github.com/PyMoDAQ
 
-Documentation: http://pymodaq.cnrs.fr/
+Homepage and documentation: https://pymodaq.cnrs.fr/en/latest/
