@@ -13,9 +13,9 @@ Three levels
 Projects in this field sit at one of three levels, and a project often includes (fully or partly) the level below:
 
 * **Instrument drivers and communication**: talk to one instrument (PyVISA, pylablib, the vendor libraries).
-* **Laboratory experiments**: operate several instruments together, scan, display and save data (PyMoDAQ, PyMeasure,
+* **Laboratory experiments**: operate several instruments together, scan, display and save data (PyMoDAQ, PyMeasure, NOMAD CAMELS,
   QCoDeS).
-* **Large instruments and facilities**: distributed control systems, many devices and users, running around the clock
+* **Large instruments and facilities**: control systems for many devices, running around the clock
   (Tango Controls, EPICS with Bluesky/Ophyd).
 
 In short
@@ -104,7 +104,7 @@ API where a *procedure* (its parameters, how it runs) is turned into a GUI with 
 experiments. It is well suited to an experiment that is a sweep over parameters of electrical instruments.
 
 `NOMAD CAMELS <https://fau-lap.github.io/NOMAD-CAMELS/>`_ also gives a GUI to operate instruments without programming.
-Measurements are protocols built from steps (loops, sweeps, conditions, function calls), run with their instruments
+Measurements are protocols built from steps (loops, sweeps, conditions, function calls), run with their instrument
 settings and code recorded in an HDF5 file, with an emphasis on FAIR metadata and on the NOMAD platform for research
 data management. It can connect to EPICS and to generic drivers (including cameras through openCV and pylablib).
 
