@@ -23,6 +23,8 @@
 
 ## Use and control PyMoDAQ
 
+- [Common questions](https://pymodaq.cnrs.fr/en/latest/user_folder/common_questions.html): how to control a camera and a motorized stage with a GUI in Python, scan and save data, drive instruments from a script, in a few steps each.
+- [PyMoDAQ and other tools](https://pymodaq.cnrs.fr/en/latest/user_folder/alternatives.html): an honest comparison with PyVISA, QCoDeS and Bluesky/Ophyd: what each is for, when to pick which, and where PyMoDAQ is not the right tool.
 - [Quick start](https://pymodaq.cnrs.fr/en/latest/quick_start.html): installation and first launch.
 - [Scripting](https://pymodaq.cnrs.fr/en/latest/user_folder/scripting.html): drive a running Dashboard from Python (`pymodaq_scripting`), the safe way to prototype against a real setup.
 - [Control modules](https://pymodaq.cnrs.fr/en/latest/modules/Control_Modules.html): DAQ_Move, DAQ_Viewer and the Dashboard.

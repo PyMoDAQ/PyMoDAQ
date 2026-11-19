@@ -7,7 +7,32 @@ name = "pymodaq"
 dynamic = [
     "version",
 ]
-description = "Modular Data Acquisition with Python"
+description = "Python framework to control scientific instruments (cameras, motors, detectors...) and acquire data from a GUI Dashboard: plugins, live viewers, scans, HDF5 saving"
+keywords = [
+    "data acquisition",
+    "DAQ",
+    "instrument control",
+    "instrumentation",
+    "laboratory automation",
+    "experiment control",
+    "hardware control",
+    "scientific instruments",
+    "measurement",
+    "GUI",
+    "Qt",
+    "camera",
+    "motion control",
+    "actuator",
+    "detector",
+    "scan",
+    "HDF5",
+    "plugins",
+    "LECO",
+    "physics",
+    "optics",
+    "spectroscopy",
+    "microscopy",
+]
 readme = "README.rst"
 license = { file="LICENSE" }
 requires-python = ">=3.10"
@@ -16,7 +41,8 @@ authors = [
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
-    "Environment :: Other Environment",
+    "Environment :: X11 Applications :: Qt",
+    "Environment :: Win32 (MS Windows)",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Natural Language :: English",
@@ -25,10 +51,13 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",    
+    "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Human Machine Interfaces",
+    "Topic :: Scientific/Engineering :: Physics",
     "Topic :: Scientific/Engineering :: Visualization",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Software Development :: User Interfaces",
+    "Topic :: System :: Hardware",
 ]
 dependencies = [
     "pymodaq_utils>=5.3.5.dev0",
@@ -85,7 +114,9 @@ ramping = "pymodaq.extensions.ramping.ramping:main"
 sequencer = "pymodaq.extensions.sequencer.sequencer:main"
 
 [project.urls]
-Homepage = "http://pymodaq.cnrs.fr"
+Homepage = "https://pymodaq.cnrs.fr"
+Documentation = "https://pymodaq.cnrs.fr/en/latest/"
+Changelog = "https://pymodaq.cnrs.fr/en/latest/changelog.html"
 Source = "https://github.com/PyMoDAQ/PyMoDAQ"
 Tracker = "https://github.com/PyMoDAQ/PyMoDAQ/issues"
 
