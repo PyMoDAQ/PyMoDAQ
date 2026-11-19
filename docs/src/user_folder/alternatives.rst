@@ -168,6 +168,12 @@ Where PyMoDAQ is a good choice
   and units, and logging of slowly varying signals.
 * Teams where people who are not programmers operate the setup: an *experiment* file restores the whole
   configuration, and writing a plugin for a new instrument is the only coding needed.
+* Domain specific acquisition and orchestration. PyMoDAQ separates the instruments, handled by the Dashboard, from the
+  *actions* performed with them, which are the extensions (:doc:`/user_folder/extensions`). Some extensions stay
+  generic (scans, logging, PID, optimization) while others are very focused on a field, such as the ones of
+  `PyMoDAQ Femto <https://pymodaq-femto.readthedocs.io/en/latest/>`_ (ultrafast optics) or of
+  `PyMoDAQ BeamShaping <https://pymodaq-plugins-beam-shaping.readthedocs.io/en/latest/>`_, so that the same instruments
+  can be orchestrated for the specificity of your field.
 * A framework to build your own application: the same widgets, data classes and modules can be reused in a custom
   application (:doc:`/developer_folder/custom_app`).
 
