@@ -55,6 +55,13 @@ In short
      - your measurements are parameter sweeps of electrical or SCPI-type instruments, one procedure per experiment
      - your data are images or other multidimensional arrays, or several detectors have to be shown and
        synchronized live
+   * - **NOMAD CAMELS**
+     - Lab experiment
+     - A configurable measurement application (University of Erlangen-Nuremberg, FAIRmat consortium): measurement
+       protocols assembled from steps in a GUI, recorded with their metadata in HDF5 following the FAIR principles,
+       with a link to the NOMAD platform
+     - you want to define protocols graphically and keep complete, self-describing records of every measurement
+     - you want to see and process multidimensional data live while acquiring it
    * - **QCoDeS**
      - Lab experiment
      - A Python data acquisition framework (instrument drivers, parameters, measurement contexts, a database of runs),
@@ -88,19 +95,25 @@ no saving. PyMoDAQ does not compete with them, it builds on them: many PyMoDAQ i
 library, and add what is missing on top (see :doc:`/developer_folder/plugin_cookbook`). If you already have driver
 code for an instrument, wrapping it in a plugin gives you the GUI, the scans and the saving for it.
 
-PyMeasure and QCoDeS: the closest tools
----------------------------------------
+PyMeasure, NOMAD CAMELS and QCoDeS: the closest tools
+-----------------------------------------------------
 
 `PyMeasure <https://pymeasure.readthedocs.io>`_ is the closest to PyMoDAQ in spirit: a package that makes
 measurements easy to set up and run with limited coding. It has a repository of instrument classes and an experiment
 API where a *procedure* (its parameters, how it runs) is turned into a GUI with live graphs and a queue of
 experiments. It is well suited to an experiment that is a sweep over parameters of electrical instruments.
 
-PyMoDAQ differs by its focus on detectors with rich data. The handling of cameras and of data of two or more dimensions,
-with their axes and units, from acquisition to display and to saving, is usually where it is stronger than the
-other tools. Instruments are handled through a common contract (actuators and detectors), so that scans, loggers and
-other extensions work with any of them, and the data model (:doc:`/data_management/data_objects`) is the same from the
-plugin to the HDF5 file.
+`NOMAD CAMELS <https://fau-lap.github.io/NOMAD-CAMELS/>`_ also gives a GUI to operate instruments without programming.
+Measurements are protocols built from steps (loops, sweeps, conditions, function calls), run with their instruments
+settings and code recorded in an HDF5 file, with an emphasis on FAIR metadata and on the NOMAD platform for research
+data management. It can connect to EPICS and to generic drivers (including cameras through openCV and pylablib).
+
+PyMoDAQ differs by its data model and its live display. Whatever the instrument produces (an electrical signal, a
+pressure, a waveform, an image, a hyperspectral cube), it is an instance of the same generic data object, with its
+axes and units, from the plugin to the HDF5 file, through the graphical viewers and the data analysis tools
+(:doc:`/data_management/data_objects`). Together with acquisition in real time, this makes the live visualization of
+data of any dimension a basic feature rather than an add-on. Instruments are handled through a common contract
+(actuators and detectors), so that scans, loggers and other extensions work with any of them.
 
 `QCoDeS <https://microsoft.github.io/Qcodes/>`_ models instruments as collections of *parameters*, defines
 measurements as sweeps of parameters, and stores every run in a database. It comes with drivers for
@@ -126,13 +139,26 @@ facility control system. There is today no plugin exposing Tango devices in PyMo
 devices from PyMoDAQ is an open question being explored. PyMoDAQ can itself be driven remotely, through
 :doc:`/user_folder/leco`.
 
+Other projects
+--------------
+
+Other open-source projects in this field, each with its own focus:
+
+* `ScopeFoundry <https://www.scopefoundry.org>`_: a Python platform to control custom laboratory experiments and
+  visualize scientific data, used for scanning microscopy.
+* `yaq <https://yaq.fyi>`_: a modular and extensible instrument control framework.
+* `labscript suite <https://labscriptsuite.org>`_: composing, running and analyzing precisely hardware-timed
+  experiments, mostly in quantum science.
+* `ARTIQ <https://m-labs.hk/experiment-control/artiq/>`_: a control system for quantum information research,
+  mostly used in atomic physics, for real-time sequencing.
+
 Where PyMoDAQ is a good choice
 ------------------------------
 
 * A mixed set of instruments (cameras, spectrometers, motion controllers, power meters, oscilloscopes, DAQ cards...)
   to be used together from a single interface.
 * Experiments where you want to *see* the data while acquiring (0D, 1D, 2D and ND viewers, ROIs, math on the data),
-  and in particular camera based experiments.
+  whatever the instrument: from a single value or a waveform to an image or a hyperspectral cube.
 * Step scans of one or several actuators with one or several detectors, with the result saved in HDF5 with its axes
   and units, and logging of slowly varying signals.
 * Teams where people who are not programmers operate the setup: an *experiment* file restores the whole
@@ -145,7 +171,7 @@ Where it is not
 
 * Hard real-time control and precisely timed pulse sequences (microseconds and below): PyMoDAQ runs Python with a Qt
   event loop. Keep such loops in the instrument (FPGA, microcontroller, vendor controller, or a system built for it
-  such as ARTIQ) and use PyMoDAQ to configure and monitor them.
+  such as ARTIQ or the labscript suite) and use PyMoDAQ to configure and monitor them.
 * Experiments with a single instrument and a one-off script: PyVISA, pylablib or the vendor Python package is lighter.
 * Facility-wide infrastructure with queues and many users: Tango or Bluesky/Ophyd are designed for it.
 * An instrument with no plugin yet needs one to be written. See :doc:`/tutorials/first_plugin`: a complete plugin
