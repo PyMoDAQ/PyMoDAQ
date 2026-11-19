@@ -1,6 +1,12 @@
 PyMoDAQ
 #######
 
+**PyMoDAQ** (Modular Data Acquisition with Python) is a free, open-source Python framework to control scientific
+instruments and acquire data. Drive cameras, spectrometers, motorized stages, power meters, digitizers and many other
+instruments from a graphical Dashboard, see the data live, run scans, log signals and save everything to HDF5, or script
+it all from Python. Support for an instrument comes from small *plugins* (``pip install pymodaq_plugins_<name>``),
+and writing a new one takes minutes. Supported by the CNRS.
+
 .. image:: https://img.shields.io/pypi/v/pymodaq.svg
    :target: https://pypi.org/project/pymodaq/
    :alt: Latest Version
