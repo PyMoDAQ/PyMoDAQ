@@ -17,9 +17,9 @@ def update_metadata_from_toml(metadata: dict, here: Path) -> None:
     SHORT_PLUGIN_NAME = metadata['name'].split('pymodaq_plugins_')[1]
 
     metadata['urls'] = {}
-    metadata['urls']['Homepage'] = "https://pymodaq.cnrs.fr"
-    metadata['urls']['Documentation '] = "https://pymodaq.cnrs.fr"
-    metadata['urls']['Repository '] = src_dict['urls']['package-url']
+    metadata['urls']['Homepage'] = "https://pymodaq.cnrs.fr/en/latest/"
+    metadata['urls']['Documentation'] = "https://pymodaq.cnrs.fr/en/latest/modules/Control_Modules.html"
+    metadata['urls']['Repository'] = src_dict['urls']['package-url']
 
     entrypoints = {}
 
