@@ -190,6 +190,66 @@ Control action visibility, enabled state, and checked state:
     if self.is_action_enabled('save'):
         print("Save is enabled")
 
+Grouping Actions Under One Button
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``add_action_group`` puts several related actions under a single toolbar button, keeping toolbars narrow. The
+entries of the group are regular actions (registered by their ``short_name``, so ``connect_action``,
+``is_action_checked``... work on them) shown in a dropdown. Checkable entries do not close the dropdown.
+
+.. code-block:: python
+
+    # A primary action (the button face) and entries in the dropdown
+    self.add_action_group(
+        'transform', 'Transform', 'flip', checkable=True,
+        secondary_actions=[
+            dict(short_name='flip_ud', name='Flip up/down', icon_name='flip', checkable=True),
+            dict(short_name='rotate', name='Rotate', icon_name='rotate_90_degrees_cw', checkable=True),
+        ])
+
+    # No primary: clicking the button opens the entries. Exclusive: a radio choice, the button shows the
+    # icon of the checked entry
+    self.add_action_group(
+        'x_axis', 'X axis', 'function', primary=False, exclusive=True,
+        secondary_actions=[
+            dict(short_name='x_samples', name='Samples', icon_name='format_list_numbered', checkable=True,
+                 checked=True),
+            dict(short_name='x_timestamps', name='Timestamps', icon_name='timer', checkable=True),
+        ])
+
+    # A spec with a 'group' key (instead of 'short_name') nests a group, displayed as a submenu
+    self.add_action_group(
+        'view', 'View', 'visibility', primary=False,
+        secondary_actions=[
+            dict(short_name='aspect_ratio', name='Lock aspect ratio', checkable=True),
+            dict(group='grid', name='Grid', icon_name='grid_on', checkable=True,
+                 secondary_actions=[dict(short_name='minor_ticks', name='Minor ticks', checkable=True)]),
+        ])
+
+The state of a group is an ``ActionGroup``, given by ``get_action_group``:
+
+.. code-block:: python
+
+    group = self.get_action_group('transform')
+    group.entry_toggled.connect(self.on_transform_changed)  # (key, checked)
+    group.keys(), group.is_checked('rotate'), group.set_checked('rotate', True)
+
+    # Entries can be replaced at runtime, e.g. one per channel of the data. An entry gets back the checked
+    # state of a previous entry with the same key, so a channel hidden by the user stays hidden. Nested
+    # groups are not replaced: they stay, after the new entries
+    self.set_action_group_entries('channels', [
+        dict(short_name=f'channel_{ind}', key=label, name=label, checkable=True, checked=True)
+        for ind, label in enumerate(data.labels)])
+
+    # The colour of the group icon tells about entries hidden in the dropdown, with the status colours
+    # (StatusPalette): Indicator.DEFAULT (neutral), ACTIVE (green), PARTIAL (yellow), EMPTY (orange)
+    self.set_action_group_indicator('channels', Indicator.PARTIAL, 'Hidden: Ch1')
+
+Without primary, the button is described by the *face* of the group (``group.face``, not registered as an action):
+hide or disable the button through it. With or without primary, the button is shown while the face is visible.
+
+Run ``python -m pymodaq_gui.examples.action_group_example`` to try them.
+
 Complete Example
 ----------------
 

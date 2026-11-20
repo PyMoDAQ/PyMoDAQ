@@ -13,8 +13,8 @@ from qtpy.QtWidgets import QAction as QtQAction
 from pymodaq_gui.qt_utils import (apply_theme, theme_signaller, get_toolbar_button_style,
                                   toolbar_style_signaller, TOOLBAR_BUTTON_STYLES,
                                   ToolbarStyleChecks, ThemeChecks, MenuIconRefresher)
-from pymodaq_gui.utils.styling import create_icon, create_color, as_theme_role, get_current_theme
-from pymodaq_gui.utils.widgets.push import ToolButtonIcon
+from pymodaq_gui.utils.styling import create_icon, create_color, as_theme_role, get_current_theme, ThemeColor
+from pymodaq_gui.managers.action_group import ActionGroup, ActionGroupButton, Indicator  # re-exported
 from pymodaq_utils.utils import find_keys_from_val
 from pymodaq_utils.warnings import deprecation_msg
 from pymodaq_utils.config import GlobalConfig as Config
@@ -115,6 +115,29 @@ class QAction(QtQAction):
             self.setIcon(self.icon_checked)
         else:
             self.setIcon(self.icon_unchecked)
+
+    def set_icon_colors(self, icon_color: Optional[Union[QtGui.QColor, str]] = None,
+                        icon_checked_color: Optional[Union[QtGui.QColor, str]] = None) -> None:
+        """Rebuild the icon(s) with other colours, kept by theme role so that they follow theme changes
+
+        No-op for actions whose icon cannot be rebuilt (see :meth:`refresh_icon`).
+        """
+        self._set_icon_spec_colors(as_theme_role(icon_color), as_theme_role(icon_checked_color))
+
+    def _icon_spec_colors(self) -> tuple:
+        """The colours the icon is built with, as stored: theme roles or fixed colours (see follow_theme)"""
+        if self._icon_spec is None:
+            return None, None
+        return self._icon_spec['icon_color'], self._icon_spec['icon_checked_color']
+
+    def _set_icon_spec_colors(self, icon_color, icon_checked_color) -> None:
+        """Rebuild the icon(s) with colours stored as given, e.g. back to :meth:`_icon_spec_colors`"""
+        if self._icon_spec is None or not self._icon_rebuildable:
+            return
+        self._icon_spec['icon_color'] = icon_color
+        self._icon_spec['icon_checked_color'] = icon_checked_color
+        self._icon_set_explicitly = False
+        self.refresh_icon()
 
     def click(self) -> None:
         deprecation_msg("click for PyMoDAQ's QAction is deprecated, use *trigger*",
@@ -430,6 +453,7 @@ class ActionManager:
         self._actions: OrderedDictType[str, QAction] = OrderedDict([])
         self._menus: OrderedDictType[str, QtWidgets.QMenu] = OrderedDict([])
         self._menu_icon_names: dict[str, Union[str, Path]] = {}
+        self._action_groups: dict[str, ActionGroup] = {}
         self._toolbars: OrderedDictType[str, QtWidgets.QToolBar] = OrderedDict([])
 
         self._toolbar: Optional[QtWidgets.QToolBar] = None
@@ -767,72 +791,176 @@ class ActionManager:
                          secondary_actions: IterableType[dict] = (),
                          visible: bool = True, enabled: bool = True,
                          follow_theme: bool = True,
-                         ) -> QtWidgets.QToolButton:
+                         exclusive: bool = False,
+                         primary: bool = True,
+                         ) -> 'ActionGroupButton':
         """Add several related actions to a toolbar under a single button, to avoid
         overloading the toolbar with one slot per action.
 
-        The button shows and triggers a *primary* action directly (a regular action,
-        created and registered exactly like :meth:`add_action`, so
-        :meth:`connect_action`, :meth:`is_action_checked`, :meth:`set_action_checked`
-        ... all keep working on its ``short_name`` unchanged). A small dropdown arrow
-        next to it reveals the *secondary* actions, each created the same way as
-        :meth:`add_action` would from its spec dict, but added only to the dropdown,
-        never to a toolbar directly.
+        With a *primary* action (the default), the button shows and triggers it directly: a regular action,
+        created and registered exactly like :meth:`add_action`, so :meth:`connect_action`,
+        :meth:`is_action_checked`, :meth:`set_action_checked` ... all keep working on its ``short_name``. A small
+        dropdown arrow next to it reveals the *secondary* actions (the entries of the group), each created the same
+        way as :meth:`add_action` would from its spec dict, but added only to the dropdown, never to a toolbar
+        directly. The arrow is shown while at least one entry is visible and enabled.
 
-        If there are no secondary actions, or none of them is currently visible, the button
-        behaves like a plain toolbar action (no dropdown arrow). The arrow reappears as soon as
-        a secondary action becomes visible again (e.g. through :meth:`set_action_visible`).
+        Without primary (``primary=False``), clicking the button opens the entries: ``name``, ``icon_name``,
+        ``tip``, ``icon_color``, ``visible``, ``enabled`` and ``follow_theme`` only describe the button, and nothing
+        is registered as ``short_name`` (hide or disable it through ``get_action_group(short_name).face``).
+        Either way the button is shown while that action (the *face* of the group) is visible.
+
+        Checkable entries do not close the dropdown when clicked. With ``exclusive=True`` at most one entry is
+        checked at a time (a radio choice); without primary, the button then shows the icon of the checked entry.
+
+        The state of the group (entries, their checked state, :meth:`set_action_group_indicator`) is an
+        :class:`ActionGroup`, given by :meth:`get_action_group` or the ``action_group`` attribute of the button.
 
         Parameters
         ----------
         short_name: str
-            the name of the primary action, as referenced in self._actions
+            the name of the group, and of its primary action as referenced in self._actions
         name, icon_name, tip, checkable, checked, icon_checked, icon_color,
         icon_checked_color, follow_theme:
             forwarded to :meth:`add_action` for the primary action
         toolbar: str or QToolBar or None
             the toolbar the button is added to (defaults to the default toolbar)
         secondary_actions: iterable of dict
-            one spec per dropdown entry, using the same keys as :meth:`add_action`
-            (at least ``short_name``); order is preserved in the dropdown menu
+            one spec per entry, using the same keys as :meth:`add_action` (at least ``short_name``), plus an
+            optional ``key`` identifying the entry in the group (defaults to ``short_name``); order is preserved.
+            A spec with a ``group`` key instead of ``short_name`` adds a nested group, displayed as a submenu: its
+            other keys are the ones of this method (``secondary_actions``, ``primary``, ``exclusive``...), its
+            primary action (if any) being the first entry of the submenu
         visible, enabled: bool
-            forwarded to the primary action
+            forwarded to the primary action (or the face of a group without primary)
+        exclusive: bool
+            if True, at most one entry is checked at a time
+        primary: bool
+            if False, the group has no primary action, the button only opens the entries
 
         Returns
         -------
-        QtWidgets.QToolButton
-            the created button, already added to the toolbar
+        ActionGroupButton
+            the created button (a QToolButton), already added to the toolbar
 
         See Also
         --------
-        add_action
+        add_action, set_action_group_entries, set_action_group_indicator
         """
         toolbar_obj = self._resolve_toolbar(toolbar, auto=True)
-
-        primary = self.add_action(short_name, name, icon_name, tip,
-                                  checkable=checkable, checked=checked,
-                                  toolbar=None, menu=None,
-                                  auto_toolbar=False, auto_menu=False,
-                                  visible=visible, enabled=enabled,
-                                  icon_checked=icon_checked,
-                                  icon_color=icon_color,
-                                  icon_checked_color=icon_checked_color,
-                                  follow_theme=follow_theme)
-
-        button = ToolButtonIcon(parent=toolbar_obj, follow_toolbar_style=True)
-        button.setDefaultAction(primary)
-
-        if secondary_actions:
-            for spec in secondary_actions:
-                spec = dict(spec)
-                spec_short_name = spec.pop('short_name')
-                self.add_action(spec_short_name, toolbar=None, menu=None,
-                                auto_toolbar=False, auto_menu=False, **spec)
-                button.add_menu_action(self._actions[spec_short_name])
-
+        group = self._create_action_group(short_name, name, icon_name, tip, checkable=checkable, checked=checked,
+                                          icon_checked=icon_checked, icon_color=icon_color,
+                                          icon_checked_color=icon_checked_color,
+                                          secondary_actions=secondary_actions, visible=visible, enabled=enabled,
+                                          follow_theme=follow_theme, exclusive=exclusive, primary=primary,
+                                          parent=toolbar_obj, menu_parent=toolbar_obj)
+        button = ActionGroupButton(group, parent=toolbar_obj)
         if toolbar_obj is not None:
-            toolbar_obj.addWidget(button)
+            button.add_to_toolbar(toolbar_obj)
         return button
+
+    def _create_action_group(self, short_name: str, name: str = '',
+                             icon_name: Union[str, Path, QtGui.QIcon] = '', tip: str = '',
+                             secondary_actions: IterableType[dict] = (), exclusive: bool = False,
+                             primary: bool = True, nested: bool = False,
+                             parent: Optional[QtCore.QObject] = None,
+                             menu_parent: Optional[QtWidgets.QWidget] = None,
+                             **primary_kwargs: Any) -> ActionGroup:
+        if short_name in self._action_groups:
+            raise KeyError(f'The action group {short_name} already exists')
+        if primary:
+            face = self.add_action(short_name, name, icon_name, tip, toolbar=None, menu=None,
+                                   auto_toolbar=False, auto_menu=False, **primary_kwargs)
+        else:
+            # what describes the button; checkable, checked and icon_checked are the primary's only
+            face_kwargs = {name: primary_kwargs[name] for name in ('icon_color', 'visible', 'enabled', 'follow_theme')
+                           if name in primary_kwargs}
+            face = addaction(name, icon_name, tip, **face_kwargs)
+            face.setParent(parent)
+        group = ActionGroup(short_name, face, has_primary=primary, exclusive=exclusive, nested=nested,
+                            parent=parent, menu_parent=menu_parent)
+        self._action_groups[short_name] = group
+        for spec in secondary_actions:
+            self._add_action_group_entry(group, spec, notify=False)
+        group.entries_changed.emit()
+        return group
+
+    def _add_action_group_entry(self, group: ActionGroup, spec: dict, before_subgroups: bool = False,
+                                notify: bool = True) -> None:
+        spec = dict(spec)
+        if 'group' in spec:
+            subgroup = self._create_action_group(spec.pop('group'), nested=True, parent=group,
+                                                 menu_parent=group.menu, **spec)
+            group.add_subgroup(subgroup, notify=notify)
+            return
+        spec_short_name = spec.pop('short_name')
+        key = spec.pop('key', spec_short_name)
+        if group.has_key(key):  # checked before registering anything
+            raise KeyError(f'The group {group.name} already has an entry with key {key}')
+        if spec.get('checkable', False) or spec.get('icon_checked') is not None:  # icon_checked makes it checkable
+            spec['checked'] = group.remembered_checked(key, spec.get('checked', False))
+        self.add_action(spec_short_name, toolbar=None, menu=None, auto_toolbar=False, auto_menu=False, **spec)
+        group.add_entry(key, self._actions[spec_short_name], spec_short_name, before_subgroups=before_subgroups,
+                        notify=notify)
+
+    def get_action_group(self, short_name: str) -> ActionGroup:
+        """The state of the group of actions created with :meth:`add_action_group` (or nested in one)"""
+        if short_name not in self._action_groups:
+            raise KeyError(f'The action group {short_name} is not referenced in: {list(self._action_groups)}')
+        return self._action_groups[short_name]
+
+    def has_action_group(self, short_name: str) -> bool:
+        return short_name in self._action_groups
+
+    def set_action_group_entries(self, short_name: str, entries: IterableType[dict]) -> None:
+        """Replace the entries of a group, e.g. one entry per channel of the displayed data
+
+        The previous entries are removed and forgotten (their short names unregistered). An entry gets back the
+        checked state of a previous entry with the same ``key`` (see :meth:`add_action_group`), so that a state set
+        by the user survives the replacement, even if the entry moved.
+
+        Parameters
+        ----------
+        short_name: str
+            the name of the group
+        entries: iterable of dict
+            one spec per entry, as the *secondary_actions* of :meth:`add_action_group`, nested groups excluded:
+            those of the group stay, after the new entries
+
+        Raises
+        ------
+        ValueError
+            if an entry is a nested group (a spec with a ``group`` key)
+        """
+        group = self.get_action_group(short_name)
+        entries = list(entries)
+        if any('group' in spec for spec in entries):
+            raise ValueError(f'set_action_group_entries replaces plain entries only, not nested groups '
+                             f'(group {short_name})')
+        for name in group.clear_entries(notify=False):
+            self._actions.pop(name, None)
+        try:
+            for spec in entries:
+                self._add_action_group_entry(group, spec, before_subgroups=True, notify=False)
+        finally:
+            group.entries_changed.emit()
+
+    def set_action_group_indicator(self, short_name: str, indicator: Indicator, tip: str = '') -> None:
+        """Tell, with the colour of the group icon, about the state of entries hidden in its dropdown
+
+        Parameters
+        ----------
+        short_name: str
+            the name of the group
+        indicator: Indicator
+            DEFAULT (neutral), ACTIVE (green), PARTIAL (yellow) or EMPTY (orange)
+        tip: str
+            appended to the tooltip of the group, e.g. what is hidden. Ignored for DEFAULT
+
+        See Also
+        --------
+        ActionGroup.set_indicator
+        """
+        self.get_action_group(short_name).set_indicator(indicator, '' if indicator is Indicator.DEFAULT else tip)
 
     def add_menu(self, short_name: str, title: str = '',
                  parent_menu: QtWidgets.QMenuBar | QtWidgets.QMenu | str | None = None,
