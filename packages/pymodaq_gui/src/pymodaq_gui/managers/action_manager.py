@@ -813,7 +813,7 @@ class ActionManager:
         checked at a time (a radio choice); without primary, the button then shows the icon of the checked entry.
 
         The state of the group (entries, their checked state, :meth:`set_action_group_indicator`) is an
-        :class:`ActionGroup`, given by :meth:`get_action_group` or the ``group`` attribute of the button.
+        :class:`ActionGroup`, given by :meth:`get_action_group` or the ``action_group`` attribute of the button.
 
         Parameters
         ----------

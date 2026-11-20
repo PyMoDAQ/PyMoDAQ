@@ -49,9 +49,17 @@ class TestGroupHandle:
                                                  secondary_actions=[checkable('flip_ud')])
 
         assert isinstance(button, QtWidgets.QToolButton)
-        assert isinstance(button.group, ActionGroup)
-        assert action_manager.get_action_group('transform') is button.group
-        assert button.group.keys() == ['flip_ud']
+        assert isinstance(button.action_group, ActionGroup)
+        assert action_manager.get_action_group('transform') is button.action_group
+        assert button.action_group.keys() == ['flip_ud']
+
+    def test_qt_button_api_untouched(self, action_manager):
+        """The button keeps QAbstractButton.group() (its QButtonGroup)"""
+        button = action_manager.add_action_group('transform', 'Transform', 'flip', checkable=True)
+        assert button.group() is None
+        button_group = QtWidgets.QButtonGroup(action_manager.toolbar)
+        button_group.addButton(button)
+        assert button.group() is button_group
 
     def test_unknown_group_raises(self, action_manager):
         with pytest.raises(KeyError):
@@ -59,7 +67,7 @@ class TestGroupHandle:
 
     def test_entry_toggled(self, action_manager, qtbot):
         group = action_manager.add_action_group('transform', 'Transform', 'flip', checkable=True,
-                                                secondary_actions=[checkable('flip_ud'), checkable('flip_lr')]).group
+                                                secondary_actions=[checkable('flip_ud'), checkable('flip_lr')]).action_group
 
         with qtbot.waitSignal(group.entry_toggled) as blocker:
             action_manager.get_action('flip_lr').trigger()
@@ -76,7 +84,7 @@ class TestExclusive:
     def test_one_entry_checked_at_most(self, action_manager):
         group = action_manager.add_action_group(
             'xmode', 'X axis', 'function', primary=False, exclusive=True,
-            secondary_actions=[checkable('x_a', checked=True), checkable('x_b'), checkable('x_c')]).group
+            secondary_actions=[checkable('x_a', checked=True), checkable('x_b'), checkable('x_c')]).action_group
         toggles = []
         group.entry_toggled.connect(lambda key, checked: toggles.append((key, checked)))
 
@@ -101,7 +109,7 @@ class TestWithoutPrimary:
             'xmode', 'X axis', 'function', primary=False, exclusive=True,
             secondary_actions=[checkable('x_a', icon_name='timer', checked=True), checkable('x_b', icon_name='sort')])
 
-        button.group.set_checked('x_b', True)
+        button.action_group.set_checked('x_b', True)
 
         assert button.icon().cacheKey() == action_manager.get_action('x_b').icon().cacheKey()
 
@@ -123,7 +131,7 @@ class TestWithoutPrimary:
         assert not button.isEnabled()
         assert not shown(action_manager.toolbar, button)
 
-        button.group.face.setVisible(True)
+        button.action_group.face.setVisible(True)
         assert shown(action_manager.toolbar, button)
 
 
@@ -148,7 +156,7 @@ class TestVisibility:
 
 class TestDynamicEntries:
     def test_entries_are_replaced(self, action_manager):
-        group = action_manager.add_action_group('channels', 'Channels', 'layers', primary=False).group
+        group = action_manager.add_action_group('channels', 'Channels', 'layers', primary=False).action_group
 
         action_manager.set_action_group_entries('channels', [checkable('channel_0', key='a', checked=True),
                                                              checkable('channel_1', key='b', checked=True)])
@@ -160,7 +168,7 @@ class TestDynamicEntries:
         assert action_manager.get_action_group('channels').menu.actions() == [action_manager.get_action('channel_0')]
 
     def test_checked_state_is_remembered_by_key(self, action_manager):
-        group = action_manager.add_action_group('channels', 'Channels', 'layers', primary=False).group
+        group = action_manager.add_action_group('channels', 'Channels', 'layers', primary=False).action_group
         action_manager.set_action_group_entries('channels', [checkable('channel_0', key='a', checked=True),
                                                              checkable('channel_1', key='b', checked=True)])
         group.set_checked('b', False)
@@ -174,7 +182,7 @@ class TestDynamicEntries:
         assert not action_manager.is_action_checked('channel_0')
 
     def test_checked_state_remembered_when_checkable_through_icon_checked(self, action_manager):
-        group = action_manager.add_action_group('channels', 'Channels', 'layers', primary=False).group
+        group = action_manager.add_action_group('channels', 'Channels', 'layers', primary=False).action_group
         spec = dict(short_name='channel_0', key='a', name='a', icon_name='visibility', icon_checked='visibility_off')
         action_manager.set_action_group_entries('channels', [spec])
         group.set_checked('a', True)
@@ -184,7 +192,7 @@ class TestDynamicEntries:
         assert group.is_checked('a')
 
     def test_entries_changed_once_per_replacement(self, action_manager):
-        group = action_manager.add_action_group('channels', 'Channels', 'layers', primary=False).group
+        group = action_manager.add_action_group('channels', 'Channels', 'layers', primary=False).action_group
         emitted = []
         group.entries_changed.connect(lambda: emitted.append(True))
 
@@ -196,7 +204,7 @@ class TestDynamicEntries:
         group = action_manager.add_action_group(
             'view', 'View', 'visibility', primary=False,
             secondary_actions=[checkable('aspect_ratio'),
-                               dict(group='grid', name='Grid', icon_name='grid_on', checkable=True)]).group
+                               dict(group='grid', name='Grid', icon_name='grid_on', checkable=True)]).action_group
         grid_entry = action_manager.get_action_group('grid').menu.menuAction()
 
         for _ in range(2):  # replacing twice keeps the nested group, once
@@ -243,7 +251,7 @@ class TestMenuStaysOpen:
 
     def test_checkable_entry_keeps_it_open(self, action_manager, qtbot):
         group = action_manager.add_action_group('transform', 'Transform', 'flip', checkable=True,
-                                                secondary_actions=[checkable('flip_ud')]).group
+                                                secondary_actions=[checkable('flip_ud')]).action_group
 
         self.click_entry(qtbot, group.menu, action_manager.get_action('flip_ud'))
 
@@ -253,7 +261,7 @@ class TestMenuStaysOpen:
 
     def test_plain_entry_closes_it(self, action_manager, qtbot):
         group = action_manager.add_action_group('bkg', 'Background', 'texture_minus', checkable=True,
-                                                secondary_actions=[dict(short_name='snap', name='Snap')]).group
+                                                secondary_actions=[dict(short_name='snap', name='Snap')]).action_group
         triggered = []
         action_manager.connect_action('snap', lambda: triggered.append(True))
 
@@ -272,7 +280,7 @@ class TestIndicator:
                                                  secondary_actions=[checkable('channel_0')])
         action_manager.set_action_group_indicator('channels', indicator)
 
-        assert button.group.indicator is indicator
+        assert button.action_group.indicator is indicator
         assert_icon_color(button.icon(), color)
 
     def test_tooltip_and_back_to_default(self, action_manager):
@@ -333,7 +341,7 @@ class TestNested:
         entries = [action for action in transform.menu.actions() if not action.isSeparator()]
         assert entries == [action_manager.get_action(name) for name in ('transform', 'flip_ud', 'flip_lr')]
         assert transform.keys() == ['flip_ud', 'flip_lr']
-        assert button.group.keys() == ['aspect_ratio']
+        assert button.action_group.keys() == ['aspect_ratio']
 
     def test_nested_indicator_on_the_submenu_entry(self, action_manager):
         button = action_manager.add_action_group(

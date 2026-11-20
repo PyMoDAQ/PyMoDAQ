@@ -257,7 +257,7 @@ class ActionGroupButton(ToolButtonIcon):
 
     def __init__(self, group: ActionGroup, parent: Optional[QtWidgets.QWidget] = None) -> None:
         super().__init__(parent=parent, follow_toolbar_style=True)
-        self.group = group
+        self.action_group = group
         self._toolbar_action: Optional[QtQAction] = None
         self.setDefaultAction(group.face)
         group.entries_changed.connect(self._refresh_menu)
@@ -273,7 +273,7 @@ class ActionGroupButton(ToolButtonIcon):
     @QtCore.Slot()
     def _follow_face_visibility(self) -> None:
         try:
-            visible = self.group.face.isVisible()
+            visible = self.action_group.face.isVisible()
             if self._toolbar_action is not None:
                 self._toolbar_action.setVisible(visible)
             else:
@@ -283,12 +283,12 @@ class ActionGroupButton(ToolButtonIcon):
 
     @QtCore.Slot()
     def _refresh_menu(self) -> None:
-        menu = self.group.menu if self.group.has_entries() else None
+        menu = self.action_group.menu if self.action_group.has_entries() else None
         if self.menu() is not menu:
             self.setMenu(menu)
-        if not self.group.has_primary:
+        if not self.action_group.has_primary:
             self.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.InstantPopup)
-        elif self.group.has_entries() and self.group.is_available():
+        elif self.action_group.has_entries() and self.action_group.is_available():
             self.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.MenuButtonPopup)
         else:
             self.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.DelayedPopup)
