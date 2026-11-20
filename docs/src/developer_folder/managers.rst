@@ -235,14 +235,18 @@ The state of a group is an ``ActionGroup``, given by ``get_action_group``:
     group.keys(), group.is_checked('rotate'), group.set_checked('rotate', True)
 
     # Entries can be replaced at runtime, e.g. one per channel of the data. An entry gets back the checked
-    # state of a previous entry with the same key, so a channel hidden by the user stays hidden
+    # state of a previous entry with the same key, so a channel hidden by the user stays hidden. Nested
+    # groups are not replaced: they stay, after the new entries
     self.set_action_group_entries('channels', [
         dict(short_name=f'channel_{ind}', key=label, name=label, checkable=True, checked=True)
         for ind, label in enumerate(data.labels)])
 
-    # The colour of the group icon tells about entries hidden in the dropdown:
-    # Indicator.DEFAULT (neutral), ACTIVE (green), PARTIAL (orange), EMPTY (red)
+    # The colour of the group icon tells about entries hidden in the dropdown, with the status colours
+    # (StatusPalette): Indicator.DEFAULT (neutral), ACTIVE (green), PARTIAL (yellow), EMPTY (orange)
     self.set_action_group_indicator('channels', Indicator.PARTIAL, 'Hidden: Ch1')
+
+Without primary, the button is described by the *face* of the group (``group.face``, not registered as an action):
+hide or disable the button through it. With or without primary, the button is shown while the face is visible.
 
 Run ``python -m pymodaq_gui.examples.action_group_example`` to try them.
 

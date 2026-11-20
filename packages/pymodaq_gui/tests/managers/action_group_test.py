@@ -27,6 +27,12 @@ def icon_color(icon: QtGui.QIcon) -> tuple:
                  for component in ('red', 'green', 'blue'))
 
 
+def shown(toolbar: QtWidgets.QToolBar, button: QtWidgets.QWidget) -> bool:
+    """True if the toolbar shows the button (the visibility of the toolbar action holding it)"""
+    action = next(action for action in toolbar.actions() if toolbar.widgetForAction(action) is button)
+    return action.isVisible()
+
+
 def assert_icon_color(icon: QtGui.QIcon, color):
     expected = create_color(color) if not isinstance(color, tuple) else QtGui.QColor(*color)
     assert icon_color(icon) == pytest.approx((expected.red(), expected.green(), expected.blue()), abs=3)
@@ -94,6 +100,46 @@ class TestWithoutPrimary:
 
         assert button.icon().cacheKey() == action_manager.get_action('x_b').icon().cacheKey()
 
+    def test_exclusive_button_keeps_the_checked_entry_with_an_indicator(self, action_manager):
+        button = action_manager.add_action_group(
+            'xmode', 'X axis', 'function', primary=False, exclusive=True,
+            secondary_actions=[checkable('x_a', icon_name='timer', checked=True), checkable('x_b', icon_name='sort')])
+
+        for indicator in (Indicator.ACTIVE, Indicator.DEFAULT):
+            action_manager.set_action_group_indicator('xmode', indicator, 'tip')
+            assert button.icon().cacheKey() == action_manager.get_action('x_a').icon().cacheKey()
+
+    def test_button_options(self, action_manager):
+        button = action_manager.add_action_group('channels', 'Channels', 'layers', primary=False,
+                                                 icon_color=ThemeColor.BLUE, enabled=False, visible=False,
+                                                 secondary_actions=[checkable('channel_0')])
+
+        assert_icon_color(button.icon(), ThemeColor.BLUE)
+        assert not button.isEnabled()
+        assert not shown(action_manager.toolbar, button)
+
+        button.group.face.setVisible(True)
+        assert shown(action_manager.toolbar, button)
+
+
+class TestVisibility:
+    def test_button_follows_the_primary(self, action_manager):
+        button = action_manager.add_action_group('transform', 'Transform', 'flip', checkable=True,
+                                                 secondary_actions=[checkable('flip_ud')])
+        assert shown(action_manager.toolbar, button)
+
+        action_manager.set_action_visible('transform', False)
+        assert not shown(action_manager.toolbar, button)
+
+        action_manager.set_action_visible('transform', True)
+        assert shown(action_manager.toolbar, button)
+
+    def test_hidden_from_creation(self, action_manager):
+        button = action_manager.add_action_group('transform', 'Transform', 'flip', checkable=True, visible=False,
+                                                 secondary_actions=[checkable('flip_ud')])
+
+        assert not shown(action_manager.toolbar, button)
+
 
 class TestDynamicEntries:
     def test_entries_are_replaced(self, action_manager):
@@ -121,6 +167,53 @@ class TestDynamicEntries:
         assert not group.is_checked('b')
         assert group.is_checked('c')
         assert not action_manager.is_action_checked('channel_0')
+
+    def test_checked_state_remembered_when_checkable_through_icon_checked(self, action_manager):
+        group = action_manager.add_action_group('channels', 'Channels', 'layers', primary=False).group
+        spec = dict(short_name='channel_0', key='a', name='a', icon_name='visibility', icon_checked='visibility_off')
+        action_manager.set_action_group_entries('channels', [spec])
+        group.set_checked('a', True)
+
+        action_manager.set_action_group_entries('channels', [spec])
+
+        assert group.is_checked('a')
+
+    def test_entries_changed_once_per_replacement(self, action_manager):
+        group = action_manager.add_action_group('channels', 'Channels', 'layers', primary=False).group
+        emitted = []
+        group.entries_changed.connect(lambda: emitted.append(True))
+
+        action_manager.set_action_group_entries('channels', [checkable(f'channel_{ind}') for ind in range(5)])
+
+        assert len(emitted) == 1
+
+    def test_nested_groups_stay_after_the_new_entries(self, action_manager):
+        group = action_manager.add_action_group(
+            'view', 'View', 'visibility', primary=False,
+            secondary_actions=[checkable('aspect_ratio'),
+                               dict(group='grid', name='Grid', icon_name='grid_on', checkable=True)]).group
+        grid_entry = action_manager.get_action_group('grid').menu.menuAction()
+
+        for _ in range(2):  # replacing twice keeps the nested group, once
+            action_manager.set_action_group_entries('view', [checkable('ratio_1'), checkable('ratio_2')])
+
+        assert group.menu.actions() == [action_manager.get_action('ratio_1'), action_manager.get_action('ratio_2'),
+                                        grid_entry]
+
+    def test_nested_group_spec_rejected(self, action_manager):
+        action_manager.add_action_group('view', 'View', 'visibility', primary=False)
+
+        with pytest.raises(ValueError):
+            action_manager.set_action_group_entries('view', [dict(group='grid', name='Grid')])
+        assert not action_manager.has_action_group('grid')
+
+    def test_duplicate_key_registers_nothing(self, action_manager):
+        action_manager.add_action_group('channels', 'Channels', 'layers', primary=False)
+
+        with pytest.raises(KeyError):
+            action_manager.set_action_group_entries('channels', [checkable('channel_0', key='a'),
+                                                                 checkable('channel_1', key='a')])
+        assert 'channel_1' not in action_manager.actions_names
 
 
 class TestDropdownArrow:
@@ -167,8 +260,8 @@ class TestMenuStaysOpen:
 
 class TestIndicator:
     @pytest.mark.parametrize('indicator, color', [(Indicator.ACTIVE, ThemeColor.GREEN),
-                                                  (Indicator.PARTIAL, ThemeColor.ORANGE),
-                                                  (Indicator.EMPTY, ThemeColor.RED)])
+                                                  (Indicator.PARTIAL, ThemeColor.YELLOW),
+                                                  (Indicator.EMPTY, ThemeColor.ORANGE)])
     def test_icon_colour(self, action_manager, indicator, color):
         button = action_manager.add_action_group('channels', 'Channels', 'layers', primary=False,
                                                  secondary_actions=[checkable('channel_0')])
@@ -188,6 +281,35 @@ class TestIndicator:
         action_manager.set_action_group_indicator('channels', Indicator.DEFAULT)
         assert button.toolTip() == 'Show the legend'
         assert_icon_color(button.icon(), default_color)
+
+    def test_status_colours(self):
+        from pymodaq_gui.utils.status_palette import Status, StatusPalette
+        assert [indicator.value for indicator in (Indicator.ACTIVE, Indicator.PARTIAL, Indicator.EMPTY)] == \
+               [StatusPalette.role(state) for state in (Status.IDLE, Status.WARNING, Status.ERROR)]
+
+    def test_tooltip_set_by_the_owner_is_kept(self, action_manager):
+        button = action_manager.add_action_group('save', 'Save', 'save', tip='Continuous save', checkable=True,
+                                                 secondary_actions=[checkable('new_file')])
+        action_manager.get_action('save').setToolTip('Continuous save (current file: a.h5)')
+
+        action_manager.set_action_group_indicator('save', Indicator.ACTIVE, 'Saving')
+        assert button.toolTip() == 'Continuous save (current file: a.h5)\nSaving'
+
+        action_manager.set_action_group_indicator('save', Indicator.DEFAULT)
+        assert button.toolTip() == 'Continuous save (current file: a.h5)'
+
+    def test_fixed_colour_stays_fixed(self, action_manager):
+        fixed = create_color(ThemeColor.GREEN)  # a QColor equal to a theme colour, kept fixed
+        action_manager.add_action_group('transform', 'Transform', 'flip', checkable=True, icon_color=fixed,
+                                        follow_theme=False, secondary_actions=[checkable('flip_ud')])
+        face = action_manager.get_action('transform')
+
+        action_manager.set_action_group_indicator('transform', Indicator.PARTIAL)
+        action_manager.set_action_group_indicator('transform', Indicator.DEFAULT)
+
+        color = face._icon_spec_colors()[0]
+        assert isinstance(color, QtGui.QColor) and not isinstance(color, ThemeColor)
+        assert color == fixed
 
 
 class TestNested:
