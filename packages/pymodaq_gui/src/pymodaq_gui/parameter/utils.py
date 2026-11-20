@@ -4,6 +4,7 @@ import inspect
 from typing import Any, Dict, Iterable, Iterator, List, Sequence, Optional, Tuple, Union
 import numpy as np
 from collections import OrderedDict
+import pint
 from pymodaq_data import Q_
 from pymodaq_utils.utils import find_keys_from_val
 from serializall import SerializableFactory, SerializableBase
@@ -124,7 +125,7 @@ def get_param_path(param: Parameter) -> List[str]:
     return path[::-1]
 
 
-def q_from_param(param: Parameter) -> Q_:
+def q_from_param(param: Parameter) -> pint.Quantity:
     """ Get the pint Quantity of a numeric parameter, its unit being the *suffix* of the parameter
 
     Parameters
@@ -135,7 +136,7 @@ def q_from_param(param: Parameter) -> Q_:
 
     Returns
     -------
-    Q_: the quantity, to be converted with ``.to('um')`` or ``.m_as('um')`` for instance. A parameter without
+    pint.Quantity: the quantity, to be converted with ``.to('um')`` or ``.m_as('um')`` for instance. A parameter without
         suffix gives a dimensionless quantity
     """
     return Q_(param.value(), param.opts.get('suffix') or '')
