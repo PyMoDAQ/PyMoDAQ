@@ -314,8 +314,8 @@ class RampExtension(CustomExt):
         return config('pymodaq', 'ramping', 'duration_units')[0]
 
     def update_n_steps(self):
-        self.settings['steps', 'nsteps'] = (self.q_from_param(('ramp', 'duration')) /
-                                            self.q_from_param(('steps', 'time_step'))).to_reduced_units().magnitude
+        self.settings['steps', 'nsteps'] = (self.q_from_param('ramp', 'duration') /
+                                            self.q_from_param('steps', 'time_step')).to_reduced_units().magnitude
     def update_duration(self):
         if self.actuator is None:
             return
@@ -324,9 +324,9 @@ class RampExtension(CustomExt):
                 suffix=f'{self.actuator.units}/{self.duration_units}')
             # the sign of the velocity is given by start and stop, the duration is always positive
             self.settings['ramp', 'duration'] = abs(
-                    (self.q_from_param(('ramp', 'stop')) -
-                     self.q_from_param(('ramp', 'start'))) /
-                    self.q_from_param(('ramp', 'velocity'))).m_as(self.duration_units)
+                    (self.q_from_param('ramp', 'stop') -
+                     self.q_from_param('ramp', 'start')) /
+                    self.q_from_param('ramp', 'velocity')).m_as(self.duration_units)
             self.settings.child('ramp', 'duration').setOpts(suffix=self.duration_units)
         else:
             self.settings['ramp', 'duration'] = 0
@@ -336,15 +336,15 @@ class RampExtension(CustomExt):
             self.settings.child('ramp', 'velocity').setOpts(
                 suffix=f'{self.actuator.units}/{self.duration_units}')
             self.settings['ramp', 'velocity'] = (
-                    (self.q_from_param(('ramp', 'stop')) -
-                     self.q_from_param(('ramp', 'start'))) /
-                    self.q_from_param(('ramp', 'duration'))).to(
+                    (self.q_from_param('ramp', 'stop') -
+                     self.q_from_param('ramp', 'start')) /
+                    self.q_from_param('ramp', 'duration')).to(
                 f'{self.actuator.units}/{self.duration_units}').magnitude
 
     def get_ramp(self) -> RampGenerator:
-        return RampGenerator(self.q_from_param(('ramp', 'start')),
-                             self.q_from_param(('ramp', 'stop')),
-                             self.q_from_param(('ramp', 'duration')),)
+        return RampGenerator(self.q_from_param('ramp', 'start'),
+                             self.q_from_param('ramp', 'stop'),
+                             self.q_from_param('ramp', 'duration'),)
 
     def _quit_fun(self):
         if self.ramping_worker.is_running:
@@ -400,7 +400,7 @@ class RampingWorker(ExtensionWorker):
                 self.run_plot_timer()
 
     def run_plot_timer(self):
-        QtCore.QTimer.singleShot(int(self.app.q_from_param(('refresh_plot',)).m_as('ms')), self.update_histogramer)
+        QtCore.QTimer.singleShot(int(self.app.q_from_param('refresh_plot',).m_as('ms')), self.update_histogramer)
 
     @property
     def histo_settings(self) -> Parameter:
@@ -479,8 +479,8 @@ class RampingWorker(ExtensionWorker):
         self.modules_manager.move_actuators_with_callback(
             DataToExport(self.actuator.title,
                          data=[DataActuator(self.actuator.title,
-                                      data=self.app.q_from_param(('ramp', 'start')).magnitude,
-                                      units=self.app.q_from_param(('ramp', 'start')).units, )]),
+                                      data=self.app.q_from_param('ramp', 'start').magnitude,
+                                      units=self.app.q_from_param('ramp', 'start').units, )]),
             mode=MoveType.ABS,
             callback=callback,
             detach_after_callback=True,
@@ -510,12 +510,12 @@ class RampingWorker(ExtensionWorker):
         if self.settings['use_steps']:
             self.app.status_manager.n_steps = self.settings['steps', 'nsteps']
             self.ramp_timer.setInterval(
-                int(self.app.q_from_param(('steps', 'time_step')).m_as('ms')))
+                int(self.app.q_from_param('steps', 'time_step').m_as('ms')))
         else:
             self.app.status_manager.n_steps = 1
 
         self.total_ramp_timer.setInterval(
-            int(self.app.q_from_param(('ramp', 'duration')).m_as('ms')))
+            int(self.app.q_from_param('ramp', 'duration').m_as('ms')))
         self.total_ramp_timer.setSingleShot(True)
 
         if self.app.is_action_checked(WorkFlowActions.LOG):
@@ -526,10 +526,10 @@ class RampingWorker(ExtensionWorker):
             self.update_histogramer_settings()
 
         for detector in self.detectors:
-            detector.settings['main_settings', 'wait_time'] = self.app.q_from_param(('refresh_grab',)).m_as('ms')
+            detector.settings['main_settings', 'wait_time'] = self.app.q_from_param('refresh_grab',).m_as('ms')
         for actuator in self.actuators:
-            actuator.settings['main_settings', 'refresh_timeout'] = self.app.q_from_param(('refresh_grab',)).m_as('ms')
-        self.actuator.settings['main_settings', 'refresh_timeout'] = self.app.q_from_param(('refresh_grab',)).m_as('ms')
+            actuator.settings['main_settings', 'refresh_timeout'] = self.app.q_from_param('refresh_grab',).m_as('ms')
+        self.actuator.settings['main_settings', 'refresh_timeout'] = self.app.q_from_param('refresh_grab',).m_as('ms')
 
     def connect_modules(self):
         # connect data signals to the event loop of the worker thread
@@ -583,8 +583,8 @@ class RampingWorker(ExtensionWorker):
             self.update_ramp()
         else:
             actuator_value = DataActuator(self.actuator.title,
-                                          data=self.app.q_from_param(('ramp', 'stop')).magnitude,
-                                          units=self.app.q_from_param(('ramp', 'stop')).units, )
+                                          data=self.app.q_from_param('ramp', 'stop').magnitude,
+                                          units=self.app.q_from_param('ramp', 'stop').units, )
             self.actuator.command_hardware.emit(
                 ThreadCommand(ControlToHardwareMove.MOVE_ABS, [actuator_value, False]))
 
@@ -602,7 +602,7 @@ class RampingWorker(ExtensionWorker):
         elapsed_time = Q_(perf_counter(), 's') - self._start_time
 
         step: Q_ = self.ramp(elapsed_time)
-        step_magnitude = step.m_as(self.app.q_from_param(('steps', 'step')).units)
+        step_magnitude = step.m_as(self.app.q_from_param('steps', 'step').units)
         self.settings['steps', 'step'] = step_magnitude
         self.status_manager.set_current_step(step)
         actuator_value = DataActuator(self.actuator.title,
@@ -611,7 +611,7 @@ class RampingWorker(ExtensionWorker):
         self.actuator.command_hardware.emit(
             ThreadCommand(ControlToHardwareMove.MOVE_ABS, [actuator_value, False]))
 
-        if elapsed_time > self.app.q_from_param(('ramp', 'duration')):
+        if elapsed_time > self.app.q_from_param('ramp', 'duration'):
             self.stop()
 
     def send_data_to_saver(self, dte: DataToExport | DataActuator):

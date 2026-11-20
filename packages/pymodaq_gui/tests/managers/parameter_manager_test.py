@@ -171,13 +171,14 @@ def test_batch_update_keeps_a_visible_tree_visible(qtbot):
     assert manager.tree.isVisible()
 
 
-def test_q_from_param_with_a_parameter_or_a_path():
+def test_q_from_param_with_a_parameter_or_names():
     class UnitsManager(ParameterManager):
         params = [{'title': 'Ramp', 'name': 'ramp', 'type': 'group', 'children': [
             {'title': 'Length', 'name': 'length', 'type': 'float', 'value': 1.5, 'suffix': 'mm',
              'siPrefix': False}]}]
 
     manager = UnitsManager()
-    by_path = manager.q_from_param(('ramp', 'length'))
+    by_path = manager.q_from_param('ramp', 'length')
     assert by_path.m_as('um') == pytest.approx(1500.)
     assert manager.q_from_param(manager.settings.child('ramp', 'length')) == by_path
+    assert manager.q_from_param(manager.settings.child('ramp'), 'length') == by_path
