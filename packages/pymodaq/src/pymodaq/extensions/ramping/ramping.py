@@ -18,7 +18,7 @@ from pymodaq_gui import utils as gutils
 from pymodaq_gui.managers.h5manager import FileAction
 from pymodaq_gui.messenger import messagebox
 from pymodaq_gui.parameter import Parameter
-from pymodaq_gui.parameter.utils import tree_change_blocker, q_from_param
+from pymodaq_gui.parameter.utils import tree_change_blocker
 from pymodaq_gui.plotting.data_viewers import ViewerDispatcher
 from pymodaq_gui.utils import Dock, QSpinBox_ro
 from pymodaq_gui.utils.custom_app import WorkFlowActions
@@ -308,13 +308,6 @@ class RampExtension(CustomExt):
             else:
                 self.update_duration()
             self.update_n_steps()
-
-    def q_from_param(self, param: Parameter | tuple[str, ...]) -> Q_:
-        """ Quantity of a parameter, or of the parameter of the settings at the given path, see
-        :func:`pymodaq_gui.parameter.utils.q_from_param`"""
-        if not isinstance(param, Parameter):
-            param = self.settings.child(*param)
-        return q_from_param(param)
 
     @property
     def duration_units(self) -> str:
