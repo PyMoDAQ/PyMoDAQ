@@ -38,6 +38,11 @@ def assert_icon_color(icon: QtGui.QIcon, color):
     assert icon_color(icon) == pytest.approx((expected.red(), expected.green(), expected.blue()), abs=3)
 
 
+def test_reexported_by_action_manager():
+    from pymodaq_gui.managers import action_group
+    assert (ActionGroup, Indicator) == (action_group.ActionGroup, action_group.Indicator)
+
+
 class TestGroupHandle:
     def test_button_carries_the_group(self, action_manager):
         button = action_manager.add_action_group('transform', 'Transform', 'flip', checkable=True,

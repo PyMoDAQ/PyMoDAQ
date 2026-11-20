@@ -44,6 +44,8 @@ the CustomApp and CustomExt classes.
    :no-index:
    :members:
 
+.. currentmodule:: pymodaq_gui.managers.action_group
+
 .. autoclass:: ActionGroup
    :no-index:
    :members:
