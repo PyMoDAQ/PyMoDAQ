@@ -150,6 +150,24 @@ class TestWithoutUI:
         assert ['true', 'value'] in sent
         assert [{'checked': False}, 'options'] in sent
 
+    def test_a_parameter_added_and_then_removed_by_the_plugin_is_removed_in_the_gui_too(
+            self, ini_daq_viewer_without_ui):
+        prog, qtbot = ini_daq_viewer_without_ui
+        prog.detector = SelectedModule(DAQTypesEnum['DAQ0D'], 'Mock')
+        prog.init_hardware(True)
+        qtbot.waitUntil(lambda: prog.initialized_state, timeout=10000)
+        thread = prog.controller_and_thread.thread
+        plugin = thread._hardwares[next(iter(thread._hardwares))].plugin
+        gui_settings = prog.settings.child(DETECTOR_SETTINGS_KEY)
+
+        plugin.settings.addChild({'name': 'group', 'type': 'group', 'children': [
+            {'name': 'first', 'type': 'float', 'value': 1.}, {'name': 'second', 'type': 'float', 'value': 2.}]})
+        qtbot.waitUntil(lambda: 'group' in [child.name() for child in gui_settings.children()], timeout=5000)
+        plugin.settings.child('group').removeChild(plugin.settings.child('group', 'first'))
+
+        qtbot.waitUntil(lambda: [child.name() for child in gui_settings.child('group').children()] == ['second'],
+                        timeout=5000)
+
     def test_main_settings_recall_detector(self, ini_daq_viewer_without_ui):
         prog, qtbot = ini_daq_viewer_without_ui
         prog.detector = SelectedModule(DAQTypesEnum['DAQ1D'], 'Mock')

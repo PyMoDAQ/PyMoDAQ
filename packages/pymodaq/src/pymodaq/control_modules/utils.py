@@ -650,6 +650,9 @@ class ParameterControlModule(ParameterManager, LECOComponentMixin, ControlModule
                     child.restoreState(status.attribute[1][0])
                     self.settings.child(self._hw_settings_name,
                                         *status.attribute[0]).addChild(status.attribute[1][0])
+                elif status.attribute[2] == 'childRemoved':
+                    parent = self.settings.child(self._hw_settings_name, *status.attribute[0])
+                    parent.removeChild(parent.child(status.attribute[1]))
             except Exception as e:
                 self.logger.exception(f'Wrong call to the "update_settings" command: \n{str(e)}')
             self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
