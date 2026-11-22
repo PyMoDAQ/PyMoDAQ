@@ -1,3 +1,5 @@
 from ._icon import MaterialIcon, SVGIcon
 
-__version__ = '0.5.0'
+__all__ = ['MaterialIcon', 'SVGIcon']
+
+__version__ = '0.5.1'

@@ -10,7 +10,7 @@ except ImportError:
     try:
         from PySide6 import QtCore, QtGui, QtWidgets
     except ImportError:
-        from PySide2 import QtCore, QtGui, QtWidgets
+        from PySide2 import QtCore, QtGui, QtWidgets  # ty: ignore[unresolved-import]
 
 ColorRole = QtGui.QPalette.ColorRole
 ColorGroup = QtGui.QPalette.ColorGroup
@@ -22,6 +22,7 @@ class SVGIcon(QtGui.QIcon):
     def __init__(self, path: str) -> None:
         super().__init__()
         self._path = path
+        self._source_icon = QtGui.QIcon(path)
         self._pixmap = QtGui.QPixmap(path)
         self._init_colors()
 
@@ -41,7 +42,7 @@ class SVGIcon(QtGui.QIcon):
         icon: QtGui.QIcon,
         mode: Mode = Mode.Normal,
         state: State = State.Off,
-    ):
+    ) -> None:
         if isinstance(icon, type(self)):
             pixmap = icon._pixmap
         else:
@@ -55,10 +56,7 @@ class SVGIcon(QtGui.QIcon):
         state: State = State.Off,
         color: QtGui.QColor | None = None,
     ) -> QtGui.QPixmap:
-        if size:
-            pixmap = QtGui.QIcon(self._path).pixmap(size)
-        else:
-            pixmap = self._pixmap
+        pixmap = self._source_icon.pixmap(size) if size else self._pixmap
 
         if color is None:
             if state == State.Off and mode == Mode.Disabled:
@@ -72,7 +70,7 @@ class SVGIcon(QtGui.QIcon):
         color: QtGui.QColor,
         mode: Mode = Mode.Normal,
         state: State = State.Off,
-    ):
+    ) -> None:
         self.addPixmap(self.pixmap(color=color), mode, state)
 
 
