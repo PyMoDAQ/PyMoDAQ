@@ -301,6 +301,16 @@ def test_tree_change_blocker(monkeypatch, has_keep, keep, expected):
     assert settings['a_float'] == 1.
 
 
+def test_q_from_param():
+    settings = Parameter.create(name='settings', type='group', children=[
+        {'title': 'Length:', 'name': 'length', 'type': 'float', 'value': 1.5, 'suffix': 'mm'},
+        {'title': 'Velocity:', 'name': 'velocity', 'type': 'float', 'value': 2., 'suffix': 'mm/s'},
+        {'title': 'Number:', 'name': 'number', 'type': 'int', 'value': 3},
+    ])
+    assert putils.q_from_param(settings.child('length')).m_as('um') == pytest.approx(1500.)
+    assert putils.q_from_param(settings.child('velocity')).m_as('um/s') == pytest.approx(2000.)
+    number = putils.q_from_param(settings.child('number'))
+    assert number.dimensionless and number.magnitude == 3
 def _settings_for_set_values():
     return Parameter.create(name='settings', type='group', children=[
         {'name': 'a_float', 'type': 'float', 'value': 0.},
