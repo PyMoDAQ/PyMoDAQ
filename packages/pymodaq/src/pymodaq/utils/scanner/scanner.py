@@ -7,6 +7,7 @@ from qtpy.QtCore import QObject, Signal
 from qtpy import QtWidgets
 
 from pymodaq_gui.messenger import messagebox
+from pymodaq_gui.utils.utils import clear_layout
 from pymodaq_utils.enums import StrEnum
 
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -151,12 +152,7 @@ class Scanner(QObject, ParameterManager):
                 settings = self.settings
             )
 
-            while True:
-                child = self._scanner_settings_widget.layout().takeAt(0)
-                if not child:
-                    break
-                child.widget().deleteLater()
-                QtWidgets.QApplication.processEvents()
+            clear_layout(self._scanner_settings_widget.layout())
 
             self._scanner._settings_tree.collapsible_widget.setVisible(False)
             self._scanner_settings_widget.layout().addWidget(self._scanner.settings_tree)
