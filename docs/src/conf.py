@@ -87,7 +87,7 @@ extensions = [
 html_extra_path = ["_extra"]
 llms_txt_file = False
 llms_txt_full_file = True
-llms_txt_exclude = ["api/*", "changelog", "about", "lab_story*", "genindex", "py-modindex"]
+llms_txt_exclude = ["api/*", "changelogs*", "about", "lab_story*", "genindex", "py-modindex"]
 
 graphviz_output_format = "svg"
 
