@@ -38,4 +38,4 @@
 
 - [Contributing](https://pymodaq.cnrs.fr/en/latest/developer_folder/contributing.html): how to contribute code to PyMoDAQ.
 - [Contributing to the documentation](https://pymodaq.cnrs.fr/en/latest/tutorials/write_documentation.html)
-- [Changelog](https://pymodaq.cnrs.fr/en/latest/changelog.html)
+- [Changelog](https://pymodaq.cnrs.fr/en/latest/changelogs.html)
