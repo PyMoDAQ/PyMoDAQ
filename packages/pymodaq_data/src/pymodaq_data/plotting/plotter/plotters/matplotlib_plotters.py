@@ -85,8 +85,8 @@ class Plotter(PlotterBase):
                      **kwargs)
             if dwa.errors is not None:
                 plt.fill_between(dwa.axes[0].get_data(), data_array - dwa.get_error(ind_data),
-                                 data_array + dwa.get_error(ind_data), *args,
-                                 color=PLOT_COLORS[ind_data] + [0.3], **kwargs)
+                                 data_array + dwa.get_error(ind_data),
+                                 color=PLOT_COLORS[ind_data], alpha=0.3)  # the color of the data, transparent
         plt.legend(dwa.labels)
         #plt.title(f'{dwa.name}')
         plt.xlabel(f'{dwa.axes[0].label} ({dwa.axes[0].units})')

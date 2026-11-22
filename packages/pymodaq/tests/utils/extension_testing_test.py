@@ -91,6 +91,23 @@ def test_loaded_extension_applies_the_theme_only_once(fake_package, monkeypatch)
     assert len(calls) >= 1
 
 
+def test_loaded_extension_styles_a_bare_application(fake_package, qapp):
+    """ The QApplication created by pytest-qt has no theme: loaded_extension must apply it (the Dashboard uses it) """
+    import qt_themes
+    from pymodaq_gui.qt_utils import STYLED_PROPERTY
+    theme, styled = qt_themes.get_theme(), qapp.property(STYLED_PROPERTY)
+    qapp.setProperty(qt_themes._theme.PROPERTY_NAME, None)  # as a bare application, never styled
+    qapp.setProperty(STYLED_PROPERTY, False)
+    try:
+        assert qt_themes.get_theme() is None
+        _, klass = find_extension_classes(fake_package)[0]
+        with loaded_extension(klass):
+            assert qt_themes.get_theme() is not None
+    finally:
+        qapp.setProperty(qt_themes._theme.PROPERTY_NAME, theme)
+        qapp.setProperty(STYLED_PROPERTY, styled)
+
+
 def test_loaded_extension_closes_when_the_body_fails(fake_package):
     _, klass = find_extension_classes(fake_package)[0]
     with pytest.raises(ZeroDivisionError):

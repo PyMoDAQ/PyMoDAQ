@@ -28,7 +28,6 @@ from typing import Iterator, Optional
 import pytest
 from qtpy import QtCore, QtWidgets
 
-from pyqtgraph import mkQApp
 from pymodaq_utils.plugin_tools.checks import guess_package_name
 
 
@@ -63,9 +62,10 @@ def loaded_extension(extension_class: type, *ext_args, show: bool = False, theme
     from pymodaq.dashboard import create_load_dashboard
     from pymodaq.utils.gui_utils.loader_utils import create_extension
 
-    from pymodaq_gui.qt_utils import apply_styling_rules
+    from pymodaq_gui.qt_utils import apply_styling_rules, mkQApp
 
-    app = mkQApp('extension_test')  # the Dashboard needs a theme: mkQApp applies it only once per application
+    # the Dashboard needs a theme: PyMoDAQ's mkQApp (not pyqtgraph's) applies it, only once per application
+    app = mkQApp('extension_test')
     if theme:  # restyling an application with many live widgets can even crash Qt
         apply_styling_rules(app)
 
