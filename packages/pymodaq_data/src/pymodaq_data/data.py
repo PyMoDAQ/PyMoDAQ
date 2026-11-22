@@ -2477,7 +2477,8 @@ class DataWithAxes(DataBase, SerializableBase):
 
         Notes
         -----
-        The update of the sum of squared deviations from the mean is Welford's online algorithm [1]_ [2]_, with
+        The update of the sum of squared deviations from the mean is Welford's online algorithm [Welford1962]_
+        [Knuth1998]_, with
         ``S_N = S_(N-1) + (x_N - mean_(N-1)) * (x_N - mean_N)`` (complex conjugate on the second factor for complex
         data). The errors are then ``sqrt(S_N / (N (N - 1)))``, i.e. the sample standard deviation (``ddof=1``)
         divided by ``sqrt(N)``.
@@ -2487,9 +2488,9 @@ class DataWithAxes(DataBase, SerializableBase):
 
         References
         ----------
-        .. [1] B. P. Welford, "Note on a method for calculating corrected sums of squares and products",
+        .. [Welford1962] B. P. Welford, "Note on a method for calculating corrected sums of squares and products",
            Technometrics 4 (1962) 419-420.
-        .. [2] D. E. Knuth, The Art of Computer Programming, vol. 2, section 4.2.2.
+        .. [Knuth1998] Donald E. Knuth, The Art of Computer Programming, vol. 2, section 4.2.2.
         """
         averaged_data = cast(DataWithAxes, self.average(other, weight))
         n_data = weight + 1
@@ -2540,14 +2541,15 @@ class DataWithAxes(DataBase, SerializableBase):
         Notes
         -----
         The errors are taken as the standard deviations of independent, normally distributed measurements. The
-        weights are the inverse of their variances, the minimum-variance unbiased estimator [1]_ [2]_.
+        weights are the inverse of their variances, the minimum-variance unbiased estimator [Bevington]_
+        [Taylor1997]_.
 
         References
         ----------
-        .. [1] P. R. Bevington and D. K. Robinson, Data Reduction and Error Analysis for the Physical Sciences,
-           McGraw-Hill, section on the weighted average.
-        .. [2] J. R. Taylor, An Introduction to Error Analysis, University Science Books, section on the weighted
-           average.
+        .. [Bevington] P. R. Bevington and D. K. Robinson, Data Reduction and Error Analysis for the Physical
+           Sciences, McGraw-Hill, section on the weighted average.
+        .. [Taylor1997] J. R. Taylor, An Introduction to Error Analysis, University Science Books, section on the
+           weighted average.
         """
         if self.errors is None or other.errors is None:
             raise ValueError('Both data should carry errors to be combined')

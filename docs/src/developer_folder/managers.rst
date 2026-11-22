@@ -891,7 +891,7 @@ control modules (see :ref:`custom_app`), it uses them through its ``ModulesManag
    :depth: 2
 
 Where you get one
-~~~~~~~~~~~~~~~~~
+-----------------
 
 * ``self.modules_manager`` in a ``CustomExt`` (and in any object using ``DashboardMixin``). By default it is a
   ``ModulesManager`` created for this object by ``init_dashboard``: its lists hold the same ``DAQ_Move`` and ``DAQ_Viewer``
@@ -908,7 +908,7 @@ The lists are filled by the Dashboard when an experiment is applied, and an exte
 after a new experiment.
 
 What it holds
-~~~~~~~~~~~~~
+-------------
 
 .. list-table::
    :header-rows: 1
@@ -937,7 +937,7 @@ The module titles are the identifiers: they are unique, they are what you give t
 the ``origin`` of the data coming back from a module.
 
 Selecting modules
-~~~~~~~~~~~~~~~~~
+-----------------
 
 Everything below acts on the **selected** modules. Select by title::
 
@@ -952,7 +952,7 @@ The selection can also be made by the user in ``settings_tree``. Two traps:
 * The selection starts empty, and is emptied each time the lists are set (new experiment).
 
 Signals
-~~~~~~~
+-------
 
 .. list-table::
    :header-rows: 1
@@ -978,14 +978,13 @@ Signals
      - ``add_modules`` was called
 
 Grabbing data
-~~~~~~~~~~~~~
+-------------
 
 The detectors have to be *connected* to the manager for it to count their answers: ``connect_detectors()`` connects the
 ``grab_done_signal`` of the selected detectors to the manager, ``connect_detectors(False)`` disconnects them. The
 ``*_with_callback`` methods do it for you.
 
-``grab_data_with_callback(callback=..., Naverage=None, check_do_override=True, do_connect_modules=True,
-detach_after_callback=True)``
+``grab_data_with_callback(callback=..., Naverage=None, check_do_override=True, do_connect_modules=True, detach_after_callback=True)``
     Asks each selected detector for a snap and returns immediately. ``callback(dte)`` is called with the data of all of
     them when the last one has answered. It is connected to ``det_done_signal``. With ``detach_after_callback=True``
     (the default) the manager calls ``forget_callback`` on your behalf right before running the callback, which
@@ -1005,13 +1004,12 @@ The data of the detectors are told apart by their ``origin``, the title of the d
 sends one ``DataWithAxes`` per channel, all with the same ``origin``).
 
 Moving actuators
-~~~~~~~~~~~~~~~~
+----------------
 
 The positions are given in a ``DataToExport`` holding one ``DataActuator`` per actuator, **named like the actuator**
 (a ``DataToActuators`` also carries the mode). Their number has to be the number of selected actuators.
 
-``move_actuators_with_callback(dte_act, mode=MoveType.ABS, callback=None, do_connect_modules=True,
-detach_after_callback=True)``
+``move_actuators_with_callback(dte_act, mode=MoveType.ABS, callback=None, do_connect_modules=True, detach_after_callback=True)``
     Selects the actuators named in ``dte_act``, starts the moves and returns immediately. ``callback(dte)`` is called with
     the positions reached when all the actuators have told they are done. Same rule as for the grab: with
     ``detach_after_callback=False`` call ``forget_callback(callback, module_type=ModuleType.Actuator)`` yourself. The
@@ -1034,7 +1032,7 @@ used to follow the modules continuously, with your own slot: ``signal='current_v
 ``current_value_signal`` of the selected actuators, and ``slot`` receives the data of each detector, as the DAQ_Logger does.
 
 Timeouts
-~~~~~~~~
+--------
 
 A grab or a move that is not completed in time does not raise: the manager logs an error and emits
 ``timeout_signal`` with the titles of the modules it did not hear from. The duration is read from the configuration at
@@ -1045,7 +1043,7 @@ the callback is never called and the timeout only tells you. Connect ``timeout_s
 itself at the timeout; with ``detach_after_callback=False`` call ``forget_callback`` yourself.
 
 Probing
-~~~~~~~
+-------
 
 The two actions of ``settings_tree`` (*Probe detectors* and *Probe actuators*) are a quick check for the user. The first
 snaps the selected detectors and lists the channels they send in the tree below (``get_probed_data_full_names(dim)``
@@ -1054,12 +1052,12 @@ actuators and shows the positions reached. ``probe_detectors()`` and ``probe_act
 ``get_det_data_list`` and ``test_move_actuators`` are the deprecated names of these methods.
 
 Use cases
-~~~~~~~~~
+---------
 
 Each snippet is run by ``tests/utils/managers/modules_manager_use_cases_test.py`` on mock modules.
 
 Move, then grab, without blocking the GUI
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The chain of callbacks used by the Sequencer elements (``sequencer/utilities/elements/move.py``, ``grab.py`` and
 ``scanner.py``) and by the ramping extension (``ramping/ramping.py``, ``go_to_ini_ramp``):
@@ -1088,7 +1086,7 @@ The chain of callbacks used by the Sequencer elements (``sequencer/utilities/ele
 Nothing waits: the GUI stays alive during the moves and the grabs.
 
 A loop that blocks until each step is done
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The optimizers (``optimizers_base/optimizer.py``, ``run_opti``), the PID (``pid/pid_controller.py``) and the Data Mixer
 (``data_mixer/data_mixer.py``, ``snap``) use the blocking calls, each step needing the result of the previous one
@@ -1115,7 +1113,7 @@ Connect once before the loop, disconnect after it (in a ``finally``). Disconnect
 unselected since stay connected. Prefer the callbacks when the GUI has to stay responsive.
 
 Choose the modules, and follow the user
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Put ``self.modules_manager.settings_tree`` in your UI to let the user select, as ``daq_logger`` does (``daq_scan`` puts
 the parameters of the manager in its own trees), and
@@ -1124,7 +1122,7 @@ Or select from your own settings with ``selected_*_name``, as the optimizers do 
 (``optimizers_base/models.py``).
 
 React to a new experiment
-^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The modules are destroyed and created again with each experiment: the objects you kept (a ``DAQ_Move``, a list, a signal
 connection) are gone and the selection is empty. Reimplement ``do_things_after_experiment_set``, call ``super()``
@@ -1141,7 +1139,7 @@ first, and rebuild from ``self.modules_manager``:
 (``ramping/ramping.py`` does this for its actuator and detector lists.)
 
 Rules
-~~~~~
+-----
 
 * Never create control modules in an extension, use the ones of ``self.modules_manager``.
 * Select the modules before moving or grabbing; give one position per selected actuator, named like it.

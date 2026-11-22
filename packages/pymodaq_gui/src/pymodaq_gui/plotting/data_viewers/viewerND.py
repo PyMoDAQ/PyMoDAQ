@@ -543,11 +543,11 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
 
         self.navigator1D.crosshair.crosshair_dragged.connect(self.data_displayer.update_viewer_data)
 
-        self.navigator1D.ROI_select_signal.connect(self.data_displayer.updated_nav_integration)
+        self.navigator1D.roi_select_signal.connect(self.data_displayer.updated_nav_integration)
 
         self.navigator2D.crosshair_dragged.connect(self.data_displayer.update_viewer_data)
 
-        self.navigator2D.ROI_select_signal.connect(self.data_displayer.updated_nav_integration)
+        self.navigator2D.roi_select_signal.connect(self.data_displayer.updated_nav_integration)
         self.axes_viewer.navigation_changed.connect(self.data_displayer.update_viewer_data)
         self.data_displayer.data_dim_signal.connect(self.update_data_dim)
 

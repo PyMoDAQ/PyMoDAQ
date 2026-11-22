@@ -35,7 +35,7 @@ keywords = [
 ]
 readme = "README.rst"
 license = { file="LICENSE" }
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [
     { name = "Sébastien Weber", email = "sebastien.weber@cemes.fr" },
 ]
@@ -47,9 +47,10 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Natural Language :: English",
     "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: 3.13",    
     "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Human Machine Interfaces",
@@ -68,7 +69,7 @@ dependencies = [
     "pymodaq_plugins_mock>=5.0.12",
     "simple_pid",
     "qtconsole",
-    "pyleco>0.3; python_version>=\"3.10\"",
+    "pyleco>0.3",
     "bayesian-optimization>=2.0",
     "adaptive",
     "pyyaml",
