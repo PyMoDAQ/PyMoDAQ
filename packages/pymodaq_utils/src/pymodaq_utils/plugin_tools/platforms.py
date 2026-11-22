@@ -189,7 +189,7 @@ def update_pyproject_classifiers(pyproject: Path, platforms: Optional[Iterable[s
 
 
 #: Python versions PyMoDAQ is developed for, they give the ``Programming Language :: Python`` classifiers
-PYTHON_VERSIONS = ('3.10', '3.11', '3.12', '3.13')
+PYTHON_VERSIONS = ('3.11', '3.12', '3.13', '3.14')
 
 
 def python_classifiers(requires_python: str = '') -> list[str]:

@@ -6,7 +6,7 @@ This file provides guidance to AI coding assistants (Claude Code, Codex, Copilot
 
 PyMoDAQ (Modular Data Acquisition with Python) is a Qt-based framework to drive lab experiments: hardware is
 interfaced through small plugins (actuators / detectors), and PyMoDAQ provides the GUI, threading, data model,
-HDF5 saving and higher-level extensions (scans, PID, logging, optimisation...). Supported Python: 3.10–3.13.
+HDF5 saving and higher-level extensions (scans, PID, logging, optimisation...). Supported Python: 3.11–3.14.
 Branches and PR targets:
 - `dev` is the development branch: new features target `dev`.
 - `5.2.x` is the current release branch: bugfixes may target it.

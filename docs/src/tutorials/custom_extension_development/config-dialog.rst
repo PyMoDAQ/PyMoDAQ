@@ -1,3 +1,5 @@
+:orphan:
+
 Work in Progress Configuring Devices and Data
 =============================================
 

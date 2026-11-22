@@ -237,3 +237,16 @@ def test_deprecated_import_path_still_works():
     assert mixin is PluginPackageChecks
     with pytest.raises(AttributeError):
         module.does_not_exist
+
+
+def test_settings_of_a_group_are_set_from_a_dict(qtbot):
+    plugin = make_actuator(DAQ_Move_Fake, epsilon=0.5, bounds={'is_bounds': True, 'max_bound': 5.})
+    assert plugin.settings['epsilon'] == 0.5
+    assert plugin.settings['bounds', 'is_bounds'] is True
+    assert plugin.settings['bounds', 'max_bound'] == 5.
+    plugin.close()
+
+
+def test_unknown_setting_lists_the_valid_ones(qtbot):
+    with pytest.raises(KeyError, match='valid children'):
+        make_actuator(DAQ_Move_Fake, not_a_setting=1)

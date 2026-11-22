@@ -13,6 +13,7 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
+import re
 import sys
 import datetime
 sys.path.insert(0, os.path.abspath('.'))
@@ -295,5 +296,60 @@ def _guard_process_signature_handlers(app):
         app.connect('autodoc-process-signature', guarded(listener.handler), priority=listener.priority)
 
 
+def _strip_qt_signal_boilerplate_docstring(app, what, name, obj, options, lines):
+    """ Clear the Qt binding's own generic Signal docstring instead of rendering it as RST
+
+    A class attribute created with QtCore.Signal()/pyqtSignal() that has no docstring of its
+    own falls back, via autodoc, to the Signal type's built-in docstring (e.g. "pyqtSignal(*types,
+    name: str = ..., ...)"). Its unescaped '*types' breaks RST ("Inline emphasis start-string
+    without end-string"). This isn't a PyMoDAQ docstring to fix - it's the Qt binding's - so we
+    clear it here instead; a Signal attribute documented with its own docstring is unaffected.
+
+    Checked against obj.__doc__ (the attribute's own, untouched docstring) rather than against
+    `lines`: napoleon/numpydoc also listen on this same event and may run first, by then having
+    already rewritten `lines` into something that no longer starts with "pyqtSignal(".
+    """
+    doc = getattr(obj, '__doc__', None) or ''
+    if doc.startswith(("pyqtSignal(", "pyqtBoundSignal(", "Signal(")):
+        del lines[:]
+
+
+_seen_docstring_citations: set[str] = set()
+
+
+def _dedupe_docstring_citations(app, what, name, obj, options, lines):
+    """ Strip repeated citation definitions for an object autodoc processes more than once
+
+    `autodoc-process-docstring` fires multiple times for the same method in some configurations
+    (observed 3x here for one method, across different pages that each document it - once via
+    the auto-generated API reference, once via a hand-curated page) even though each page only
+    renders it once. Autodoc gives a citation "[label]_" a page-independent id derived from the
+    object (e.g. "Rbb8ec97686e2-label"), and Sphinx's citation registry is project-wide rather
+    than per-page, so every pass after the first re-defines the same id and is flagged as a
+    genuine duplicate ("duplicate citation") even on an otherwise unrelated page. Only the first
+    pass's ".. [label] ..." definitions are needed project-wide; later passes for the same `name`
+    have theirs removed. The citation uses (e.g. "[label]_") are left untouched since that text
+    isn't a target itself, and still resolves to the one definition that was kept.
+    """
+    if name in _seen_docstring_citations:
+        kept = []
+        dropping = False
+        for line in lines:
+            if re.match(r'^\s*\.\. \[[\w-]+\]\s', line):
+                dropping = True
+                continue
+            if dropping and (not line.strip() or re.match(r'^\s+\S', line)):
+                # blank line or an indented continuation of the citation body we just dropped
+                if line.strip():
+                    continue
+            dropping = False
+            kept.append(line)
+        lines[:] = kept
+    else:
+        _seen_docstring_citations.add(name)
+
+
 def setup(app):
     _guard_process_signature_handlers(app)
+    app.connect('autodoc-process-docstring', _strip_qt_signal_boilerplate_docstring)
+    app.connect('autodoc-process-docstring', _dedupe_docstring_citations)
