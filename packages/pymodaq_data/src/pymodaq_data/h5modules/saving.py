@@ -28,7 +28,7 @@ from pymodaq_utils.warnings import deprecation_msg
 
 from .backends import (H5Backend, backends_available, SaveType, InvalidSave, InvalidExport,
                        Node, GroupType, InvalidDataDimension, InvalidScanType,
-                       GROUP, VLARRAY)
+                       GROUP, VLARRAY, snapshot_path)
 from . import browsing
 
 
@@ -233,6 +233,32 @@ class H5SaverLowLevel(H5Backend):
             if metadata is not None:
                 for metadata_key in metadata:
                     self._raw_group.attrs[metadata_key] = metadata[metadata_key]
+
+    def finalize_swmr(self, keep_open=False):
+        """Extends H5Backend.finalize_swmr: when keep_open, the file reopened by the
+        base implementation is a new h5py file object, so raw_group (cached by
+        init_file, used by every saver as the root to resolve nodes from) would
+        otherwise keep pointing at a now-closed file and break the next get_set_node.
+
+        Only read raw_group at all when a refresh will actually be needed
+        (keep_open and SWMR was active, checked *before* the base implementation
+        runs, since it always clears _swmr_enabled): close_file/finalize_swmr are
+        routinely called on an already-closed file (e.g. init_file calls
+        close_file defensively first) or with a backend that never activates SWMR
+        (tables), and raw_group would then be a stale reference from a previous
+        session - reading .path off of it raises on tables (ClosedNodeError)
+        instead of returning None the way h5py does.
+
+        Parameters
+        ----------
+        keep_open : bool
+            Passed through to H5Backend.finalize_swmr; see there.
+        """
+        needs_refresh = keep_open and self._swmr_enabled
+        raw_group_path = snapshot_path(getattr(self, '_raw_group', None)) if needs_refresh else None
+        super().finalize_swmr(keep_open=keep_open)
+        if needs_refresh and raw_group_path is not None:
+            self._raw_group = self.get_node(raw_group_path)
 
     def save_file(self, filename=None):
         if isinstance(filename, str) or isinstance(filename, Path) and filename != '':

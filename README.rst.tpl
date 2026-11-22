@@ -4,11 +4,26 @@ PyMoDAQ
 .. figure:: http://pymodaq.cnrs.fr/en/latest/_static/splash.png
    :alt: PyMoDAQ Logo
 
-PyMoDAQ, Modular Data Acquisition with Python, is a set of **python** modules used to interface any kind of experiments.
-It simplifies the interaction with detector and actuator hardware to go straight to the data acquisition of interest. 
+PyMoDAQ (Modular Data Acquisition with Python) is a free and open-source Python framework to control scientific
+instruments and acquire data, officially supported by the CNRS. It is a set of **python** modules used to interface any
+kind of experiments: cameras, spectrometers, motorized stages, power meters, digitizers... Support for an instrument
+comes from small plugins (``pip install pymodaq_plugins_<name>``).
+
+With PyMoDAQ you can:
+
+- drive detectors and actuators from a graphical Dashboard, without writing any interface
+- see data of any dimension (a value, a waveform, an image, a hyperspectral cube) live, whatever the instrument
+- scan actuators while acquiring data, log signals, lock a parameter with a feedback loop, optimize...
+- save everything, with axes and units, in HDF5 files
+- control the same instruments from a Python script or a remote computer
+- write the plugin of a new instrument in a few dozen lines
+
+Start with the `common questions <https://pymodaq.cnrs.fr/en/latest/user_folder/common_questions.html>`_ or see how
+PyMoDAQ `compares with other tools <https://pymodaq.cnrs.fr/en/latest/user_folder/alternatives.html>`_ (PyVISA, PyMeasure,
+QCoDeS, NOMAD CAMELS, Bluesky...).
 
 
-This is the main repository README. Below are links to the README files for each one of the four individual packages:
+This is the main repository README. Below are links to the README files for each one of the five individual packages:
 
 Packages
 --------
@@ -36,4 +51,4 @@ Published under the MIT FREE SOFTWARE LICENSE
 
 GitHub repo: https://github.com/PyMoDAQ
 
-Documentation: http://pymodaq.cnrs.fr/
+Homepage and documentation: https://pymodaq.cnrs.fr/en/latest/

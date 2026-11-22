@@ -7,7 +7,7 @@ name = "pymodaq_utils"
 dynamic = [
     "version",
 ]
-description = "Modular Data Acquisition with Python"
+description = "Utilities shared by the PyMoDAQ packages (configuration, logging, plugin discovery and checks)"
 readme = "README.rst"
 license = { file="LICENSE" }
 requires-python = ">=3.11"
