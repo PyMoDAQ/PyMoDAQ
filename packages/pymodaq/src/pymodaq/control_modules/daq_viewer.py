@@ -353,15 +353,17 @@ class DAQ_Viewer(ParameterControlModule):
         ----------
         cmd: ThreadCommand
             Possible values are:
-                * init
-                * grab
-                * snap
-                * detector_changed
-                * save_current
-                * do_bkg
-                * take_bkg
-                * viewers_changed
-                * quit
+
+            * init
+            * grab
+            * snap
+            * detector_changed
+            * save_current
+            * do_bkg
+            * take_bkg
+            * viewers_changed
+            * quit
+
             and the continuous-saving ones, see UiToMainSaving
         """
         if self._process_saving_ui_cmd(cmd):
