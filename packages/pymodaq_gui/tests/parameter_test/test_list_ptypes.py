@@ -21,3 +21,15 @@ def test_changing_the_limits_does_not_change_the_value(list_param):
     list_param.setLimits(['a', 'b', 'c'])
     assert changes == []
     assert list_param.value() == initial
+
+
+def test_a_value_that_is_not_in_the_new_limits_becomes_the_first_item_without_passing_by_none(qtbot):
+    param = Parameter.create(name='choice', type='list', limits=['a', 'b'], value='b')
+    tree = ParameterTree()
+    tree.setParameters(param, showTop=False)
+    qtbot.addWidget(tree)
+    changes = []
+    param.sigValueChanged.connect(lambda p, v: changes.append(v))
+    param.setLimits(['a', 'c'])
+    assert changes == ['a']
+    assert param.value() == 'a'
