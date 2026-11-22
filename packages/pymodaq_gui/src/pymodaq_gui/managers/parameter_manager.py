@@ -3,6 +3,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator, List, Union, Dict, Optional, Tuple, Any
 
+import pint
 from qtpy import QtWidgets, QtCore, QtGui
 from pymodaq_gui.parameter.utils import filter_parameter_tree
 from pymodaq_gui.utils.widgets.collapsible_widget import CollapsibleWidget
@@ -317,6 +318,27 @@ class ParameterManager:
             - A Path to an XML file containing saved parameters
         """
         self.set_settings(settings)
+
+    def q_from_param(self, param: Union[Parameter, str], *names: str) -> pint.Quantity:
+        """ Quantity of a numeric parameter, its unit being the parameter's suffix
+
+        Parameters
+        ----------
+        param: Parameter or str
+            Either a Parameter or the name of a child of ``self.settings``
+        names: str
+            Names of the successive children below ``param`` (given as a name), as for
+            :meth:`Parameter.child`: ``self.q_from_param('ramp', 'start')``
+
+        See Also
+        --------
+        pymodaq_gui.parameter.utils.q_from_param
+        """
+        if not isinstance(param, Parameter):
+            param = self.settings.child(param, *names)
+        elif names:
+            param = param.child(*names)
+        return utils.q_from_param(param)
 
     def set_settings(self, settings: Union[Parameter, List[Dict[str, str]], Path]) -> None:
         """ similar to the property setter but easier to subclass"""

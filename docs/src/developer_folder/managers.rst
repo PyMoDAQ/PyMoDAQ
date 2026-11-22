@@ -621,6 +621,24 @@ The static ``create_parameter()`` method creates Parameter objects from various 
 
 This is useful when you need to create parameter objects outside of a ParameterManager instance.
 
+Quantities from Numeric Parameters
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A numeric parameter can carry its unit in its ``suffix`` option. :func:`pymodaq_gui.parameter.utils.q_from_param`
+builds the `pint <https://pint.readthedocs.io>`_ quantity (``Q_`` of ``pymodaq_data``) of such a parameter, and
+``ParameterManager.q_from_param`` does the same for a Parameter **or** for the names of the successive children (as ``Parameter.child``) leading to a
+parameter of ``self.settings``, so that units can be converted without writing the conversion factors:
+
+.. code-block:: python
+
+    class Ramp(ParameterManager):
+        params = [{'title': 'Length:', 'name': 'length', 'type': 'float', 'value': 1.5,
+                   'suffix': 'mm', 'siPrefix': False}]
+
+    ramp = Ramp()
+    ramp.q_from_param('length').m_as('um')   # 1500.0
+    ramp.q_from_param(ramp.settings.child('length'))   # the same, from the Parameter
+
 Complete Examples
 -----------------
 
