@@ -10,7 +10,7 @@ dynamic = [
 description = "Utilities shared by the PyMoDAQ packages (configuration, logging, plugin discovery and checks)"
 readme = "README.rst"
 license = { file="LICENSE" }
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [
     { name = "Sébastien Weber", email = "sebastien.weber@cemes.fr" },
 ]
@@ -21,10 +21,10 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Natural Language :: English",
     "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",    
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering :: Human Machine Interfaces",
     "Topic :: Scientific/Engineering :: Visualization",
     "Topic :: Software Development :: Libraries :: Python Modules",
@@ -38,7 +38,6 @@ dependencies = [
     "pint",
     "python-dateutil",
     "toml",
-    "strenum; python_version<\"3.11\"",
     "serializall>=0.1.0",
     "aenum",
     "requests",
