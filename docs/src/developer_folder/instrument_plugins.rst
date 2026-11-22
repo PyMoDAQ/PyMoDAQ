@@ -1108,6 +1108,8 @@ variables:
   * *limits*: the object should be a sequence listing the limits of the parameter (depends on the type of parameter)
   * *options*: the object is a dictionary defining the options to modify
   * *childAdded*: the object is a dictionary generated using SaveState of a given Parameter
+  * *childRemoved* (``update_settings`` only): the object is the name of the child to remove, and the path is the one
+    of its parent. The settings tree of a plugin sends it by itself when the plugin removes a parameter
 
 
 .. _daq_move_commands:

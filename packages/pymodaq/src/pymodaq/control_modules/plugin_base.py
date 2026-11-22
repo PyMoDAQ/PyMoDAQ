@@ -145,8 +145,11 @@ class PluginBase(QObject):
             elif change in ('value', 'limits', 'options'):
                 self.emit_status(ThreadCommand(ThreadStatus.UPDATE_SETTINGS,
                                                [self.parent_parameters_path + path, data, change]))
+            elif change == 'childRemoved':  # param is the parent, still in the tree, and data the removed child
+                self.emit_status(ThreadCommand(ThreadStatus.UPDATE_SETTINGS,
+                                               [self.parent_parameters_path + path, data.name(), change]))
             elif change == 'parent':
-                pass
+                pass  # the removed parameter is already detached, its path is unknown: see 'childRemoved'
 
     @Slot(edict)
     def update_settings(self, settings_parameter_dict):
