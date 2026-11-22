@@ -41,6 +41,15 @@ class Combo_pb(QtWidgets.QWidget):
         self.addItems = self.combo.addItems
         self.findText = self.combo.findText
 
+    def blockSignals(self, block: bool) -> bool:
+        """Also block the signals of the inner combo box: they are the ones that report a change of value.
+
+        A parameter blocks the signals of its widget while it rebuilds it (new limits): without this the inner combo
+        box tells the parameter that its value changed to nothing, then to the first item.
+        """
+        self.combo.blockSignals(block)
+        return super().blockSignals(block)
+
 
 class ListParameterItem(ListParameterItem):
     """
