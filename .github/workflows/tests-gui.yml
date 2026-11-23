@@ -82,7 +82,6 @@ jobs:
         continue-on-error: true
         run: |
           pip install ${{ 
-            matrix.qt-backend == 'pyqt5' && 'PyQtWebEngine'   || 
             matrix.qt-backend == 'pyqt6' && 'PyQt6-WebEngine' || 
             '' 
           }}
