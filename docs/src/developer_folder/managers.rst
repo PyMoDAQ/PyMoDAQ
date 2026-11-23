@@ -193,13 +193,40 @@ Control action visibility, enabled state, and checked state:
 Grouping Actions Under One Button
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``add_action_group`` puts several related actions under a single toolbar button, keeping toolbars narrow. The
-entries of the group are regular actions (registered by their ``short_name``, so ``connect_action``,
-``is_action_checked``... work on them) shown in a dropdown. Checkable entries do not close the dropdown.
+A toolbar with one button per option quickly becomes too wide. ``add_action_group`` puts several related actions
+under a **single toolbar button**: the actions (the *entries* of the group) are listed in a dropdown menu opened from
+that button.
+
+Vocabulary
+++++++++++
+
+.. list-table::
+    :widths: 20 80
+
+    * - **entry**
+      - One of the actions listed in the dropdown (given in ``secondary_actions``). Entries are regular actions,
+        registered with their ``short_name``: ``connect_action``, ``is_action_checked``, ``set_action_enabled``...
+        work on them as on any other action. An entry is added to the dropdown only, never to a toolbar.
+    * - **primary action**
+      - The action shown on the button itself and triggered when the button is clicked (by default, ``primary=True``).
+        It is a regular action, created from the arguments of ``add_action_group`` (``name``, ``icon_name``,
+        ``checkable``...) and registered under the ``short_name`` of the group. The dropdown is then opened with
+        the small arrow next to the button.
+    * - **face**
+      - The action that gives the button its icon, text and tooltip: the primary action if there is one, otherwise
+        an internal action that is not registered. Use ``get_action_group(short_name).face`` to show, hide or
+        disable the button of a group without primary.
+    * - **key**
+      - The identifier of an entry *within its group*. It defaults to the ``short_name`` of the entry and is what
+        ``entry_toggled`` reports. It only differs from ``short_name`` for dynamic entries, see below.
+
+Checkable entries do not close the dropdown when clicked, so several of them can be toggled in a row.
+
+The basic case: a primary action with its options
++++++++++++++++++++++++++++++++++++++++++++++++++
 
 .. code-block:: python
 
-    # A primary action (the button face) and entries in the dropdown
     self.add_action_group(
         'transform', 'Transform', 'flip', checkable=True,
         secondary_actions=[
@@ -207,48 +234,164 @@ entries of the group are regular actions (registered by their ``short_name``, so
             dict(short_name='rotate', name='Rotate', icon_name='rotate_90_degrees_cw', checkable=True),
         ])
 
-    # No primary: clicking the button opens the entries. Exclusive: a radio choice, the button shows the
-    # icon of the checked entry
+    self.connect_action('transform', self.apply_transforms)   # the primary action: the master switch
+    self.connect_action('rotate', self.apply_transforms)      # an entry: same call as for any action
+
+Clicking the button toggles the primary action ``transform``; the arrow opens the list of transforms. Typically the
+primary action switches the feature on and off while the entries choose what it does.
+
+No primary action: a button that opens a menu
++++++++++++++++++++++++++++++++++++++++++++++
+
+With ``primary=False`` there is nothing to trigger on the button: clicking it opens the entries directly. ``name``,
+``icon_name``, ``tip`` and the other arguments then only describe the button, and **nothing is registered** under
+``short_name``.
+
+``exclusive=True`` makes the entries a radio choice: checking one unchecks the others. Without primary, the button then
+shows the icon of the checked entry, so the current choice is visible without opening the menu.
+
+.. code-block:: python
+
     self.add_action_group(
         'x_axis', 'X axis', 'function', primary=False, exclusive=True,
         secondary_actions=[
             dict(short_name='x_samples', name='Samples', icon_name='format_list_numbered', checkable=True,
-                 checked=True),
+                 checked=True),     # the initially checked entry
             dict(short_name='x_timestamps', name='Timestamps', icon_name='timer', checkable=True),
         ])
 
-    # A spec with a 'group' key (instead of 'short_name') nests a group, displayed as a submenu
+    self.get_action_group('x_axis').face.setVisible(False)   # hides the whole button
+
+Exclusivity applies to the entries of one group: nested groups (below) have their own.
+
+Nested groups: a submenu
+++++++++++++++++++++++++
+
+An entry spec with a ``group`` key (instead of ``short_name``) is not an action but another group, displayed as a
+**submenu** of the dropdown. The rest of its keys are the arguments of ``add_action_group``: ``secondary_actions``,
+``primary``, ``exclusive``... With a primary action, it is the first entry of the submenu, followed by the entries.
+
+.. code-block:: python
+
     self.add_action_group(
         'view', 'View', 'visibility', primary=False,
         secondary_actions=[
             dict(short_name='aspect_ratio', name='Lock aspect ratio', checkable=True),
-            dict(group='grid', name='Grid', icon_name='grid_on', checkable=True,
+            dict(group='grid', name='Grid', icon_name='grid_on', checkable=True,   # submenu "Grid"
                  secondary_actions=[dict(short_name='minor_ticks', name='Minor ticks', checkable=True)]),
         ])
 
-The state of a group is an ``ActionGroup``, given by ``get_action_group``:
+    self.get_action_group('grid')   # a nested group is reached by its name like any other
+
+Dynamic entries: one entry per channel, per ROI...
+++++++++++++++++++++++++++++++++++++++++++++++++++
+
+When the entries depend on the data, create the group (with or without entries) once, then replace the entries when
+the data changes with ``set_action_group_entries``:
+
+.. code-block:: python
+
+    self.add_action_group('channels', 'Legend', 'layers', checkable=True, checked=True)
+
+    def on_data(self, data):
+        self.set_action_group_entries('channels', [
+            dict(short_name=f'channel_{ind}', key=label, name=label, checkable=True, checked=True)
+            for ind, label in enumerate(data.labels)])
+
+The previous entries are removed (and their ``short_name`` unregistered). To keep what the user chose, an entry
+takes the checked state of the former entry **with the same** ``key``, whatever its position: a channel the user
+hid stays hidden when the next data arrive, even if channels were added before it. This is why the ``key`` is the
+label of the channel (stable) and the ``short_name`` its index (not). Nested groups are not replaced: they stay,
+after the new entries.
+
+Reading and reacting to the state of a group
+++++++++++++++++++++++++++++++++++++++++++++
+
+The state of a group is held by an ``ActionGroup``, returned by ``get_action_group`` (it is also the ``action_group``
+attribute of the button returned by ``add_action_group``):
 
 .. code-block:: python
 
     group = self.get_action_group('transform')
-    group.entry_toggled.connect(self.on_transform_changed)  # (key, checked)
-    group.keys(), group.is_checked('rotate'), group.set_checked('rotate', True)
+    group.entry_toggled.connect(self.on_transform_changed)   # slot(key: str, checked: bool)
+    group.keys()                       # keys of the entries, in order
+    group.is_checked('rotate')         # state of an entry
+    group.set_checked('rotate', True)  # change it (entry_toggled is emitted, as for a click)
 
-    # Entries can be replaced at runtime, e.g. one per channel of the data. An entry gets back the checked
-    # state of a previous entry with the same key, so a channel hidden by the user stays hidden. Nested
-    # groups are not replaced: they stay, after the new entries
-    self.set_action_group_entries('channels', [
-        dict(short_name=f'channel_{ind}', key=label, name=label, checkable=True, checked=True)
-        for ind, label in enumerate(data.labels)])
+``entry_toggled`` is a single signal for all the entries of a group, handy for dynamic entries that have no fixed
+``short_name`` to ``connect_action`` to. It is emitted for changes made by code as well as for user clicks.
 
-    # The colour of the group icon tells about entries hidden in the dropdown, with the status colours
-    # (StatusPalette): Indicator.DEFAULT (neutral), ACTIVE (green), PARTIAL (yellow), EMPTY (orange)
-    self.set_action_group_indicator('channels', Indicator.PARTIAL, 'Hidden: Ch1')
+Connecting the entries to slots
++++++++++++++++++++++++++++++++
 
-Without primary, the button is described by the *face* of the group (``group.face``, not registered as an action):
-hide or disable the button through it. With or without primary, the button is shown while the face is visible.
+There are two ways to react to an entry, and they differ on *when* they fire:
 
-Run ``python -m pymodaq_gui.examples.action_group_example`` to try them.
+.. code-block:: python
+
+    # 1. as any action: the entry is registered under its short_name
+    self.connect_action('rotate', self.on_rotate)                           # 'triggered': user clicks only
+    self.connect_action('rotate', self.on_rotate, signal_name='toggled')    # also when changed by code
+
+    # 2. through the group: one slot for all the entries, receiving their key
+    self.get_action_group('transform').entry_toggled.connect(self.on_transform_changed)
+
+* ``triggered`` (the default of ``connect_action``) is emitted only when the user clicks the entry. Setting the
+  state from code (``set_action_checked``, ``group.set_checked``) does not emit it. In an exclusive group, only the entry
+  clicked emits it, not the one that gets unchecked.
+* ``toggled`` and ``entry_toggled`` are emitted for every change of the checked state, from the user or from code, and
+  for both entries of an exclusive group (the one unchecked, then the one checked).
+* Entries of fixed groups (declared in ``secondary_actions``) are best connected once, with ``connect_action``. The
+  primary action is connected the same way, with its own ``short_name``.
+* Entries given to ``set_action_group_entries`` are **new actions each time**: the previous ones are deleted with their
+  connections. Either connect the group's ``entry_toggled`` once (it survives the replacement), or call
+  ``connect_action`` again after each replacement.
+
+The indicator: telling about what is hidden in the dropdown
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Entries inside a dropdown are out of sight: the user cannot tell that a channel is hidden or that a transform is
+applied. ``set_action_group_indicator`` colours the icon of the group button (and adds a line to its tooltip) to
+signal it. The colours are the status ones of the application (``StatusPalette``), red being kept for real faults:
+
+.. list-table::
+    :widths: 20 15 65
+
+    * - ``Indicator.DEFAULT``
+      - neutral
+      - Everything is in its default state. The icon and tooltip are restored.
+    * - ``Indicator.ACTIVE``
+      - green
+      - The group is actively changing something (e.g. a transform is applied).
+    * - ``Indicator.PARTIAL``
+      - yellow
+      - Part of what the group controls is hidden (e.g. some channels).
+    * - ``Indicator.EMPTY``
+      - orange
+      - Nothing the group controls is shown (e.g. no channel visible).
+
+The indicator is only set when you call it: update it from ``entry_toggled``.
+
+.. code-block:: python
+
+    def update_indicator(self, *args):
+        group = self.get_action_group('channels')
+        hidden = [key for key in group.keys() if not group.is_checked(key)]
+        if hidden:
+            self.set_action_group_indicator('channels', Indicator.PARTIAL, f'Hidden: {", ".join(hidden)}')
+        else:
+            self.set_action_group_indicator('channels', Indicator.DEFAULT)
+
+    self.get_action_group('channels').entry_toggled.connect(self.update_indicator)
+
+(``from pymodaq_gui.managers.action_manager import Indicator``.) On an exclusive group without primary, the icon is
+the one of the checked entry and is not coloured: only the tooltip is updated.
+
+Try it
+++++++
+
+``python -m pymodaq_gui.examples.action_group_example`` shows one group of each kind above (Transform: primary +
+entries + indicator, X axis: exclusive without primary, Legend: dynamic entries, View: nested group) and logs every
+``entry_toggled``. Change the number of channels while hiding one to see the state being kept.
 
 Complete Example
 ----------------

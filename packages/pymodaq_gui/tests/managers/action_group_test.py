@@ -80,6 +80,81 @@ class TestGroupHandle:
         assert not action_manager.is_action_checked('flip_lr')
 
 
+class TestConnectingEntries:
+    """What the documentation says about connecting the entries to slots"""
+
+    @pytest.fixture
+    def exclusive(self, action_manager):
+        action_manager.add_action_group('axis', 'Axis', 'function', primary=False, exclusive=True,
+                                        secondary_actions=[checkable('a', checked=True), checkable('b')])
+        return action_manager
+
+    def test_connect_action_triggered_only_on_click(self, action_manager):
+        action_manager.add_action_group('transform', 'Transform', 'flip', checkable=True,
+                                        secondary_actions=[checkable('rotate')])
+        calls = []
+        action_manager.connect_action('rotate', lambda checked: calls.append(checked))
+
+        action_manager.set_action_checked('rotate', True)  # by code
+        assert calls == []
+        action_manager.get_action_group('transform').get_entry('rotate').trigger()  # as a click
+        assert calls == [False]  # triggered(checked): the click unchecked it
+
+    def test_connect_action_toggled_follows_code_too(self, action_manager):
+        action_manager.add_action_group('transform', 'Transform', 'flip', checkable=True,
+                                        secondary_actions=[checkable('rotate')])
+        calls = []
+        action_manager.connect_action('rotate', lambda checked: calls.append(checked), signal_name='toggled')
+
+        action_manager.set_action_checked('rotate', True)
+        action_manager.get_action_group('transform').set_checked('rotate', False)
+        assert calls == [True, False]
+
+    def test_exclusive_triggered_only_for_the_clicked_entry(self, exclusive):
+        calls = []
+        exclusive.connect_action('a', lambda checked: calls.append(('a', checked)))
+        exclusive.connect_action('b', lambda checked: calls.append(('b', checked)))
+
+        exclusive.get_action_group('axis').get_entry('b').trigger()
+        assert calls == [('b', True)]  # 'a' was unchecked but not triggered
+        assert not exclusive.is_action_checked('a')
+
+    def test_exclusive_toggled_for_both_entries(self, exclusive):
+        calls = []
+        exclusive.connect_action('a', lambda checked: calls.append(('a', checked)), signal_name='toggled')
+        exclusive.connect_action('b', lambda checked: calls.append(('b', checked)), signal_name='toggled')
+        group_calls = []
+        exclusive.get_action_group('axis').entry_toggled.connect(lambda key, checked: group_calls.append((key, checked)))
+
+        exclusive.get_action_group('axis').set_checked('b', True)  # by code
+        assert sorted(calls) == [('a', False), ('b', True)]
+        assert sorted(group_calls) == [('a', False), ('b', True)]
+
+    def test_entry_toggled_survives_the_replacement_of_entries(self, action_manager):
+        action_manager.add_action_group('channels', 'Legend', 'layers')
+        group = action_manager.get_action_group('channels')
+        calls = []
+        group.entry_toggled.connect(lambda key, checked: calls.append((key, checked)))
+
+        action_manager.set_action_group_entries('channels', [checkable('channel_0', key='Ch0')])
+        action_manager.set_action_group_entries('channels', [checkable('channel_0', key='Ch0')])
+        group.set_checked('Ch0', True)
+        assert calls == [('Ch0', True)]
+
+    def test_connect_action_is_lost_with_the_replaced_entries(self, action_manager):
+        action_manager.add_action_group('channels', 'Legend', 'layers',
+                                        secondary_actions=[checkable('channel_0', key='Ch0')])
+        calls = []
+        action_manager.connect_action('channel_0', lambda checked: calls.append(checked), signal_name='toggled')
+
+        action_manager.set_action_group_entries('channels', [checkable('channel_0', key='Ch0')])
+        action_manager.set_action_checked('channel_0', True)
+        assert calls == []  # the new action has to be connected again
+        action_manager.connect_action('channel_0', lambda checked: calls.append(checked), signal_name='toggled')
+        action_manager.set_action_checked('channel_0', False)
+        assert calls == [False]
+
+
 class TestExclusive:
     def test_one_entry_checked_at_most(self, action_manager):
         group = action_manager.add_action_group(
