@@ -161,7 +161,7 @@ class DAQ_Move(ParameterControlModule):
     @property
     def current_value(self) -> DataActuator:
         if self._current_value.origin is None or self._current_value.origin == '':
-            self.current_value.origin = self.title
+            self._current_value.origin = self.title
         return self._current_value
 
     @property
