@@ -10,6 +10,7 @@ About/Community
    about
    changelogs
    lab_story
+   user_folder/alternatives
 
 Ecosystem
 ---------

@@ -8,7 +8,6 @@ User's Guide
    :caption: Contents:
 
    user_folder/common_questions
-   user_folder/alternatives
    user_folder/python_environment
    user_folder/installation_tips
    user_folder/launcher
