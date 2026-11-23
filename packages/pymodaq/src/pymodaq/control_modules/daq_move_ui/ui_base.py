@@ -444,10 +444,10 @@ class DAQMoveUI(ControlModuleUI):
 
     def display_value(self, value: DataActuator):
         try:
-            self.current_value_sb.setValue(value.value(self._unit))
+            self.current_value_sb.setValue(value.value_to_display(self._unit))
         except DimensionalityError as e:
             value.force_units(self._unit)
-            self.current_value_sb.setValue(value.value())
+            self.current_value_sb.setValue(value.value_to_display())
 
     def enable_move_buttons(self, status):
         self.abs_value_sb.setEnabled(status)
