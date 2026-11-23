@@ -2,7 +2,7 @@
 message_status_persistence = 1000  # ms
 
 [qtbackend]
-backend = ["pyqt6",  "pyqt5", "pyside6",]
+backend = ["pyqt6", "pyside6",]
 
 [style]
 style = ['Fusion']

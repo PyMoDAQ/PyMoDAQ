@@ -43,7 +43,7 @@ def parse_args():
     parser.add_argument(
         "-qt", "--qt_backend",
         type=lambda value: value.lower(),
-        choices=['pyside6', 'pyqt6', 'pyqt5'],
+        choices=['pyside6', 'pyqt6'],
         default='pyside6',
         help="Select the qt backend to install (e.g. '-qt pyside6' will install the pyside6 backend",
     )

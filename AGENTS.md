@@ -42,7 +42,7 @@ Install all packages in editable mode (order matters, the script handles it):
 ```bash
 python install-packages.py -d                 # editable + dev extras
 python install-packages.py -d -u pymodaq_data # only up to a given package
-python install-packages.py -d -qt pyside6     # choose Qt backend (pyqt5/pyqt6/pyside6)
+python install-packages.py -d -qt pyside6     # choose Qt backend (pyqt6/pyside6)
 ```
 
 Tests (pytest + pytest-qt; root `pyproject.toml` sets `--import-mode=importlib` and `testpaths = packages`):
