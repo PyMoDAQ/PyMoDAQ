@@ -3,7 +3,7 @@ import numbers
 import warnings
 import copy
 
-from typing import List
+from typing import List, Optional
 
 from pymodaq.control_modules.enums import MoveType
 from pymodaq_utils.warnings import deprecation_msg, user_warning
@@ -43,7 +43,7 @@ class DataActuator(DataRaw):
         else:
             return f'<{self.__class__.__name__} ({self.shape} {self.units})>'
 
-    def value_to_display(self, units: str = None) -> float:
+    def value_to_display(self, units: Optional[str] = None) -> float:
         """The scalar to show for this position (user interface, plots)
 
         The ``display_value`` extra attribute if the data has one, else :meth:`value` (the mean of the data when it
