@@ -64,6 +64,13 @@ class TestMethods:
 
 
 class TestDAQMove:
+    def test_current_value_gets_the_title_as_origin(self, ini_daq_move_without_ui):
+        """Reading current_value when its origin is empty sets the origin (it used to recurse for ever)"""
+        daq_move, qtbot = ini_daq_move_without_ui
+        daq_move._current_value.origin = ''
+
+        assert daq_move.current_value.origin == daq_move.title
+
     def test_buttons_send_one_command(self, ini_daq_move_ui):
         """Changing the actuator rebuilds the UI: buttons must not end up connected twice"""
         daq_move, qtbot, widget = ini_daq_move_ui
