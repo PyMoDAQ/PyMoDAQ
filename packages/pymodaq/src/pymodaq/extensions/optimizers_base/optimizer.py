@@ -280,7 +280,10 @@ class OptimizationRunner(QtCore.QObject):
                     break
 
                 self.current_time = time.perf_counter()
-                QtWidgets.QApplication.processEvents()
+                # This loop runs on its own thread (self.runner_thread) and never returns to
+                # that thread's own event loop between iterations, so without this, a queued
+                # command from the GUI thread (STOP, BOUNDS, RESTART...) would never be
+                # delivered to process_commands() until the loop exits on its own.
                 QtWidgets.QApplication.processEvents()
             logger.info('Optimisation loop exiting')
             self.modules_manager.connect_actuators(False)
@@ -725,7 +728,6 @@ class GenericOptimization(CustomExt):
     def update_actuators(self, actuators: List[str]):
         if self.is_action_checked(OptimizerAction.INI_RUNNER):
             self.get_action(OptimizerAction.INI_RUNNER).trigger()
-            QtWidgets.QApplication.processEvents()
 
         self._save_main_settings = False
 
@@ -811,10 +813,8 @@ class GenericOptimization(CustomExt):
             if self.is_action_checked(OptimizerAction.INI_RUNNER):
                 if self.is_action_checked(OptimizerAction.RUN):
                     self.get_action(OptimizerAction.RUN).trigger()
-                    QtWidgets.QApplication.processEvents()
                 self.get_action(OptimizerAction.INI_RUNNER).trigger()  # for the model/algo de-initialization to correctly resave data
                 # afterwards
-                QtWidgets.QApplication.processEvents()
                 self.get_action(OptimizerAction.INI_RUNNER).trigger()
 
     def ini_saver(self):
@@ -847,7 +847,6 @@ class GenericOptimization(CustomExt):
 
         if self.is_action_checked(OptimizerAction.RUN):
             self.get_action(OptimizerAction.RUN).trigger()
-            QtWidgets.QApplication.processEvents()
 
         self.set_algorithm()
         self.model_class.runner_initialized()
@@ -922,7 +921,6 @@ class GenericOptimization(CustomExt):
             self.enable_settings_run(True)
             if self.is_action_checked(OptimizerAction.RUN):
                 self.get_action(OptimizerAction.RUN).trigger()
-                QtWidgets.QApplication.processEvents()
 
             self._status_message_label.setText('Quitting Runner Thread')
             try:
@@ -1024,8 +1022,6 @@ class GenericOptimization(CustomExt):
             self.set_action_enabled(OptimizerAction.GO_TO, False)
             self.set_action_enabled(OptimizerAction.INI_RUNNER, False)
             self.command_runner.emit(utils.ThreadCommand(OptimizerToRunner.START))
-            QtWidgets.QApplication.processEvents()
-            QtWidgets.QApplication.processEvents()
             self.command_runner.emit(utils.ThreadCommand(OptimizerToRunner.RUN))
         else:
             self._status_message_label.setText('Pausing Optimization')
@@ -1035,7 +1031,6 @@ class GenericOptimization(CustomExt):
             self.set_action_enabled(OptimizerAction.GO_TO_BEST, True)
             self.set_action_enabled(OptimizerAction.GO_TO, True)
             self.set_action_enabled(OptimizerAction.INI_RUNNER, True)
-            QtWidgets.QApplication.processEvents()
 
     def thread_status(self, status: utils.ThreadCommand):
         """To reimplement if needed"""

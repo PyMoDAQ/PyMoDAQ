@@ -587,18 +587,12 @@ class DAQ_PID(CustomExt):
         if self.is_action_checked("run"):
             self.get_action("run").set_icon("stop")
             self.command_pid.emit(ThreadCommand("start_PID", []))
-            QtWidgets.QApplication.processEvents()
-
-            QtWidgets.QApplication.processEvents()
-
             self.command_pid.emit(
                 ThreadCommand("run_PID", [np.zeros_like(self.model_class.curr_output)]),
                 )
         else:
             self.get_action("run").set_icon("run2")
             self.command_pid.emit(ThreadCommand("stop_PID"))
-
-            QtWidgets.QApplication.processEvents()
 
     def pause_PID(self):
         for setp in self.setpoints_sb:
@@ -956,6 +950,9 @@ class PIDRunner(QObject):
                         self.outputs_to_actuators.mode,
                         polling=False,
                     )
+                # This loop runs on its own thread and never returns to that thread's own event
+                # loop between iterations, so without this, a queued command from the GUI thread
+                # (pause/stop) would never be delivered until the loop exits on its own.
                 QtWidgets.QApplication.processEvents()
 
             logger.info("PID loop exiting")

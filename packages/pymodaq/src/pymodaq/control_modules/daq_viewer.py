@@ -169,7 +169,9 @@ class DAQ_Viewer(ParameterControlModule):
             self.ui = None
 
         if self.ui is not None:
-            QtWidgets.QApplication.processEvents()
+            # No processEvents() here: this runs during construction, and processing events
+            # reentrantly at that point can dispatch unrelated pending events synchronously,
+            # right in the middle of construction.
             self.ui.add_setting_tree(self.settings_tree)
             self.ui.command_sig.connect(self.process_ui_cmds)
             self.viewers = self.ui.viewers
@@ -351,15 +353,17 @@ class DAQ_Viewer(ParameterControlModule):
         ----------
         cmd: ThreadCommand
             Possible values are:
-                * init
-                * grab
-                * snap
-                * detector_changed
-                * save_current
-                * do_bkg
-                * take_bkg
-                * viewers_changed
-                * quit
+
+            * init
+            * grab
+            * snap
+            * detector_changed
+            * save_current
+            * do_bkg
+            * take_bkg
+            * viewers_changed
+            * quit
+
             and the continuous-saving ones, see UiToMainSaving
         """
         if self._process_saving_ui_cmd(cmd):

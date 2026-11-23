@@ -87,7 +87,7 @@ We suppose that you have Miniforge/Miniconda3/Anaconda3 installed.
 
 In a console, first create a dedicated environment and activate it
 
-``conda create -n mock_beam_steering python=3.10``
+``conda create -n mock_beam_steering python=3.12``
 
 ``conda activate mock_beam_steering``
 

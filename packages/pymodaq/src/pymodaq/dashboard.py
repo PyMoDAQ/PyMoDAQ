@@ -520,8 +520,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
         except Exception as e:
             logger.exception(str(e))
             return False
-        finally:
-            QtWidgets.QApplication.processEvents()
 
     def restart_fun(self, ask=False):
         ret = False
@@ -901,7 +899,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
                 self.settings.child(settings_key).addChild(
                     {"title": mod.title, "name": name, "type": "led", "value": False}
                 )
-                QtWidgets.QApplication.processEvents()
             self.settings.child(settings_key, name).setValue(mod.initialized_state)
 
     def update_init_tree(self):
