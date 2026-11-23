@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 
 from pymodaq.utils import data as data_mod
-from pymodaq.utils.data import DataDim
+from pymodaq.utils.data import DataDim, Q_
 
 
 LABEL = 'A Label'
@@ -88,12 +88,17 @@ class TestDataActuator:
         assert data.value_to_display() == pytest.approx(1.5)
         assert data.value_to_display('mV') == pytest.approx(1500.)
         assert data.value() == pytest.approx(3.)
+        # or a pint quantity, which can be in other units than the data
+        data = data_mod.DataActuator(data=[wave], units='V', display_value=Q_(1.5, 'mV'))
+        assert data.value_to_display() == pytest.approx(0.0015)
+        assert data.value_to_display('uV') == pytest.approx(1500.)
 
     def test_display_value_is_serialized(self):
         from pymodaq_data.data import ser_factory
-        data = data_mod.DataActuator('wave', data=[np.arange(5.)], units='V', display_value=1.5)
-        new_data = ser_factory.get_apply_deserializer(ser_factory.get_apply_serializer(data))
-        assert new_data.value_to_display() == pytest.approx(1.5)
+        for display_value, expected in ((1.5, 1.5), (Q_(1.5, 'mV'), 0.0015)):
+            data = data_mod.DataActuator('wave', data=[np.arange(5.)], units='V', display_value=display_value)
+            new_data = ser_factory.get_apply_deserializer(ser_factory.get_apply_serializer(data))
+            assert new_data.value_to_display() == pytest.approx(expected)
 
     @pytest.mark.parametrize("data_number", [23, 0.25, -0.7, 1j*12])
     def test_quick_format(self, data_number):
