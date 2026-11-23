@@ -144,3 +144,28 @@ def test_qt_side_is_initialized_before_the_dashboard_is_set(dashboard, monkeypat
 def test_unknown_keyword_of_a_manager_is_refused(qapp):
     with pytest.raises(TypeError):
         SettingsManager(dashboard=None)
+
+
+def test_modules_added_to_the_dashboard_reach_the_modules_manager_of_an_extension(dashboard):
+    """Adding modules makes a new list in the dashboard: the manager of the extension has to take it again"""
+    added = []
+
+    class MyExt(CustomExt):
+        def setup_docks_and_widgets(self): pass
+        def setup_actions(self): pass
+        def connect_things(self): pass
+        def setup_menus_and_toolbars(self, menubar=None): pass
+        def value_changed(self, param): pass
+        def do_things_after_modules_added(self):
+            added.append(self.modules_manager.actuators_name)
+        def _quit_fun(self): return True
+
+    ext = MyExt(None, dashboard)
+    module = MagicMock()
+    module.title = 'act'
+    module.__class__ = type('DAQ_Move', (), {})
+    dashboard.modules_manager.add_modules([module])
+
+    assert 'act' in ext.modules_manager.actuators_name
+    assert added and 'act' in added[-1]
+    ext.quit_fun(external_call=True)
