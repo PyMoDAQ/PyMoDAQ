@@ -1005,9 +1005,15 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
                 return [float(np.mean(data_array)) for data_array in self.data]
 
     def equal_to(self, other: 'DataBase', epsilon: Union[float, pint.Quantity])-> bool:
-        """ Check if two data object are equal within epsilon """
+        """ Check if two data object are equal within epsilon
+
+        Two data objects that do not have the same number of arrays or arrays of the same shapes are never equal
+        """
         if isinstance(epsilon, numbers.Number):
             epsilon = Q_(epsilon, self.units)
+        if len(self) != len(other) or any(np.shape(mine) != np.shape(theirs)
+                                          for mine, theirs in zip(self.data, other.data)):
+            return False
         try:
             # using below epsilon - Q_(0, self.units) to handle units with offset/scaling like
             # °C and °F where the diff produce a derived unit (delta_degree_Celsius) that do
