@@ -1141,6 +1141,12 @@ You can directly modify the printed current actuator's value using the
 of ``emit_status(ThreadCommand('get_actuator_value', DataActuator(data=12.4, units='m')))``.
 In that case the printed value would show ``12.4 m``.
 
+The position of an actuator can be an array (a waveform sent to an analog output, for instance). The UI then shows the
+mean of the data. To show another scalar (the amplitude of a sine, the index of a waveform in a list...), give it with
+the ``display_value`` extra attribute, in the units of the data:
+``DataActuator('wave', data=[array], units='V', display_value=2.5)``
+(see :py:meth:`value_to_display<pymodaq.utils.data.DataActuator.value_to_display>`).
+
 You can also modify some SpinBox of the UI (the ones used to specify the absolute values) using the *set_allowed_values*
 command. In that case the attribute argument of the ThreadCommand should be a dictionary, see
 :py:meth:`set_abs_spinbox_properties<pymodaq.control_modules.daq_move_ui.ui_base.DAQMoveUI.set_abs_spinbox_properties>`.
