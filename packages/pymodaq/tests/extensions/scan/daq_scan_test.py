@@ -71,6 +71,25 @@ class TestMoveFailed:
 
         assert not scan_acquisition.is_running
 
+    def test_stops_scan_when_the_move_to_initial_positions_fails(self, qtbot, scan_acquisition, monkeypatch):
+        scan_acquisition._running = True
+        monkeypatch.setattr(scan_acquisition, 'set_ini_positions', lambda: None)
+        scan_acquisition._start()
+
+        scan_acquisition.modules_manager.move_failed_signal.emit('X_axis', 'the board refused the position')
+
+        assert not scan_acquisition.is_running
+
+    def test_a_failed_move_ends_the_batch(self, qtbot, scan_acquisition):
+        scan_acquisition._running = True
+        scan_acquisition.batch_started = True
+        scan_acquisition.init_things()
+        scan_acquisition.scan_step_failed_signal.disconnect(scan_acquisition._on_scan_step_failed)
+
+        scan_acquisition.modules_manager.move_failed_signal.emit('X_axis', 'the board refused the position')
+
+        assert not scan_acquisition.batch_started
+
 
 @pytest.mark.skip
 class TestTimeout:
