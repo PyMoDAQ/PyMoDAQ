@@ -1727,7 +1727,7 @@ class DAQScanAcquisition(ExtensionWorker):
         msg = f'The move of {title} failed: {message}'
         self._update_status(msg)
         logger.error(msg)
-        self.batch_started = False  # a failed actuator ends the whole batch, not only the current scan
+        self.app.batch_started = False  # a failed actuator ends the whole batch, not only the current scan
         self.stop(msg=f'Scan stopped: the move of {title} failed')
 
     def _on_scan_step_failed(self, exception: ScanStepError):
