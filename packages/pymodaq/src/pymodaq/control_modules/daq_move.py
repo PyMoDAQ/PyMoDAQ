@@ -788,7 +788,8 @@ class DAQ_Move(ParameterControlModule):
         elif status.command == ThreadStatusMove.MOVE_FAILED:
             self._move_done_bool = True  # nothing is moving anymore
             if self.ui is not None:
-                self.ui.move_done = True
+                self.ui.move_done = True  # the UI is not busy anymore, but this also clears its error...
+            self._set_in_error(True, str(status.attribute))  # ...that the failed move keeps
             self.move_failed_signal.emit(self.title, str(status.attribute))
 
         elif status.command == ThreadStatusMove.OUT_OF_BOUNDS:
