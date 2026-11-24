@@ -409,7 +409,8 @@ class ControlModule(QObject):
 
         if (self._in_error and status.command not in
                 (ThreadStatus.ERROR, ThreadStatus.UPDATE_STATUS, ThreadStatus.UPDATE_SETTINGS,
-                 ThreadStatus.UPDATE_MAIN_SETTINGS, ThreadStatus.UPDATE_UI, "Update_Status")):
+                 ThreadStatus.UPDATE_MAIN_SETTINGS, ThreadStatus.UPDATE_UI, "Update_Status",
+                 'move_failed')):  # sent right after the error of a failed move: it does not clear it
             self._set_in_error(False)  # the hardware answered: it works again
 
         if status.command == ThreadStatus.ERROR:

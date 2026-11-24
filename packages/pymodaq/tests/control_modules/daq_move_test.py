@@ -84,6 +84,7 @@ class TestDAQMove:
         assert blocker.args[0] == daq_move.title
         assert 'refused' in blocker.args[1]
         assert done == []
+        assert daq_move._in_error  # the status LED stays in error: the move_failed status does not clear it
         daq_move.quit_fun()
 
     def test_current_value_gets_the_title_as_origin(self, ini_daq_move_without_ui):
