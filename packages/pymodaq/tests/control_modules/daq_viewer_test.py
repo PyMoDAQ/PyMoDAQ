@@ -30,9 +30,6 @@ from pymodaq_gui.parameter import utils as putils
 
 config = GlobalConfig()
 
-config_viewer = config['pymodaq', 'viewer']
-config_viewer['viewer_in_thread'] = True
-
 
 @fixture
 def init_qt(qtbot):

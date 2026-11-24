@@ -77,7 +77,6 @@ def test_required_config_entries():
 
     assert 'viewer' in config
     assert 'daq_type' in config('viewer')
-    assert 'viewer_in_thread' in config('viewer')
     assert 'timeout' in config('viewer')
     assert 'allow_settings_edition' in config('viewer')
 
