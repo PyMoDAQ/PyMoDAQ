@@ -73,6 +73,7 @@ class ModulesManager(QObject, ParameterManager):
     actuators_changed = Signal(list)
     det_done_signal = Signal(DataToExport)  # dte here contains DataWithAxes
     move_done_signal = Signal(DataToExport)  # dte here contains DataActuators
+    move_failed_signal = Signal(str, str)  # title of the actuator whose move failed (exception of its plugin), message
     timeout_signal = Signal(list)  # list of titles of the modules whose origin wasn't found among
                                     # the received responses (see grab_data/move_actuators)
 
@@ -126,6 +127,7 @@ class ModulesManager(QObject, ParameterManager):
         self.det_done_flag = False
         self.move_done_positions: DataToExport = None  # type: ignore[assignment]
         self.move_done_flag = False
+        self.move_failed = False  # True when a move of the selected actuators failed (see move_failed_signal)
 
         # sigActivated emits the param itself (ActionLedParameter.activate()), but neither
         # handler takes any argument, so Qt drops it -- same as any other zero-arg slot.
@@ -677,12 +679,17 @@ class ModulesManager(QObject, ParameterManager):
         --------
         :meth:`move_done`
         """
-        if slot is None:
+        default_slot = slot is None
+        if default_slot:
             slot = self.move_done
         if connect:
             for sig in [mod.move_done_signal if signal == 'move_done' else mod.current_value_signal
                         for mod in self.actuators]:
                 sig.connect(slot)
+            if default_slot and signal == 'move_done':
+                for mod in self.actuators:
+                    if hasattr(mod, 'move_failed_signal'):
+                        mod.move_failed_signal.connect(self._on_move_failed)
 
         else:
 
@@ -692,6 +699,12 @@ class ModulesManager(QObject, ParameterManager):
                     sig.disconnect(slot)
                 except TypeError as e:
                     logger.error(str(e))
+            if default_slot and signal == 'move_done':
+                for mod in self.actuators:
+                    try:
+                        mod.move_failed_signal.disconnect(self._on_move_failed)
+                    except (TypeError, AttributeError):
+                        pass  # was not connected
 
         self.actuators_connected = connect
 
@@ -892,6 +905,7 @@ class ModulesManager(QObject, ParameterManager):
                         mode: Union[MoveType, str] = MoveType.ABS) -> DataToExport:
         self.move_done_positions = DataToExport(name=__class__.__name__, control_module='DAQ_Move')  # type: ignore[name-defined]
         self.move_done_flag = False
+        self.move_failed = False
         self.settings.child(ModulesManagerParam.PROBE_ACTUATORS).setValue(self.move_done_flag)
 
         if mode == MoveType.ABS:
@@ -942,7 +956,7 @@ class ModulesManager(QObject, ParameterManager):
 
         if polling:
             tzero = time.perf_counter()
-            while not self.move_done_flag:  # polling move done
+            while not self.move_done_flag and not self.move_failed:  # polling move done
 
                 QtWidgets.QApplication.processEvents()  # mandatory for the det_done_flag boolean to be modified in the corresponding method
                 if time.perf_counter() - tzero > self.actuator_timeout:  # timeout in seconds
@@ -953,7 +967,8 @@ class ModulesManager(QObject, ParameterManager):
                     break
                 QThread.msleep(10)
 
-        self.move_done_signal.emit(self.move_done_positions)
+        if not self.move_failed:  # a failed move was announced by move_failed_signal
+            self.move_done_signal.emit(self.move_done_positions)
         return self.move_done_positions
 
     def raise_actuator_timeout(self, module_name: str) -> None:
@@ -973,6 +988,19 @@ class ModulesManager(QObject, ParameterManager):
         return pos
 
     @Slot(DataActuator)
+    @Slot(str, str)
+    def _on_move_failed(self, title: str, message: str) -> None:
+        """Slot connected to the move_failed_signal of the selected actuators
+
+        The move is not waited for anymore (no timeout will follow, the callback of a move with callback is forgotten)
+        and move_failed_signal is emitted.
+        """
+        self.actuators_timeout_timer.stop()
+        self.move_failed = True
+        logger.error(f'The move of {title} failed: {message}')
+        self._forget_pending_callback(ModuleType.Actuator)
+        self.move_failed_signal.emit(title, message)
+
     def move_done(self, data_act: DataActuator) -> None:
         """Default slot connected to the move_done_signal of the selected actuators
 

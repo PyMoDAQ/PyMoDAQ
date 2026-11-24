@@ -1500,6 +1500,10 @@ class DAQScanAcquisition(ExtensionWorker):
             self.modules_manager.timeout_signal.disconnect(self.timeout)
         except (TypeError, AttributeError):
             pass
+        try:
+            self.modules_manager.move_failed_signal.disconnect(self.move_failed)
+        except (TypeError, AttributeError):
+            pass
 
         #4 update the GUI
         self._app.status_sig.emit(utils.ThreadCommand("Scan_done"))
@@ -1535,6 +1539,7 @@ class DAQScanAcquisition(ExtensionWorker):
             self.Naverage = self.settings['scan_options', 'scan_average']
 
             self.modules_manager.timeout_signal.connect(self.timeout)
+            self.modules_manager.move_failed_signal.connect(self.move_failed)
 
             self.scan_step_failed_signal.connect(self._on_scan_step_failed)
 
@@ -1708,6 +1713,13 @@ class DAQScanAcquisition(ExtensionWorker):
             self.stop(msg=f'Scan stopped due to a Timeout')
         else:
             self.advance()
+
+    def move_failed(self, title: str, message: str):
+        """An actuator could not reach its position (its plugin raised an exception): the scan is stopped"""
+        msg = f'The move of {title} failed: {message}'
+        self._update_status(msg)
+        logger.error(msg)
+        self.stop(msg=f'Scan stopped: the move of {title} failed')
 
     def _on_scan_step_failed(self, exception: ScanStepError):
         logger.warning(exception)

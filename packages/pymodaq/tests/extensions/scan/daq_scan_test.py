@@ -61,6 +61,17 @@ def scan_acquisition(qtbot, scan_settings, monkeypatch):
     return DAQScanAcquisition(daq_scan=scan)
 
 
+class TestMoveFailed:
+    def test_stops_scan_when_a_move_fails(self, qtbot, scan_acquisition):
+        scan_acquisition._running = True
+        scan_acquisition.init_things()
+        scan_acquisition.scan_step_failed_signal.disconnect(scan_acquisition._on_scan_step_failed)
+
+        scan_acquisition.modules_manager.move_failed_signal.emit('X_axis', 'the board refused the position')
+
+        assert not scan_acquisition.is_running
+
+
 @pytest.mark.skip
 class TestTimeout:
     def test_stops_scan_when_stop_on_timeout_enabled(self, qtbot, scan_acquisition, scan_settings):

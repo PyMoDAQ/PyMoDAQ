@@ -62,6 +62,24 @@ class MockActuator(QObject):
         self._current_value = DataActuator(title, data=current_value)
 
 
+class MockActuatorFailing(QObject):
+    """An actuator whose plugin raises an exception while moving"""
+    move_done_signal = Signal(DataActuator)
+    move_failed_signal = Signal(str, str)
+    current_value_signal = Signal(DataActuator)
+    command_hardware = Signal(ThreadCommand)
+
+    def __init__(self, title: str):
+        super().__init__()
+        self.title = title
+        self._current_value = DataActuator(title, data=0.)
+        self.command_hardware.connect(self._queue_command)
+
+    def _queue_command(self, cmd: ThreadCommand):
+        if cmd.command == ControlToHardwareMove.MOVE_ABS:
+            self.move_failed_signal.emit(self.title, 'the board refused the position')
+
+
 class MockActuatorWithEmission(QObject):
     move_done_signal = Signal(DataActuator)
     current_value_signal = Signal(DataActuator)
@@ -447,6 +465,41 @@ class TestMoveActuatorsWithCallback:
 
         assert received == []
         assert manager_with_emission._pending_auto_forgetting == {}
+
+class TestMoveFailed:
+    @pytest.fixture
+    def failing_manager(self, qtbot):
+        actuator = MockActuatorFailing('X_axis')
+        return ModulesManager(detectors=[], actuators=[actuator], selected_detectors=[],
+                              selected_actuators=[actuator])
+
+    def test_a_failed_move_is_announced_at_once_and_the_callback_forgotten(self, qtbot, failing_manager):
+        move_dte = DataToExport('move_dte', data=[DataActuator(name='X_axis', data=[np.atleast_1d(1.0)])])
+        received, timeouts = [], []
+        failing_manager.timeout_signal.connect(timeouts.append)
+
+        with qtbot.waitSignal(failing_manager.move_failed_signal, timeout=2000) as blocker:
+            failing_manager.move_actuators_with_callback(move_dte, callback=received.append)
+
+        assert blocker.args == ['X_axis', 'the board refused the position']
+        assert received == []
+        assert not failing_manager.actuators_timeout_timer.isActive()  # no timeout will follow
+        assert failing_manager._pending_auto_forgetting == {}
+        assert timeouts == []
+
+    def test_polling_stops_at_a_failed_move(self, qtbot, failing_manager):
+        move_dte = DataToExport('move_dte', data=[DataActuator(name='X_axis', data=[np.atleast_1d(1.0)])])
+        failing_manager.connect_actuators(True)
+        done = []
+        failing_manager.move_done_signal.connect(done.append)
+        failures = []
+        failing_manager.move_failed_signal.connect(lambda title, message: failures.append(title))
+
+        failing_manager.move_actuators(move_dte, polling=True)
+
+        assert failures == ['X_axis']
+        assert done == []
+
 
 class TestGrabData:
     def test_callback_called_when_done(self, qtbot, manager_with_emission):

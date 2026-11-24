@@ -64,6 +64,28 @@ class TestMethods:
 
 
 class TestDAQMove:
+    def test_an_exception_of_the_plugin_while_moving_fails_the_move(self, ini_daq_move_without_ui, monkeypatch):
+        """The exception is shown as an error of the module and the move is announced as failed, not done"""
+        daq_move, qtbot = ini_daq_move_without_ui
+        daq_move.actuator = 'Mock'
+        plugin_class = daqmv.find_actuator_class_from_name('Mock')
+
+        def refuse(self, value):
+            raise ValueError('refused')
+        monkeypatch.setattr(plugin_class, 'move_abs', refuse)
+        with qtbot.waitSignal(daq_move.init_signal, timeout=10000):
+            daq_move.init_hardware(True)
+        done = []
+        daq_move.move_done_signal.connect(done.append)
+
+        with qtbot.waitSignal(daq_move.move_failed_signal, timeout=5000) as blocker:
+            daq_move.move_abs(DataActuator(daq_move.title, data=3.))
+
+        assert blocker.args[0] == daq_move.title
+        assert 'refused' in blocker.args[1]
+        assert done == []
+        daq_move.quit_fun()
+
     def test_buttons_send_one_command(self, ini_daq_move_ui):
         """Changing the actuator rebuilds the UI: buttons must not end up connected twice"""
         daq_move, qtbot, widget = ini_daq_move_ui

@@ -59,10 +59,12 @@ class TestWorkers:
         worker.plugin = StubActuator()
         recorder = Recorder(worker.status_sig)
         worker.queue_command(ThreadCommand(ControlToHardwareMove.MOVE_ABS, [DataActuator(data=500., units='mm')]))
-        assert len(recorder.statuses) == 1
-        status = recorder.statuses[0]
+        assert len(recorder.statuses) == 2
+        status, failed = recorder.statuses
         assert status.command == ThreadStatus.ERROR
         assert 'position out of range' in status.attribute and ControlToHardwareMove.MOVE_ABS in status.attribute
+        assert failed.command == ThreadStatusMove.MOVE_FAILED  # the move will not be done
+        assert 'position out of range' in failed.attribute
 
     def test_detector_worker_reports_a_failed_grab(self, qapp):
         worker = _detector_worker()
