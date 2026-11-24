@@ -85,7 +85,7 @@ class HardwareWorkerBase(QObject):
     def ini_hardware(self, params_state=None, controller=None):
         raise NotImplementedError
 
-    def report_error(self, error: Exception, context: str = '') -> None:
+    def report_error(self, error: Exception, context: str = '', status: str = ThreadStatus.ERROR) -> None:
         """Log an exception raised by the instrument plugin and show it in the control module
 
         The control module displays the message in its status bar and marks itself in error (see
@@ -97,10 +97,13 @@ class HardwareWorkerBase(QObject):
             The exception raised by the plugin
         context: str
             What was being done (the command), added in front of the message
+        status: str
+            The status sent to the control module, ``ThreadStatus.ERROR`` or, for an actuator that could not move,
+            ``ThreadStatusMove.MOVE_FAILED`` (it also marks the module in error)
         """
         getattr(self, 'logger', logger).exception(str(error))
         message = f'{context}: {error}' if context else str(error)
-        self.status_sig.emit(ThreadCommand(ThreadStatus.ERROR, message))
+        self.status_sig.emit(ThreadCommand(status, message))
 
     def update_settings(self, settings_parameter_dict) -> None:
         """Route a settings change to either main_settings or the plugin subtree."""
@@ -409,8 +412,7 @@ class ControlModule(QObject):
 
         if (self._in_error and status.command not in
                 (ThreadStatus.ERROR, ThreadStatus.UPDATE_STATUS, ThreadStatus.UPDATE_SETTINGS,
-                 ThreadStatus.UPDATE_MAIN_SETTINGS, ThreadStatus.UPDATE_UI, "Update_Status",
-                 'move_failed')):  # sent right after the error of a failed move: it does not clear it
+                 ThreadStatus.UPDATE_MAIN_SETTINGS, ThreadStatus.UPDATE_UI, "Update_Status")):
             self._set_in_error(False)  # the hardware answered: it works again
 
         if status.command == ThreadStatus.ERROR:

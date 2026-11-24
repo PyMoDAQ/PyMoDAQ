@@ -789,7 +789,8 @@ class DAQ_Move(ParameterControlModule):
             self._move_done_bool = True  # nothing is moving anymore
             if self.ui is not None:
                 self.ui.move_done = True  # the UI is not busy anymore, but this also clears its error...
-            self._set_in_error(True, str(status.attribute))  # ...that the failed move keeps
+            self.update_status(f'Error: {status.attribute}', log=False)  # already logged by the worker
+            self._set_in_error(True, str(status.attribute))  # ...that the failed move sets (as the ERROR status)
             self.move_failed_signal.emit(self.title, str(status.attribute))
 
         elif status.command == ThreadStatusMove.OUT_OF_BOUNDS:
@@ -1067,10 +1068,11 @@ class ActuatorWorker(HardwareWorkerBase):
             else:  # custom commands for particular plugins
                 self._dispatch_custom_command(command)
         except Exception as e:
-            self.report_error(e, str(command.command))
             if command.command in (ControlToHardwareMove.MOVE_ABS, ControlToHardwareMove.MOVE_REL,
                                    ControlToHardwareMove.MOVE_HOME):
-                self.status_sig.emit(ThreadCommand(ThreadStatusMove.MOVE_FAILED, str(e)))
+                self.report_error(e, str(command.command), status=ThreadStatusMove.MOVE_FAILED)
+            else:
+                self.report_error(e, str(command.command))
 
     def stop_motion(self):
         """Stop hardware motion."""
