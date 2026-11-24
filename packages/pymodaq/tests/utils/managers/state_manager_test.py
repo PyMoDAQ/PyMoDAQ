@@ -360,8 +360,8 @@ class TestWithSubEntries:
 
         with qtbot.waitSignal(state_manager.applied_entry, timeout=5000):
             state_manager.execute_entry(blocking=True, block_caller=False)
-            # the call returned without running the event loop, that the modules need to finish: this does not
-            # depend on the speed of the machine, unlike a measured duration
+            # the call returned without running the event loop, which the modules need in order to report
+            # they are done: so the entry cannot be applied yet, whatever the speed of the machine
             assert not state_manager.entry_applied
         assert state_manager.entry_applied
 
