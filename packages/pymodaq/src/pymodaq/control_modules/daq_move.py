@@ -91,6 +91,7 @@ class DAQ_Move(ParameterControlModule):
     _ini_hw_cmd = ControlToHardware.INI_HARDWARE
 
     move_done_signal = Signal(DataActuator)
+    move_failed_signal = Signal(str, str)  # title of the module and message of the exception raised by the plugin
     current_value_signal = Signal(DataActuator)
     bounds_signal = Signal(bool)
 
@@ -716,6 +717,7 @@ class DAQ_Move(ParameterControlModule):
             * **ini_stage**: obtains info from the initialization
             * **get_actuator_value**: update the UI current value
             * **move_done**: update the UI current value and emits the move_done signal
+            * **move_failed**: the plugin raised an exception while moving, emits the move_failed_signal signal
             * **outofbounds**: emits the bounds_signal signal with a True argument
             * **set_allowed_values**: used to change the behaviour of the spinbox controlling absolute values (see
               :meth:`DAQMoveUI.set_abs_spinbox_properties<pymodaq.control_modules.daq_move_ui.ui_base.DAQMoveUI.set_abs_spinbox_properties>`
@@ -782,6 +784,14 @@ class DAQ_Move(ParameterControlModule):
 
             if self.settings.child("main_settings", "leco", "leco_connected").value() and self._send_to_leco:
                 self._leco_commands_signal.emit(ThreadCommand(LECOMoveCommands.MOVE_DONE, data_act))
+
+        elif status.command == ThreadStatusMove.MOVE_FAILED:
+            self._move_done_bool = True  # nothing is moving anymore
+            if self.ui is not None:
+                self.ui.move_done = True  # the UI is not busy anymore, but this also clears its error...
+            self.update_status(f'Error: {status.attribute}', log=False)  # already logged by the worker
+            self._set_in_error(True, str(status.attribute))  # ...that the failed move sets (as the ERROR status)
+            self.move_failed_signal.emit(self.title, str(status.attribute))
 
         elif status.command == ThreadStatusMove.OUT_OF_BOUNDS:
             logger.warning(f"The Actuator {self.title} has reached its defined bounds")
@@ -1058,7 +1068,11 @@ class ActuatorWorker(HardwareWorkerBase):
             else:  # custom commands for particular plugins
                 self._dispatch_custom_command(command)
         except Exception as e:
-            self.report_error(e, str(command.command))
+            if command.command in (ControlToHardwareMove.MOVE_ABS, ControlToHardwareMove.MOVE_REL,
+                                   ControlToHardwareMove.MOVE_HOME):
+                self.report_error(e, str(command.command), status=ThreadStatusMove.MOVE_FAILED)
+            else:
+                self.report_error(e, str(command.command))
 
     def stop_motion(self):
         """Stop hardware motion."""

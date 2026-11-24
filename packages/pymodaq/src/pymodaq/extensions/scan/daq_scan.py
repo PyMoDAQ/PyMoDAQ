@@ -1483,6 +1483,7 @@ class DAQScanAcquisition(ExtensionWorker):
                                          excepted=(WorkFlowActions.PAUSE,
                                                    WorkFlowActions.STOP),
                                          other_actions='ini_positions')
+        self._connect_move_failed()  # also needed for the move to the initial positions
         self.set_ini_positions()
 
     def _pause(self, do_pause: bool = True):
@@ -1498,6 +1499,10 @@ class DAQScanAcquisition(ExtensionWorker):
             pass
         try:
             self.modules_manager.timeout_signal.disconnect(self.timeout)
+        except (TypeError, AttributeError):
+            pass
+        try:
+            self.modules_manager.move_failed_signal.disconnect(self.move_failed)
         except (TypeError, AttributeError):
             pass
 
@@ -1528,6 +1533,13 @@ class DAQScanAcquisition(ExtensionWorker):
             self.init_things()
             self.advance()
 
+    def _connect_move_failed(self):
+        try:
+            self.modules_manager.move_failed_signal.disconnect(self.move_failed)
+        except (TypeError, RuntimeError):
+            pass  # was not connected
+        self.modules_manager.move_failed_signal.connect(self.move_failed)
+
     def init_things(self):
         try:
             # the number of averages may have been changed since the creation of this object: it must be
@@ -1535,6 +1547,7 @@ class DAQScanAcquisition(ExtensionWorker):
             self.Naverage = self.settings['scan_options', 'scan_average']
 
             self.modules_manager.timeout_signal.connect(self.timeout)
+            self._connect_move_failed()
 
             self.scan_step_failed_signal.connect(self._on_scan_step_failed)
 
@@ -1708,6 +1721,14 @@ class DAQScanAcquisition(ExtensionWorker):
             self.stop(msg=f'Scan stopped due to a Timeout')
         else:
             self.advance()
+
+    def move_failed(self, title: str, message: str):
+        """An actuator could not reach its position (its plugin raised an exception): the scan is stopped"""
+        msg = f'The move of {title} failed: {message}'
+        self._update_status(msg)
+        logger.error(msg)
+        self.app.batch_started = False  # a failed actuator ends the whole batch, not only the current scan
+        self.stop(msg=f'Scan stopped: the move of {title} failed')
 
     def _on_scan_step_failed(self, exception: ScanStepError):
         logger.warning(exception)

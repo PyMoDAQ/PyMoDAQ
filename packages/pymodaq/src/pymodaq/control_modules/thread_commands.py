@@ -51,6 +51,7 @@ class ThreadStatusMove(StrEnum):
     INI_STAGE = 'ini_stage'         # deprecated: use ThreadStatus.INI_HARDWARE
     GET_ACTUATOR_VALUE = 'get_actuator_value'
     MOVE_DONE = 'move_done'
+    MOVE_FAILED = 'move_failed'     # the plugin raised an exception while moving: the position will not be reached
     OUT_OF_BOUNDS = 'outofbounds'
     SET_ALLOWED_VALUES = 'set_allowed_values'
     STOP = 'stop'                   # deprecated: use ThreadStatus.STOP
