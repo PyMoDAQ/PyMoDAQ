@@ -158,6 +158,29 @@ class ExtensionWorker(QObject):
         """ Convenience property"""
         return self._app.module_and_data_saver
 
+    def prepare_data_to_save(self, bundle: DataBundle) -> DataBundle:
+        """ Hook called just before a bundle is sent to the SaverWorker, to be reimplemented
+
+        Use it to add metadata (for instance with :meth:`DataWithAxes.add_extra_attribute`), add data or filter
+        what is going to be saved. The default implementation returns the bundle unchanged.
+
+        Notes
+        -----
+        * It is called by :meth:`emit_data_to_save`, so for every bundle saved by the extension, and runs in the
+          thread of this worker (the GUI thread for most extensions): keep it short.
+        * The bundle can be modified in place. Return the bundle to be saved.
+        * The attributes of the saved arrays are written when the arrays are created, that is with the first
+          bundle of an acquisition: annotating only once is enough (the scan sets ``bundle.save_index``).
+        """
+        return bundle
+
+    def emit_data_to_save(self, bundle: DataBundle):
+        """ Send a bundle to the SaverWorker after the call to :meth:`prepare_data_to_save`
+
+        Extensions should use it instead of emitting ``saver_worker.data_to_save_signal`` directly.
+        """
+        self.saver_worker.data_to_save_signal.emit(self.prepare_data_to_save(bundle))
+
     def start(self):
         self._running = True
         for worker_name in self.thread_manager.n_jobs:
