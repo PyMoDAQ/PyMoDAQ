@@ -160,7 +160,7 @@ class ExtensionWorker(QObject):
         return self._app.module_and_data_saver
 
     def add_data_preparer(self, preparer: Callable[[DataBundle], DataBundle | None]):
-        """ Register a function called by :meth:`prepare_data_to_save` for every bundle to be saved
+        """ Register a function called by :meth:`run_data_preparers` for every bundle to be saved
 
         It allows to act on the data without subclassing the worker. The function receives the bundle and returns
         the bundle to be saved, or None if it modified the bundle in place. The functions are called in the order of
@@ -174,13 +174,25 @@ class ExtensionWorker(QObject):
         if preparer in self._data_preparers:
             self._data_preparers.remove(preparer)
 
+    def run_data_preparers(self, bundle: DataBundle) -> DataBundle:
+        """ Pass the bundle through the functions registered with :meth:`add_data_preparer`, in order
+
+        Called by :meth:`emit_data_to_save`, not meant to be reimplemented. Returns the resulting bundle (the bundle
+        unchanged if there are no functions).
+        """
+        for preparer in list(self._data_preparers):
+            result = preparer(bundle)
+            if result is not None:
+                bundle = result
+        return bundle
+
     def prepare_data_to_save(self, bundle: DataBundle) -> DataBundle:
         """ Hook called just before a bundle is sent to the SaverWorker, to be reimplemented
 
         Use it to add metadata (for instance with :meth:`DataWithAxes.add_extra_attribute`), add data or filter
-        what is going to be saved. The default implementation calls the functions registered with
-        :meth:`add_data_preparer` and returns the resulting bundle (the bundle unchanged if there are none). A
-        reimplementation should call the parent method to keep them working.
+        what is going to be saved. The default implementation does nothing and returns the bundle. There is no need
+        to call the parent method: the functions registered with :meth:`add_data_preparer` are run separately by
+        :meth:`run_data_preparers`, before this hook.
 
         Notes
         -----
@@ -190,17 +202,14 @@ class ExtensionWorker(QObject):
         * The attributes of the saved arrays are written when the arrays are created, that is with the first
           bundle of an acquisition: annotating only once is enough (the scan sets ``bundle.save_index``).
         """
-        for preparer in list(self._data_preparers):
-            result = preparer(bundle)
-            if result is not None:
-                bundle = result
         return bundle
 
     def emit_data_to_save(self, bundle: DataBundle):
-        """ Send a bundle to the SaverWorker after the call to :meth:`prepare_data_to_save`
+        """ Send a bundle to the SaverWorker after :meth:`run_data_preparers` then :meth:`prepare_data_to_save`
 
         Extensions should use it instead of emitting ``saver_worker.data_to_save_signal`` directly.
         """
+        bundle = self.run_data_preparers(bundle)
         self.saver_worker.data_to_save_signal.emit(self.prepare_data_to_save(bundle))
 
     def start(self):
