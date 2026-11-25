@@ -1644,7 +1644,7 @@ class DAQScanAcquisition(ExtensionWorker):
         if self.scanner.scanner.do_process_data:
             # extra data to be saved at the same time!
             bundle.dte.append(self.scanner.scanner.process_data(bundle.dte))
-        return super().prepare_data_to_save(bundle)
+        return bundle
 
     def det_done(self, dte_grabbed):
         """
