@@ -54,6 +54,22 @@ class TestH5SaverLowLevel:
             assert h5saver.raw_group.attrs[key] == value
         h5saver.close_file()
 
+    @pytest.mark.parametrize('backend', tested_backend)
+    def test_init_file_date_time_have_utc_offset(self, tmp_path, backend):
+        """the date and time attributes of the file root give an unambiguous instant"""
+        h5saver = saving.H5SaverLowLevel(backend=backend)
+        before = datetime.now().astimezone().replace(microsecond=0)
+        h5saver.init_file(file_name=tmp_path.joinpath('h5file.h5'), new_file=True)
+        after = datetime.now().astimezone()
+
+        date = datetime.fromisoformat(h5saver.get_attr(h5saver.root(), 'date')).date()
+        time = datetime.strptime('2000-01-01T' + h5saver.get_attr(h5saver.root(), 'time'),
+                                 '%Y-%m-%dT%H:%M:%S.%f%z').timetz()
+        assert time.utcoffset() is not None
+        instant = datetime.combine(date, time)
+        assert before <= instant <= after
+        h5saver.close_file()
+
     def test_logger(self, h5saver_lowlevel):
         h5saver = h5saver_lowlevel
 
