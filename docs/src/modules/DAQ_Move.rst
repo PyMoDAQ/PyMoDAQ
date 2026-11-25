@@ -96,7 +96,7 @@ Hardware initialization
 -----------------------
 
 * |select|: list of available instrument plugins of actuator type, see :numref:`daq_move_gui_base_actuators`.
-  The plugins are grouped in submenus (for instance *Mock* for the simulated instruments, *Remote* for the LECO ones
+  The plugins are grouped in submenus (for instance *Mock* for the simulated instruments, those whose name contains *mock*, *simulat* or the word *Sim*, *Remote* for the LECO ones
   and one submenu per plugin package) and the button shows the name of the chosen actuator.
 * |init|: Initialize/Desinitialize the hardware using the current :ref:`settings<daq_move_settings>`
 * |quit|: De-initialize the hardware and quit the module

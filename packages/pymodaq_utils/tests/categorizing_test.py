@@ -17,6 +17,14 @@ class TestCategorizeItems:
         categorized = categorize_items(['BSPiezoMirror', 'BSpline'])
         assert categorized == {'Mock': ['BSPiezoMirror'], 'Plugin': ['BSpline']}
 
+    def test_simulated_instruments_by_name(self):
+        simulated = ['MokeMagnetSim', 'Sim_Stage', 'SimStage', 'sim', 'Simulated', 'SimulatedCamera', 'XSimulator',
+                     'simulated_stage']
+        not_simulated = ['Simple', 'SimpleCamera', 'Simon', 'Similar', 'Simplex']
+        categorized = categorize_items(simulated + not_simulated)
+        assert categorized['Mock'] == simulated
+        assert categorized['Plugin'] == not_simulated
+
     def test_empty_categories_are_dropped(self):
         assert categorize_items(['Andor']) == {'Plugin': ['Andor']}
         assert categorize_items([]) == {}
