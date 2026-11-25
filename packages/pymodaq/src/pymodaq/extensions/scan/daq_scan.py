@@ -1639,6 +1639,13 @@ class DAQScanAcquisition(ExtensionWorker):
                                                             f"ind_average: {self._ind_average}:\n"
                                                             f"{str(e)}"))
 
+    def prepare_data_to_save(self, bundle: DataBundle) -> DataBundle:
+        """ Add to the data to be saved the data processed by the scanner, if it does some (``do_process_data``)"""
+        if self.scanner.scanner.do_process_data:
+            # extra data to be saved at the same time!
+            bundle.dte.append(self.scanner.scanner.process_data(bundle.dte))
+        return super().prepare_data_to_save(bundle)
+
     def det_done(self, dte_grabbed):
         """
 
@@ -1660,10 +1667,7 @@ class DAQScanAcquisition(ExtensionWorker):
                                               index=0))
             self.saver_worker.nav_axes_signal.emit(nav_axes)
 
-        if self.scanner.scanner.do_process_data:
-            # extra data to be saved at the same time!
-            dte_grabbed.append(self.scanner.scanner.process_data(dte_grabbed))
-        else:
+        if not self.scanner.scanner.do_process_data:  # otherwise the processed data are added by prepare_data_to_save
             full_names: list = self.settings['plot_options', 'plot_0d']['selected'][:]
             full_names.extend(self.settings['plot_options', 'plot_1d']['selected'][:])
             self._current_dte_to_be_plotted = dte_grabbed.get_data_from_full_names(full_names, deepcopy=True)
