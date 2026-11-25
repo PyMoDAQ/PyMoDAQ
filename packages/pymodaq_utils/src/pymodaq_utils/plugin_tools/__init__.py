@@ -4,6 +4,7 @@
 * :mod:`~pymodaq_utils.plugin_tools.rules`: the static rules (``PMQxxx`` codes)
 * :mod:`~pymodaq_utils.plugin_tools.checks`: the report on a plugin package (``check_plugin`` command)
 * :mod:`~pymodaq_utils.plugin_tools.scaffold`: creation of new plugin modules
+* :mod:`~pymodaq_utils.plugin_tools.readme`: reading of the ``Authors`` and ``Instruments`` sections of a plugin README
 
 They read the source files of the plugins and do not import ``pymodaq``. The previous locations
 (``pymodaq_utils.plugin_tools.checks``, ``plugin_rules`` and ``plugin_scaffold``) still work.
