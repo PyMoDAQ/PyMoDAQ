@@ -374,6 +374,11 @@ metadata (``DataWithAxes.add_extra_attribute``), add data or filter what is save
                     dwa.add_extra_attribute(quantity_kind='http://qudt.org/vocab/quantitykind/Wavelength')
             return super().prepare_data_to_save(bundle)
 
+Without subclassing, a component (a manager for instance) can register a function:
+``worker.add_data_preparer(fn)`` (and ``remove_data_preparer(fn)``). The default ``prepare_data_to_save`` calls the
+registered functions in the order of their registration, each one receiving the bundle and returning the bundle to be
+saved, or ``None`` if it modified it in place. A reimplemented hook keeps them working by calling ``super()``.
+
 Things to know:
 
 * the hook is called for every bundle and runs in the thread of the ``ExtensionWorker``, which is the GUI thread for
