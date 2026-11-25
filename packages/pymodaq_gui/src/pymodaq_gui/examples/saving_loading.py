@@ -321,7 +321,7 @@ class MySaverLoaderWorker(ExtensionWorker):
 
 
     def send_data(self, dte: DataToExport):
-        self.saver_worker.data_to_save_signal.emit(DataBundle(node=self.current_node, dte=dte))
+        self.emit_data_to_save(DataBundle(node=self.current_node, dte=dte))
         self.thread_manager.n_jobs[SaverWorker.name] += 1
 
 

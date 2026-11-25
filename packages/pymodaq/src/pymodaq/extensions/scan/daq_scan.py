@@ -1673,7 +1673,7 @@ class DAQScanAcquisition(ExtensionWorker):
         #filtering the data to be saved:
 
 
-        self.saver_worker.data_to_save_signal.emit(
+        self.emit_data_to_save(
             DataBundle(
                 indexes=list(self._current_indexes),
                 distribution=self.scanner.distribution,

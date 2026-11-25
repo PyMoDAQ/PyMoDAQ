@@ -313,7 +313,7 @@ class SequenceWorker(ExtensionWorker):
 
     def save_callback(self, dte: DataToExport):
         self.thread_manager.n_jobs[SaverWorker.name] += 1
-        self.saver_worker.data_to_save_signal.emit(DataBundle(dte=dte))
+        self.emit_data_to_save(DataBundle(dte=dte))
 
     def _start(self):
         self.module_and_data_saver.get_set_node(new=True)
