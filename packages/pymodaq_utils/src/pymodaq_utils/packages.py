@@ -193,22 +193,10 @@ def extract_authors_from_description(description):
     Returns
     -------
     list of string
+
+    See Also
+    --------
+    pymodaq_utils.plugin_tools.readme.parse_readme: also extracts the contributors and the instruments
     """
-
-    posa = description.find('Authors')
-    pos_if_need = description.find('\n\n.. if needed use this field')
-    posc = description.find('\n\nContributors')
-    posi = description.find('\n\nInstruments')
-    if posi == -1:
-        posi = description.find('\nInstruments')  # in case only one new line has been used
-        if posi == -1:
-            posi = description.find('Instruments')
-            if posi == -1:
-                posi == posa + 50
-
-    authors_end = pos_if_need if pos_if_need != -1 else posc
-    if authors_end == -1 or authors_end > posi:
-        authors_end = posi
-
-    authors_raw = description[posa:authors_end]
-    return authors_raw.split('\n* ')[1:]
+    from pymodaq_utils.plugin_tools.readme import extract_authors
+    return extract_authors(description)
