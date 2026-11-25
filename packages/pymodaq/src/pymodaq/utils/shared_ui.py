@@ -3,7 +3,7 @@
 import sys
 from typing import cast
 
-from qtpy import QtWidgets
+from qtpy import QtCore, QtWidgets
 
 from pymodaq_plugin_manager.manager import PluginManager
 
@@ -66,6 +66,20 @@ class SharedUI(SharedUI):
             self._main_application._connect_leco_request.emit(self._enable_scripting)
 
     def start_plugin_manager(self):
+        """Open the Plugin Manager window, or bring it to the front if it is already open
+
+        Each manager window fetches the plugins in its own thread: opening several of them is useless.
+        """
+        win = getattr(self, 'win_plug_manager', None)
+        if win is not None:
+            try:
+                if win.isVisible():
+                    win.setWindowState(win.windowState() & ~QtCore.Qt.WindowState.WindowMinimized)
+                    win.raise_()
+                    win.activateWindow()
+                    return
+            except RuntimeError:  # the window has been deleted
+                pass
         self.win_plug_manager = QtWidgets.QMainWindow()
         self.win_plug_manager.setWindowTitle("PyMoDAQ Plugin Manager")
         widget = QtWidgets.QWidget()
