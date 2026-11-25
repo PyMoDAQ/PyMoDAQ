@@ -190,7 +190,7 @@ class H5SaverLowLevel(H5Backend):
         bool
             True if new file has been created, False otherwise
         """
-        datetime_now = datetime.datetime.now()
+        datetime_now = datetime.datetime.now().astimezone()  # timezone aware: the instant stays unambiguous
 
         if file_name is not None and isinstance(file_name, Path):
             if 'h5' not in file_name.suffix:
@@ -228,7 +228,7 @@ class H5SaverLowLevel(H5Backend):
             self.root().set_attr('file', self.h5_file_name)  # second possibility
 
             self.set_attr(self.root(), 'date', datetime_now.date().isoformat())
-            self.set_attr(self.root(), 'time', datetime_now.time().isoformat())
+            self.set_attr(self.root(), 'time', datetime_now.timetz().isoformat())  # with the UTC offset
 
             if metadata is not None:
                 for metadata_key in metadata:
