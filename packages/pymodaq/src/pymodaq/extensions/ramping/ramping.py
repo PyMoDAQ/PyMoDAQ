@@ -619,7 +619,7 @@ class RampingWorker(ExtensionWorker):
             if isinstance(dte, DataActuator):
                 dte = DataToExport(dte.name, data=[dte])
 
-            self.saver_worker.data_to_save_signal.emit(DataBundle(dte=dte))
+            self.emit_data_to_save(DataBundle(dte=dte))
             self.thread_manager.n_jobs[SaverWorker.name] += 1
 
 

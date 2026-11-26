@@ -345,12 +345,50 @@ Text version of the diagram:
 #. The app (GUI thread) owns the ``H5Manager`` and, for the extensions that need it, an ``ExtensionWorker``.
 #. The user presses start: the app calls ``ExtensionWorker.start``, which creates the ``SaverWorker`` (and the
    ``ProcessorWorker`` if ``has_data_processor``) with ``create_thread_for_worker`` and starts their threads.
-#. For each piece of data, the ``ExtensionWorker`` emits ``data_to_save_signal`` (a ``DataBundle``) to the saver,
-   which writes it in the h5 file and answers with ``n_jobs_done_signal(name, n_saved)``. The difference with the
-   number of jobs sent is displayed as ``worker_tasks`` in the settings.
+#. For each piece of data, the ``ExtensionWorker`` calls ``emit_data_to_save`` with a ``DataBundle``: it first passes
+   the bundle through the registered preparer functions and the ``prepare_data_to_save`` hook (see
+   :ref:`prepare_data_to_save`), then emits
+   ``data_to_save_signal`` to the saver, which writes it in the h5 file and answers with
+   ``n_jobs_done_signal(name, n_saved)``. The difference with the number of jobs sent is displayed as
+   ``worker_tasks`` in the settings.
 #. When the user presses stop, the emission towards the workers is disconnected, then once every queue is empty
    (``_workers_done``) the threads are exited, the file is closed through the ``H5Manager`` and
    ``workers_terminated`` is emitted.
+
+.. _prepare_data_to_save:
+
+Acting on the data just before they are saved
+---------------------------------------------
+
+An extension should send its data to the saver with ``self.emit_data_to_save(DataBundle(...))`` rather than by emitting
+``saver_worker.data_to_save_signal`` itself. ``emit_data_to_save`` first runs the registered preparer functions (see below),
+then calls ``prepare_data_to_save(bundle)`` and emits what it returns. The default hook does nothing and returns the
+bundle unchanged, so there is no need to call ``super()``. Reimplement it in your ``ExtensionWorker`` to add
+metadata (``DataWithAxes.add_extra_attribute``), add data or filter what is saved:
+
+.. code-block:: python
+
+    class MyWorker(ExtensionWorker):
+
+        def prepare_data_to_save(self, bundle: DataBundle) -> DataBundle:
+            if bundle.save_index == 0:  # attributes are written when the arrays are created
+                for dwa in bundle.dte:
+                    dwa.add_extra_attribute(quantity_kind='http://qudt.org/vocab/quantitykind/Wavelength')
+            return bundle
+
+Without subclassing, a component (a manager for instance) can register a function:
+``worker.add_data_preparer(fn)`` (and ``remove_data_preparer(fn)``). They are run by ``run_data_preparers``, before the
+hook, in the order of their registration, each one receiving the bundle and returning the bundle to be saved, or
+``None`` if it modified it in place. They are independent of the hook: reimplementing it does not affect them.
+
+Things to know:
+
+* the hook is called for every bundle and runs in the thread of the ``ExtensionWorker``, which is the GUI thread for
+  most extensions: keep it short and do not read files in it;
+* the attributes of an array (``units``, the extra attributes) are written when the array is created, that is with the
+  first bundle of an acquisition. Annotating once is enough; ``DAQ_Scan`` sets ``bundle.save_index``, the other
+  extensions do not, so keep your own flag if you need to know the first bundle;
+* the bundle can be modified in place; return the bundle to be saved.
 
 .. _custom_app_patterns:
 

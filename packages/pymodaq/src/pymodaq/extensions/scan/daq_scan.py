@@ -1483,6 +1483,7 @@ class DAQScanAcquisition(ExtensionWorker):
                                          excepted=(WorkFlowActions.PAUSE,
                                                    WorkFlowActions.STOP),
                                          other_actions='ini_positions')
+        self._connect_move_failed()  # also needed for the move to the initial positions
         self.set_ini_positions()
 
     def _pause(self, do_pause: bool = True):
@@ -1498,6 +1499,10 @@ class DAQScanAcquisition(ExtensionWorker):
             pass
         try:
             self.modules_manager.timeout_signal.disconnect(self.timeout)
+        except (TypeError, AttributeError):
+            pass
+        try:
+            self.modules_manager.move_failed_signal.disconnect(self.move_failed)
         except (TypeError, AttributeError):
             pass
 
@@ -1528,6 +1533,13 @@ class DAQScanAcquisition(ExtensionWorker):
             self.init_things()
             self.advance()
 
+    def _connect_move_failed(self):
+        try:
+            self.modules_manager.move_failed_signal.disconnect(self.move_failed)
+        except (TypeError, RuntimeError):
+            pass  # was not connected
+        self.modules_manager.move_failed_signal.connect(self.move_failed)
+
     def init_things(self):
         try:
             # the number of averages may have been changed since the creation of this object: it must be
@@ -1535,6 +1547,7 @@ class DAQScanAcquisition(ExtensionWorker):
             self.Naverage = self.settings['scan_options', 'scan_average']
 
             self.modules_manager.timeout_signal.connect(self.timeout)
+            self._connect_move_failed()
 
             self.scan_step_failed_signal.connect(self._on_scan_step_failed)
 
@@ -1626,6 +1639,13 @@ class DAQScanAcquisition(ExtensionWorker):
                                                             f"ind_average: {self._ind_average}:\n"
                                                             f"{str(e)}"))
 
+    def prepare_data_to_save(self, bundle: DataBundle) -> DataBundle:
+        """ Add to the data to be saved the data processed by the scanner, if it does some (``do_process_data``)"""
+        if self.scanner.scanner.do_process_data:
+            # extra data to be saved at the same time!
+            bundle.dte.append(self.scanner.scanner.process_data(bundle.dte))
+        return bundle
+
     def det_done(self, dte_grabbed):
         """
 
@@ -1647,26 +1667,23 @@ class DAQScanAcquisition(ExtensionWorker):
                                               index=0))
             self.saver_worker.nav_axes_signal.emit(nav_axes)
 
-        if self.scanner.scanner.do_process_data:
-            # extra data to be saved at the same time!
-            dte_grabbed.append(self.scanner.scanner.process_data(dte_grabbed))
-        else:
-            full_names: list = self.settings['plot_options', 'plot_0d']['selected'][:]
-            full_names.extend(self.settings['plot_options', 'plot_1d']['selected'][:])
-            self._current_dte_to_be_plotted = dte_grabbed.get_data_from_full_names(full_names, deepcopy=True)
-            n_nav_axis_selection = 2-len(self._current_indexes) + 1 if self.Naverage > 1 else 2-len(self._current_indexes)
-            self._current_dte_to_be_plotted = self._current_dte_to_be_plotted.get_data_with_naxes_lower_than(n_nav_axis_selection)  # maximum Data2D included nav indexes
-
         #filtering the data to be saved:
 
 
-        self.saver_worker.data_to_save_signal.emit(
+        self.emit_data_to_save(
             DataBundle(
                 indexes=list(self._current_indexes),
                 distribution=self.scanner.distribution,
                 save_index=self._ind_scan,
                 dte=dte_grabbed,))
         self.thread_manager.n_jobs[SaverWorker.name] += 1
+
+        # after the emission: the hook may have added data (processed by the scanner) that can then be plotted
+        full_names: list = self.settings['plot_options', 'plot_0d']['selected'][:]
+        full_names.extend(self.settings['plot_options', 'plot_1d']['selected'][:])
+        self._current_dte_to_be_plotted = dte_grabbed.get_data_from_full_names(full_names, deepcopy=True)
+        n_nav_axis_selection = 2-len(self._current_indexes) + 1 if self.Naverage > 1 else 2-len(self._current_indexes)
+        self._current_dte_to_be_plotted = self._current_dte_to_be_plotted.get_data_with_naxes_lower_than(n_nav_axis_selection)  # maximum Data2D included nav indexes
 
         self.scan_data_tmp.emit(
             DataBundle(dte=self._current_dte_to_be_plotted,
@@ -1708,6 +1725,14 @@ class DAQScanAcquisition(ExtensionWorker):
             self.stop(msg=f'Scan stopped due to a Timeout')
         else:
             self.advance()
+
+    def move_failed(self, title: str, message: str):
+        """An actuator could not reach its position (its plugin raised an exception): the scan is stopped"""
+        msg = f'The move of {title} failed: {message}'
+        self._update_status(msg)
+        logger.error(msg)
+        self.app.batch_started = False  # a failed actuator ends the whole batch, not only the current scan
+        self.stop(msg=f'Scan stopped: the move of {title} failed')
 
     def _on_scan_step_failed(self, exception: ScanStepError):
         logger.warning(exception)

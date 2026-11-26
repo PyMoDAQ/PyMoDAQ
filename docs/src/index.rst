@@ -1,3 +1,10 @@
+.. raw:: html
+
+   <div style="text-align: center; padding: 0.6em 1em; margin-bottom: 1.5em; background: #e7f2fa; border: 1px solid #6ab0de; border-radius: 4px;">
+      Help us find the best PyMoDAQ icon!
+      <a href="https://docs.google.com/forms/d/e/1FAIpQLSe9oFYMehzxdw-f77pMBMhycnD6uKcAPNOMKPOL3ssAFhMv7Q/viewform">Vote in the poll</a>.
+   </div>
+
 PyMoDAQ
 =======
 

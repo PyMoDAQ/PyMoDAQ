@@ -30,9 +30,6 @@ from pymodaq_gui.parameter import utils as putils
 
 config = GlobalConfig()
 
-config_viewer = config['pymodaq', 'viewer']
-config_viewer['viewer_in_thread'] = True
-
 
 @fixture
 def init_qt(qtbot):
@@ -351,13 +348,18 @@ def test_background_toolbar_group_structure(ini_daq_viewer_ui):
 
 
 def test_save_current_defaults_to_dated_folder_with_prefilled_name(
-        ini_daq_viewer_without_ui, tmp_path, monkeypatch):
+        ini_daq_viewer_without_ui, tmp_path, monkeypatch, request):
     """save_current's dialog should default into today's dataset folder (not the bare
     base path), with a timestamped .h5 name already filled in and the extension enforced."""
     prog, qtbot = ini_daq_viewer_without_ui
     prog._data_to_save_export = None
 
-    config['data', 'data_saving', 'h5file', 'save_path'] = str(tmp_path)
+    # The config is a process-wide singleton saved to the user's toml file at exit: put the original value back,
+    # or the temporary path stays in the user's config and later opens of an H5 saver fail.
+    save_path_key = ('data', 'data_saving', 'h5file', 'save_path')
+    original_save_path = config[save_path_key]
+    request.addfinalizer(lambda: config.__setitem__(save_path_key, original_save_path))
+    config[save_path_key] = str(tmp_path)
 
     captured = {}
 

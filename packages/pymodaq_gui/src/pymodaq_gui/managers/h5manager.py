@@ -235,10 +235,13 @@ class H5Manager(QtCore.QObject, ActionManager):
             self.update_file_status_led()
         except Exception as e:
             logger.error(f"Could not create new h5 file: {e}")
-            QtWidgets.QMessageBox.warning(
-                None, 'New File Error',
-                f'Could not create a new h5 file:\n{e}',
-            )
+            # not the static QMessageBox.warning: it runs a nested event loop and would block the caller
+            # (a saving pipeline, a script, a test) until someone closes the box
+            box = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Icon.Warning, 'New File Error',
+                                        f'Could not create a new h5 file:\n{e}',
+                                        QtWidgets.QMessageBox.StandardButton.Ok)
+            box.setAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose)
+            box.open()
 
     def open_file(self, mode='a') -> FileStatus:
         """ Try to reopen the current h5 file if it is closed.

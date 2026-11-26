@@ -295,12 +295,12 @@ class Logging(ExtensionWorker):
     def save_detector(self, dte: DataToExport):
         self.thread_manager.n_jobs[SaverWorker.name] += 1
         self.n_saved += 1
-        self.saver_worker.data_to_save_signal.emit(DataBundle(dte=dte))
+        self.emit_data_to_save(DataBundle(dte=dte))
 
     def format_and_save_actuator(self, dwa: DataActuator):
         self.thread_manager.n_jobs[SaverWorker.name] += 1
         self.n_saved += 1
-        self.saver_worker.data_to_save_signal.emit(
+        self.emit_data_to_save(
             DataBundle(dte=DataToExport(name=dwa.name,
                                         data=[dwa])))
 

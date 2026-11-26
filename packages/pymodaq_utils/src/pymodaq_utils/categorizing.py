@@ -1,9 +1,14 @@
 import re
 
 
+# "Sim" as a word of a name: MagnetSim, Sim_Stage, sim, but not Simple or Simon ("simulat" is looked for apart)
+_SIM_WORD = re.compile(r'Sim(?![a-z])|(?<![A-Za-z])sim(?![a-z])')
+
+
 def _is_mock(item: str, mock_items) -> bool:
-    """Simulated instruments: the mock ones, and the beam steering family (BSCamera, BSPiezoMirror...)"""
-    return item in mock_items or 'mock' in item.lower() or re.match(r'BS[A-Z]', item) is not None
+    """Simulated instruments: the mock ones, those named Sim or Simulated, and the beam steering family (BSCamera...)"""
+    return (item in mock_items or 'mock' in item.lower() or 'simulat' in item.lower()
+            or _SIM_WORD.search(item) is not None or re.match(r'BS[A-Z]', item) is not None)
 
 
 def categorize_items(item_list, remote_items=None, mock_items=None):
@@ -11,8 +16,9 @@ def categorize_items(item_list, remote_items=None, mock_items=None):
     Core function: categorize any list of items into Remote/Mock/Plugin.
 
     The ``Mock`` category groups all the simulated instruments under one banner: the ones whose name contains
-    ``mock`` or starts with ``BS`` (beam steering demonstrations) are leaves of it, the ``Cookbook`` recipes and the
-    ``Fake`` ones (name containing ``fake``) are in a submenu of their own.
+    ``mock`` or ``simulat`` (Simulated, Simulator), has the word ``Sim`` (``MagnetSim``) or starts with ``BS`` (beam
+    steering demonstrations) are leaves of it, the ``Cookbook`` recipes and the ``Fake`` ones (name containing
+    ``fake``) are in a submenu of their own.
 
     Args:
         item_list: List of items to categorize

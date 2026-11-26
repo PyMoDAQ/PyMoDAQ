@@ -84,6 +84,8 @@ class DashboardMixin(_MixinBase):
         """
         if self.dashboard is not None and self.experiment_manager is not None:
             self.experiment_manager.applied_entry.connect(self.do_things_after_experiment_set)
+            if self.own_modules_manager:
+                self.dashboard.modules_manager.modules_added_signal.connect(self.update_modules_after_added)
             if apply_now:
                 self.apply_current_experiment()
 
@@ -92,6 +94,27 @@ class DashboardMixin(_MixinBase):
         if (self.dashboard is not None and self.experiment_manager is not None
                 and self.experiment_manager.entry_applied):
             self.do_things_after_experiment_set(self.experiment_manager.entry, show_dashboard)
+
+    def update_modules_after_added(self) -> None:
+        """ Take the control modules added to the dashboard since the experiment was applied
+
+        The modules manager of the extension is filled with the lists of the dashboard when an experiment is applied
+        (:meth:`do_things_after_experiment_set`), but adding modules to the dashboard makes a new list that it does not
+        see (removing one changes the list they share). The selection of modules is kept for the ones still there.
+        Then :meth:`do_things_after_modules_added` is called.
+        """
+        if self.dashboard is None or not self.own_modules_manager:
+            return
+        manager, dashboard_manager = self.modules_manager, self.dashboard.modules_manager
+        selected_actuators, selected_detectors = manager.actuators, manager.detectors
+        manager.set_actuators(dashboard_manager.actuators_all,
+                              [mod for mod in selected_actuators if mod in dashboard_manager.actuators_all])
+        manager.set_detectors(dashboard_manager.detectors_all,
+                              [mod for mod in selected_detectors if mod in dashboard_manager.detectors_all])
+        self.do_things_after_modules_added()
+
+    def do_things_after_modules_added(self) -> None:
+        """ To be reimplemented: control modules were added to the dashboard and are now in ``self.modules_manager``"""
 
     # hooks of ManagerBase
     def init_extra(self, dashboard: Optional['DashBoard'] = None,

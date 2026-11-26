@@ -61,7 +61,7 @@ class TestWorkers:
         worker.queue_command(ThreadCommand(ControlToHardwareMove.MOVE_ABS, [DataActuator(data=500., units='mm')]))
         assert len(recorder.statuses) == 1
         status = recorder.statuses[0]
-        assert status.command == ThreadStatus.ERROR
+        assert status.command == ThreadStatusMove.MOVE_FAILED  # one status: the module is in error, the move not done
         assert 'position out of range' in status.attribute and ControlToHardwareMove.MOVE_ABS in status.attribute
 
     def test_detector_worker_reports_a_failed_grab(self, qapp):
