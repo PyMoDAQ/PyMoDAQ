@@ -47,14 +47,12 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      # pymodaq_ontology is not part of install-packages.py (it is an optional add-on): install the other packages
-      # with their dev requirements (they bring the mock instruments of the integration test), then this one
+      # the other packages with their dev requirements (they bring the mock instruments of the integration test)
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           cd ../../
-          python install-packages.py -d -u pymodaq -qt pyqt6
-          python -m pip install -e "packages/pymodaq_ontology[dev]"
+          python install-packages.py -d --ontology -qt pyqt6
 
       - name: Install the libraries Qt needs
         run: |

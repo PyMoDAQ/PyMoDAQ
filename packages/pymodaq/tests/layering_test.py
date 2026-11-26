@@ -1,6 +1,6 @@
 """Guard of the layering of the packages of the monorepo: a package never imports the ones above it
 
-The order is the one of ``install-packages.py``. The few upward imports that remain are listed below, with the reason
+The order is the one of ``install-packages.py`` (the optional add-ons last). The few upward imports that remain are listed below, with the reason
 why they are accepted. Any other one fails this test; so does an entry that is not needed anymore.
 """
 import ast
@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 PACKAGES_DIR = Path(__file__).parents[2]
-ORDER = ['pymodaq_utils', 'pymodaq_data', 'pymodaq_gui', 'pymodaq_scripting', 'pymodaq']
+ORDER = ['pymodaq_utils', 'pymodaq_data', 'pymodaq_gui', 'pymodaq_scripting', 'pymodaq', 'pymodaq_ontology']
 RANK = {name: rank for rank, name in enumerate(ORDER)}
 
 TYPING = 'only imported for type checking (under TYPE_CHECKING)'
@@ -55,7 +55,7 @@ def upward_imports(package: str) -> set[tuple[str, str]]:
 @pytest.fixture(scope='module')
 def found() -> set[tuple[str, str]]:
     if not all((PACKAGES_DIR / package / 'src').is_dir() for package in ORDER):
-        pytest.skip('needs the sources of the five packages of the monorepo')
+        pytest.skip('needs the sources of the packages of the monorepo')
     return {item for package in ORDER[:-1] for item in upward_imports(package)}
 
 
@@ -75,6 +75,6 @@ def test_install_order_is_the_layering_order():
     if not install.is_file():
         pytest.skip('install-packages.py not available')
     tree = ast.parse(install.read_text(encoding='utf-8'))
-    order = [ast.literal_eval(node.value) for node in ast.walk(tree)
-             if isinstance(node, ast.Assign) and getattr(node.targets[0], 'id', '') == 'PYMODAQ_PACKAGES'][0]
-    assert order == ORDER
+    values = {name: ast.literal_eval(node.value) for node in ast.walk(tree) if isinstance(node, ast.Assign)
+              for name in [getattr(node.targets[0], 'id', '')] if name in ('PYMODAQ_PACKAGES', 'OPTIONAL_PACKAGES')}
+    assert values['PYMODAQ_PACKAGES'] + list(values['OPTIONAL_PACKAGES'].values()) == ORDER

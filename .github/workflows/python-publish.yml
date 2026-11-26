@@ -34,7 +34,7 @@ jobs:
         release_tag="${GITHUB_REF_NAME}"
         published=0
         failed=0
-        for package in pymodaq_utils pymodaq_data pymodaq_gui pymodaq_scripting pymodaq; do
+        for package in pymodaq_utils pymodaq_data pymodaq_gui pymodaq_scripting pymodaq pymodaq_ontology; do
           cd packages/${package}
           current_version=$(hatch version)
           if [[ "${current_version}" == "${release_tag}" ]]; then
