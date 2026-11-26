@@ -153,7 +153,7 @@ The *idVendor* and *idProduct* numbers correspond to the ones that are displayed
 Install PyMoDAQ
 ---------------
 
-The installation of PyMoDAQ is quite standard and mainly described in the :ref:`Quick start <ubuntu>`. Once it is
+The installation of PyMoDAQ is quite standard and mainly described in the :ref:`Quick start <quick_start>`. Once it is
 installed in a dedicated environment we install the SmarAct plugin:
 
 ``pip install pymodaq_plugins_smaract``

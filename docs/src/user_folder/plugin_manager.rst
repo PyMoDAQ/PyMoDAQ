@@ -11,8 +11,10 @@ either
 a ``DAQ_Move_base`` or a ``DAQ_Viewer_base`` class and implements mandatory methods for easy and quick inclusion
 of the instrument within the PyMoDAQ control modules.
 
-The complete list of available Instrument Plugins is maintained in the `pymodaq_plugin_manager`__ repository
-(`table of plugins`__, updated every week from the README of the packages published on PyPI).
+The complete list of available Instrument Plugins is maintained on this GitHub `repository`__, and its
+curated `Supported instruments
+<https://github.com/PyMoDAQ/pymodaq_plugin_manager/blob/main/README.md>`_ list is reachable from the User
+Guide navigation.
 
 While you can install them manually (for instance using ``pip install plugin_name``), a plugin
 manager is available. You can open it from the **Dashboard** (*Tools* menu) or directly using the command

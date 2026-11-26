@@ -76,6 +76,8 @@ and you can in the mean time look at this `video`__
 __ https://youtu.be/9O6pqz89UT8
 
 
+.. _instrument_plugin_naming_convention:
+
 Naming convention
 -----------------
 
