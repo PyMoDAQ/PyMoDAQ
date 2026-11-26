@@ -816,7 +816,7 @@ class DAQScan(CustomExt):
             params = self.scan_attributes
         for child in params.child(type_info).children():
             if type(child.value()) is QDateTime:
-                attr[child.name()] = child.value().toString('dd/mm/yyyy HH:MM:ss')
+                attr[child.name()] = child.value().toString('dd/MM/yyyy HH:mm:ss')
             else:
                 attr[child.name()] = child.value()
         if type_info == 'dataset_info':

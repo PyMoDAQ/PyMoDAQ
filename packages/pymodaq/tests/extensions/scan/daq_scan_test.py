@@ -154,3 +154,16 @@ class TestNaverage:
         assert bundle.indexes == [1, 0]  # [average index, scan index]
         nav_axes = scan_acquisition.saver_worker.nav_axes_signal.emit.call_args[0][0]
         assert {axis.label: axis.index for axis in nav_axes} == {'Average': 0, 'x': 1}
+
+
+class TestSaveMetadata:
+    def test_date_time_attribute_keeps_month_and_minutes_in_place(self, scan):
+        # Qt: 'MM' is the month and 'mm' the minutes, they were swapped in the saved string
+        node = Mock()
+        node.attrs = {}
+        date_time = QtCore.QDateTime(QtCore.QDate(2026, 11, 26), QtCore.QTime(22, 14, 3))
+        scan.scan_attributes.child('scan_info', 'date_time').setValue(date_time)
+
+        scan.save_metadata(node, 'scan_info')
+
+        assert node.attrs['date_time'] == '26/11/2026 22:14:03'
