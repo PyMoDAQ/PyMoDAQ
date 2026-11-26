@@ -1,0 +1,68 @@
+[build-system]
+requires = ["hatchling>=1.9.0", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pymodaq_ontology"
+dynamic = [
+    "version",
+]
+description = "Assign ontology terms to the channels of the instruments of the PyMoDAQ Dashboard"
+readme = "README.rst"
+license = { file="LICENSE" }
+requires-python = ">=3.11"
+authors = [
+    { name = "Sébastien Weber", email = "sebastien.weber@cemes.fr" },
+]
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Other Environment",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Human Machine Interfaces",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "pymodaq>=5.3.0",
+    "toml",
+]
+
+[project.optional-dependencies]
+
+dev = [
+    "hatch",
+    "flake8",
+    "pytest",
+    "pytest-cov",
+    "pytest-qt",
+]
+
+# the manager is created by the Dashboard, see the pymodaq.managers entry point group
+[project.entry-points."pymodaq.managers"]
+ontology = "pymodaq_ontology.manager:OntologyManager"
+
+[project.urls]
+Homepage = "http://pymodaq.cnrs.fr"
+Source = "https://github.com/PyMoDAQ/PyMoDAQ"
+Tracker = "https://github.com/PyMoDAQ/PyMoDAQ/issues"
+
+[tool.hatch.version.raw-options]
+search_parent_directories = true
+fallback_version = "5.3.0"
+git_describe_command = "python git_describe.py packages/pymodaq_ontology"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+]
