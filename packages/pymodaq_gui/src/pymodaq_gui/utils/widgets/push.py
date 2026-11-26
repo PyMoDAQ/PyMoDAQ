@@ -62,21 +62,6 @@ class ToolButtonIcon(QtWidgets.QToolButton):
                                     else QtCore.Qt.ToolButtonStyle.ToolButtonFollowStyle)
             toolbar_style_signaller.style_changed.connect(self.setToolButtonStyle)
 
-    def add_menu_action(self, action: QtGui.QAction) -> None:
-        """Add one action to the dropdown menu (created on first call), and keep the
-        dropdown arrow shown only while at least one menu action is visible"""
-        if self.menu() is None:
-            self.setMenu(QtWidgets.QMenu(self))
-        self.menu().addAction(action)
-        action.visibleChanged.connect(self._refresh_popup_mode)
-        self._refresh_popup_mode()
-
-    def _refresh_popup_mode(self) -> None:
-        if self.menu() and any(action.isVisible() for action in self.menu().actions()):
-            self.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.MenuButtonPopup)
-        else:
-            self.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.DelayedPopup)
-
 
 class EditPushInfo:
     def __init__(self, type:str, value: float):
