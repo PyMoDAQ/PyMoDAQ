@@ -236,6 +236,21 @@ class TestScannerProcessData:
         assert saved.indexes == [0]
         assert [dwa.name for dwa in saved.dte] == ['det', 'calibration']
 
+    def test_processed_data_can_be_plotted(self, acquisition, scan_settings):
+        acquisition.scanner.scanner.do_process_data = True
+        processed = DataToExport('processed', data=[DataRaw('calibration', data=[np.ones((1,))], origin='Scan')])
+        acquisition.scanner.scanner.process_data.return_value = processed
+        dte = self.grabbed()
+        full_names = [dwa.get_full_name() for dwa in (dte[0], processed[0])]
+        scan_settings.child('plot_options', 'plot_0d').setValue(dict(all_items=full_names, selected=full_names))
+        plotted = []
+        acquisition.scan_data_tmp.connect(plotted.append)
+
+        acquisition.det_done(dte)
+
+        assert len(plotted) == 1
+        assert [dwa.name for dwa in plotted[0].dte] == ['det', 'calibration']
+
 
 class TestDoScan:
     """do_scan must not raise whatever the state of the START action (issue #1503)"""

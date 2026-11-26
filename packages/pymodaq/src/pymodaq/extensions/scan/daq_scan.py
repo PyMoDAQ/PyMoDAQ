@@ -1667,13 +1667,6 @@ class DAQScanAcquisition(ExtensionWorker):
                                               index=0))
             self.saver_worker.nav_axes_signal.emit(nav_axes)
 
-        if not self.scanner.scanner.do_process_data:  # otherwise the processed data are added by prepare_data_to_save
-            full_names: list = self.settings['plot_options', 'plot_0d']['selected'][:]
-            full_names.extend(self.settings['plot_options', 'plot_1d']['selected'][:])
-            self._current_dte_to_be_plotted = dte_grabbed.get_data_from_full_names(full_names, deepcopy=True)
-            n_nav_axis_selection = 2-len(self._current_indexes) + 1 if self.Naverage > 1 else 2-len(self._current_indexes)
-            self._current_dte_to_be_plotted = self._current_dte_to_be_plotted.get_data_with_naxes_lower_than(n_nav_axis_selection)  # maximum Data2D included nav indexes
-
         #filtering the data to be saved:
 
 
@@ -1684,6 +1677,13 @@ class DAQScanAcquisition(ExtensionWorker):
                 save_index=self._ind_scan,
                 dte=dte_grabbed,))
         self.thread_manager.n_jobs[SaverWorker.name] += 1
+
+        # after the emission: the hook may have added data (processed by the scanner) that can then be plotted
+        full_names: list = self.settings['plot_options', 'plot_0d']['selected'][:]
+        full_names.extend(self.settings['plot_options', 'plot_1d']['selected'][:])
+        self._current_dte_to_be_plotted = dte_grabbed.get_data_from_full_names(full_names, deepcopy=True)
+        n_nav_axis_selection = 2-len(self._current_indexes) + 1 if self.Naverage > 1 else 2-len(self._current_indexes)
+        self._current_dte_to_be_plotted = self._current_dte_to_be_plotted.get_data_with_naxes_lower_than(n_nav_axis_selection)  # maximum Data2D included nav indexes
 
         self.scan_data_tmp.emit(
             DataBundle(dte=self._current_dte_to_be_plotted,
