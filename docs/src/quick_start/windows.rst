@@ -8,7 +8,12 @@ PyMoDAQ installation on Windows is done in a few steps. We just need an internet
 Python installation
 -------------------
 
-We first need to download the `Miniforge <https://github.com/conda-forge/miniforge/>`_ installer by
+Because different Python versions may need to coexist on the same machine, a Python environment manager such as `conda <https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html>`_, `mamba <https://mamba.readthedocs.io/en/latest/index.html>`_ or `uv <https://docs.astral.sh/uv/>`_ is needed.
+
+With conda/mamba
+++++++++++++++++
+
+We recommand the `Miniforge <https://github.com/conda-forge/miniforge/>`_ installer by
 clicking (on the miniforge webpage) on one of the links highlighted in red in the following figure.
 
 .. figure:: /image/quick_start/mini_forge_installer_link.png
@@ -26,11 +31,24 @@ Let’s execute the installer and keep the default choices.
    * a Python interpreter (a *python.exe* file) in a *base* environment
    * :term:`pip <pip & PyPI>`
 
+With uv
++++++++
+
+uv is a newer, faster Python environment and project manager. The easiest way to install it is with your operating system's package manager. On windows, that would be `winget`. In the console (cmd or Powershell), run:
+
+``winget install --id=astral-sh.uv  -e``
+
+You may need to restart your console before you can use uv. You can then check the installation by running the following command, that prints the installed uv version:
+
+``uv --version``
 
 .. _section_installation:
 
 Set up a new Python environment
 -------------------------------
+
+With conda/mamba
+++++++++++++++++
 
 From the Windows *Start* menu, execute the *Miniforge Prompt*.
 
@@ -57,8 +75,24 @@ And let’s activate it.
 
 After this command, we should notice that the name in brackets in the terminal is now *pymodaq*.
 
+With uv
++++++++
+
+uv manages Python versions on a per-project basis.
+
+   * Create a new folder where your first pymodaq project should live.
+   * In the file explorer, right click and `open in terminal` in this new folder. A console should pop up with the folder path in the prompt (before the `>` symbol).
+   * Run the following command to create a new project and its associated environment with a given python version:
+
+``uv init --python 3.12``
+
+This creates several files and folders in the project directory, which we don't need to worry about for now. There is no need the activate the Python environment, since it is tied this project, uv will automatically know which environment to use.
+
 Install PyMoDAQ
 ---------------
+
+With conda/mamba
+++++++++++++++++
 
 After this preparation, the installation of PyMoDAQ is done with a single command line. It takes a few minutes to
 download and install all the dependencies in our new environment.
@@ -69,6 +103,19 @@ download and install all the dependencies in our new environment.
 
  For more details about the installation, see :ref:`installation_tips`
 
+With uv
++++++++
+
+Installing python packages with uv is as easy as replacing ``pip install`` with ``uv add`` while in the project directory. To install pymodaq and a qt backend, run:
+
+``uv add pymodaq pyside6``
+
+Since we never activate the Python environment, we need to prefix every command we wish to execute in this environment with:
+
+``uv run <command>``
+
+No more forgetting to activate the environment, or forgetting to switch environments between projects !
+
 Check the installation
 ----------------------
 
@@ -77,6 +124,10 @@ To check that the installation went well, we can execute a PyMoDAQ’s *control 
 command
 
 ``daq_move``
+
+or if you are using uv:
+
+``uv run daq_move``
 
 This prompts the following user interface. In the *Actuator* drop-down list, choose *Mock* and click
 *Initialization*. This will simulate numerically the behavior of a simple actuator, with the reading of its position.
