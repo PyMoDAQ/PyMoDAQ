@@ -185,3 +185,21 @@ To make your models visible:
 The package `pymodaq_plugins_mockexamples <https://github.com/PyMoDAQ/pymodaq_plugins_mockexamples>`__ gathers working
 examples of models together with the mock actuators and detectors to try them with: start from there rather than from
 a blank file, and see the page of each extension for the methods to implement.
+
+
+Adding a manager to the Dashboard
+---------------------------------
+
+A manager (see :ref:`custom_app`; a subclass of ``ManagerBase``, such as the ``StateManager``) keeps its entries as files
+and gets its own menu and toolbar in the *Tools* menu of the Dashboard. A package can add one without changing PyMoDAQ
+by declaring it in the ``pymodaq.managers`` entry point group of its *pyproject.toml*:
+
+.. code-block:: toml
+
+    [project.entry-points."pymodaq.managers"]
+    ontology = "pymodaq_ontology.manager:OntologyManager"
+
+The value is ``module:Class``. The Dashboard instantiates the class as ``OntologyManager(dashboard=dashboard)`` after the
+user interface is set up, enables its menu and toolbar once an experiment is loaded, and calls its ``quit_fun`` when it
+closes. The manager is shown with its ``entry_type`` (menu and toolbar title) and its ``icon_name``. A manager that
+cannot be imported, or that does not derive from ``ManagerBase``, is logged and ignored.
