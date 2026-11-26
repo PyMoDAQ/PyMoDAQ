@@ -136,7 +136,7 @@ class DAQ_Viewer_base(PluginBase):
 
     def _emit_dte(self, dte: Union[DataToExport, list]):
         if isinstance(dte, list):
-            deprecation_msg('Data emitted from the instrument plugins should be a DataToExport instance'
+            deprecation_msg('Data emitted from the instrument plugins should be a DataToExport instance. '
                             'See: http://pymodaq.cnrs.fr/en/latest/developer_folder/'
                             'instrument_plugins.html#emission-of-data')
             dte = DataToExport('temp', dte)
@@ -144,7 +144,7 @@ class DAQ_Viewer_base(PluginBase):
 
     def _emit_dte_temp(self, dte: Union[DataToExport, list]):
         if isinstance(dte, list):
-            deprecation_msg('Data emitted from the instrument plugins should be a DataToExport instance'
+            deprecation_msg('Data emitted from the instrument plugins should be a DataToExport instance. '
                             'See: http://pymodaq.cnrs.fr/en/latest/developer_folder/'
                             'instrument_plugins.html#emission-of-data')
             dte = DataToExport('temp', dte)
