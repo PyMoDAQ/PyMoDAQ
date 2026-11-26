@@ -1001,7 +1001,7 @@ class ParameterControlModule(ParameterManager, LECOComponentMixin, ControlModule
         """Move *hardware* to the thread and start it.
 
         Default: always move and start. Override when the move/start should be
-        conditional (e.g. DAQ_Viewer's ``viewer_in_thread`` config option).
+        conditional.
         """
         hardware.moveToThread(self.controller_and_thread.thread.thread)
         self.controller_and_thread.thread.finished.connect(hardware.deleteLater)

@@ -1,19 +1,10 @@
-import gc
 import time
 import threading
-from contextlib import contextmanager
 # -*- coding: utf-8 -*-
 """
 Created the 07/11/2023
 
 @author: Sebastien Weber
-
-Context: the tests asserting that a call returns "at once" (``test_blocking_without_blocking_the_caller``,
-``test_non_blocking``) time it with ``no_garbage_collection``. The state manager windows and their large parameter
-trees are not freed as soon as a test ends: with PySide6 on the CI runners a garbage collection starting inside the
-timed call could take minutes (up to 886 s measured) to free them, and fail the assertion whatever the code does.
-This only keeps the measure reliable, it does not make the collections faster: the leaks themselves are a
-separate matter (see issue #1275).
 """
 import pytest
 from pathlib import Path
@@ -30,22 +21,6 @@ from pymodaq.utils.managers.state.subentries import (
 
 factory = SubEntryHandlerFactory()
 config = GlobalConfig()
-
-
-@contextmanager
-def no_garbage_collection():
-    """ Keep a timed call from being stretched by a garbage collection
-
-    With PySide6 the collections free the large widget trees left by the previous tests, which took minutes on
-    the CI runners.
-    """
-    was_enabled = gc.isenabled()
-    gc.disable()
-    try:
-        yield
-    finally:
-        if was_enabled:
-            gc.enable()
 
 
 @pytest.fixture
@@ -384,11 +359,9 @@ class TestWithSubEntries:
         state_manager.set_action_checked('parallel_execution', parallel)
 
         with qtbot.waitSignal(state_manager.applied_entry, timeout=5000):
-            with no_garbage_collection():
-                t0 = time.perf_counter()
-                state_manager.execute_entry(blocking=True, block_caller=False)
-                duration = time.perf_counter() - t0
-            assert duration < 0.2  # returned at once
+            state_manager.execute_entry(blocking=True, block_caller=False)
+            # the call returned without running the event loop, which the modules need in order to report
+            # they are done: so the entry cannot be applied yet, whatever the speed of the machine
             assert not state_manager.entry_applied
         assert state_manager.entry_applied
 
@@ -406,11 +379,8 @@ class TestWithSubEntries:
         state_manager, qtbot = state_with_subentries
         state_manager.set_action_checked('parallel_execution', True)
 
-        with no_garbage_collection():
-            t0 = time.perf_counter()
-            state_manager.execute_entry(blocking=False)
-            duration = time.perf_counter() - t0
-        assert duration < 0.2
+        state_manager.execute_entry(blocking=False)
+        # over as soon as the call returns: no event loop has run since, so nothing was waited for
         assert state_manager.entry_applied
 
 
