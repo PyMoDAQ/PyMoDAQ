@@ -186,6 +186,72 @@ class TestNaverage:
         assert {axis.label: axis.index for axis in nav_axes} == {'Average': 0, 'x': 1}
 
 
+class TestScannerProcessData:
+    """The stage of the scanner adding processed data to what is saved (``do_process_data``/``process_data``)"""
+
+    @pytest.fixture
+    def acquisition(self, scan_acquisition, scan_settings):
+        for name in ('plot_0d', 'plot_1d'):
+            scan_settings.child('plot_options', name).setValue(dict(all_items=[], selected=[]))
+        scan_acquisition.init_things()
+        scan_acquisition.saver_worker = Mock()
+        scan_acquisition.thread_manager = Mock()
+        scan_acquisition.thread_manager.n_jobs = {'SaverWorker': 0}
+        scan_acquisition._on_scan_step_done = Mock()
+        scanner = scan_acquisition.scanner
+        scanner.get_indexes_from_scan_index.return_value = (0,)
+        scanner.get_nav_axes.return_value = [Axis('x', 'm', data=np.arange(4.), index=0)]
+        scan_acquisition._ind_average = 0
+        scan_acquisition._ind_scan = 1  # not the first step: only the data are sent
+        return scan_acquisition
+
+    @staticmethod
+    def grabbed():
+        return DataToExport('dte', data=[DataRaw('det', data=[np.zeros((1,))], origin='Det0D')])
+
+    @staticmethod
+    def saved_bundle(acquisition):
+        return acquisition.saver_worker.data_to_save_signal.emit.call_args[0][0]
+
+    def test_data_are_saved_unchanged_without_processing(self, acquisition):
+        acquisition.scanner.scanner.do_process_data = False
+        dte = self.grabbed()
+
+        acquisition.det_done(dte)
+
+        acquisition.scanner.scanner.process_data.assert_not_called()
+        assert [dwa.name for dwa in self.saved_bundle(acquisition).dte] == ['det']
+
+    def test_processed_data_are_added_to_the_saved_data(self, acquisition):
+        acquisition.scanner.scanner.do_process_data = True
+        processed = DataToExport('processed', data=[DataRaw('calibration', data=[np.ones((1,))], origin='Scan')])
+        acquisition.scanner.scanner.process_data.return_value = processed
+        dte = self.grabbed()
+
+        acquisition.det_done(dte)
+
+        acquisition.scanner.scanner.process_data.assert_called_once()
+        assert acquisition.scanner.scanner.process_data.call_args[0][0] is dte
+        saved = self.saved_bundle(acquisition)
+        assert saved.indexes == [0]
+        assert [dwa.name for dwa in saved.dte] == ['det', 'calibration']
+
+    def test_processed_data_can_be_plotted(self, acquisition, scan_settings):
+        acquisition.scanner.scanner.do_process_data = True
+        processed = DataToExport('processed', data=[DataRaw('calibration', data=[np.ones((1,))], origin='Scan')])
+        acquisition.scanner.scanner.process_data.return_value = processed
+        dte = self.grabbed()
+        full_names = [dwa.get_full_name() for dwa in (dte[0], processed[0])]
+        scan_settings.child('plot_options', 'plot_0d').setValue(dict(all_items=full_names, selected=full_names))
+        plotted = []
+        acquisition.scan_data_tmp.connect(plotted.append)
+
+        acquisition.det_done(dte)
+
+        assert len(plotted) == 1
+        assert [dwa.name for dwa in plotted[0].dte] == ['det', 'calibration']
+
+
 class TestDoScan:
     """do_scan must not raise whatever the state of the START action (issue #1503)"""
 

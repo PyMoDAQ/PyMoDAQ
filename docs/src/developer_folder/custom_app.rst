@@ -346,7 +346,8 @@ Text version of the diagram:
 #. The user presses start: the app calls ``ExtensionWorker.start``, which creates the ``SaverWorker`` (and the
    ``ProcessorWorker`` if ``has_data_processor``) with ``create_thread_for_worker`` and starts their threads.
 #. For each piece of data, the ``ExtensionWorker`` calls ``emit_data_to_save`` with a ``DataBundle``: it first passes
-   the bundle through the ``prepare_data_to_save`` hook (see :ref:`prepare_data_to_save`), then emits
+   the bundle through the registered preparer functions and the ``prepare_data_to_save`` hook (see
+   :ref:`prepare_data_to_save`), then emits
    ``data_to_save_signal`` to the saver, which writes it in the h5 file and answers with
    ``n_jobs_done_signal(name, n_saved)``. The difference with the number of jobs sent is displayed as
    ``worker_tasks`` in the settings.
@@ -360,8 +361,9 @@ Acting on the data just before they are saved
 ---------------------------------------------
 
 An extension should send its data to the saver with ``self.emit_data_to_save(DataBundle(...))`` rather than by emitting
-``saver_worker.data_to_save_signal`` itself. ``emit_data_to_save`` calls ``prepare_data_to_save(bundle)`` and emits what
-it returns. The default implementation returns the bundle unchanged. Reimplement it in your ``ExtensionWorker`` to add
+``saver_worker.data_to_save_signal`` itself. ``emit_data_to_save`` first runs the registered preparer functions (see below),
+then calls ``prepare_data_to_save(bundle)`` and emits what it returns. The default hook does nothing and returns the
+bundle unchanged, so there is no need to call ``super()``. Reimplement it in your ``ExtensionWorker`` to add
 metadata (``DataWithAxes.add_extra_attribute``), add data or filter what is saved:
 
 .. code-block:: python
@@ -372,12 +374,12 @@ metadata (``DataWithAxes.add_extra_attribute``), add data or filter what is save
             if bundle.save_index == 0:  # attributes are written when the arrays are created
                 for dwa in bundle.dte:
                     dwa.add_extra_attribute(quantity_kind='http://qudt.org/vocab/quantitykind/Wavelength')
-            return super().prepare_data_to_save(bundle)
+            return bundle
 
 Without subclassing, a component (a manager for instance) can register a function:
-``worker.add_data_preparer(fn)`` (and ``remove_data_preparer(fn)``). The default ``prepare_data_to_save`` calls the
-registered functions in the order of their registration, each one receiving the bundle and returning the bundle to be
-saved, or ``None`` if it modified it in place. A reimplemented hook keeps them working by calling ``super()``.
+``worker.add_data_preparer(fn)`` (and ``remove_data_preparer(fn)``). They are run by ``run_data_preparers``, before the
+hook, in the order of their registration, each one receiving the bundle and returning the bundle to be saved, or
+``None`` if it modified it in place. They are independent of the hook: reimplementing it does not affect them.
 
 Things to know:
 

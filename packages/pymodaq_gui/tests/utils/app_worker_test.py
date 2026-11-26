@@ -45,7 +45,7 @@ class TestPrepareDataToSave:
                 calls.append(bundle)
                 for dwa in bundle.dte:
                     dwa.add_extra_attribute(quantity_kind='some_iri')
-                return super().prepare_data_to_save(bundle)
+                return bundle
 
         worker, received = make_worker(AnnotatingWorker)
         bundle = make_bundle()
@@ -132,16 +132,16 @@ class TestDataPreparers:
 
         assert calls == []
 
-    def test_reimplemented_hook_keeps_the_registered_functions_with_super(self):
+    def test_registered_functions_run_before_the_hook_without_super(self):
         calls = []
 
         class MyWorker(ExtensionWorker):
             def prepare_data_to_save(self, bundle):
                 calls.append('hook')
-                return super().prepare_data_to_save(bundle)
+                return bundle
 
         worker, _ = make_worker(MyWorker)
         worker.add_data_preparer(lambda bundle: calls.append('preparer'))
         worker.emit_data_to_save(make_bundle())
 
-        assert calls == ['hook', 'preparer']
+        assert calls == ['preparer', 'hook']
