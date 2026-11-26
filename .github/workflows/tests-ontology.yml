@@ -1,0 +1,70 @@
+name: Test for pymodaq_ontology
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+  pull_request:
+    paths:
+      - 'packages/pymodaq_ontology/**'
+      - '.github/workflows/tests-ontology.yml'
+    branches:
+      - '*'
+      - '!badges'
+  push:
+    paths:
+      - 'packages/pymodaq_ontology/**'
+      - '.github/workflows/tests-ontology.yml'
+    branches:
+      - '*'
+      - '!badges'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.13"]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/pymodaq_ontology
+    env:
+      PYTEST_QT_API: pyqt6
+      QT_API: pyqt6
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v5.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6.0.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # the other packages with their dev requirements (they bring the mock instruments of the integration test)
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          cd ../../
+          python install-packages.py -d --ontology -qt pyqt6
+
+      - name: Install the libraries Qt needs
+        run: |
+          sudo apt install -y xvfb yaru-theme-icon libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-cursor0 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 x11-utils libgl1 libegl1
+          sudo mkdir -p /etc/.pymodaq
+          sudo chmod uo+rw /etc/.pymodaq
+
+      - name: Linting with flake8
+        run: |
+          # stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Tests
+        run: |
+          xvfb-run -a python -X faulthandler -m pytest -o faulthandler_timeout=100 -vv --cov=pymodaq_ontology
