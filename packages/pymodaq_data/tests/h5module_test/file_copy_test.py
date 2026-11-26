@@ -86,23 +86,13 @@ class TestCopy:
         assert result.sha256 == sha256_of(source)
 
     def test_gives_up_if_the_source_keeps_changing(self, copier, source, monkeypatch):
-        counter = {'n': 0}
-        real_stat = Path.stat
+        changes = iter(range(1000))
+        # a different size and time each time they are read, as for a file always written to
+        monkeypatch.setattr(file_copy, 'signature_of', lambda path: (next(changes), 0))
 
-        def moving_stat(self, *args, **kwargs):
-            st = real_stat(self, *args, **kwargs)
-            if self == source:
-                counter['n'] += 1
-                import os
-                return os.stat_result((st.st_mode, st.st_ino, st.st_dev, st.st_nlink, st.st_uid, st.st_gid,
-                                       st.st_size + counter['n'], int(st.st_atime), int(st.st_mtime),
-                                       int(st.st_ctime), st.st_atime, st.st_mtime, st.st_ctime))
-            return st
-
-        monkeypatch.setattr(Path, 'stat', moving_stat)
         with pytest.raises(CopyError):
             copier.copy(source)
-        assert not list((copier.destination_for(source).parent).glob('*.part'))
+        assert not list(copier.destination_for(source).parent.glob('*.part'))
 
 
 class TestPlanning:
@@ -161,7 +151,11 @@ class TestFailures:
         results = []
         copier.add_listener(results.append)
         real_copy = copier.copy
-        monkeypatch.setattr(copier, 'copy', lambda path: (_ for _ in ()).throw(PermissionError('locked')))
+
+        def copy_of_a_locked_file(path):
+            raise PermissionError('locked')
+
+        monkeypatch.setattr(copier, 'copy', copy_of_a_locked_file)
         copier._run(source, from_timer=False)
         assert not results[0].ok and 'locked' in results[0].error
         assert copier._read_pending() == [str(source)]

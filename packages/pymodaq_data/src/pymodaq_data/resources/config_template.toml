@@ -20,8 +20,8 @@ backend = ['h5py', 'tables', 'h5pyd']  # first element is the default, mostly te
     [data_saving.copy]
     # copy of each h5 file to another folder (a NAS for instance) a few seconds after its last close
     enabled = false
-    destination_path = ""  # folder receiving the copies
-    url_prefix = ""  # put before the relative path of a copy to build its url, for instance smb://nas/data
+    destination_path = ""  # folder where the copies are written, as seen from this computer (/mnt/nas/data or Z:\data)
+    url_prefix = ""  # not used to copy: put before the relative path of a copy to build its address, for instance smb://nas/data
     delay = 30  # seconds to wait after the last close of a file before copying it
 
     [data_saving.data_type]

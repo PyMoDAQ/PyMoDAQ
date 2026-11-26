@@ -128,10 +128,11 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
                         'The local file is kept. These settings are shared by all the savers.'},
             {'title': 'Destination:', 'name': 'destination_path', 'type': 'browsepath',
              'value': config('data', 'data_saving', 'copy', 'destination_path'), 'filetype': False,
-             'tooltip': 'Folder receiving the copies (a NAS already mounted for instance)'},
+             'tooltip': 'Folder where the copies are written, as seen from this computer (a NAS already mounted for instance)'},
             {'title': 'Url prefix:', 'name': 'url_prefix', 'type': 'str',
              'value': config('data', 'data_saving', 'copy', 'url_prefix'),
-             'tooltip': 'Put before the path of a copy, relative to the base path, to build its url'},
+             'tooltip': 'Not used to copy. Put before the path of a copy, relative to the base path, to build its '
+                        'address for other people and programs (smb://nas/data)'},
             {'title': 'Delay (s):', 'name': 'delay', 'type': 'float',
              'value': config('data', 'data_saving', 'copy', 'delay'), 'min': 0,
              'tooltip': 'Seconds to wait after the last close of a file before copying it'},

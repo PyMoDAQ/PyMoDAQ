@@ -8,13 +8,19 @@ copying it to a storage server, registers here and does not need to know the sav
 """
 from pathlib import Path
 import threading
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, NamedTuple, Optional
 
 from pymodaq_utils.logger import set_logger, get_module_name
 
 logger = set_logger(get_module_name(__file__))
 
-FileEvent = Callable[[Path], None]
+FileEvent = Callable[[Path], None]  # what an action calls: it receives the path of the file
+
+
+class FileAction(NamedTuple):
+    """The two callables of an action, either of them can be None"""
+    on_opened: Optional[FileEvent] = None
+    on_closed: Optional[FileEvent] = None
 
 
 class FileActions:
@@ -25,15 +31,15 @@ class FileActions:
     the file, so they should return quickly and hand long work to a thread of their own.
     A failing action is logged and never stops the saving.
     """
-    _actions: Dict[str, Tuple[Optional[FileEvent], Optional[FileEvent]]] = {}
-    _lock = threading.RLock()
+    _actions: Dict[str, FileAction] = {}  # the registered actions, by name
+    _lock = threading.RLock()  # actions can be registered while a file is closed in another thread
 
     @classmethod
     def register(cls, name: str, on_closed: Optional[FileEvent] = None,
                  on_opened: Optional[FileEvent] = None):
         """Register (or replace) the action called ``name``"""
         with cls._lock:
-            cls._actions[name] = (on_opened, on_closed)
+            cls._actions[name] = FileAction(on_opened, on_closed)
 
     @classmethod
     def unregister(cls, name: str):
@@ -48,22 +54,24 @@ class FileActions:
     @classmethod
     def notify_opened(cls, path: Path):
         """Run the ``on_opened`` callables: a file is open to write"""
-        cls._notify(0, 'opened', path)
+        cls._notify('on_opened', path)
 
     @classmethod
     def notify_closed(cls, path: Path):
         """Run the ``on_closed`` callables: a file written by PyMoDAQ is closed"""
-        cls._notify(1, 'closed', path)
+        cls._notify('on_closed', path)
 
     @classmethod
-    def _notify(cls, index: int, event: str, path: Path):
+    def _notify(cls, event: str, path: Path):
+        """Call, for each action, its ``on_opened`` or ``on_closed`` callable (``event`` is that name)"""
         with cls._lock:
-            actions = list(cls._actions.items())
-        for name, callables in actions:
-            fun = callables[index]
+            actions = list(cls._actions.items())  # a copy: an action may register another one
+
+        for name, action in actions:
+            fun = getattr(action, event)
             if fun is None:
                 continue
             try:
                 fun(Path(path))
-            except Exception as e:
+            except Exception as e:  # an action must not stop the saving, nor the other actions
                 logger.warning(f'The action "{name}" failed on the {event} event of {path}: {e}')
