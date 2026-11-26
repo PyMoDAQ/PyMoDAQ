@@ -12,6 +12,7 @@ from pymodaq_gui.messenger import messagebox
 from pymodaq.utils.dashboard_mixin import DashboardMixin
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 
+from pymodaq_ontology.annotation import make_preparer
 from pymodaq_ontology.assignment import Assignment, save_entry, load_entry
 from pymodaq_ontology.channel_tree import ChannelRow, ChannelTree
 from pymodaq_ontology.channels import Channel, actuator_channels, detector_channels
@@ -45,6 +46,8 @@ class OntologyManager(DashboardMixin, ManagerBase):
         self.source: Optional[OntologySource] = None
         self.terms: dict[str, OntologyTerm] = {}
         self.channels: list[Channel] = []
+        self._preparer = make_preparer(lambda: self.assignment)
+        self._workers: list = []
         super().__init__(dashboard=dashboard, **kwargs)
 
     # ---- the manager machinery
@@ -103,12 +106,15 @@ class OntologyManager(DashboardMixin, ManagerBase):
     def setup_actions(self) -> None:
         self.add_action('update_channels', 'Update channels', 'refresh', toolbar='management', auto_menu=True,
                         tip='Update the channels from the control modules of the Dashboard')
+        self.add_action('recap', 'Recap', 'table_view', toolbar='management', auto_menu=True,
+                        tip='Show the table of the terms assigned to the channels')
         self.add_action('probe', 'Probe detectors', 'search', toolbar='management', auto_menu=True,
                         tip='Do a snap of the detectors to find the channels they emit')
 
     def connect_things(self) -> None:
         self.connect_action('update_channels', self.update_channels_from_dashboard)
         self.connect_action('probe', self.probe)
+        self.connect_action('recap', self.show_recap)
 
     # ---- the ontology
     def set_source(self, source: Optional[OntologySource]) -> bool:
@@ -140,6 +146,50 @@ class OntologyManager(DashboardMixin, ManagerBase):
         source = SourceFactory.create(self.source_type.currentText(), self.source_location.text())
         if self.set_source(source):
             self.save_current_entry()
+
+    # ---- the annotation of the saved data
+    def attach_worker(self, worker) -> None:
+        """Annotate the data saved by the worker of an extension (it must have ``add_data_preparer``)"""
+        worker.add_data_preparer(self._preparer)
+        if worker not in self._workers:
+            self._workers.append(worker)
+
+    def detach_worker(self, worker) -> None:
+        worker.remove_data_preparer(self._preparer)
+        if worker in self._workers:
+            self._workers.remove(worker)
+
+    def quit_fun(self, *args, **kwargs):
+        for worker in list(self._workers):
+            self.detach_worker(worker)
+        return super().quit_fun(*args, **kwargs)
+
+    # ---- the recap
+    def recap_rows(self) -> list[tuple[str, str, str, str]]:
+        """(channel, term label, IRI, status) of each assigned channel"""
+        return [(key, self._term_label(key), iri, self.status_of(key, self._kind_of_key(key)))
+                for key, iri in sorted(self.assignment.values.items())]
+
+    def _kind_of_key(self, key: str) -> str:
+        for channel in self.channels:
+            if channel.key == key:
+                return channel.kind
+        return ''
+
+    def show_recap(self) -> None:
+        rows = self.recap_rows()
+        dialog = QtWidgets.QDialog(self.mainwindow)
+        dialog.setWindowTitle('Assigned terms')
+        table = QtWidgets.QTableWidget(len(rows), 4, dialog)
+        table.setHorizontalHeaderLabels(['Channel', 'Term', 'IRI', 'Status'])
+        for r, row in enumerate(rows):
+            for c, text in enumerate(row):
+                table.setItem(r, c, QtWidgets.QTableWidgetItem(text))
+        table.horizontalHeader().setStretchLastSection(True)
+        table.resizeColumnsToContents()
+        QtWidgets.QVBoxLayout(dialog).addWidget(table)
+        dialog.resize(800, 400)
+        dialog.exec()
 
     # ---- the channels
     def set_channels(self, channels: list[Channel]) -> None:

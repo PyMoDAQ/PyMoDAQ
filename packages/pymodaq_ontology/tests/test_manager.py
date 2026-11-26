@@ -131,3 +131,28 @@ def test_double_click_opens_the_popup_and_assigns(manager, monkeypatch):
 def test_double_click_on_a_group_does_nothing(manager, monkeypatch):
     monkeypatch.setattr(manager_module, 'TermPicker', lambda *a, **k: pytest.fail('no popup for a group'))
     manager._on_double_clicked(manager.channel_tree.topLevelItem(0))
+
+
+class FakeWorker:
+    def __init__(self):
+        self.preparers = []
+
+    def add_data_preparer(self, preparer):
+        self.preparers.append(preparer)
+
+    def remove_data_preparer(self, preparer):
+        self.preparers.remove(preparer)
+
+
+def test_attach_and_detach_worker(manager):
+    worker = FakeWorker()
+    manager.attach_worker(worker)
+    assert len(worker.preparers) == 1
+    manager.detach_worker(worker)
+    assert worker.preparers == []
+
+
+def test_recap_rows(manager):
+    manager.assign('Magnet', FIELD)
+    rows_ = manager.recap_rows()
+    assert rows_ == [('Magnet', 'Applied magnetic field', FIELD, 'assigned')]
