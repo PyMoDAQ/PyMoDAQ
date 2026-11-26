@@ -8,10 +8,14 @@ PyMoDAQ (Modular Data Acquisition with Python) is a Qt-based framework to drive 
 interfaced through small plugins (actuators / detectors), and PyMoDAQ provides the GUI, threading, data model,
 HDF5 saving and higher-level extensions (scans, PID, logging, optimisation...). Supported Python: 3.11–3.14.
 Branches and PR targets:
-- `dev` is the development branch: new features target `dev`.
-- `5.2.x` is the current release branch: bugfixes may target it.
-- When a new minor version is released (e.g. the future `5.3.x`), a branch with that name is created and becomes the new
-  latest/main release branch. Older `5.x.y` branches are kept to receive hotfix patches if needed.
+- `dev` is the development branch: new features target `dev` only.
+- `5.3.x` is the current release branch (the latest `5.x.y`): bugfixes target it. Older `5.x.y` branches are kept to
+  receive hotfix patches if needed. When a new minor version is released, a branch with that name is created and becomes
+  the new latest/main release branch.
+- Never open the two PRs of a fix (release branch and `dev`) at the same time. A fix goes to the release branch (`5.x.y`)
+  first; once the maintainer has reviewed it as OK, port it to `dev` in a second PR.
+- The other way around when the work started as a PR on `dev` and turns out to be a fix: finish and get the `dev` PR
+  reviewed first, then port it to the release branch.
 
 ## Repository layout
 
