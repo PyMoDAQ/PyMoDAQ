@@ -124,6 +124,7 @@ class TestExtraManagers:
     def test_extra_manager_is_created_and_enabled_with_the_experiment(self, init_qt, monkeypatch):
         qtbot = init_qt
         monkeypatch.setattr(dashboard_module, 'get_extra_managers', lambda: {'extra': ExtraManager})
+        monkeypatch.setattr(dashboard_module, 'show_toolbar_in_dashboard', lambda name: True)
         ExtraManager.quit_called = False
         shared_ui, dashboard = create_load_dashboard()
         qtbot.addWidget(shared_ui.mainwindow)
@@ -141,3 +142,20 @@ class TestExtraManagers:
 
         shared_ui.quit_fun()
         assert ExtraManager.quit_called
+
+    def test_toolbar_is_not_added_when_deactivated_in_the_preferences(self, init_qt, monkeypatch):
+        qtbot = init_qt
+        monkeypatch.setattr(dashboard_module, 'get_extra_managers', lambda: {'extra': ExtraManager})
+        monkeypatch.setattr(dashboard_module, 'show_toolbar_in_dashboard', lambda name: False)
+        shared_ui, dashboard = create_load_dashboard()
+        qtbot.addWidget(shared_ui.mainwindow)
+        shared_ui.show()
+
+        assert 'extra' in dashboard.extra_managers
+        assert 'manager_extra' not in dashboard._toolbars  # no toolbar in the dashboard
+        assert dashboard.get_menu('manager_extra') is not None  # but the menu is there
+
+        dashboard.experiment_manager.execute_entry()
+        qtbot.waitUntil(lambda: dashboard.get_menu('manager_extra').isEnabled(), timeout=30000)
+
+        shared_ui.quit_fun()
