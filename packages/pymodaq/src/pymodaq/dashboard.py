@@ -55,8 +55,9 @@ from pymodaq.extensions.utils import get_extensions
 from pymodaq.extensions import ExtensionEnum
 from pymodaq.utils.shared_ui import SharedUI
 from pymodaq.utils.managers.state.state_manager import StateManager
+from pymodaq.utils.managers.extra_managers import get_extra_managers, show_toolbar_in_dashboard
 
-from pymodaq_gui.managers.manager_base import ManagerActions # should be imported afterwards
+from pymodaq_gui.managers.manager_base import ManagerActions, ManagerBase # should be imported afterwards
 
 
 
@@ -168,6 +169,12 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.state_manager: StateManager = None  # instantiation in do_things_after_ui_setup
         self.overshooter: Overshooter = None  # instantiation in do_things_after_ui_setup
         self.roi_manager: ROIManager = None  # instantiation in do_things_after_ui_setup
+        # managers installed by other packages (entry point group 'pymodaq.managers')
+        self.extra_manager_classes = get_extra_managers()
+        self.extra_managers: dict[str, ManagerBase] = {}  # instantiation in do_things_after_ui_setup
+        # the preference to add the toolbar of each extra manager to the dashboard (menus are always added)
+        self._extra_manager_qtoolbars: dict[str, QtWidgets.QToolBar] = {}
+        self.extra_manager_toolbars = {name: show_toolbar_in_dashboard(name) for name in self.extra_manager_classes}
         self.dockarea.dock_signal.connect(self.save_layout_state_auto)
 
         self.title = ""
@@ -233,6 +240,16 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.extension_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('extension'))
 
 
+        for name, manager_class in self.extra_manager_classes.items():
+            manager = manager_class(dashboard=self)
+            self.extra_managers[name] = manager
+            toolbar, _menu = manager.get_external_toolbar_menu(
+                toolbar=self.get_toolbar(f'manager_{name}') if self.extra_manager_toolbars[name] else None,
+                menu=self.get_menu(f'manager_{name}'))
+            self._extra_manager_qtoolbars[name] = toolbar  # keeps the toolbar (and its widgets) alive when not in the dashboard
+            self.get_menu(f'manager_{name}').setEnabled(False)
+            toolbar.setEnabled(False)
+
         self.get_toolbar('state').setEnabled(False)
         self.get_toolbar('overshooter').setEnabled(False)
         self.experiment_manager.enable_actions(True)
@@ -250,6 +267,12 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.get_toolbar('overshooter').setEnabled(True)
 
         self.get_menu('extensions').setEnabled(True)
+
+        for name, manager in self.extra_managers.items():
+            self.get_menu(f'manager_{name}').setEnabled(True)
+            if self.extra_manager_toolbars[name]:
+                self.get_toolbar(f'manager_{name}').setEnabled(True)
+            manager.enable_actions(True)
 
         self.state_manager.enable_actions(True)
         self.roi_manager.enable_actions(True)
@@ -356,6 +379,9 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.get_menu('rois').setEnabled(False)
         self.add_menu('overshooter', 'Overshooter', MenuToolbarNames.TOOLS, icon_name=Overshooter.icon_name)
         self.get_menu('overshooter').setEnabled(False)
+        for name, manager_class in self.extra_manager_classes.items():
+            self.add_menu(f'manager_{name}', manager_class.entry_type.capitalize(), MenuToolbarNames.TOOLS,
+                          icon_name=manager_class.icon_name)
 
         # self.remote_menu = self.add_menu('remote', "Remote/Shortcuts Control")
         # self.update_remote_menu()
@@ -372,6 +398,10 @@ class DashBoard(CustomApp, LECOComponentMixin):
                          add_break=False)
         self.add_toolbar('overshooter', 'Overshoot', parent=self.mainwindow,
                          add_break=False)
+        for name, manager_class in self.extra_manager_classes.items():
+            if self.extra_manager_toolbars[name]:
+                self.add_toolbar(f'manager_{name}', manager_class.entry_type.capitalize(), parent=self.mainwindow,
+                                 add_break=False)
         self.add_toolbar('extension', 'Extension', parent=self.mainwindow, add_break=False)
         self.toolbar.addSeparator()
 
@@ -507,6 +537,8 @@ class DashBoard(CustomApp, LECOComponentMixin):
             self.state_manager.quit_fun()
             self.overshooter.quit_fun()
             self.roi_manager.quit_fun()
+            for manager in self.extra_managers.values():
+                manager.quit_fun()
             self.extension_manager.quit_fun()  # and the extensions loaded from its menu
 
             # Removing dock areas (I don't know what this is for)
