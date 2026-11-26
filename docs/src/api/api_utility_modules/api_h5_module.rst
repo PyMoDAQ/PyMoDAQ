@@ -67,6 +67,19 @@ the file while a scan is in progress.
    :members: collect_datasets, refresh_datasets, refresh_cached
 
 
+.. currentmodule:: pymodaq_data.h5modules.file_actions
+
+.. automodule:: pymodaq_data.h5modules.file_actions
+   :no-index:
+   :members: FileActions
+
+.. currentmodule:: pymodaq_data.h5modules.file_copy
+
+.. automodule:: pymodaq_data.h5modules.file_copy
+   :no-index:
+   :members: FileCopier, CopyResult
+
+
 .. _data_saving_loading:
 
 High Level saving/loading

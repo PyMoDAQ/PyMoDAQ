@@ -4,6 +4,8 @@ Created the 21/11/2022
 
 @author: Sebastien Weber
 """
+from pathlib import Path
+
 import numpy as np
 import pytest
 from datetime import datetime
@@ -150,3 +152,41 @@ class TestH5Saver:
             assert h5saver.get_node_path(CH_group1) ==\
                    f'/RawData/Scan000/Detector002/{utils.capitalize(data_dim)}/Ch001'
 
+
+
+class TestCopySettings:
+    """The settings of the copy of the closed files drive the copier shared by the savers"""
+
+    @pytest.fixture
+    def copier(self):
+        from pymodaq_data.h5modules import file_copy
+        before = (file_copy.copier.enabled, file_copy.copier.destination, file_copy.copier.url_prefix,
+                  file_copy.copier.delay)
+        yield file_copy.copier
+        file_copy.copier.configure(enabled=False, destination=before[1], url_prefix=before[2], delay=before[3])
+        file_copy.copier.enabled = before[0]
+
+    def test_settings_change_the_copier(self, qtbot, copier, tmp_path, monkeypatch):
+        monkeypatch.setattr(copier, 'retry_pending_in_thread', lambda: None)
+        saver = saving.H5Saver(backend=saving.backends_available[0])
+        saver.settings.child('copy', 'destination_path').setValue(str(tmp_path))
+        saver.settings.child('copy', 'url_prefix').setValue('smb://nas/data')
+        saver.settings.child('copy', 'delay').setValue(5.)
+        saver.settings.child('copy', 'enabled').setValue(True)
+        assert copier.enabled is True
+        assert str(copier.destination) == str(tmp_path)
+        assert copier.url_prefix == 'smb://nas/data'
+        assert copier.delay == 5.
+
+    def test_another_saver_shows_what_the_copier_is_set_to(self, qtbot, copier, tmp_path, monkeypatch):
+        monkeypatch.setattr(copier, 'retry_pending_in_thread', lambda: None)
+        copier.configure(destination=str(tmp_path), url_prefix='smb://nas', delay=12., enabled=True)
+        saver = saving.H5Saver(backend=saving.backends_available[0])
+        assert saver.settings['copy', 'enabled'] is True
+        assert saver.settings['copy', 'destination_path'] == str(tmp_path)
+        assert saver.settings['copy', 'url_prefix'] == 'smb://nas'
+        assert saver.settings['copy', 'delay'] == 12.
+
+    def test_base_path_of_the_saver_becomes_a_source_root(self, qtbot, copier):
+        saver = saving.H5Saver(backend=saving.backends_available[0])
+        assert Path(saver.settings['base_path']).resolve() in copier.source_roots

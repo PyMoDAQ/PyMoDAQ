@@ -18,6 +18,9 @@ from pymodaq_utils.safe_pickle import restricted_loads, warn_legacy_format
 from pymodaq_utils import utils
 from pymodaq_utils.enums import BaseEnum, enum_checker
 
+from .file_actions import FileActions
+from . import file_copy  # noqa: F401  registers the copy of the closed files
+
 
 config = Config()
 logger = set_logger(get_module_name(__file__))
@@ -604,6 +607,7 @@ class H5Backend:
         self.compression = None
         self._swmr_mode = False
         self._swmr_enabled = False
+        self._file_mode = None  # mode the current file was opened with
         self.set_backend(backend)
 
     @property
@@ -682,6 +686,18 @@ class H5Backend:
         self.finalize_swmr(keep_open=False)
 
     def open_file(self, fullpathname, mode='r', title='PyMoDAQ file', swmr_mode=False, **kwargs):
+        h5file = self._open_file(fullpathname, mode, title, swmr_mode, **kwargs)
+        self._file_mode = mode
+        if self._notifies_file_events():
+            FileActions.notify_opened(Path(fullpathname))
+        return h5file
+
+    def _notifies_file_events(self) -> bool:
+        """Only the files opened to write are of interest of the file actions, and not the ones
+        of a remote HSDS server"""
+        return self._file_mode not in (None, 'r') and self.backend != 'h5pyd'
+
+    def _open_file(self, fullpathname, mode='r', title='PyMoDAQ file', swmr_mode=False, **kwargs):
         self.file_path = fullpathname
         self._swmr_mode = swmr_mode
         if self.backend == 'tables':
@@ -845,7 +861,10 @@ class H5Backend:
                 self.reconcile_swmr_attrs()
         finally:
             if not keep_open:
+                was_open = self._h5file is not None and self.isopen()
                 self._flush_and_close()
+                if was_open and self._notifies_file_events():
+                    FileActions.notify_closed(Path(self.file_path))
 
     def _flush_and_close(self):
         """Flush and close the h5file, with no SWMR handling: the raw primitive
