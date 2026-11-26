@@ -63,6 +63,17 @@ type (linear, random, spiral, adaptive...), then start. Data are saved in HDF5 w
 (:doc:`/extensions_folder/daq_scan/daq_scan`, :doc:`/data_management/saving_loading_data`). The
 *DAQ Logger* extension records detectors over time (:doc:`/extensions_folder/daq_logger`).
 
+Is my instrument supported by PyMoDAQ?
+--------------------------------------
+
+Search for it in the :ref:`Plugin Manager<plugin_manager>` (Dashboard, *Tools* menu, or the ``plugin_manager`` command):
+the search box looks in the name of the plugins and in the instruments they list, and the table shows the instruments of
+each plugin. The same list, compiled every week from the README of the plugins published on PyPI, is on the
+`plugin list <https://github.com/PyMoDAQ/pymodaq_plugin_manager/blob/main/README.md>`_ and, for programs, in
+`instruments.json <https://raw.githubusercontent.com/PyMoDAQ/pymodaq_plugin_manager/main/doc/instruments.json>`_ (plugin,
+versions of PyMoDAQ it works with, instruments by type). If your model is not listed, a plugin for another model of the
+same manufacturer may already exist and be easy to extend: see the next question.
+
 How do I add support for an instrument that has no plugin yet?
 --------------------------------------------------------------
 

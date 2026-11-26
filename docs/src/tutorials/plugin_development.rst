@@ -123,7 +123,7 @@ Before dedicating hours of work to develop your own solution, we should check wh
 
 Here is the `list of readily available plugins`__.
 
-__ https://github.com/CEMES-CNRS/pymodaq_plugin_manager/blob/main/doc/PluginList.md
+__ https://github.com/PyMoDAQ/pymodaq_plugin_manager/blob/main/doc/PluginList.md
 
 Each plugin is a *Python package*, and also a *Git repository* (we will talk about that later).
 
