@@ -680,6 +680,13 @@ class TestDataBase:
 
         assert dwa_1.equal_to(dwa_2, epsilon=epsilon) is equal
 
+    def test_equal_to_different_shapes(self):
+        """Used by DAQ_Move.move_abs: it used to raise when an actuator received an array of another size"""
+        dwa_1 = data_mod.DataRaw('data', data=[np.zeros(100), np.zeros(100)], units='V')
+        assert dwa_1.equal_to(data_mod.DataRaw('data', data=[np.zeros(250), np.zeros(250)], units='V'), 0.1) is False
+        assert dwa_1.equal_to(data_mod.DataRaw('data', data=[np.zeros(100)], units='V'), 0.1) is False
+        assert dwa_1.equal_to(data_mod.DataRaw('data', data=[np.zeros(100), np.zeros(100)], units='V'), 0.1) is True
+
 
 class TestDataWithAxesUniform:
     def test_init(self):
