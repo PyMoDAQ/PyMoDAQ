@@ -2,7 +2,8 @@ import pytest
 
 from pymodaq_ontology import manager as manager_module
 from pymodaq_ontology.channels import Channel
-from pymodaq_ontology.manager import OntologyManager, KEY_ROLE
+from pymodaq_ontology.channel_tree import KEY_ROLE
+from pymodaq_ontology.manager import OntologyManager
 from pymodaq_ontology.terms import ACTUATOR, DETECTOR
 
 FIELD = 'http://example.org/moke#MagneticField'
@@ -103,7 +104,7 @@ class TestEntries:
         assert len(other.terms) == 3
 
     def test_unreadable_source_keeps_the_previous_terms(self, manager):
-        from pymodaq_ontology.sources import SourceFactory
+        from pymodaq_ontology.source_factory import SourceFactory
         assert not manager.set_source(SourceFactory.create('terms', '/no/such/file.toml'))
         assert len(manager.terms) == 3
         assert manager.source.location != '/no/such/file.toml'

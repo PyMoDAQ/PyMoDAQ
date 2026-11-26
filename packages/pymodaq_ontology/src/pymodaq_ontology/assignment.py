@@ -4,7 +4,7 @@ from typing import Optional
 
 import toml
 
-from pymodaq_ontology.sources import OntologySource, SourceFactory
+from pymodaq_ontology.source_factory import OntologySource, SourceFactory
 
 
 class Assignment:

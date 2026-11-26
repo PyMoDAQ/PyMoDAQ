@@ -1,15 +1,14 @@
-"""Sources of ontology terms
+"""Base class and factory of the sources of ontology terms
 
 A source reads the terms of an ontology from somewhere (a file, a web address...) in some format. The manager only
-asks it for a list of :class:`~pymodaq_ontology.terms.OntologyTerm`. A format that needs a library (RDF/Turtle for
-instance) is read by a source type provided by a plugin, which registers it with :meth:`SourceFactory.register` or
-through the ``pymodaq.ontology_sources`` entry point group (the value is a module that registers its sources when
-imported, or a source class).
+asks it for a list of :class:`~pymodaq_ontology.terms.OntologyTerm`. The sources provided are in the sibling folder
+``sources``, one module per source type, each registering itself with :meth:`SourceFactory.register`: adding a source
+type is adding a file. A format that needs a library (RDF/Turtle for instance) is read by a source type provided by a
+plugin, which registers it the same way, from a module or a class named in the ``pymodaq.ontology_sources`` entry
+point group.
 """
 from abc import ABC, abstractmethod
-from pathlib import Path
-
-import toml
+from importlib import import_module
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import get_entrypoints
@@ -59,6 +58,7 @@ class SourceFactory:
         if cls._discovered:
             return
         cls._discovered = True
+        import_module('pymodaq_ontology.sources')  # the sources provided register themselves
         for entry_point in get_entrypoints(group=GROUP):
             try:
                 loaded = entry_point.load()
@@ -69,10 +69,19 @@ class SourceFactory:
                 cls.register(loaded)
 
     @classmethod
-    def types(cls) -> list[str]:
+    def names(cls) -> list[str]:
         """The names of the source types available"""
         cls._discover()
         return list(cls._types)
+
+    @classmethod
+    def get_class(cls, source_type: str) -> type[OntologySource]:
+        """The class of a source type"""
+        cls._discover()
+        try:
+            return cls._types[source_type]
+        except KeyError:
+            raise ValueError(f'Unknown ontology source type "{source_type}", available: {cls.names()}') from None
 
     @classmethod
     def create(cls, source_type: str, location: str) -> OntologySource:
@@ -80,35 +89,10 @@ class SourceFactory:
         try:
             return cls._types[source_type](location)
         except KeyError:
-            raise ValueError(f'Unknown ontology source type "{source_type}", available: {cls.types()}') from None
+            raise ValueError(f'Unknown ontology source type "{source_type}", available: {cls.names()}') from None
 
     @classmethod
     def from_identifier(cls, identifier: str) -> OntologySource:
         """Create a source from its identifier (``type:location``)"""
         source_type, _, location = identifier.partition(':')
         return cls.create(source_type, location)
-
-
-@SourceFactory.register
-class TermsFileSource(OntologySource):
-    """A TOML file listing the terms, one ``[[term]]`` table each::
-
-        [[term]]
-        iri = "http://example.org/moke#KerrRotation"
-        label = "Kerr rotation"
-        category = "Derived quantity"      # optional
-        description = "..."                # optional
-        roles = ["detector"]               # optional: detector, actuator or both
-    """
-    source_type = 'terms'
-
-    def terms(self) -> list[OntologyTerm]:
-        content = toml.loads(Path(self.location).read_text(encoding='utf-8'))
-        terms = []
-        for item in content.get('term', []):
-            roles = item.get('roles', [])
-            terms.append(OntologyTerm(
-                iri=item['iri'], label=item.get('label', item['iri']),
-                category=item.get('category', ''), description=item.get('description', ''),
-                roles=tuple(roles) if isinstance(roles, list) else (roles,)))
-        return terms

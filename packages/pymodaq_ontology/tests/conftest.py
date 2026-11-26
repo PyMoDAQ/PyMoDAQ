@@ -1,6 +1,6 @@
 import pytest
 
-from pymodaq_ontology.sources import SourceFactory
+from pymodaq_ontology.source_factory import SourceFactory
 
 TERMS_FILE = '''
 [[term]]

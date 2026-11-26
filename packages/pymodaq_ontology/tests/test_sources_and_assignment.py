@@ -1,7 +1,7 @@
 import pytest
 
 from pymodaq_ontology.assignment import Assignment, load_entry, save_entry
-from pymodaq_ontology.sources import OntologySource, SourceFactory
+from pymodaq_ontology.source_factory import OntologySource, SourceFactory
 from pymodaq_ontology.terms import ACTUATOR, DETECTOR, OntologyTerm
 
 
@@ -42,7 +42,7 @@ class TestSources:
                 return [OntologyTerm('a', 'A')]
 
         try:
-            assert 'fixed_for_test' in SourceFactory.types()
+            assert 'fixed_for_test' in SourceFactory.names()
             assert [t.iri for t in SourceFactory.create('fixed_for_test', '').terms()] == ['a']
         finally:
             SourceFactory._types.pop('fixed_for_test')

@@ -2,7 +2,7 @@
 from pathlib import Path
 from typing import Optional, TYPE_CHECKING
 
-from qtpy import QtCore, QtGui, QtWidgets
+from qtpy import QtWidgets
 
 from pymodaq_utils.config import get_set_config_dir
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -13,8 +13,9 @@ from pymodaq.utils.dashboard_mixin import DashboardMixin
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 
 from pymodaq_ontology.assignment import Assignment, save_entry, load_entry
+from pymodaq_ontology.channel_tree import ChannelRow, ChannelTree
 from pymodaq_ontology.channels import Channel, actuator_channels, detector_channels
-from pymodaq_ontology.sources import OntologySource, SourceFactory
+from pymodaq_ontology.source_factory import OntologySource, SourceFactory
 from pymodaq_ontology.term_picker import TermPicker
 from pymodaq_ontology.terms import ACTUATOR, DETECTOR, OntologyTerm
 
@@ -25,10 +26,6 @@ logger = set_logger(get_module_name(__file__))
 
 GROUP_TITLES = {ACTUATOR: 'Actuators', DETECTOR: 'Detectors'}
 MISSING = 'Not in the Dashboard'
-COLUMNS = ['Channel', 'Term', 'Last value', '']
-COLORS = {'assigned': '#2e9d4f', 'incompatible': '#d9822b', 'none': '#9a9a9a', 'missing': '#c0392b'}
-KEY_ROLE = QtCore.Qt.ItemDataRole.UserRole
-KIND_ROLE = QtCore.Qt.ItemDataRole.UserRole + 1
 
 
 class OntologyManager(DashboardMixin, ManagerBase):
@@ -83,7 +80,7 @@ class OntologyManager(DashboardMixin, ManagerBase):
 
     def setup_docks_and_widgets(self) -> None:
         self.source_type = QtWidgets.QComboBox()
-        self.source_type.addItems(SourceFactory.types())
+        self.source_type.addItems(SourceFactory.names())
         self.source_location = QtWidgets.QLineEdit(placeholderText='Location of the ontology (file, address...)')
         browse = QtWidgets.QPushButton('Browse...')
         browse.clicked.connect(self._browse_source)
@@ -94,14 +91,7 @@ class OntologyManager(DashboardMixin, ManagerBase):
             source_row.addWidget(widget)
         source_row.setStretch(2, 1)
 
-        self.channel_tree = QtWidgets.QTreeWidget()
-        self.channel_tree.setColumnCount(len(COLUMNS))
-        self.channel_tree.setHeaderLabels(COLUMNS)
-        self.channel_tree.setExpandsOnDoubleClick(False)  # a double click chooses the term, it does not fold the group
-        self.channel_tree.header().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
-        self.channel_tree.header().setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeMode.Stretch)
-        self.channel_tree.header().setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
-        self.channel_tree.header().setSectionResizeMode(3, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
+        self.channel_tree = ChannelTree()
         self.channel_tree.itemDoubleClicked.connect(self._on_double_clicked)
         self.status_label = QtWidgets.QLabel('Double click the term of a channel to choose it.')
 
@@ -209,58 +199,23 @@ class OntologyManager(DashboardMixin, ManagerBase):
         return term.label if term is not None else iri  # an IRI the source does not know is shown as is
 
     def _refresh_tree(self) -> None:
-        self.channel_tree.clear()
-        groups: dict[tuple[str, str], QtWidgets.QTreeWidgetItem] = {}
-        known = set()
-
-        def parent_of(kind: str, module: str) -> QtWidgets.QTreeWidgetItem:
-            top = groups.get((kind, ''))
-            if top is None:
-                title = MISSING if kind == '' else GROUP_TITLES[kind]
-                top = groups[(kind, '')] = self._group_item(self.channel_tree, title)
-            if kind == ACTUATOR:
-                return top  # an actuator is its own channel: no level for its module
-            if (kind, module) not in groups:
-                groups[(kind, module)] = self._group_item(top, module)
-            return groups[(kind, module)]
-
-        for channel in sorted(self.channels, key=lambda c: (c.kind != ACTUATOR, c.module)):
-            known.add(channel.key)
-            item = QtWidgets.QTreeWidgetItem(parent_of(channel.kind, channel.module),
-                                             [channel.name, self._term_label(channel.key),
-                                              f'{channel.last_value} {channel.units}'.strip(), '●'])
-            item.setData(0, KEY_ROLE, channel.key)
-            item.setData(0, KIND_ROLE, channel.kind)
-            self._paint(item, self.status_of(channel.key, channel.kind))
-        for key in sorted(set(self.assignment.values) - known):  # assigned, but no such channel now
-            item = QtWidgets.QTreeWidgetItem(parent_of('', ''), [key, self._term_label(key), '', '●'])
-            item.setData(0, KEY_ROLE, key)
-            item.setData(0, KIND_ROLE, '')
-            self._paint(item, 'missing')
-        self.channel_tree.expandAll()
-
-    @staticmethod
-    def _group_item(parent, title: str) -> QtWidgets.QTreeWidgetItem:
-        item = QtWidgets.QTreeWidgetItem(parent, [title])
-        item.setFlags(QtCore.Qt.ItemFlag.ItemIsEnabled)
-        font = item.font(0)
-        font.setBold(True)
-        item.setFont(0, font)
-        return item
-
-    @staticmethod
-    def _paint(item: QtWidgets.QTreeWidgetItem, status: str) -> None:
-        item.setForeground(3, QtGui.QBrush(QtGui.QColor(COLORS[status])))
-        item.setData(3, QtCore.Qt.ItemDataRole.ToolTipRole, {
-            'assigned': 'The term fits the channel', 'none': 'No term assigned',
-            'incompatible': 'The term is not meant for this kind of channel',
-            'missing': 'No such channel in the Dashboard: check the cabling and the assignment'}[status])
+        rows = [ChannelRow(key=channel.key, kind=channel.kind, name=channel.name, group=GROUP_TITLES[channel.kind],
+                           module='' if channel.kind == ACTUATOR else channel.module,  # an actuator is its own channel
+                           term_label=self._term_label(channel.key),
+                           value_text=f'{channel.last_value} {channel.units}'.strip(),
+                           status=self.status_of(channel.key, channel.kind))
+                for channel in sorted(self.channels, key=lambda c: (c.kind != ACTUATOR, c.module))]
+        known = {channel.key for channel in self.channels}
+        rows += [ChannelRow(key=key, kind='', name=key, group=MISSING, term_label=self._term_label(key),
+                            status='missing')  # assigned, but no such channel now
+                 for key in sorted(set(self.assignment.values) - known)]
+        self.channel_tree.set_rows(rows)
 
     def _on_double_clicked(self, item: QtWidgets.QTreeWidgetItem, _column: int = 0) -> None:
-        key = item.data(0, KEY_ROLE)
+        key = self.channel_tree.key_of(item)
         if key is None or not self.terms:
             return
-        kind = item.data(0, KIND_ROLE) or None
+        kind = self.channel_tree.kind_of(item)
         picker = TermPicker(list(self.terms.values()), self.mainwindow, self.assignment.get(key), kind,
                             title=f'Term for {key}')
         if picker.exec():
