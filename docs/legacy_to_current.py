@@ -87,6 +87,19 @@ def _escape(text: str) -> str:
     return re.sub(r'([\\*`|])', r'\\\1', text)
 
 
+# pages of this documentation that the deprecation messages of the code point to by URL (a terminal cannot follow a
+# Sphinx reference): URL path on the website -> label of the page or section
+DOC_LINKS = {'developer_folder/instrument_plugins.html#emission-of-data': 'data_emission'}
+
+
+def _link(text: str) -> str:
+    """Replace the URL of a page of this documentation by a Sphinx reference, as the URL would leave the local build"""
+    def replace(match):
+        label = DOC_LINKS.get(match.group(1))
+        return f'See :ref:`{label}`' if label else match.group(0)
+    return re.sub(r'See: https?://pymodaq\.cnrs\.fr/en/latest/(\S+)', replace, text)
+
+
 def page() -> str:
     out = [HEADER]
     module = None
@@ -96,7 +109,7 @@ def page() -> str:
                 out.append('')
             out += [f'``{mod}``', '-' * (len(mod) + 4), '', '.. list-table::', '   :widths: 30 70', '']
             module = mod
-        out += [f'   * - {"``" + scope + "``" if scope else "(on import)"}', f'     - {_escape(message)}']
+        out += [f'   * - {"``" + scope + "``" if scope else "(on import)"}', f'     - {_link(_escape(message))}']
     return '\n'.join(out) + '\n'
 
 
