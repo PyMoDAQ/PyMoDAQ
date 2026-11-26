@@ -163,8 +163,12 @@ class UniformDataDisplayer(BaseDataDisplayer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def check_nav_axes_linear(self, data):
+        nav_axes = data.get_nav_axes_with_data()
+        return data.check_axes_linear(nav_axes)
+
     def init(self, data: DataRaw):
-        if len(data.nav_indexes) > 2 or not data.check_axes_linear():
+        if len(data.nav_indexes) > 2 or not self.check_nav_axes_linear(data):
             self._axes_viewer.set_nav_viewers(self._data.get_nav_axes_with_data())
         processor: DataProcessorFactory = data_processors
         self.update_processor(processor)
@@ -235,7 +239,7 @@ class UniformDataDisplayer(BaseDataDisplayer):
                         else:
                             data.append(self._data.mean(axis=nav_axis.index))
 
-                elif len(self._data.nav_indexes) == 2 and self._data.check_axes_linear():
+                elif len(self._data.nav_indexes) == 2 and self.check_nav_axes_linear(self._data):
                     nav_x = self._data.axes_manager.get_nav_axes()[1]
                     nav_y = self._data.axes_manager.get_nav_axes()[0]
                     if posx < nav_x.min() or posx > nav_x.max():
@@ -281,7 +285,7 @@ class UniformDataDisplayer(BaseDataDisplayer):
                 nav_data.nav_indexes = ()  # transform nav axes in sig axes for plotting
                 if len(nav_data.shape) < 2:
                     self._navigator1D.show_data(nav_data)
-                elif len(nav_data.shape) == 2 and self._data.check_axes_linear():
+                elif len(nav_data.shape) == 2 and self.check_nav_axes_linear(self._data):
                     self._navigator2D.show_data(nav_data)
                 else:
                     self._axes_viewer.set_nav_viewers(self._data.get_nav_axes_with_data())
@@ -689,10 +693,12 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
         #nav_axes = data.get_nav_axes()
 
         if data.distribution.name == DataDistribution.uniform:
+            nav_axes = data.get_nav_axes_with_data()
+            nav_axes_linear = data.check_axes_linear(nav_axes)
             self.navigator1D.setVisible(len(nav_indexes) == 1)
-            self.navigator2D.setVisible(len(nav_indexes) == 2 and data.check_axes_linear())
+            self.navigator2D.setVisible(len(nav_indexes) == 2 and nav_axes_linear)
             self.axes_viewer.setVisible(len(nav_indexes) > 2 or (
-                    len(nav_indexes) == 2 and not data.check_axes_linear()))
+                    len(nav_indexes) == 2 and not nav_axes_linear))
         elif data.distribution.name == DataDistribution.spread:
             n_nav_axes = len(data.get_nav_axes())
             self.navigator2D.setVisible(n_nav_axes == 2 and self.data_displayer.triangulation)
