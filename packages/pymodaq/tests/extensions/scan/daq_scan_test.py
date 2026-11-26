@@ -280,3 +280,16 @@ class TestDoScan:
     def test_stop(self, scan):
         DAQScan.do_scan(scan, False)
         self.actions[self.workflow.STOP].trigger.assert_called_once()
+
+
+class TestSaveMetadata:
+    def test_date_time_attribute_keeps_month_and_minutes_in_place(self, scan):
+        # Qt: 'MM' is the month and 'mm' the minutes, they were swapped in the saved string
+        node = Mock()
+        node.attrs = {}
+        date_time = QtCore.QDateTime(QtCore.QDate(2026, 11, 26), QtCore.QTime(22, 14, 3))
+        scan.scan_attributes.child('scan_info', 'date_time').setValue(date_time)
+
+        scan.save_metadata(node, 'scan_info')
+
+        assert node.attrs['date_time'] == '26/11/2026 22:14:03'
