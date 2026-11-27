@@ -52,6 +52,8 @@ class ControlModuleUI(CustomApp):
     # Common icon name for initialization action
     INIT_ICON = 'cable'
     CONTINUOUS_SAVE_TIP = 'Toggle continuous saving'
+    # Actions that only display information: they stay enabled while the module is locked
+    LOCK_EXEMPT = ('name', 'status_led', 'status', 'current')
 
     def __init__(self, app: 'ControlModule', parent, title, settings_dock: Dock = None,):
         super().__init__(parent, title=title)
@@ -60,6 +62,8 @@ class ControlModuleUI(CustomApp):
         self.config = config
         self._ini_state = False
         self._in_error = False
+        self._locked = False
+        self._locked_states: dict[str, bool] = {}
         self.status_led: MultistateLED = None
 
         self._settings_widget = WidgetWithLabelTitle(self.title, closable=True, attachable=True,
@@ -241,8 +245,51 @@ class ControlModuleUI(CustomApp):
                                                                 else self.get_theme().red)
             self.get_action(action_name).set_icon(self.INIT_ICON, color)
 
+    @property
+    def user_actions_locked(self) -> bool:
+        """True while the controls are locked (see :meth:`lock_user_actions`)"""
+        return self._locked
+
+    def lock_user_actions(self, locked: bool = True) -> None:
+        """Lock or unlock the user controls, for instance while a scan is running.
+
+        Only the actions listed in `LOCK_EXEMPT` (module name, status LED, current value, status bar)
+        stay enabled: they only display information. The enabled state of every other action is saved
+        when locking and restored when unlocking; changes requested through :meth:`enable_actions`
+        while locked are kept and applied on unlock.
+
+        Parameters
+        ----------
+        locked: bool
+            True to lock the controls, False to restore them.
+        """
+        if locked == self._locked:
+            return
+        if locked:
+            self._locked_states = {name: self._action_enabled(name) for name in self.actions_names
+                                   if name not in self.LOCK_EXEMPT}
+            self._locked = True
+            for name in self._locked_states:
+                self.set_action_enabled(name, False)
+        else:
+            self._locked = False
+            states, self._locked_states = self._locked_states, {}
+            for name, state in states.items():
+                self.set_action_enabled(name, state)
+        self._on_lock_changed(locked)
+
+    def _action_enabled(self, name: str) -> bool:
+        """Enabled state of an action; for widget actions, the one of the widget (as set by set_action_enabled)"""
+        action = self.get_action(name)
+        return action.widget.isEnabled() if hasattr(action, 'widget') else action.isEnabled()
+
+    def _on_lock_changed(self, locked: bool) -> None:
+        """Hook for subclasses controlling widgets that are not actions"""
+
     def enable_actions(self, status=True, all_except=()):
         """Enable or disable all toolbar actions, optionally excluding some.
+
+        While the module is locked, the requested state is only recorded and applied on unlock.
 
         Parameters
         ----------
@@ -252,7 +299,11 @@ class ControlModuleUI(CustomApp):
             Action names to leave unchanged.
         """
         for action in self.actions_names:
-            if action not in all_except:
+            if action in all_except:
+                continue
+            if self._locked and action in self._locked_states:
+                self._locked_states[action] = status
+            elif not (self._locked and action in self.LOCK_EXEMPT and not status):
                 self.set_action_enabled(action, status)
 
     def _show_settings(self, show: bool = True):
