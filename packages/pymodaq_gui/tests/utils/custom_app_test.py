@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 import pytest
 import qt_themes
 from qtpy import QtWidgets
@@ -144,3 +146,45 @@ class TestSnapshot:
     def test_app_without_saver_has_no_saving_to_end(self, app):
         assert app.take_saving_snapshot() is None
         app.end_saving()  # nothing to end, no error
+
+
+class FakeReporter:
+    """A saver that tells the saving events, as the ExtensionSaver does"""
+
+    def __init__(self, path):
+        self.saving = SimpleNamespace(saving_id='abc')
+        self.path = path
+        self.ended = []
+
+    def snapshot_file_path(self, saving_id=None):
+        return self.path
+
+    def end_saving(self, snapshot_path=None, saving_id=None):
+        self.ended.append((snapshot_path, saving_id))
+
+
+class TestSavingReporter:
+    @pytest.fixture
+    def reporter(self, app, tmp_path):
+        reporter = FakeReporter(tmp_path / 'picture.png')
+        app.__class__.module_and_data_saver = property(lambda self: reporter)
+        yield reporter
+        del app.__class__.module_and_data_saver
+
+    def test_a_saver_that_does_not_tell_the_savings_is_no_reporter(self, app):
+        assert app.saving_reporter is None
+        assert app.current_saving_id() is None
+
+    def test_reporter_is_the_saver_that_tells_the_savings(self, app, reporter):
+        assert app.saving_reporter is reporter
+        assert app.current_saving_id() == 'abc'
+
+    def test_end_takes_the_picture_then_tells_the_saver(self, app, reporter, tmp_path):
+        app.end_saving('abc')
+
+        assert reporter.ended == [(tmp_path / 'picture.png', 'abc')]
+
+    def test_end_without_saving_id_gives_none_to_the_saver(self, app, reporter):
+        app.notify_saving_end()
+
+        assert reporter.ended == [(None, None)]

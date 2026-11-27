@@ -637,7 +637,7 @@ class ExtensionSaver(ModuleSaver):
         if h5saver is not None and h5saver.h5_file_path is not None and h5saver.h5_file_name:
             h5_path = Path(h5saver.h5_file_path).joinpath(h5saver.h5_file_name)
         try:
-            payload = dict(getattr(self._module, 'saving_payload', dict)())
+            payload = dict(self._module.saving_payload())
         except Exception as e:  # a payload that fails must not prevent the saving
             logger.warning(f'The payload of the saving of {self._module.title} could not be read: {e}')
             payload = {}

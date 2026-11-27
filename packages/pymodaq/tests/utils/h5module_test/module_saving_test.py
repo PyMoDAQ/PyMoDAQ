@@ -330,3 +330,7 @@ class TestExtSavingEvents:
         scan_saver.end_saving(saving_id='unknown')
 
         assert [name for name, _ in events] == ['started', 'ended']
+
+    def test_extension_saver_is_a_saving_reporter(self, scan_saver):
+        from pymodaq_gui.utils.custom_app import SavingReporter
+        assert isinstance(scan_saver, SavingReporter)

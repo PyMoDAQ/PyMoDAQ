@@ -354,29 +354,24 @@ class ExtensionWorker(QObject):
         self.workers_terminated.emit()
 
     def _current_saving_id(self) -> Optional[str]:
-        """The id of the last saving of the saver that did not end (None if the saver has no saving)"""
-        try:
-            saving = getattr(self.module_and_data_saver, 'saving', None)
-        except AttributeError:  # no saver set in the extension
-            return None
-        return saving.saving_id if saving is not None else None
+        """The id of the last saving of the app that did not end (None if there is none)"""
+        return self._app.current_saving_id()
 
     def _take_snapshot(self) -> Optional[Path]:
         """Save the picture of the extension (see ``CustomApp.snapshot_widget``) and return its path, or None
 
         The picture is of the saving of this worker, and is taken in the thread of the user interface.
         """
-        if self._saving_id is None or not hasattr(self._app, 'take_saving_snapshot'):
+        if self._saving_id is None:
             return None
         return self._app.take_saving_snapshot(self._saving_id)
 
     def _end_saving(self, snapshot_path: Optional[Path]):
-        """Tell the saver that the saving of this worker is over (the file is closed). The saving is given by its id: in
+        """Tell that the saving of this worker is over (the file is closed). The saving is given by its id: in
         a batch of scans the next saving may have started already"""
         saving_id, self._saving_id = self._saving_id, None
-        saver = self.module_and_data_saver
-        if saving_id is not None and hasattr(saver, 'end_saving'):
-            saver.end_saving(snapshot_path, saving_id)
+        if saving_id is not None:
+            self._app.notify_saving_end(snapshot_path, saving_id)
 
     def _on_workers_terminated(self):
         """ Method to reimplement to finalize things after all workers terminated their jobs in their threads
