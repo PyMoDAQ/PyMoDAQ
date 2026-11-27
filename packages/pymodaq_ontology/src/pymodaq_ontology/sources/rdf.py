@@ -28,13 +28,22 @@ def _text(graph: Graph, subject: URIRef, predicates: tuple[URIRef, ...]) -> str:
     return ''
 
 
+def _roles(graph: Graph, subject: URIRef, is_class: bool) -> tuple[str, ...]:
+    """The kinds of channel the term is meant for: it (or its class) is a kind of observable or actuatable property"""
+    classes = [subject] if is_class else list(graph.objects(subject, RDF.type))
+    ancestors = {a for c in classes for a in graph.transitive_objects(c, RDFS.subClassOf)}
+    return tuple(sorted({ROLES_OF_TYPE[a] for a in ancestors if a in ROLES_OF_TYPE}))
+
+
 @SourceFactory.register
 class RdfSource(OntologySource):
     """An RDF file, read with rdflib (the format is guessed from the extension). The terms are
 
     * the classes (``owl:Class``): ``rdfs:subClassOf`` gives their parents (``broader``)
-    * the named individuals (``owl:NamedIndividual``): their classes are their parents. Those of type
-      ``sosa:ObservableProperty`` are meant for detectors, those of type ``sosa:ActuatableProperty`` for actuators.
+    * the named individuals (``owl:NamedIndividual``): their classes are their parents.
+
+    A term that is (or whose class is) a kind of ``sosa:ObservableProperty`` is meant for detectors, a kind of
+    ``sosa:ActuatableProperty`` for actuators.
 
     The label is ``rdfs:label`` (English first), the description ``skos:definition`` or ``rdfs:comment``. Only the
     things with a label are terms: the others are structure of the ontology.
@@ -57,8 +66,7 @@ class RdfSource(OntologySource):
             parents = graph.objects(subject, RDFS.subClassOf if is_class else RDF.type)
             parents = tuple(str(p) for p in parents if isinstance(p, URIRef) and p != OWL.NamedIndividual
                             and p != OWL.Class)
-            roles = () if is_class else tuple(sorted({ROLES_OF_TYPE[t] for t in graph.objects(subject, RDF.type)
-                                                      if t in ROLES_OF_TYPE}))
+            roles = _roles(graph, subject, is_class)
             terms.append(OntologyTerm(
                 iri=str(subject), label=label,
                 category='Classes' if is_class else 'Individuals',

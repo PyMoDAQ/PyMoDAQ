@@ -14,6 +14,8 @@ ex:Sensor a owl:Class ; rdfs:label "sensor"@en , "capteur"@fr ; skos:definition 
 ex:Photodiode a owl:Class ; rdfs:subClassOf ex:Sensor , sosa:Sensor ; rdfs:label "photodiode"@en ;
     rdfs:comment "A diode sensitive to light." .
 ex:NoLabel a owl:Class .
+ex:Signal a owl:Class ; rdfs:subClassOf sosa:ObservableProperty ; rdfs:label "signal" .
+ex:Diode a owl:Class ; rdfs:subClassOf ex:Signal ; rdfs:label "diode signal" .
 ex:KerrRotation a owl:NamedIndividual , sosa:ObservableProperty ; rdfs:label "Kerr rotation" .
 ex:MagneticField a owl:NamedIndividual , sosa:ActuatableProperty ; rdfs:label "applied field" .
 '''
@@ -28,7 +30,7 @@ def terms(tmp_path):
 
 def test_classes_and_individuals_with_a_label_are_terms(terms):
     ns = 'http://example.org/o#'
-    assert set(terms) == {ns + n for n in ('Sensor', 'Photodiode', 'KerrRotation', 'MagneticField')}
+    assert set(terms) == {ns + n for n in ('Sensor', 'Photodiode', 'KerrRotation', 'MagneticField', 'Signal', 'Diode')}
     assert terms[ns + 'Sensor'].label == 'sensor'  # the English label
     assert terms[ns + 'Sensor'].description == 'Measures something.'
     assert terms[ns + 'Photodiode'].description == 'A diode sensitive to light.'
@@ -46,3 +48,9 @@ def test_roles_of_the_individuals(terms):
     assert terms[ns + 'KerrRotation'].roles == (DETECTOR,)
     assert terms[ns + 'MagneticField'].roles == (ACTUATOR,)
     assert terms[ns + 'Sensor'].roles == ()
+
+
+def test_roles_of_the_classes_are_inherited(terms):
+    ns = 'http://example.org/o#'
+    assert terms[ns + 'Signal'].roles == (DETECTOR,)
+    assert terms[ns + 'Diode'].roles == (DETECTOR,)  # a kind of signal, which is a kind of observable property
