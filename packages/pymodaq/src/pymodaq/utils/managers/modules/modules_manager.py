@@ -196,7 +196,8 @@ class ModulesManager(QObject, ParameterManager):
         display information. The previous enabled state of the other actions is restored on enabling.
         """
         for module in self.modules_all:
-            module.ui.lock(not enable)
+            if module.ui is not None:
+                module.ui.lock(not enable)
 
     def __repr__(self) -> str:
         try:
