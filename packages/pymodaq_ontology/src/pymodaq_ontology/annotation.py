@@ -1,13 +1,18 @@
 """Write the assigned terms in the data to be saved, as the ``semantic_iri`` extra attribute of the arrays"""
 from typing import Callable, Optional
 
+from pymodaq_utils.logger import set_logger, get_module_name
+
 from pymodaq_data.h5modules.data_saving import DataBundle
 
 from pymodaq_ontology.assignment import Assignment
 from pymodaq_ontology.channels import Channel
 from pymodaq_ontology.terms import ACTUATOR, DETECTOR
 
+logger = set_logger(get_module_name(__file__))
+
 ATTRIBUTE = 'semantic_iri'
+EMBEDDED_GROUP = 'Ontology'  # read by pymodaq_data.h5modules.representations.embedded_semantics
 
 
 def annotate_bundle(bundle: DataBundle, assignment: Assignment) -> DataBundle:
@@ -37,3 +42,34 @@ def make_preparer(get_assignment: Callable[[], Assignment]) -> Callable[[DataBun
     def preparer(bundle: DataBundle) -> DataBundle:
         return annotate_bundle(bundle, get_assignment())
     return preparer
+
+
+def embed_excerpt(h5saver, source, assignment: Assignment) -> bool:
+    """Save in the file the part of the ontology describing the assigned terms (group ``Ontology`` of the root, with the
+    attributes ``excerpt``, ``format``, and ``iri`` and ``version`` of the ontology when known), so that the file
+    can be read without the ontology. Returns False if there is nothing to save or the file cannot be written."""
+    iris = sorted({iri for iri in assignment.values.values() if iri})
+    if source is None or not iris or h5saver is None:
+        return False
+    try:
+        text, info = source.excerpt(iris)
+        if not text:
+            return False
+        group = h5saver.get_set_group('/', EMBEDDED_GROUP)
+        for name, value in {'excerpt': text, 'format': 'turtle', **info}.items():
+            h5saver.set_attr(group, name, value)
+        return True
+    except Exception as e:  # an excerpt that cannot be written must never stop the saving of the data
+        logger.warning(f'Could not save the ontology excerpt in the file: {e}')
+        return False
+
+
+def make_embedder(get_source: Callable[[], object], get_assignment: Callable[[], Assignment],
+                  get_h5saver: Callable[[], object]) -> Callable[[DataBundle], Optional[DataBundle]]:
+    """A function to give to ``add_data_preparer``: with the first bundle of an acquisition, saves the excerpt of the
+    ontology (see :func:`embed_excerpt`). The file is then open and no other bundle is being saved."""
+    def embedder(bundle: DataBundle) -> DataBundle:
+        if not bundle.save_index:
+            embed_excerpt(get_h5saver(), get_source(), get_assignment())
+        return bundle
+    return embedder
