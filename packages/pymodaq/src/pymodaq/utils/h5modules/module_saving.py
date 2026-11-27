@@ -618,15 +618,15 @@ class ExtensionSaver(ModuleSaver):
             self.create_module_group(self._module_group)
             if self._time_saver is not None:
                 self._time_saver.get_set_node(self._module_group)
-            self.start_run()
+            self.run_started()
         return self._module_group
 
     @property
     def run(self) -> Optional[RunInfo]:
-        """The last run that started and did not end yet (see :meth:`start_run`), None if there is none"""
+        """The last run that started and did not end yet (see :meth:`run_started`), None if there is none"""
         return list(self._open_runs.values())[-1] if self._open_runs else None
 
-    def start_run(self):
+    def run_started(self):
         """Tell the registered actions (see :class:`RunEvents`) that a run starts, in the current h5 file
 
         Called when a new group is created for the extension. The information on the run is given by the
