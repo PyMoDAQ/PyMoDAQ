@@ -13,8 +13,6 @@ from qtpy.QtWidgets import (
     QWidget,
     QComboBox,
 )
-import toml
-
 from pymodaq_utils import set_logger
 from pymodaq_utils.logger import get_module_name
 from pymodaq_utils.utils import ThreadCommand
@@ -25,7 +23,7 @@ from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.utils import CustomApp
 
 from pymodaq.extensions import ExtensionEnum
-from pymodaq.launcher import HISTORY_FILE_PATH, HISTORY_FILE_NAME
+from pymodaq.launcher import HISTORY_FILE_PATH, HISTORY_FILE_NAME, load_history
 from pymodaq.utils.managers.state.state_manager import StateManager
 from pymodaq.utils.managers.extension.extension_manager import ExtensionManager
 from pymodaq.utils.managers.modules.utils import ModuleType
@@ -484,7 +482,7 @@ class Launcher(CustomApp):
             List of history dictionary keys sorted by descending date
         """
         try:
-            history = toml.load(self.history_file_path)
+            history = load_history(self.history_file_path)
         except (FileNotFoundError, PermissionError, OSError):
             history = {}
 
