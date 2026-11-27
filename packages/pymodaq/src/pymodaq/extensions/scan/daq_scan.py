@@ -1387,6 +1387,7 @@ class DAQScan(CustomExt):
             set_ini_positions
         """
         self.status_manager.set_permanent_status('Stoping acquisition')
+        self.modules_manager.enable_modules(True)  # the controls are given back as soon as the stop is fired
         self.command_daq_signal.emit(utils.ThreadCommand("stop_acquisition"))
 
         if self.settings['scan_options', 'go_to_ini_positions']:
