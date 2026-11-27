@@ -207,20 +207,28 @@ def get_semantics(name: str = 'default', **kwargs) -> SemanticsBase:
 
 
 EMBEDDED_GROUP = 'Ontology'  # group of the root holding the excerpt of the ontology used when saving
-EMBEDDED_ATTRIBUTES = ('excerpt', 'format')  # RDF text and its format (default turtle); also 'iri', 'version'
+EMBEDDED_TEXT = 'excerpt'  # string array of the group: the RDF text (no size limit, unlike an attribute)
+
+
+def _as_text(item) -> str:
+    """A stored string, whichever way the backend gives it (text or the UTF-8 bytes of a string array)"""
+    return item if isinstance(item, str) else bytes(item).decode('utf-8')
 
 
 def embedded_semantics(root, on_error: Optional[Callable[[Exception], None]] = None) -> Optional[SemanticsBase]:
-    """The provider built from the excerpt of ontology saved in the file (group ``Ontology`` of the root with the
-    attributes ``excerpt``, the RDF text, and optionally ``format``), None if the file has none or if it cannot
-    be read (damaged text...). The file then explains itself, whatever happens to the original ontology.
-    ``on_error`` is called with the exception when an excerpt exists but cannot be read."""
+    """The provider built from the excerpt of ontology saved in the file (group ``Ontology`` of the root holding the
+    string array ``excerpt``, the RDF text, and optionally the attributes ``format``, ``iri`` and ``version``), None
+    if the file has none or if it cannot be read (damaged text...). The file then explains itself, whatever happens
+    to the original ontology. ``on_error`` is called with the exception when an excerpt exists but cannot be read."""
     try:
         group = root.children().get(EMBEDDED_GROUP)
-        if group is None or 'excerpt' not in group.attrs.attrs_name:
+        if group is None:
+            return None
+        text_node = group.children().get(EMBEDDED_TEXT)
+        if text_node is None:
             return None
         attrs = {name: str(group.attrs[name]) for name in group.attrs.attrs_name}
-        return get_semantics('rdf', text=attrs['excerpt'], format=attrs.get('format', 'turtle'))
+        return get_semantics('rdf', text=''.join(_as_text(item) for item in text_node.read()), format=attrs.get('format', 'turtle'))
     except Exception as e:  # the embedded ontology is a help, never an obstacle
         logger.warning(f'Could not read the ontology embedded in the file: {e}')
         if on_error is not None:

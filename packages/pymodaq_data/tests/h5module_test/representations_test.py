@@ -26,7 +26,7 @@ def make_file(path: Path, items, group: str = 'Spectrometer', ontology: str = ''
     h5.init_file(file_name=path, new_file=True)
     DataToExportSaver(h5).add_data(h5.get_set_group(h5.raw_group, group), dte)
     if ontology:  # excerpt of the ontology embedded in the file
-        h5.set_attr(h5.get_set_group('/', rep.EMBEDDED_GROUP), 'excerpt', ontology)
+        h5.add_string_array(h5.get_set_group('/', rep.EMBEDDED_GROUP), rep.EMBEDDED_TEXT).append(ontology)
     h5.close_file()
     return path
 
