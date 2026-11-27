@@ -387,6 +387,37 @@ class TestROI:
         assert isinstance(roi_meta.roi, EllipseROI)
         assert roi_meta.index == 1
 
+    def test_add_roi_centers_on_view(self, init_viewer2d):
+        """A freshly added ROI is centered on the data's axis extent and scaled to a
+        fraction of it (config 'gui', 'viewer', 'roi_default_size_fraction'), instead of a
+        fixed tiny (0, 0)+(10, 10) that is hard to grab without zooming in first, and
+        regardless of the current zoom level."""
+        prog, qtbot = init_viewer2d
+        data = init_data()  # Nx=100, Ny=200, so the data's axis extent is (0, 99)/(0, 199)
+        prog.show_data(data)
+        view_box = prog.view.roi_manager.view_box
+        view_box.enableAutoRange(enable=False)
+        view_box.setAspectLocked(False)
+        # zoom to a sub-range of the data: the default size/position must still be based on
+        # the full data extent, not this (possibly very different) view range
+        view_box.setRange(xRange=(10, 40), yRange=(20, 80), padding=0)
+        qtbot.wait(0)
+
+        fraction = plot_utils.config('gui', 'viewer', 'roi_default_size_fraction')
+        xmin, xmax = 0, data[0].shape[1] - 1
+        ymin, ymax = 0, data[0].shape[0] - 1
+        expected_width = (xmax - xmin) * fraction
+        expected_height = (ymax - ymin) * fraction
+
+        index_roi, roi_meta, roi_type = create_one_roi(prog, qtbot, roitype='RectROI')
+
+        width, height = roi_meta.roi.size()
+        x, y = roi_meta.roi.pos()
+        assert width == approx(expected_width)
+        assert height == approx(expected_height)
+        assert x + width / 2 == approx((xmin + xmax) / 2)
+        assert y + height / 2 == approx((ymin + ymax) / 2)
+
     def test_remove_roi(self, init_viewer2d):
         prog, qtbot = init_viewer2d
         data = init_data()
@@ -643,6 +674,33 @@ class TestRoiSelect:
         assert isinstance(blocker.args[0], RoiInfo)
         assert blocker.args[0].origin == Point(POS[-1::-1])
         assert blocker.args[0].size == Point(SIZE[-1::-1])
+
+    def test_roi_select_centers_on_axis(self, init_viewer2d):
+        """The ROIselect tool is also sized/centered on the data's axis extent, not the
+        current (possibly zoomed) view range, when shown (#1444)."""
+        prog, qtbot = init_viewer2d
+        data = init_data()  # Nx=100, Ny=200, so the data's axis extent is (0, 99)/(0, 199)
+        prog.show_data(data)
+        view_box = prog.view.roi_manager.view_box
+        view_box.enableAutoRange(enable=False)
+        view_box.setAspectLocked(False)
+        view_box.setRange(xRange=(10, 40), yRange=(20, 80), padding=0)
+        qtbot.wait(0)
+
+        fraction = plot_utils.config('gui', 'viewer', 'roi_default_size_fraction')
+        xmin, xmax = 0, data[0].shape[1] - 1
+        ymin, ymax = 0, data[0].shape[0] - 1
+        expected_width = (xmax - xmin) * fraction
+        expected_height = (ymax - ymin) * fraction
+
+        prog.view.get_action('ROIselect').trigger()
+
+        width, height = prog.view.ROIselect.size()
+        x, y = prog.view.ROIselect.pos()
+        assert width == approx(expected_width)
+        assert height == approx(expected_height)
+        assert x + width / 2 == approx((xmin + xmax) / 2)
+        assert y + height / 2 == approx((ymin + ymax) / 2)
 
 
 def test_crosshair_and_roiselect_above_images(init_viewer2d):
