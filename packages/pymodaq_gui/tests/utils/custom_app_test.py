@@ -104,3 +104,32 @@ def test_quit_fun_closes_the_window(app):
     assert app.mainwindow.isVisible()
     assert app.quit_fun() is True
     assert not app.mainwindow.isVisible()
+
+
+class TestSnapshot:
+    def test_default_widget_is_the_main_window(self, app):
+        assert app.snapshot_widget() is app.mainwindow
+
+    def test_snapshot_is_saved_as_png(self, app, tmp_path):
+        path = app.save_snapshot(tmp_path / 'picture.png')
+
+        assert path == tmp_path / 'picture.png'
+        assert path.read_bytes()[:8] == b'\x89PNG\r\n\x1a\n'
+
+    def test_another_widget_can_be_chosen(self, app, tmp_path):
+        widget = QtWidgets.QLabel('result')
+        app.snapshot_widget = lambda: widget
+
+        assert app.save_snapshot(tmp_path / 'picture.png') is not None
+
+    def test_no_widget_gives_no_picture(self, app, tmp_path):
+        app.snapshot_widget = lambda: None
+
+        assert app.save_snapshot(tmp_path / 'picture.png') is None
+        assert not (tmp_path / 'picture.png').exists()
+
+    def test_unwritable_path_gives_no_picture(self, app, tmp_path):
+        assert app.save_snapshot(tmp_path / 'missing_folder' / 'picture.png') is None
+
+    def test_payload_is_empty_by_default(self, app):
+        assert app.run_payload() == {}

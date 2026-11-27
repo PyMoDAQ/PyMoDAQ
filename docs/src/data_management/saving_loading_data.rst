@@ -77,6 +77,40 @@ it is really closed (not when the file is kept open by ``finalize_swmr(keep_open
 the files of an HSDS server, do not trigger them. The copy is one of these actions, named ``copy``.
 
 
+.. _run_events:
+
+Events of a run
+---------------
+
+An extension that saves data (the scan, the logger, the ramping, the sequencer or the optimizers) does runs: a scan,
+a logging, a ramp... Other code can be told when a run starts and when it ends with the registry of run events
+(:class:`~pymodaq_data.h5modules.run_events.RunEvents`), as the file actions tell when a file is closed::
+
+    from pymodaq_data.h5modules.run_events import RunEvents
+
+    def run_started(info):
+        print(info.extension, info.started_at, info.payload)
+
+    def run_ended(info):
+        print(info.ended_at, info.h5_path, info.snapshot_path)
+
+    RunEvents.register('my_action', on_started=run_started, on_ended=run_ended)
+
+Both functions receive a :class:`~pymodaq_data.h5modules.run_events.RunInfo`:
+
+* the title of the extension, the h5 file in which the run is saved and a free ``payload`` given by the extension
+  (for the scan: the scan type, the detectors, the actuators and the average)
+* the time of the start and of the end, in ISO 8601 with the offset to UTC, taken when each event happens
+* at the end, the path of a PNG picture of the extension, or None
+
+A run starts when the extension creates a new group in the file, and ends when the extension has finished saving and
+closed the file. The picture is a file written by PyMoDAQ: it is announced to the file actions as a closed file, so
+the copy of the closed files copies it with the h5 file. A failing action is logged and never stops the run.
+
+An extension chooses what is photographed by reimplementing ``snapshot_widget`` (the main window by default, the live
+plots for the scan; None for no picture) and what it tells about its run by reimplementing ``run_payload``.
+
+
 DataSaver/DataLoader
 --------------------
 

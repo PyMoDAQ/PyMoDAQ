@@ -73,6 +73,12 @@ the file while a scan is in progress.
    :no-index:
    :members: FileActions
 
+.. currentmodule:: pymodaq_data.h5modules.run_events
+
+.. automodule:: pymodaq_data.h5modules.run_events
+   :no-index:
+   :members: RunEvents, RunInfo
+
 .. currentmodule:: pymodaq_data.h5modules.file_copy
 
 .. automodule:: pymodaq_data.h5modules.file_copy
@@ -154,4 +160,4 @@ Module savers
 .. currentmodule:: pymodaq.utils.h5modules.module_saving
 
 .. automodule:: pymodaq.utils.h5modules.module_saving
-   :members: ModuleSaver, DetectorSaver, DetectorEnlargeableSaver, DetectorExtendedSaver, ActuatorSaver, ScanSaver, LoggerSaver
+   :members: ModuleSaver, ExtensionSaver, DetectorSaver, DetectorEnlargeableSaver, DetectorExtendedSaver, ActuatorSaver, ScanSaver, LoggerSaver

@@ -145,3 +145,38 @@ class TestDataPreparers:
         worker.emit_data_to_save(make_bundle())
 
         assert calls == ['preparer', 'hook']
+
+
+class TestRunEnd:
+    """The worker takes the picture of the extension and tells the saver that the run is over"""
+
+    def make(self, tmp_path, picture=True):
+        calls = []
+        saver = SimpleNamespace(snapshot_file_path=lambda: tmp_path / 'run.png',
+                                end_run=lambda path: calls.append(path))
+        app = SimpleNamespace(module_and_data_saver=saver)
+        if picture:
+            app.save_snapshot = lambda path: path
+        worker = ExtensionWorker(app)
+        return worker, calls
+
+    def test_picture_path_is_given_to_the_saver(self, tmp_path):
+        worker, calls = self.make(tmp_path)
+
+        snapshot = worker._take_snapshot()
+        worker._end_run(snapshot)
+
+        assert calls == [tmp_path / 'run.png']
+
+    def test_no_picture_if_the_app_cannot_take_one(self, tmp_path):
+        worker, calls = self.make(tmp_path, picture=False)
+
+        assert worker._take_snapshot() is None
+        worker._end_run(None)
+        assert calls == [None]
+
+    def test_saver_without_runs_is_left_alone(self):
+        worker = ExtensionWorker(SimpleNamespace(module_and_data_saver=SimpleNamespace()))
+
+        assert worker._take_snapshot() is None
+        worker._end_run(None)  # nothing to call, no error

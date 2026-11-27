@@ -1,6 +1,7 @@
 import numpy as np
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable
+from pathlib import Path
+from typing import TYPE_CHECKING, Callable, Optional
 from qtpy import QtCore
 from qtpy.QtCore import QObject, Signal
 
@@ -335,9 +336,11 @@ class ExtensionWorker(QObject):
             self.thread_manager.exit_worker_thread(ProcessorWorker.name, delete_worker=True)
         self.thread_manager.exit_worker_thread(SaverWorker.name, delete_worker=True)
 
-        # 4 flushing/closing the file to be able to create new groups...
+        # 4 taking a picture of the extension, flushing/closing the file to be able to create new groups...
+        snapshot_path = self._take_snapshot()
         self.h5_manager.close_file()
         self.h5_manager.update_file_status_led()
+        self._end_run(snapshot_path)
 
         # 5 updating GUI info
         if hasattr(self._app, 'enable_start_stop'):
@@ -347,6 +350,23 @@ class ExtensionWorker(QObject):
             self.settings[self._processor_worker_class.worker_setting_name, 'worker_running'] = False
 
         self.workers_terminated.emit()
+
+    def _take_snapshot(self) -> Optional[Path]:
+        """Save the picture of the extension (see ``CustomApp.snapshot_widget``) and return its path, or None
+
+        The picture is taken in the thread of the user interface, only if the saver knows a run and a file.
+        """
+        saver = self.module_and_data_saver
+        path = saver.snapshot_file_path() if hasattr(saver, 'snapshot_file_path') else None
+        if path is None or not hasattr(self._app, 'save_snapshot'):
+            return None
+        return self._app.save_snapshot(path)
+
+    def _end_run(self, snapshot_path: Optional[Path]):
+        """Tell the saver that the run is over (the file is closed), if it handles runs (an ExtensionSaver)"""
+        saver = self.module_and_data_saver
+        if hasattr(saver, 'end_run'):
+            saver.end_run(snapshot_path)
 
     def _on_workers_terminated(self):
         """ Method to reimplement to finalize things after all workers terminated their jobs in their threads

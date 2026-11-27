@@ -396,7 +396,13 @@ class GenericOptimization(CustomExt):
         self.module_and_data_saver.h5saver = self.h5saver  # force all control modules to update their h5saver
 
     def close_file(self):
+        """Close the file, the run being saved in it (if any) is then over: its picture is taken and announced"""
+        saver = self._module_and_data_saver
+        picture_path = saver.snapshot_file_path() if saver is not None else None
+        picture = self.save_snapshot(picture_path) if picture_path is not None else None
         self.h5saver.close_file()
+        if saver is not None:
+            saver.end_run(picture)
 
     def add_data(self, data: DataToSave):
         if self.is_action_checked(OptimizerAction.SAVE):

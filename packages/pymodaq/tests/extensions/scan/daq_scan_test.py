@@ -293,3 +293,14 @@ class TestSaveMetadata:
         scan.save_metadata(node, 'scan_info')
 
         assert node.attrs['date_time'] == '26/11/2026 22:14:03'
+
+
+class TestRunEvents:
+    def test_payload_describes_the_scan(self, scan):
+        payload = scan.run_payload()
+
+        assert set(payload) == {'scan_type', 'scan_sub_type', 'detectors', 'actuators', 'scan_average'}
+        assert payload['scan_type'] == scan.scanner.scan_type
+
+    def test_picture_shows_the_live_plots(self, scan):
+        assert scan.snapshot_widget() is scan.live_plot_dockarea

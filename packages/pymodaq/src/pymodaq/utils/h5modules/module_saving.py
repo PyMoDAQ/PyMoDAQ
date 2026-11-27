@@ -5,7 +5,8 @@ Created the 23/11/2022
 @author: Sebastien Weber
 """
 from __future__ import annotations
-from typing import Union, List, Tuple, TYPE_CHECKING, Iterable
+from pathlib import Path
+from typing import Union, List, Tuple, TYPE_CHECKING, Iterable, Optional
 import time
 import xml.etree.ElementTree as ET
 
@@ -22,6 +23,8 @@ from pymodaq_data.h5modules.data_saving import (
     DataToExportSaver, DataToExportEnlargeableSaver,
     DataToExportTimedSaver, DataToExportExtendedSaver, DataBundle)
 from pymodaq_data.h5modules.backends import GROUP, Node, snapshot_path
+from pymodaq_data.h5modules.file_actions import FileActions
+from pymodaq_data.h5modules.run_events import RunEvents, RunInfo
 
 from pymodaq_gui.h5modules.saving import H5SaverBase
 from pymodaq_gui.parameter import ioxml
@@ -531,6 +534,7 @@ class ExtensionSaver(ModuleSaver):
 
         self.current_nodes: dict[str, Node] = {}
         self._time_saver: TimeModuleSaver = None
+        self._run: Optional[RunInfo] = None  # the run going on, None when there is none
 
     def update_after_h5changed(self):
         """ To be updated depending on the actual Saver you want to use"""
@@ -614,7 +618,51 @@ class ExtensionSaver(ModuleSaver):
             self.create_module_group(self._module_group)
             if self._time_saver is not None:
                 self._time_saver.get_set_node(self._module_group)
+            self.start_run()
         return self._module_group
+
+    @property
+    def run(self) -> Optional[RunInfo]:
+        """The run going on (see :meth:`start_run`), None if there is none"""
+        return self._run
+
+    def start_run(self):
+        """Tell the registered actions (see :class:`RunEvents`) that a run starts, in the current h5 file
+
+        Called when a new group is created for the extension. The information on the run is given by the
+        extension (``run_payload``).
+        """
+        h5saver = self._h5saver
+        h5_path = None
+        if h5saver is not None and h5saver.h5_file_path is not None and h5saver.h5_file_name:
+            h5_path = Path(h5saver.h5_file_path).joinpath(h5saver.h5_file_name)
+        try:
+            payload = dict(getattr(self._module, 'run_payload', dict)())
+        except Exception as e:  # a payload that fails must not prevent the run
+            logger.warning(f'The payload of the run of {self._module.title} could not be read: {e}')
+            payload = {}
+        self._run = RunInfo(extension=self._module.title, h5_path=h5_path, payload=payload)
+        RunEvents.notify_started(self._run)
+
+    def snapshot_file_path(self) -> Optional[Path]:
+        """Where the picture of the run going on is saved: next to the h5 file, None if there is no run or file"""
+        if self._run is None or self._run.h5_path is None:
+            return None
+        h5_path = self._run.h5_path
+        return h5_path.with_name(f'{h5_path.stem}_{self._run.run_id[:8]}.png')
+
+    def end_run(self, snapshot_path: Optional[Path] = None):
+        """Tell the registered actions that the run is over, its file being closed (nothing if no run is going on)
+
+        A picture of the extension, if any, is a file written by PyMoDAQ: it is announced to the
+        :class:`FileActions` as a closed file, so it can be copied as the h5 files are.
+        """
+        if self._run is None:
+            return
+        info, self._run = self._run.ended(snapshot_path), None
+        if snapshot_path is not None:
+            FileActions.notify_closed(snapshot_path)
+        RunEvents.notify_ended(info)
 
     def initialize_time_array(self, extended_shape: Iterable[int]):
         self._time_saver.initialize(extended_shape)

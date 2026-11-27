@@ -290,6 +290,39 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         if self.mainwindow is not None:
             self.mainwindow.setWindowTitle(self._title)
 
+    def snapshot_widget(self) -> Optional[QtWidgets.QWidget]:
+        """The widget that is photographed at the end of a run (see :meth:`save_snapshot`)
+
+        By default the main window of the app, or its parent widget when there is no main window. Reimplement it
+        to choose another widget, for instance the viewer showing the result of the run. Return None for no picture.
+        """
+        return self.mainwindow if self.mainwindow is not None else self.parent
+
+    def save_snapshot(self, path: Path) -> Optional[Path]:
+        """Save a PNG picture of :meth:`snapshot_widget` and return its path, or None if there is no picture
+
+        It must be called in the thread of the user interface. A failure is logged and gives None.
+        """
+        widget = self.snapshot_widget()
+        if widget is None:
+            return None
+        try:
+            path = Path(path)
+            if widget.grab().save(str(path), 'PNG'):
+                return path
+            logger.warning(f'The picture of {self.title} could not be saved in {path}')
+        except Exception as e:
+            logger.warning(f'The picture of {self.title} could not be taken: {e}')
+        return None
+
+    def run_payload(self) -> Dict[str, Any]:
+        """Free information on the run that starts, given to the actions listening to the run events
+
+        Empty by default. Reimplement it to give what is useful to describe the run (the scan type for instance).
+        The values should be simple (text, numbers, booleans) as they may be written in a notebook.
+        """
+        return {}
+
     @staticmethod
     def get_theme(name: Optional[str] = None) -> Theme:
         """Returns the theme named *name*, or the current one if None (see the qt_themes package)"""

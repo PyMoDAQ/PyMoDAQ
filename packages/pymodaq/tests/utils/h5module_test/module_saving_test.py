@@ -5,11 +5,15 @@ Created the 23/11/2022
 @author: Sebastien Weber
 """
 
+from datetime import datetime
+
 import numpy as np
 import pytest
 
 from pymodaq_data.h5modules.saving import H5SaverLowLevel
 from pymodaq_data.h5modules import backends
+from pymodaq_data.h5modules.file_actions import FileActions
+from pymodaq_data.h5modules.run_events import RunEvents
 from pymodaq.utils.h5modules.module_saving import DetectorSaver, ScanSaver, GroupModuleType, TimeModuleSaver
 
 from pymodaq_gui.parameter import Parameter
@@ -227,3 +231,74 @@ class TestTimeModuleSaver:
         for idx in [0, 2, 4]:
             assert np.isnan(arr[idx])
 
+
+
+class TestRunEvents:
+    """The extension savers tell the RunEvents registry when a run starts and when it ends"""
+
+    @pytest.fixture
+    def events(self):
+        received = []
+        RunEvents.register('test', on_started=lambda info: received.append(('started', info)),
+                           on_ended=lambda info: received.append(('ended', info)))
+        yield received
+        RunEvents.unregister('test')
+
+    @pytest.fixture
+    def scan_saver(self, h5saver_with_settings):
+        module = MockScan(h5saver_with_settings)
+        module.run_payload = lambda: {'scan_type': 'Scan1D'}
+        saver = ScanSaver(module=module)
+        saver.h5saver = h5saver_with_settings
+        return saver
+
+    def test_run_starts_with_a_new_group_only(self, scan_saver, events):
+        scan_saver.get_set_node()  # creates the first group: a run starts
+        scan_saver.get_set_node()  # gets it back: no new run
+        scan_saver.get_set_node(new=True)
+
+        assert [name for name, _ in events] == ['started', 'started']
+
+    def test_started_run_gives_what_is_known(self, scan_saver, events):
+        scan_saver.get_set_node()
+
+        info = events[0][1]
+        assert info.extension == 'MyScan'
+        assert info.payload == {'scan_type': 'Scan1D'}
+        assert info.h5_path.name == 'h5file.h5'
+        assert info.ended_at is None
+        assert datetime.fromisoformat(info.started_at).utcoffset() is not None  # the offset to UTC is given
+
+    def test_ended_run_is_the_started_one_with_its_end(self, scan_saver, events):
+        scan_saver.get_set_node()
+        scan_saver.end_run()
+
+        started, ended = events[0][1], events[1][1]
+        assert events[1][0] == 'ended'
+        assert ended.run_id == started.run_id
+        assert ended.ended_at is not None
+        assert scan_saver.run is None
+
+    def test_ending_without_run_does_nothing(self, scan_saver, events):
+        scan_saver.end_run()
+        assert events == []
+
+    def test_snapshot_is_announced_as_a_closed_file(self, scan_saver, events):
+        closed = []
+        FileActions.register('test_png', on_closed=closed.append)
+        try:
+            scan_saver.get_set_node()
+            path = scan_saver.snapshot_file_path()
+            scan_saver.end_run(path)
+        finally:
+            FileActions.unregister('test_png')
+
+        assert path.suffix == '.png'
+        assert closed == [path]
+        assert events[1][1].snapshot_path == path
+
+    def test_failing_payload_does_not_stop_the_run(self, scan_saver, events):
+        scan_saver._module.run_payload = lambda: 1 / 0
+        scan_saver.get_set_node()
+
+        assert events[0][1].payload == {}

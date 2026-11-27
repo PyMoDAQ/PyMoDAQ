@@ -778,6 +778,18 @@ class DAQScan(CustomExt):
         self._metada_dataset_set = False
         self.update_file_settings()
 
+    def snapshot_widget(self):
+        """The picture of a scan shows its live plots"""
+        return self.live_plot_dockarea
+
+    def run_payload(self) -> dict:
+        """What describes the scan for the actions listening to the run events (a notebook entry for instance)"""
+        return dict(scan_type=self.scanner.scan_type,
+                    scan_sub_type=self.scanner.scan_sub_type,
+                    detectors=', '.join(self.modules_manager.selected_detectors_name),
+                    actuators=', '.join(self.modules_manager.selected_actuators_name),
+                    scan_average=self.settings['scan_options', 'scan_average'])
+
     def save_metadata(self, node, type_info='dataset_info'):
         """
             Switch the type_info value with :
