@@ -131,3 +131,10 @@ venv.bak/
 
 
 **/README.rst
+
+# mattpocock-skills grill-with-docs/domain-modeling artifacts (GLOSSARY.md, ADRs). This repo's
+# real glossary/design docs live under docs/src/ (Sphinx); keep these locally for working
+# sessions if useful, but never commit/push them.
+GLOSSARY.md
+GLOSSARY-MAP.md
+**/docs/adr/
