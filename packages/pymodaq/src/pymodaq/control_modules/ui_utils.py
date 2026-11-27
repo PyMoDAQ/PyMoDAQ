@@ -247,11 +247,11 @@ class ControlModuleUI(CustomApp):
             self.get_action(action_name).set_icon(self.INIT_ICON, color)
 
     @property
-    def locked(self) -> bool:
-        """True while the controls are locked (see :meth:`lock`)"""
+    def user_actions_locked(self) -> bool:
+        """True while the controls are locked (see :meth:`lock_user_actions`)"""
         return self._locked
 
-    def lock(self, locked: bool = True) -> None:
+    def lock_user_actions(self, locked: bool = True) -> None:
         """Lock or unlock the user controls, for instance while a scan is running.
 
         Only the actions listed in `LOCK_EXEMPT` (module name, status LED, current value, status bar)
