@@ -321,7 +321,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
 
         Returns the path of the picture, or None if the app has no run, no file or no picture.
         """
-        saver = getattr(self, 'module_and_data_saver', None)
+        saver: Any = getattr(self, 'module_and_data_saver', None)
         path = saver.snapshot_file_path(run_id) if hasattr(saver, 'snapshot_file_path') else None
         return self.save_snapshot(path) if path is not None else None
 
@@ -330,7 +330,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
 
         Nothing happens if the app has no such run.
         """
-        saver = getattr(self, 'module_and_data_saver', None)
+        saver: Any = getattr(self, 'module_and_data_saver', None)
         if hasattr(saver, 'end_run'):
             saver.end_run(self.take_run_snapshot(run_id), run_id)
 
