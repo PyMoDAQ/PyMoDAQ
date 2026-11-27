@@ -353,3 +353,16 @@ def test_embedded_ontology_is_read_from_the_file(tmp_path):
                 assert sem.canonical('http://other.org/vocab#DarkCurrent') == sem.canonical(NS + 'DarkSpectrum')
         finally:
             h5.close_file()
+
+
+def test_unreadable_embedded_ontology_is_reported(tmp_path):
+    path = make_file(tmp_path / 'bad.h5', [('d1', 'counts', 'DarkSpectrum', None, None)],
+                     ontology='this is not turtle {{{')
+    h5 = H5BrowserUtil(backend='h5py')
+    h5.init_file(file_name=path, new_file=False, mode='r')
+    errors = []
+    try:
+        assert rep.embedded_semantics(h5.root(), errors.append) is None
+    finally:
+        h5.close_file()
+    assert len(errors) == 1

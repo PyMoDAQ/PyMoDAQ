@@ -227,6 +227,7 @@ class H5Browser(CustomApp):
         self.current_node_path = None
         self.semantics_key = NO_SEMANTICS  # selected ontology: '' (none), a registered name or a file path
         self._semantics = None  # the corresponding provider (None: default behaviour)
+        self._embedded_error_file = None  # file for which an unreadable embedded ontology was reported
         self.mode = HIERARCHY_MODE  # representation of the file content, see pymodaq_data representations
 
         self._restore_mode()
@@ -561,6 +562,14 @@ class H5Browser(CustomApp):
         except Exception as e:
             logger.exception(str(e))
 
+    def _embedded_error(self, error: Exception):
+        """Tell the user, once per file, that the ontology saved in the file could not be read"""
+        name = self.h5utils.h5_file_name
+        if name != self._embedded_error_file:
+            self._embedded_error_file = name
+            messagebox(severity='warning', title='Ontology',
+                       text=f'The ontology saved in this file could not be read:\n{error}')
+
     def set_semantics_choice(self, key: str):
         """Select the ontology used to label and organise the concepts: '' for none, the name of a
         registered provider, a path to an RDF file, or OTHER_FILE to ask for such a file."""
@@ -673,7 +682,7 @@ class H5Browser(CustomApp):
                     self.view.add_widget_to_tree(pixmap_items)
                 else:
                     infos = representations.data_infos(base_node, Path(self.h5utils.h5_file_name or '').stem)
-                    embedded = representations.embedded_semantics(base_node)  # the ontology saved in the file itself
+                    embedded = representations.embedded_semantics(base_node, self._embedded_error)  # saved in the file
                     semantics = (representations.CompositeSemantics([p for p in (self._semantics, embedded) if p])
                                  if embedded else self._semantics)
                     self.view.add_base_item(rep_item_to_qtree(representations.build_mode(self.mode, infos, semantics)))

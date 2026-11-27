@@ -34,18 +34,17 @@ dependencies = [
     "pymodaq_utils>=0.0.8",
     "scipy",
     "h5py",
+    "rdflib>=7.0",
 ]
 
 [project.optional-dependencies]
 xarray = ["xarray>=2024.10"]
-semantics = ["rdflib>=7.0"]
 dev = [
     "hatch", 
     "flake8",
     "h5py>=2.5.0",
     "tables>=3.10",
     "pytest",
-    "rdflib>=7.0",
     "pytest-cov",
     "pytest-xdist",
     "matplotlib",  # tests of the matplotlib plotter

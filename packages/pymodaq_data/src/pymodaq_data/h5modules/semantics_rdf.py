@@ -1,6 +1,6 @@
 """Semantics provider reading labels and the concept hierarchy from RDF files (Turtle, RDF/XML...).
 
-Needs the optional dependency rdflib: ``pip install pymodaq_data[semantics]``. Use it with::
+Uses rdflib, a dependency of pymodaq_data, so that a file carrying an ontology can be read anywhere. Use it with::
 
     from pymodaq_data.h5modules.representations import get_semantics, build_tree
     semantics = get_semantics('rdf', sources=['my_ontology.ttl', 'qudt_excerpt.ttl'])

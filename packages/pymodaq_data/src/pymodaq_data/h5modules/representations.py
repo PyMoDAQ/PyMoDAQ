@@ -202,8 +202,7 @@ def get_semantics(name: str = 'default', **kwargs) -> SemanticsBase:
         try:
             from pymodaq_data.h5modules import semantics_rdf  # noqa: F401  (registers the provider)
         except ImportError as e:
-            raise ImportError('The "rdf" semantics provider needs rdflib: '
-                              'pip install pymodaq_data[semantics]') from e
+            raise ImportError('The "rdf" semantics provider needs rdflib: pip install rdflib') from e
     return SemanticsFactory.create(name, **kwargs)
 
 
@@ -211,10 +210,11 @@ EMBEDDED_GROUP = 'Ontology'  # group of the root holding the excerpt of the onto
 EMBEDDED_ATTRIBUTES = ('excerpt', 'format')  # RDF text and its format (default turtle); also 'iri', 'version'
 
 
-def embedded_semantics(root) -> Optional[SemanticsBase]:
+def embedded_semantics(root, on_error: Optional[Callable[[Exception], None]] = None) -> Optional[SemanticsBase]:
     """The provider built from the excerpt of ontology saved in the file (group ``Ontology`` of the root with the
     attributes ``excerpt``, the RDF text, and optionally ``format``), None if the file has none or if it cannot
-    be read (rdflib missing...). The file then explains itself, whatever happens to the original ontology."""
+    be read (damaged text...). The file then explains itself, whatever happens to the original ontology.
+    ``on_error`` is called with the exception when an excerpt exists but cannot be read."""
     try:
         group = root.children().get(EMBEDDED_GROUP)
         if group is None or 'excerpt' not in group.attrs.attrs_name:
@@ -223,6 +223,8 @@ def embedded_semantics(root) -> Optional[SemanticsBase]:
         return get_semantics('rdf', text=attrs['excerpt'], format=attrs.get('format', 'turtle'))
     except Exception as e:  # the embedded ontology is a help, never an obstacle
         logger.warning(f'Could not read the ontology embedded in the file: {e}')
+        if on_error is not None:
+            on_error(e)
         return None
 
 
