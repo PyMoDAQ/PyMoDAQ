@@ -6,9 +6,10 @@ The backends call :meth:`FileActions.notify_opened` when a file is opened to wri
 keeps it open to write more). Anything that has to react to a finished file, such as
 copying it to a storage server, registers here and does not need to know the savers.
 """
+import dataclasses
 from pathlib import Path
 import threading
-from typing import Callable, Dict, List, NamedTuple, Optional
+from typing import Callable, Dict, List, Optional
 
 from pymodaq_utils.logger import set_logger, get_module_name
 
@@ -17,22 +18,29 @@ logger = set_logger(get_module_name(__file__))
 FileEvent = Callable[[Path], None]  # what an action calls: it receives the path of the file
 
 
-class FileAction(NamedTuple):
-    """The two callables of an action, either of them can be None"""
+@dataclasses.dataclass(frozen=True)
+class FileAction:
+    """The two functions of an action, each of them can be None. It cannot be modified once created"""
     on_opened: Optional[FileEvent] = None
     on_closed: Optional[FileEvent] = None
 
 
 class FileActions:
-    """Registry of the actions run on file events, kept by name
+    """List of the actions to run when a file is opened or closed, each one has a name
 
-    An action is made of two optional callables receiving the :class:`~pathlib.Path` of the
-    file: ``on_opened`` and ``on_closed``. They are called in the thread that opens or closes
-    the file, so they should return quickly and hand long work to a thread of their own.
-    A failing action is logged and never stops the saving.
+    The class is used directly, as a registry (``FileActions.register(...)``), and is never instantiated:
+    all the actions are shared by the whole application, as for the other registries of PyMoDAQ.
+
+    An action has two optional functions that receive the :class:`~pathlib.Path` of the file:
+    ``on_opened`` and ``on_closed``. They are called in the thread that opens or closes
+    the file, so they should return quickly and give a long work to a thread of their own.
+    If an action fails, the error is logged and the saving continues.
     """
     _actions: Dict[str, FileAction] = {}  # the registered actions, by name
     _lock = threading.RLock()  # actions can be registered while a file is closed in another thread
+
+    def __new__(cls, *args, **kwargs):
+        raise TypeError(f'{cls.__name__} is a registry: use its class methods, do not create an instance')
 
     @classmethod
     def register(cls, name: str, on_closed: Optional[FileEvent] = None,

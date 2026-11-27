@@ -112,7 +112,7 @@ def signature_of(path: Path) -> FileSignature:
 
 
 class FileCopier:
-    """Copies the files it is told are closed to a destination folder
+    """The files that are said to be closed are copied to a destination folder
 
     Parameters
     ----------

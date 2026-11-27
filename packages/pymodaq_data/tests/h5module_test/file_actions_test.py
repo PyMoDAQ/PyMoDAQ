@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 """Tests of the actions run when a file written with a backend is opened or closed"""
+import dataclasses
 from pathlib import Path
 
 import pytest
 
 from pymodaq_data.h5modules import backends
-from pymodaq_data.h5modules.file_actions import FileActions
+from pymodaq_data.h5modules.file_actions import FileAction, FileActions
 
 tested_backend = [b for b in ['tables', 'h5py'] if b in backends.backends_available]
 
@@ -82,3 +83,14 @@ def test_file_kept_open_is_not_notified_as_closed(tmp_path, events):
     assert bck.isopen()
     bck.close_file()
     assert events[-1] == ('closed', path)
+
+
+def test_registry_cannot_be_instantiated():
+    with pytest.raises(TypeError):
+        FileActions()
+
+
+def test_file_action_is_immutable():
+    action = FileAction(on_closed=print)
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        action.on_closed = None

@@ -52,11 +52,16 @@ as ``<base path>/20261126/Dataset_000.h5`` is copied to ``/mnt/nas/data/20261126
 ``smb://nas/data/20261126/Dataset_000.h5``. Both point to the same place, ``destination_path`` as the computer sees it,
 ``url_prefix`` as everybody else does.
 
+``url_prefix`` is a free text, PyMoDAQ does not check it. Write the address your colleagues use to reach the same folder.
+If your NAS is known by a server alias, a volume and the path of your home folder in the volume, put them one after the
+other, for example ``smb://nas-alias/volume/home/me/data`` (or ``\\nas-alias\volume\home\me\data`` on Windows). The
+url of a copy is this text followed by the path of the file below the base path.
+
 These settings are shared by all the ``H5Saver`` of the running application. The folder structure of the copy is the one
 below the base path of the ``H5Saver`` (or, for a file out of any base path, its last folder and its name).
 
-PyMoDAQ sometimes closes a file and opens it again to write more, so the copy starts ``delay`` seconds after the last
-close only, and is cancelled if the file is opened again meanwhile. The copies still planned when PyMoDAQ stops are
+PyMoDAQ sometimes closes a file and opens it again to write more. The copy is therefore made ``delay`` seconds after
+the last close only, and it is cancelled if the file is opened again before. The copies still planned when PyMoDAQ stops are
 made at once. The copy runs in a thread of its own (except the ones made when PyMoDAQ stops) and never moves nor
 deletes the local file. It goes through a temporary name and replaces the previous copy of the file, so the destination mirrors the last version and does not
 keep the history. Two checks are made before the copy replaces the previous one: the sha256 of the copy, computed again
