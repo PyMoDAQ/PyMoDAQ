@@ -291,10 +291,10 @@ class CustomApp(QObject, ActionManager, ParameterManager):
             self.mainwindow.setWindowTitle(self._title)
 
     def snapshot_widget(self) -> Optional[QtWidgets.QWidget]:
-        """The widget that is photographed at the end of a run (see :meth:`save_snapshot`)
+        """The widget that is photographed at the end of a saving (see :meth:`save_snapshot`)
 
         By default the main window of the app, or its parent widget when there is no main window. Reimplement it
-        to choose another widget, for instance the viewer showing the result of the run. Return None for no picture.
+        to choose another widget, for instance the viewer showing the result of the saving. Return None for no picture.
         """
         return self.mainwindow if self.mainwindow is not None else self.parent
 
@@ -316,28 +316,28 @@ class CustomApp(QObject, ActionManager, ParameterManager):
             logger.warning(f'The picture of {self.title} could not be taken: {e}')
         return None
 
-    def take_run_snapshot(self, run_id: Optional[str] = None) -> Optional[Path]:
-        """Take the picture of a run saved by this app (the last one that did not end if ``run_id`` is None)
+    def take_saving_snapshot(self, saving_id: Optional[str] = None) -> Optional[Path]:
+        """Take the picture of a saving saved by this app (the last one that did not end if ``saving_id`` is None)
 
-        Returns the path of the picture, or None if the app has no run, no file or no picture.
+        Returns the path of the picture, or None if the app has no saving, no file or no picture.
         """
         saver: Any = getattr(self, 'module_and_data_saver', None)
-        path = saver.snapshot_file_path(run_id) if hasattr(saver, 'snapshot_file_path') else None
+        path = saver.snapshot_file_path(saving_id) if hasattr(saver, 'snapshot_file_path') else None
         return self.save_snapshot(path) if path is not None else None
 
-    def end_run(self, run_id: Optional[str] = None):
-        """Take the picture of a run, then tell the registered actions that it is over (its file must be closed)
+    def end_saving(self, saving_id: Optional[str] = None):
+        """Take the picture of a saving, then tell the registered actions that it is over (its file must be closed)
 
-        Nothing happens if the app has no such run.
+        Nothing happens if the app has no such saving.
         """
         saver: Any = getattr(self, 'module_and_data_saver', None)
-        if hasattr(saver, 'end_run'):
-            saver.end_run(self.take_run_snapshot(run_id), run_id)
+        if hasattr(saver, 'end_saving'):
+            saver.end_saving(self.take_saving_snapshot(saving_id), saving_id)
 
-    def run_payload(self) -> Dict[str, Any]:
-        """Free information on the run that starts, given to the actions listening to the run events
+    def saving_payload(self) -> Dict[str, Any]:
+        """Free information on the saving that starts, given to the actions listening to the saving events
 
-        Empty by default. Reimplement it to give what is useful to describe the run (the scan type for instance).
+        Empty by default. Reimplement it to give what is useful to describe the saving (the scan type for instance).
         The values should be simple (text, numbers, booleans) as they may be written in a notebook.
         """
         return {}

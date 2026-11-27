@@ -396,11 +396,11 @@ class GenericOptimization(CustomExt):
         self.module_and_data_saver.h5saver = self.h5saver  # force all control modules to update their h5saver
 
     def close_file(self):
-        """Close the file, the run being saved in it (if any) is then over: its picture is taken and announced"""
-        picture = self.take_run_snapshot() if self._module_and_data_saver is not None else None
+        """Close the file, the saving of the extension in it (if any) is then over: its picture is taken and announced"""
+        picture = self.take_saving_snapshot() if self._module_and_data_saver is not None else None
         self.h5saver.close_file()
         if self._module_and_data_saver is not None:
-            self._module_and_data_saver.end_run(picture)
+            self._module_and_data_saver.end_saving(picture)
 
     def add_data(self, data: DataToSave):
         if self.is_action_checked(OptimizerAction.SAVE):
@@ -824,7 +824,7 @@ class GenericOptimization(CustomExt):
     def ini_saver(self):
         if self.is_action_checked(OptimizerAction.SAVE):
             if self._module_and_data_saver is not None:
-                self.close_file()  # the run of the saver that is replaced ends here, not with the new saver
+                self.close_file()  # the saving of the saver that is replaced ends here, not with the new saver
             self.module_and_data_saver = module_saving.OptimizerSaver(
                 self, enl_axis_names=self.modules_manager.selected_actuators_name,
                 enl_axis_units=[act.units for act in self.modules_manager.actuators])
@@ -877,8 +877,8 @@ class GenericOptimization(CustomExt):
         node_is_empty = (
             len(self.module_and_data_saver.get_set_node().children()) == 0 or
             len(self.module_and_data_saver.get_set_node().get_child('Detector000').children()) == 0)
-        if not node_is_empty:  # a new group starts a new run: the previous one is over
-            self.end_run()
+        if not node_is_empty:  # a new group starts a new saving: the previous one is over
+            self.end_saving()
         node = self.module_and_data_saver.get_set_node(new=not node_is_empty)
         self.h5saver.settings.child('current_scan_name').setValue(node.name)
 

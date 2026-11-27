@@ -131,7 +131,7 @@ class ExtensionWorker(QObject):
         self._data_preparers: list[Callable[[DataBundle], DataBundle | None]] = []
 
         self._running = False
-        self._run_id: Optional[str] = None  # the run of the saver that this worker is doing, None if there is none
+        self._saving_id: Optional[str] = None  # the saving of the saver that this worker is doing, None if there is none
         self.workers_terminated.connect(self._on_workers_terminated)
 
     @property
@@ -193,12 +193,12 @@ class ExtensionWorker(QObject):
 
         Use it to add metadata (for instance with :meth:`DataWithAxes.add_extra_attribute`), add data or filter
         what is going to be saved. The default implementation does nothing and returns the bundle. There is no need
-        to call the parent method: the functions registered with :meth:`add_data_preparer` are run separately by
+        to call the parent method: the functions registered with :meth:`add_data_preparer` are saving separately by
         :meth:`run_data_preparers`, before this hook.
 
         Notes
         -----
-        * It is called by :meth:`emit_data_to_save`, so for every bundle saved by the extension, and runs in the
+        * It is called by :meth:`emit_data_to_save`, so for every bundle saved by the extension, and savings in the
           thread of this worker (the GUI thread for most extensions): keep it short.
         * The bundle can be modified in place. Return the bundle to be saved.
         * The attributes of the saved arrays are written when the arrays are created, that is with the first
@@ -225,7 +225,7 @@ class ExtensionWorker(QObject):
         if self.has_data_processor:
             self._init_processor_worker_and_start_it()
         self._start()
-        self._run_id = self._current_run_id()
+        self._saving_id = self._current_saving_id()
 
     def pause(self, do_pause: bool = True):
         if do_pause:
@@ -342,7 +342,7 @@ class ExtensionWorker(QObject):
         snapshot_path = self._take_snapshot()
         self.h5_manager.close_file()
         self.h5_manager.update_file_status_led()
-        self._end_run(snapshot_path)
+        self._end_saving(snapshot_path)
 
         # 5 updating GUI info
         if hasattr(self._app, 'enable_start_stop'):
@@ -353,30 +353,30 @@ class ExtensionWorker(QObject):
 
         self.workers_terminated.emit()
 
-    def _current_run_id(self) -> Optional[str]:
-        """The id of the last run of the saver that did not end (None if the saver has no run)"""
+    def _current_saving_id(self) -> Optional[str]:
+        """The id of the last saving of the saver that did not end (None if the saver has no saving)"""
         try:
-            run = getattr(self.module_and_data_saver, 'run', None)
+            saving = getattr(self.module_and_data_saver, 'saving', None)
         except AttributeError:  # no saver set in the extension
             return None
-        return run.run_id if run is not None else None
+        return saving.saving_id if saving is not None else None
 
     def _take_snapshot(self) -> Optional[Path]:
         """Save the picture of the extension (see ``CustomApp.snapshot_widget``) and return its path, or None
 
-        The picture is of the run of this worker, and is taken in the thread of the user interface.
+        The picture is of the saving of this worker, and is taken in the thread of the user interface.
         """
-        if self._run_id is None or not hasattr(self._app, 'take_run_snapshot'):
+        if self._saving_id is None or not hasattr(self._app, 'take_saving_snapshot'):
             return None
-        return self._app.take_run_snapshot(self._run_id)
+        return self._app.take_saving_snapshot(self._saving_id)
 
-    def _end_run(self, snapshot_path: Optional[Path]):
-        """Tell the saver that the run of this worker is over (the file is closed). The run is given by its id: in
-        a batch of scans the next run may have started already"""
-        run_id, self._run_id = self._run_id, None
+    def _end_saving(self, snapshot_path: Optional[Path]):
+        """Tell the saver that the saving of this worker is over (the file is closed). The saving is given by its id: in
+        a batch of scans the next saving may have started already"""
+        saving_id, self._saving_id = self._saving_id, None
         saver = self.module_and_data_saver
-        if run_id is not None and hasattr(saver, 'end_run'):
-            saver.end_run(snapshot_path, run_id)
+        if saving_id is not None and hasattr(saver, 'end_saving'):
+            saver.end_saving(snapshot_path, saving_id)
 
     def _on_workers_terminated(self):
         """ Method to reimplement to finalize things after all workers terminated their jobs in their threads

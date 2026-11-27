@@ -73,11 +73,11 @@ the file while a scan is in progress.
    :no-index:
    :members: FileActions
 
-.. currentmodule:: pymodaq_data.h5modules.run_events
+.. currentmodule:: pymodaq_data.h5modules.ext_saving_events
 
-.. automodule:: pymodaq_data.h5modules.run_events
+.. automodule:: pymodaq_data.h5modules.ext_saving_events
    :no-index:
-   :members: RunEvents, RunInfo
+   :members: ExtSavingEvents, ExtSavingInfo
 
 .. currentmodule:: pymodaq_data.h5modules.file_copy
 

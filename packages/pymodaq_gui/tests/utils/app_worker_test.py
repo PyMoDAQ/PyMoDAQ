@@ -132,7 +132,7 @@ class TestDataPreparers:
 
         assert calls == []
 
-    def test_registered_functions_run_before_the_hook_without_super(self):
+    def test_registered_functions_saving_before_the_hook_without_super(self):
         calls = []
 
         class MyWorker(ExtensionWorker):
@@ -147,45 +147,45 @@ class TestDataPreparers:
         assert calls == ['preparer', 'hook']
 
 
-class TestRunEnd:
-    """The worker takes the picture of its run and tells the saver that this run is over"""
+class TestSavingEnd:
+    """The worker takes the picture of its saving and tells the saver that this saving is over"""
 
-    def make(self, tmp_path, run_id='abc', picture=True):
+    def make(self, tmp_path, saving_id='abc', picture=True):
         calls = []
-        saver = SimpleNamespace(run=SimpleNamespace(run_id=run_id) if run_id else None,
-                                end_run=lambda path, run: calls.append((path, run)))
+        saver = SimpleNamespace(saving=SimpleNamespace(saving_id=saving_id) if saving_id else None,
+                                end_saving=lambda path, saving: calls.append((path, saving)))
         app = SimpleNamespace(module_and_data_saver=saver)
         if picture:
-            app.take_run_snapshot = lambda run: tmp_path / f'{run}.png'
+            app.take_saving_snapshot = lambda saving: tmp_path / f'{saving}.png'
         worker = ExtensionWorker(app)
-        worker._run_id = worker._current_run_id()
+        worker._saving_id = worker._current_saving_id()
         return worker, calls
 
-    def test_run_is_the_one_known_when_the_worker_started(self, tmp_path):
+    def test_saving_is_the_one_known_when_the_worker_started(self, tmp_path):
         worker, _ = self.make(tmp_path)
-        assert worker._run_id == 'abc'
+        assert worker._saving_id == 'abc'
 
-    def test_picture_and_run_id_are_given_to_the_saver(self, tmp_path):
+    def test_picture_and_saving_id_are_given_to_the_saver(self, tmp_path):
         worker, calls = self.make(tmp_path)
 
         snapshot = worker._take_snapshot()
-        worker._end_run(snapshot)
+        worker._end_saving(snapshot)
 
         assert calls == [(tmp_path / 'abc.png', 'abc')]
 
-    def test_a_run_is_ended_once(self, tmp_path):
+    def test_a_saving_is_ended_once(self, tmp_path):
         worker, calls = self.make(tmp_path)
 
-        worker._end_run(None)
-        worker._end_run(None)
+        worker._end_saving(None)
+        worker._end_saving(None)
 
         assert len(calls) == 1
 
-    def test_a_worker_ends_its_own_run_even_if_another_one_started(self, tmp_path):
+    def test_a_worker_ends_its_own_saving_even_if_another_one_started(self, tmp_path):
         worker, calls = self.make(tmp_path)
-        worker._app.module_and_data_saver.run = SimpleNamespace(run_id='next')  # the next scan of a batch
+        worker._app.module_and_data_saver.saving = SimpleNamespace(saving_id='next')  # the next scan of a batch
 
-        worker._end_run(None)
+        worker._end_saving(None)
 
         assert calls == [(None, 'abc')]
 
@@ -193,16 +193,16 @@ class TestRunEnd:
         worker, _ = self.make(tmp_path, picture=False)
         assert worker._take_snapshot() is None
 
-    def test_saver_without_run_is_left_alone(self, tmp_path):
-        worker, calls = self.make(tmp_path, run_id=None)
+    def test_saver_without_saving_is_left_alone(self, tmp_path):
+        worker, calls = self.make(tmp_path, saving_id=None)
 
-        assert worker._run_id is None
+        assert worker._saving_id is None
         assert worker._take_snapshot() is None
-        worker._end_run(None)
+        worker._end_saving(None)
         assert calls == []
 
-    def test_saver_without_runs_is_left_alone(self):
+    def test_saver_without_savings_is_left_alone(self):
         worker = ExtensionWorker(SimpleNamespace(module_and_data_saver=SimpleNamespace()))
 
-        assert worker._current_run_id() is None
-        worker._end_run(None)  # nothing to call, no error
+        assert worker._current_saving_id() is None
+        worker._end_saving(None)  # nothing to call, no error

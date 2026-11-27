@@ -295,9 +295,9 @@ class TestSaveMetadata:
         assert node.attrs['date_time'] == '26/11/2026 22:14:03'
 
 
-class TestRunEvents:
+class TestExtSavingEvents:
     def test_payload_describes_the_scan(self, scan):
-        payload = scan.run_payload()
+        payload = scan.saving_payload()
 
         assert set(payload) == {'scan_type', 'scan_sub_type', 'detectors', 'actuators', 'scan_average'}
         assert payload['scan_type'] == scan.scanner.scan_type
@@ -305,15 +305,15 @@ class TestRunEvents:
     def test_picture_shows_the_live_plots(self, scan):
         assert scan.snapshot_widget() is scan.live_plot_dockarea
 
-    def test_run_of_a_scan_ends_before_the_next_scan_of_a_batch(self, scan):
+    def test_saving_of_a_scan_ends_before_the_next_scan_of_a_batch(self, scan):
         calls = []
         scan.batch_started = True
         scan.ind_batch = 0
-        scan.end_run = lambda *args, **kwargs: calls.append('end_run')
+        scan.end_saving = lambda *args, **kwargs: calls.append('end_saving')
         scan.loop_scan_batch = lambda: calls.append('next scan')
         scan.module_and_data_saver.flush = lambda: None
         scan.h5_manager.close_file = lambda: None
 
         scan.thread_status(ThreadCommand('Scan_done'))
 
-        assert calls == ['end_run', 'next scan']
+        assert calls == ['end_saving', 'next scan']

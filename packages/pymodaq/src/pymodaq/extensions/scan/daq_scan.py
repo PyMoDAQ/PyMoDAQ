@@ -782,8 +782,8 @@ class DAQScan(CustomExt):
         """The picture of a scan shows its live plots"""
         return self.live_plot_dockarea
 
-    def run_payload(self) -> dict:
-        """What describes the scan for the actions listening to the run events (a notebook entry for instance)"""
+    def saving_payload(self) -> dict:
+        """What describes the scan for the actions listening to the saving events (a notebook entry for instance)"""
         return dict(scan_type=self.scanner.scan_type,
                     scan_sub_type=self.scanner.scan_sub_type,
                     detectors=', '.join(self.modules_manager.selected_detectors_name),
@@ -1116,7 +1116,7 @@ class DAQScan(CustomExt):
                 if self.navigator is not None:
                     self.navigator.list_2D_scans()
             else:
-                self.end_run()  # the next scan of the batch starts a new run: the one of this scan is over
+                self.end_saving()  # the next scan of the batch starts a new saving: the one of this scan is over
                 self.ind_batch += 1
                 self.loop_scan_batch()
 

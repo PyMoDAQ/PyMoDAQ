@@ -13,7 +13,7 @@ import pytest
 from pymodaq_data.h5modules.saving import H5SaverLowLevel
 from pymodaq_data.h5modules import backends
 from pymodaq_data.h5modules.file_actions import FileActions
-from pymodaq_data.h5modules.run_events import RunEvents
+from pymodaq_data.h5modules.ext_saving_events import ExtSavingEvents
 from pymodaq.utils.h5modules.module_saving import DetectorSaver, ScanSaver, GroupModuleType, TimeModuleSaver
 
 from pymodaq_gui.parameter import Parameter
@@ -233,33 +233,33 @@ class TestTimeModuleSaver:
 
 
 
-class TestRunEvents:
-    """The extension savers tell the RunEvents registry when a run starts and when it ends"""
+class TestExtSavingEvents:
+    """The extension savers tell the ExtSavingEvents registry when a saving starts and when it ends"""
 
     @pytest.fixture
     def events(self):
         received = []
-        RunEvents.register('test', on_started=lambda info: received.append(('started', info)),
+        ExtSavingEvents.register('test', on_started=lambda info: received.append(('started', info)),
                            on_ended=lambda info: received.append(('ended', info)))
         yield received
-        RunEvents.unregister('test')
+        ExtSavingEvents.unregister('test')
 
     @pytest.fixture
     def scan_saver(self, h5saver_with_settings):
         module = MockScan(h5saver_with_settings)
-        module.run_payload = lambda: {'scan_type': 'Scan1D'}
+        module.saving_payload = lambda: {'scan_type': 'Scan1D'}
         saver = ScanSaver(module=module)
         saver.h5saver = h5saver_with_settings
         return saver
 
-    def test_run_starts_with_a_new_group_only(self, scan_saver, events):
-        scan_saver.get_set_node()  # creates the first group: a run starts
-        scan_saver.get_set_node()  # gets it back: no new run
+    def test_saving_starts_with_a_new_group_only(self, scan_saver, events):
+        scan_saver.get_set_node()  # creates the first group: a saving starts
+        scan_saver.get_set_node()  # gets it back: no new saving
         scan_saver.get_set_node(new=True)
 
         assert [name for name, _ in events] == ['started', 'started']
 
-    def test_started_run_gives_what_is_known(self, scan_saver, events):
+    def test_started_saving_gives_what_is_known(self, scan_saver, events):
         scan_saver.get_set_node()
 
         info = events[0][1]
@@ -269,18 +269,18 @@ class TestRunEvents:
         assert info.ended_at is None
         assert datetime.fromisoformat(info.started_at).utcoffset() is not None  # the offset to UTC is given
 
-    def test_ended_run_is_the_started_one_with_its_end(self, scan_saver, events):
+    def test_ended_saving_is_the_started_one_with_its_end(self, scan_saver, events):
         scan_saver.get_set_node()
-        scan_saver.end_run()
+        scan_saver.end_saving()
 
         started, ended = events[0][1], events[1][1]
         assert events[1][0] == 'ended'
-        assert ended.run_id == started.run_id
+        assert ended.saving_id == started.saving_id
         assert ended.ended_at is not None
-        assert scan_saver.run is None  # no run is going on any more
+        assert scan_saver.saving is None  # no saving is going on any more
 
-    def test_ending_without_run_does_nothing(self, scan_saver, events):
-        scan_saver.end_run()
+    def test_ending_without_saving_does_nothing(self, scan_saver, events):
+        scan_saver.end_saving()
         assert events == []
 
     def test_snapshot_is_announced_as_a_closed_file(self, scan_saver, events):
@@ -289,7 +289,7 @@ class TestRunEvents:
         try:
             scan_saver.get_set_node()
             path = scan_saver.snapshot_file_path()
-            scan_saver.end_run(path)
+            scan_saver.end_saving(path)
         finally:
             FileActions.unregister('test_png')
 
@@ -297,36 +297,36 @@ class TestRunEvents:
         assert closed == [path]
         assert events[1][1].snapshot_path == path
 
-    def test_failing_payload_does_not_stop_the_run(self, scan_saver, events):
-        scan_saver._module.run_payload = lambda: 1 / 0
+    def test_failing_payload_does_not_stop_the_saving(self, scan_saver, events):
+        scan_saver._module.saving_payload = lambda: 1 / 0
         scan_saver.get_set_node()
 
         assert dict(events[0][1].payload) == {}
 
-    def test_a_run_can_be_ended_when_the_next_one_has_started(self, scan_saver, events):
+    def test_a_saving_can_be_ended_when_the_next_one_has_started(self, scan_saver, events):
         scan_saver.get_set_node()
-        first = scan_saver.run
+        first = scan_saver.saving
         scan_saver.get_set_node(new=True)  # the next scan of a batch
-        second = scan_saver.run
+        second = scan_saver.saving
 
-        scan_saver.end_run(run_id=first.run_id)
+        scan_saver.end_saving(saving_id=first.saving_id)
 
-        assert [(name, info.run_id) for name, info in events] == [
-            ('started', first.run_id), ('started', second.run_id), ('ended', first.run_id)]
-        assert scan_saver.run.run_id == second.run_id  # the second one goes on
+        assert [(name, info.saving_id) for name, info in events] == [
+            ('started', first.saving_id), ('started', second.saving_id), ('ended', first.saving_id)]
+        assert scan_saver.saving.saving_id == second.saving_id  # the second one goes on
 
-    def test_picture_name_depends_on_the_run(self, scan_saver, events):
+    def test_picture_name_depends_on_the_saving(self, scan_saver, events):
         scan_saver.get_set_node()
-        first = scan_saver.run
+        first = scan_saver.saving
         scan_saver.get_set_node(new=True)
 
-        assert scan_saver.snapshot_file_path(first.run_id) != scan_saver.snapshot_file_path()
+        assert scan_saver.snapshot_file_path(first.saving_id) != scan_saver.snapshot_file_path()
 
-    def test_unknown_or_ended_run_is_ignored(self, scan_saver, events):
+    def test_unknown_or_ended_saving_is_ignored(self, scan_saver, events):
         scan_saver.get_set_node()
-        run_id = scan_saver.run.run_id
-        scan_saver.end_run(run_id=run_id)
-        scan_saver.end_run(run_id=run_id)
-        scan_saver.end_run(run_id='unknown')
+        saving_id = scan_saver.saving.saving_id
+        scan_saver.end_saving(saving_id=saving_id)
+        scan_saver.end_saving(saving_id=saving_id)
+        scan_saver.end_saving(saving_id='unknown')
 
         assert [name for name, _ in events] == ['started', 'ended']
