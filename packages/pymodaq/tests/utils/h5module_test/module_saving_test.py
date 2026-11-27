@@ -264,7 +264,7 @@ class TestRunEvents:
 
         info = events[0][1]
         assert info.extension == 'MyScan'
-        assert info.payload == {'scan_type': 'Scan1D'}
+        assert dict(info.payload) == {'scan_type': 'Scan1D'}
         assert info.h5_path.name == 'h5file.h5'
         assert info.ended_at is None
         assert datetime.fromisoformat(info.started_at).utcoffset() is not None  # the offset to UTC is given
@@ -277,7 +277,7 @@ class TestRunEvents:
         assert events[1][0] == 'ended'
         assert ended.run_id == started.run_id
         assert ended.ended_at is not None
-        assert scan_saver.run is None
+        assert scan_saver.run is None  # no run is going on any more
 
     def test_ending_without_run_does_nothing(self, scan_saver, events):
         scan_saver.end_run()
@@ -301,4 +301,32 @@ class TestRunEvents:
         scan_saver._module.run_payload = lambda: 1 / 0
         scan_saver.get_set_node()
 
-        assert events[0][1].payload == {}
+        assert dict(events[0][1].payload) == {}
+
+    def test_a_run_can_be_ended_when_the_next_one_has_started(self, scan_saver, events):
+        scan_saver.get_set_node()
+        first = scan_saver.run
+        scan_saver.get_set_node(new=True)  # the next scan of a batch
+        second = scan_saver.run
+
+        scan_saver.end_run(run_id=first.run_id)
+
+        assert [(name, info.run_id) for name, info in events] == [
+            ('started', first.run_id), ('started', second.run_id), ('ended', first.run_id)]
+        assert scan_saver.run.run_id == second.run_id  # the second one goes on
+
+    def test_picture_name_depends_on_the_run(self, scan_saver, events):
+        scan_saver.get_set_node()
+        first = scan_saver.run
+        scan_saver.get_set_node(new=True)
+
+        assert scan_saver.snapshot_file_path(first.run_id) != scan_saver.snapshot_file_path()
+
+    def test_unknown_or_ended_run_is_ignored(self, scan_saver, events):
+        scan_saver.get_set_node()
+        run_id = scan_saver.run.run_id
+        scan_saver.end_run(run_id=run_id)
+        scan_saver.end_run(run_id=run_id)
+        scan_saver.end_run(run_id='unknown')
+
+        assert [name for name, _ in events] == ['started', 'ended']

@@ -534,7 +534,7 @@ class ExtensionSaver(ModuleSaver):
 
         self.current_nodes: dict[str, Node] = {}
         self._time_saver: TimeModuleSaver = None
-        self._run: Optional[RunInfo] = None  # the run going on, None when there is none
+        self._open_runs: dict[str, RunInfo] = {}  # the runs that started and did not end yet, by run id
 
     def update_after_h5changed(self):
         """ To be updated depending on the actual Saver you want to use"""
@@ -623,8 +623,8 @@ class ExtensionSaver(ModuleSaver):
 
     @property
     def run(self) -> Optional[RunInfo]:
-        """The run going on (see :meth:`start_run`), None if there is none"""
-        return self._run
+        """The last run that started and did not end yet (see :meth:`start_run`), None if there is none"""
+        return list(self._open_runs.values())[-1] if self._open_runs else None
 
     def start_run(self):
         """Tell the registered actions (see :class:`RunEvents`) that a run starts, in the current h5 file
@@ -641,25 +641,44 @@ class ExtensionSaver(ModuleSaver):
         except Exception as e:  # a payload that fails must not prevent the run
             logger.warning(f'The payload of the run of {self._module.title} could not be read: {e}')
             payload = {}
-        self._run = RunInfo(extension=self._module.title, h5_path=h5_path, payload=payload)
-        RunEvents.notify_started(self._run)
+        info = RunInfo(extension=self._module.title, h5_path=h5_path, payload=payload)
+        self._open_runs[info.run_id] = info
+        RunEvents.notify_started(info)
 
-    def snapshot_file_path(self) -> Optional[Path]:
-        """Where the picture of the run going on is saved: next to the h5 file, None if there is no run or file"""
-        if self._run is None or self._run.h5_path is None:
-            return None
-        h5_path = self._run.h5_path
-        return h5_path.with_name(f'{h5_path.stem}_{self._run.run_id[:8]}.png')
+    def snapshot_file_path(self, run_id: Optional[str] = None) -> Optional[Path]:
+        """Where the picture of a run is saved: next to its h5 file. None if there is no such run or no file
 
-    def end_run(self, snapshot_path: Optional[Path] = None):
-        """Tell the registered actions that the run is over, its file being closed (nothing if no run is going on)
-
-        A picture of the extension, if any, is a file written by PyMoDAQ: it is announced to the
-        :class:`FileActions` as a closed file, so it can be copied as the h5 files are.
+        Parameters
+        ----------
+        run_id: str, optional
+            The run, the last one that did not end if None
         """
-        if self._run is None:
+        run = self._open_runs.get(run_id) if run_id is not None else self.run
+        if run is None or run.h5_path is None:
+            return None
+        return run.h5_path.with_name(f'{run.h5_path.stem}_{run.run_id[:8]}.png')
+
+    def end_run(self, snapshot_path: Optional[Path] = None, run_id: Optional[str] = None):
+        """Tell the registered actions that a run is over, its file being closed
+
+        Nothing happens if the run is unknown or already ended. A picture of the extension, if any, is a file
+        written by PyMoDAQ: it is announced to the :class:`FileActions` as a closed file, so it can be copied as the
+        h5 files are.
+
+        Parameters
+        ----------
+        snapshot_path: Path, optional
+            The picture of the extension at the end of the run
+        run_id: str, optional
+            The run to end, the last one that did not end if None. A batch of scans gives the id of the scan that is
+            over, as the next one may have started already.
+        """
+        run = self._open_runs.pop(run_id, None) if run_id is not None else None
+        if run_id is None and self._open_runs:
+            run = self._open_runs.pop(list(self._open_runs)[-1])
+        if run is None:
             return
-        info, self._run = self._run.ended(snapshot_path), None
+        info = run.ended(snapshot_path)
         if snapshot_path is not None:
             FileActions.notify_closed(snapshot_path)
         RunEvents.notify_ended(info)

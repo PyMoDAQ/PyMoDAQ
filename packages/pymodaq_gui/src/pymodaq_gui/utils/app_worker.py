@@ -131,6 +131,7 @@ class ExtensionWorker(QObject):
         self._data_preparers: list[Callable[[DataBundle], DataBundle | None]] = []
 
         self._running = False
+        self._run_id: Optional[str] = None  # the run of the saver that this worker is doing, None if there is none
         self.workers_terminated.connect(self._on_workers_terminated)
 
     @property
@@ -224,6 +225,7 @@ class ExtensionWorker(QObject):
         if self.has_data_processor:
             self._init_processor_worker_and_start_it()
         self._start()
+        self._run_id = self._current_run_id()
 
     def pause(self, do_pause: bool = True):
         if do_pause:
@@ -351,22 +353,30 @@ class ExtensionWorker(QObject):
 
         self.workers_terminated.emit()
 
+    def _current_run_id(self) -> Optional[str]:
+        """The id of the last run of the saver that did not end (None if the saver has no run)"""
+        try:
+            run = getattr(self.module_and_data_saver, 'run', None)
+        except AttributeError:  # no saver set in the extension
+            return None
+        return run.run_id if run is not None else None
+
     def _take_snapshot(self) -> Optional[Path]:
         """Save the picture of the extension (see ``CustomApp.snapshot_widget``) and return its path, or None
 
-        The picture is taken in the thread of the user interface, only if the saver knows a run and a file.
+        The picture is of the run of this worker, and is taken in the thread of the user interface.
         """
-        saver = self.module_and_data_saver
-        path = saver.snapshot_file_path() if hasattr(saver, 'snapshot_file_path') else None
-        if path is None or not hasattr(self._app, 'save_snapshot'):
+        if self._run_id is None or not hasattr(self._app, 'take_run_snapshot'):
             return None
-        return self._app.save_snapshot(path)
+        return self._app.take_run_snapshot(self._run_id)
 
     def _end_run(self, snapshot_path: Optional[Path]):
-        """Tell the saver that the run is over (the file is closed), if it handles runs (an ExtensionSaver)"""
+        """Tell the saver that the run of this worker is over (the file is closed). The run is given by its id: in
+        a batch of scans the next run may have started already"""
+        run_id, self._run_id = self._run_id, None
         saver = self.module_and_data_saver
-        if hasattr(saver, 'end_run'):
-            saver.end_run(snapshot_path)
+        if run_id is not None and hasattr(saver, 'end_run'):
+            saver.end_run(snapshot_path, run_id)
 
     def _on_workers_terminated(self):
         """ Method to reimplement to finalize things after all workers terminated their jobs in their threads

@@ -301,12 +301,13 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     def save_snapshot(self, path: Path) -> Optional[Path]:
         """Save a PNG picture of :meth:`snapshot_widget` and return its path, or None if there is no picture
 
-        It must be called in the thread of the user interface. A failure is logged and gives None.
+        It must be called in the thread of the user interface. A failure, even in a reimplemented
+        :meth:`snapshot_widget`, is logged and gives None.
         """
-        widget = self.snapshot_widget()
-        if widget is None:
-            return None
         try:
+            widget = self.snapshot_widget()
+            if widget is None:
+                return None
             path = Path(path)
             if widget.grab().save(str(path), 'PNG'):
                 return path
@@ -314,6 +315,24 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         except Exception as e:
             logger.warning(f'The picture of {self.title} could not be taken: {e}')
         return None
+
+    def take_run_snapshot(self, run_id: Optional[str] = None) -> Optional[Path]:
+        """Take the picture of a run saved by this app (the last one that did not end if ``run_id`` is None)
+
+        Returns the path of the picture, or None if the app has no run, no file or no picture.
+        """
+        saver = getattr(self, 'module_and_data_saver', None)
+        path = saver.snapshot_file_path(run_id) if hasattr(saver, 'snapshot_file_path') else None
+        return self.save_snapshot(path) if path is not None else None
+
+    def end_run(self, run_id: Optional[str] = None):
+        """Take the picture of a run, then tell the registered actions that it is over (its file must be closed)
+
+        Nothing happens if the app has no such run.
+        """
+        saver = getattr(self, 'module_and_data_saver', None)
+        if hasattr(saver, 'end_run'):
+            saver.end_run(self.take_run_snapshot(run_id), run_id)
 
     def run_payload(self) -> Dict[str, Any]:
         """Free information on the run that starts, given to the actions listening to the run events

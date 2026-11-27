@@ -133,3 +133,14 @@ class TestSnapshot:
 
     def test_payload_is_empty_by_default(self, app):
         assert app.run_payload() == {}
+
+    def test_failing_snapshot_widget_gives_no_picture(self, app, tmp_path):
+        def failing():
+            raise RuntimeError('bug in the extension')
+        app.snapshot_widget = failing
+
+        assert app.save_snapshot(tmp_path / 'picture.png') is None
+
+    def test_app_without_saver_has_no_run_to_end(self, app):
+        assert app.take_run_snapshot() is None
+        app.end_run()  # nothing to end, no error

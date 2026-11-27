@@ -12,7 +12,8 @@ import dataclasses
 from datetime import datetime
 from pathlib import Path
 import threading
-from typing import Any, Callable, Dict, List, Optional
+from types import MappingProxyType
+from typing import Any, Callable, Dict, List, Mapping, Optional
 import uuid
 
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -23,6 +24,20 @@ logger = set_logger(get_module_name(__file__))
 def iso_now() -> str:
     """The current time in ISO 8601 with the offset to UTC, for instance ``2026-11-27T15:04:05+01:00``"""
     return datetime.now().astimezone().isoformat(timespec='seconds')
+
+
+def freeze(value: Any) -> Any:
+    """A copy of a value that cannot be modified: dicts become read-only mappings, lists tuples and sets frozensets
+
+    Other values are returned as they are, they should be simple (text, numbers, booleans...).
+    """
+    if isinstance(value, Mapping):
+        return MappingProxyType({key: freeze(item) for key, item in value.items()})
+    if isinstance(value, (list, tuple)):
+        return tuple(freeze(item) for item in value)
+    if isinstance(value, (set, frozenset)):
+        return frozenset(freeze(item) for item in value)
+    return value
 
 
 @dataclasses.dataclass(frozen=True)
@@ -41,18 +56,22 @@ class RunInfo:
         ISO 8601 time with the offset to UTC, taken when the run started
     ended_at: str, optional
         Same, taken when the run ended. None while the run is going on
-    payload: dict
-        Free information given by the extension (see ``CustomApp.run_payload``), for instance the scan type
+    payload: Mapping
+        Free information given by the extension (see ``CustomApp.run_payload``), for instance the scan type. It is a
+        read-only copy, so a listener cannot change what the others receive
     snapshot_path: Path, optional
         A PNG picture of the extension at the end of the run, None if there is none
     """
     extension: str
     h5_path: Optional[Path] = None
-    payload: Dict[str, Any] = dataclasses.field(default_factory=dict)
+    payload: Mapping[str, Any] = dataclasses.field(default_factory=dict)
     run_id: str = dataclasses.field(default_factory=lambda: uuid.uuid4().hex)
     started_at: str = dataclasses.field(default_factory=iso_now)
     ended_at: Optional[str] = None
     snapshot_path: Optional[Path] = None
+
+    def __post_init__(self):
+        object.__setattr__(self, 'payload', freeze(self.payload))  # a frozen dataclass is set with object.__setattr__
 
     def ended(self, snapshot_path: Optional[Path] = None) -> 'RunInfo':
         """The same run, with its end time taken now and the picture taken at its end"""

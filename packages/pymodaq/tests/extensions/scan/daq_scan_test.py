@@ -304,3 +304,16 @@ class TestRunEvents:
 
     def test_picture_shows_the_live_plots(self, scan):
         assert scan.snapshot_widget() is scan.live_plot_dockarea
+
+    def test_run_of_a_scan_ends_before_the_next_scan_of_a_batch(self, scan):
+        calls = []
+        scan.batch_started = True
+        scan.ind_batch = 0
+        scan.end_run = lambda *args, **kwargs: calls.append('end_run')
+        scan.loop_scan_batch = lambda: calls.append('next scan')
+        scan.module_and_data_saver.flush = lambda: None
+        scan.h5_manager.close_file = lambda: None
+
+        scan.thread_status(ThreadCommand('Scan_done'))
+
+        assert calls == ['end_run', 'next scan']

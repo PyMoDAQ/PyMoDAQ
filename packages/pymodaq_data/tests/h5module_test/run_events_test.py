@@ -70,3 +70,31 @@ def test_unregister():
     RunEvents.unregister('a')
     RunEvents.unregister('a')  # unknown names are ignored
     assert RunEvents.names() == []
+
+
+class TestPayload:
+    def test_payload_cannot_be_modified(self):
+        info = RunInfo(extension='MyScan', payload={'scan_type': 'Scan1D'})
+        with pytest.raises(TypeError):
+            info.payload['scan_type'] = 'other'
+
+    def test_payload_is_a_copy(self):
+        payload = {'scan_type': 'Scan1D', 'detectors': ['a', 'b']}
+        info = RunInfo(extension='MyScan', payload=payload)
+
+        payload['scan_type'] = 'other'
+        payload['detectors'].append('c')
+
+        assert info.payload['scan_type'] == 'Scan1D'
+        assert info.payload['detectors'] == ('a', 'b')
+
+    def test_nested_values_cannot_be_modified(self):
+        info = RunInfo(extension='MyScan', payload={'nested': {'a': [1, 2]}})
+
+        with pytest.raises(TypeError):
+            info.payload['nested']['a'] = 3
+        assert info.payload['nested']['a'] == (1, 2)
+
+    def test_ended_run_keeps_the_payload(self):
+        info = RunInfo(extension='MyScan', payload={'a': {'b': 1}})
+        assert dict(info.ended().payload['a']) == {'b': 1}

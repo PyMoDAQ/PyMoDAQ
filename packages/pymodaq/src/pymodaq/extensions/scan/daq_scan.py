@@ -1116,6 +1116,7 @@ class DAQScan(CustomExt):
                 if self.navigator is not None:
                     self.navigator.list_2D_scans()
             else:
+                self.end_run()  # the next scan of the batch starts a new run: the one of this scan is over
                 self.ind_batch += 1
                 self.loop_scan_batch()
 

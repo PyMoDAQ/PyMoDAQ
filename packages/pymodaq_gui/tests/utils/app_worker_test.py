@@ -148,35 +148,61 @@ class TestDataPreparers:
 
 
 class TestRunEnd:
-    """The worker takes the picture of the extension and tells the saver that the run is over"""
+    """The worker takes the picture of its run and tells the saver that this run is over"""
 
-    def make(self, tmp_path, picture=True):
+    def make(self, tmp_path, run_id='abc', picture=True):
         calls = []
-        saver = SimpleNamespace(snapshot_file_path=lambda: tmp_path / 'run.png',
-                                end_run=lambda path: calls.append(path))
+        saver = SimpleNamespace(run=SimpleNamespace(run_id=run_id) if run_id else None,
+                                end_run=lambda path, run: calls.append((path, run)))
         app = SimpleNamespace(module_and_data_saver=saver)
         if picture:
-            app.save_snapshot = lambda path: path
+            app.take_run_snapshot = lambda run: tmp_path / f'{run}.png'
         worker = ExtensionWorker(app)
+        worker._run_id = worker._current_run_id()
         return worker, calls
 
-    def test_picture_path_is_given_to_the_saver(self, tmp_path):
+    def test_run_is_the_one_known_when_the_worker_started(self, tmp_path):
+        worker, _ = self.make(tmp_path)
+        assert worker._run_id == 'abc'
+
+    def test_picture_and_run_id_are_given_to_the_saver(self, tmp_path):
         worker, calls = self.make(tmp_path)
 
         snapshot = worker._take_snapshot()
         worker._end_run(snapshot)
 
-        assert calls == [tmp_path / 'run.png']
+        assert calls == [(tmp_path / 'abc.png', 'abc')]
+
+    def test_a_run_is_ended_once(self, tmp_path):
+        worker, calls = self.make(tmp_path)
+
+        worker._end_run(None)
+        worker._end_run(None)
+
+        assert len(calls) == 1
+
+    def test_a_worker_ends_its_own_run_even_if_another_one_started(self, tmp_path):
+        worker, calls = self.make(tmp_path)
+        worker._app.module_and_data_saver.run = SimpleNamespace(run_id='next')  # the next scan of a batch
+
+        worker._end_run(None)
+
+        assert calls == [(None, 'abc')]
 
     def test_no_picture_if_the_app_cannot_take_one(self, tmp_path):
-        worker, calls = self.make(tmp_path, picture=False)
+        worker, _ = self.make(tmp_path, picture=False)
+        assert worker._take_snapshot() is None
 
+    def test_saver_without_run_is_left_alone(self, tmp_path):
+        worker, calls = self.make(tmp_path, run_id=None)
+
+        assert worker._run_id is None
         assert worker._take_snapshot() is None
         worker._end_run(None)
-        assert calls == [None]
+        assert calls == []
 
     def test_saver_without_runs_is_left_alone(self):
         worker = ExtensionWorker(SimpleNamespace(module_and_data_saver=SimpleNamespace()))
 
-        assert worker._take_snapshot() is None
+        assert worker._current_run_id() is None
         worker._end_run(None)  # nothing to call, no error
