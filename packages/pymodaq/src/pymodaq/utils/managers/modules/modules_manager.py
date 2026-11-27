@@ -192,9 +192,14 @@ class ModulesManager(QObject, ParameterManager):
         return config('pymodaq', 'viewer', 'timeout')
 
     def enable_modules(self, enable: bool = True) -> None:
-        """Enable or disable the toolbar of all the control modules"""
+        """Enable or disable the controls of all the control modules
+
+        The status LED, the module name, the current value and the status bar stay enabled, as they only
+        display information. The previous enabled state of the other actions is restored on enabling.
+        """
         for module in self.modules_all:
-            module.ui.toolbar.setEnabled(enable)  # type: ignore[union-attr]
+            if module.ui is not None:
+                module.ui.lock_user_actions(not enable)
 
     def __repr__(self) -> str:
         try:

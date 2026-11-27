@@ -449,7 +449,22 @@ class DAQMoveUI(ControlModuleUI):
             value.force_units(self._unit)
             self.current_value_sb.setValue(value.value_to_display())
 
+    def _on_lock_changed(self, locked: bool) -> None:
+        # the move actions (including the absolute spinboxes) are handled by `lock_user_actions`, only the
+        # control widget, which is not an action, is handled here
+        if locked:
+            self._control_widget_state = self.control_widget.isEnabled()
+            self.control_widget.setEnabled(False)
+        else:
+            self.control_widget.setEnabled(self._control_widget_state)
+
     def enable_move_buttons(self, status):
+        if self.user_actions_locked:  # applied on unlock
+            self._control_widget_state = status
+            for action_name in ('move_abs_green', 'move_abs_red', 'move_rel', 'abs_green', 'abs_red'):
+                if action_name in self._locked_states:
+                    self._locked_states[action_name] = status
+            return
         self.abs_value_sb.setEnabled(status)
         self.abs_value_sb_2.setEnabled(status)
         for action_name in ('move_abs_green', 'move_abs_red', 'move_rel'):
