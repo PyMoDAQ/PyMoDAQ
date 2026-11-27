@@ -41,7 +41,7 @@ dependencies = [
     "serializall>=0.1.0",
     "aenum",
     "requests",
-    "lxml",
+    "lxml<6.2",  # 6.2.0 has no binary wheel yet and fails to build from source on CI
 ]
 
 [project.optional-dependencies]
