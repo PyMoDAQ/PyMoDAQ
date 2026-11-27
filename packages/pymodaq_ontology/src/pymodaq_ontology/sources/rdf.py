@@ -64,4 +64,4 @@ class RdfSource(OntologySource):
                 category='Classes' if is_class else 'Individuals',
                 description=_text(graph, subject, (SKOS.definition, RDFS.comment)),
                 roles=roles, broader=parents))
-        return terms
+        return sorted(terms, key=lambda term: term.label.lower())

@@ -1,7 +1,6 @@
 from pymodaq_ontology.channels import Channel
 from pymodaq_ontology.manager import OntologyManager
 from pymodaq_ontology import manager as manager_module
-from pymodaq_ontology.source_factory import SourceFactory
 from pymodaq_ontology.term_picker import TermPicker
 from pymodaq_ontology.terms import DETECTOR, OntologyTerm, TermHierarchy
 
@@ -26,13 +25,6 @@ def test_a_loop_does_not_hang():
     h = TermHierarchy([OntologyTerm('a', 'A', broader=('b',)), OntologyTerm('b', 'B', broader=('a',))])
     assert h.ancestors('a') == ['b']
     assert h.is_a('a', 'b') and h.is_a('b', 'a')
-
-
-def test_terms_file_reads_broader(tmp_path):
-    path = tmp_path / 't.toml'
-    path.write_text('[[term]]\niri = "a"\n[[term]]\niri = "b"\nbroader = ["a"]\n', encoding='utf-8')
-    terms = SourceFactory.create('terms', str(path)).terms()
-    assert terms[1].broader == ('a',) and terms[0].broader == ()
 
 
 def test_picker_shows_the_terms_under_their_parent(qtbot):

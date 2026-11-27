@@ -105,9 +105,9 @@ class TestEntries:
 
     def test_unreadable_source_keeps_the_previous_terms(self, manager):
         from pymodaq_ontology.source_factory import SourceFactory
-        assert not manager.set_source(SourceFactory.create('terms', '/no/such/file.toml'))
+        assert not manager.set_source(SourceFactory.create('rdf', '/no/such/file.ttl'))
         assert len(manager.terms) == 3
-        assert manager.source.location != '/no/such/file.toml'
+        assert manager.source.location != '/no/such/file.ttl'
 
 
 def test_double_click_opens_the_popup_and_assigns(manager, monkeypatch):

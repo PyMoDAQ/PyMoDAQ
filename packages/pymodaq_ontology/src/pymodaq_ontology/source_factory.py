@@ -31,7 +31,7 @@ class OntologySource(ABC):
 
     @property
     def identifier(self) -> str:
-        """What identifies the source in the entry files, for instance ``terms:/path/to/file.toml``"""
+        """What identifies the source in the entry files, for instance ``rdf:/path/to/file.ttl``"""
         return f'{self.source_type}:{self.location}'
 
     @abstractmethod
