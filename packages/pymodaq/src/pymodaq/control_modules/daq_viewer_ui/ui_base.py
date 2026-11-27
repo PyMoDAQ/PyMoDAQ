@@ -92,6 +92,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
         self.selector = ViewerSelector(add_menu_entries=add_menu_entries)
 
+        self._grab_in_progress = False
         self.setup_docks_and_widgets()
         self.setup_menus_and_toolbars(self.menubar)
         self.setup_actions()  # see ActionManager MixIn class
@@ -272,7 +273,17 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
                                              self.selector.selected_module]))
 
     def _is_busy(self) -> bool:
-        return self.is_action_checked('grab')
+        return self.is_action_checked('grab') or self._grab_in_progress
+
+    @property
+    def grab_in_progress(self) -> bool:
+        """bool: True between the order of a grab (live or single) and the data it produces"""
+        return self._grab_in_progress
+
+    @grab_in_progress.setter
+    def grab_in_progress(self, in_progress: bool):
+        self._grab_in_progress = in_progress
+        self.update_status_led()
 
     def quit_fun(self):
         return self.app.quit_fun()

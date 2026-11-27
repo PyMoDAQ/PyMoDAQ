@@ -245,6 +245,11 @@ class ExtensionWorker(QObject):
     def stop(self, msg: str = None):
         self._running = False
 
+        try:  # 0 give the controls of the modules back to the user as soon as the stop is fired
+            self.modules_manager.enable_modules(True)
+        except AttributeError:
+            pass
+
         try:  # 1 immediately stop the emission of data to the saver worker
             if self.saver_worker is not None:
                 self.saver_worker.data_to_save_signal.disconnect(self.saver_worker.save_data)
@@ -262,7 +267,6 @@ class ExtensionWorker(QObject):
         try:
             self.modules_manager.connect_actuators(False)
             self.modules_manager.connect_detectors(False)
-            self.modules_manager.enable_modules(True)
         except AttributeError:
             pass
 
