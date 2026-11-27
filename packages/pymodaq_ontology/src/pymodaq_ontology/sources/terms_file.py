@@ -17,6 +17,7 @@ class TermsFileSource(OntologySource):
         category = "Derived quantity"      # optional
         description = "..."                # optional
         roles = ["detector"]               # optional: detector, actuator or both
+        broader = ["http://example.org/moke#OpticalSignal"]  # optional: the terms this one is a kind of
     """
     source_type = 'terms'
 
@@ -25,8 +26,10 @@ class TermsFileSource(OntologySource):
         terms = []
         for item in content.get('term', []):
             roles = item.get('roles', [])
+            broader = item.get('broader', [])
             terms.append(OntologyTerm(
                 iri=item['iri'], label=item.get('label', item['iri']),
                 category=item.get('category', ''), description=item.get('description', ''),
-                roles=tuple(roles) if isinstance(roles, list) else (roles,)))
+                roles=tuple(roles) if isinstance(roles, list) else (roles,),
+                broader=tuple(broader) if isinstance(broader, list) else (broader,)))
         return terms

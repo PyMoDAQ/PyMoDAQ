@@ -18,7 +18,7 @@ from pymodaq_ontology.channel_tree import ChannelRow, ChannelTree
 from pymodaq_ontology.channels import Channel, actuator_channels, detector_channels
 from pymodaq_ontology.source_factory import OntologySource, SourceFactory
 from pymodaq_ontology.term_picker import TermPicker
-from pymodaq_ontology.terms import ACTUATOR, DETECTOR, OntologyTerm
+from pymodaq_ontology.terms import ACTUATOR, DETECTOR, OntologyTerm, TermHierarchy
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -146,6 +146,18 @@ class OntologyManager(DashboardMixin, ManagerBase):
         source = SourceFactory.create(self.source_type.currentText(), self.source_location.text())
         if self.set_source(source):
             self.save_current_entry()
+
+    # ---- the relations between the terms
+    @property
+    def hierarchy(self) -> TermHierarchy:
+        return TermHierarchy(self.terms.values())
+
+    def channels_of_concept(self, concept_iri: str) -> list[Channel]:
+        """The channels whose assigned term is the concept or a kind of it (what the channels *mean*, not what
+        they are called)"""
+        hierarchy = self.hierarchy
+        return [channel for channel in self.channels
+                if (iri := self.assignment.get(channel.key)) and hierarchy.is_a(iri, concept_iri)]
 
     # ---- the annotation of the saved data
     def attach_worker(self, worker) -> None:
