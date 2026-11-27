@@ -197,7 +197,7 @@ class ModulesManager(QObject, ParameterManager):
         """
         for module in self.modules_all:
             if module.ui is not None:
-                module.ui.lock(not enable)
+                module.ui.lock_user_actions(not enable)
 
     def __repr__(self) -> str:
         try:
