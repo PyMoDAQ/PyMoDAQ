@@ -205,6 +205,27 @@ class DAQ_Viewer(ParameterControlModule):
         self.detector = self._detector
 
         self.grab_done_signal.connect(self._save_export_data)
+        # grabs ordered directly on command_hardware (for instance by the ModulesManager during a scan) must also be
+        # shown in the UI
+        self.command_hardware.connect(self._show_grab_started)
+        self.grab_done_signal.connect(self._show_grab_done)
+
+    def _show_grab_started(self, command: ThreadCommand) -> None:
+        """Slot of ``command_hardware``: the status LED shows the detector as busy as soon as a grab is ordered
+
+        The grabs ordered by :meth:`grab_data` are covered too, as they go through ``command_hardware``.
+        """
+        if self.ui is None:
+            return
+        if command.command in (ControlToHardwareViewer.SINGLE, ControlToHardwareViewer.GRAB):
+            self.ui.grab_in_progress = True
+        elif command.command == ControlToHardwareViewer.STOP_GRAB:
+            self.ui.grab_in_progress = False
+
+    def _show_grab_done(self, *_) -> None:
+        """Slot of ``grab_done_signal``: the data are there, the status LED is not busy any more"""
+        if self.ui is not None:
+            self.ui.grab_in_progress = False
 
     def __repr__(self):
         return f'{self.__class__.__name__}: {self.title} {self.detector}'
