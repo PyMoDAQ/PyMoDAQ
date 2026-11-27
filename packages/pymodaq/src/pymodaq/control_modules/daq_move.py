@@ -147,6 +147,9 @@ class DAQ_Move(ParameterControlModule):
             self.actuator = kwargs.get("actuator", ACTUATOR_NAMES[0])
 
         self._move_done_bool = True
+        # commands sent directly to the hardware (for instance by the ModulesManager during a scan) must also show
+        # that the actuator is moving
+        self.command_hardware.connect(self._show_move_started)
 
         self._current_value = DataActuator(title, units=self.units)
         self._target_value = DataActuator(title, units=self.units)
@@ -388,6 +391,19 @@ class DAQ_Move(ParameterControlModule):
             self.move_rel(move_command.value)
         elif move_command.move_type == "home":
             self.move_home(move_command.value)
+
+    def _show_move_started(self, command: ThreadCommand) -> None:
+        """Slot of ``command_hardware``: the UI shows the actuator as moving as soon as a move order is sent
+
+        The move orders sent by :meth:`move_abs`, :meth:`move_rel` and :meth:`move_home` already do so, this
+        covers the ones emitted directly on ``command_hardware`` (the status LED then turns to running until the
+        move is done).
+        """
+        if command.command in (ControlToHardwareMove.MOVE_ABS, ControlToHardwareMove.MOVE_REL,
+                               ControlToHardwareMove.MOVE_HOME) and self._move_done_bool:
+            if self.ui is not None:
+                self.ui.move_done = False
+            self._move_done_bool = False
 
     def move_abs(self, value: Union[DataActuator, numbers.Number], send_to_leco=False):
         """Move the connected hardware to the absolute value
