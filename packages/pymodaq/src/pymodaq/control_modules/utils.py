@@ -4,6 +4,7 @@ Created the 03/10/2022
 
 @author: Sebastien Weber
 """
+import gc
 import functools
 import dataclasses
 from random import randint
@@ -873,6 +874,10 @@ class ParameterControlModule(ParameterManager, LECOComponentMixin, ControlModule
                 self.ui.close()
         except Exception as e:
             self.logger.exception(str(e))
+        # CI probe: collect the cyclic garbage of this module now, in the main thread. Left alone, it would be collected
+        # at some random moment by whichever thread allocates next, e.g. a hardware thread, that would destroy
+        # Qt objects of the main thread.
+        gc.collect()
         return True
 
     def _quit_cleanup(self):
