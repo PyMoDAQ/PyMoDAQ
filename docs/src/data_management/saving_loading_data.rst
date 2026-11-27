@@ -30,6 +30,53 @@ interface related to saving in PyMoDAQ all use the ``H5Saver`` ParameterTree and
 what/where/how to save data, see :ref:`h5saver_module`.
 
 
+.. _copy_closed_files:
+
+Copy of the closed files
+------------------------
+
+A h5 file can be copied automatically to another folder (a NAS already mounted on the computer for instance) once
+it is closed. The copy is set in the ``Copy of the closed files`` group of the ``H5Saver`` settings, or by default in the
+``data_saving.copy`` section of the ``pymodaq_data`` configuration:
+
+* ``enabled``: copy the closed files or not
+* ``destination_path``: the folder where the copies are written, as seen from this computer (``/mnt/nas/data`` or
+  ``Z:\data``). PyMoDAQ does not mount any network share, the folder must be reachable by the operating system
+* ``url_prefix``: not used to copy. It only builds the address of a copy, for other people and programs (an electronic
+  lab notebook for instance), by being put before the path of the copy relative to the base path of the ``H5Saver``.
+  Nothing is built when empty
+* ``delay``: seconds to wait after the last close of a file before copying it
+
+For example, with a ``destination_path`` of ``/mnt/nas/data`` and a ``url_prefix`` of ``smb://nas/data``, a file saved
+as ``<base path>/20261126/Dataset_000.h5`` is copied to ``/mnt/nas/data/20261126/Dataset_000.h5`` and its address is
+``smb://nas/data/20261126/Dataset_000.h5``. Both point to the same place, ``destination_path`` as the computer sees it,
+``url_prefix`` as everybody else does.
+
+``url_prefix`` is a free text, PyMoDAQ does not check it. Write the address your colleagues use to reach the same folder.
+If your NAS is known by a server alias, a volume and the path of your home folder in the volume, put them one after the
+other, for example ``smb://nas-alias/volume/home/me/data`` (or ``\\nas-alias\volume\home\me\data`` on Windows). The
+url of a copy is this text followed by the path of the file below the base path.
+
+These settings are shared by all the ``H5Saver`` of the running application. The folder structure of the copy is the one
+below the base path of the ``H5Saver`` (or, for a file out of any base path, its last folder and its name).
+
+PyMoDAQ sometimes closes a file and opens it again to write more. The copy is therefore made ``delay`` seconds after
+the last close only, and it is cancelled if the file is opened again before. The copies still planned when PyMoDAQ stops are
+made at once. The copy runs in a thread of its own (except the ones made when PyMoDAQ stops) and never moves nor
+deletes the local file. It goes through a temporary name and replaces the previous copy of the file, so the destination mirrors the last version and does not
+keep the history. Two checks are made before the copy replaces the previous one: the sha256 of the copy, computed again
+by reading it, must be the one of what was read, and the size and modification time of the file must not have changed
+during the copy (otherwise the copy starts again, up to three times).
+
+A copy that fails is logged and the file is kept in a small file of the configuration folder
+(``pending_copies.json``): it is tried again the next time the copy is enabled.
+
+Other code can react to the files written by PyMoDAQ with the registry of file actions
+(:class:`~pymodaq_data.h5modules.file_actions.FileActions`): an action is called when a file is opened to write and when
+it is really closed (not when the file is kept open by ``finalize_swmr(keep_open=True)``). Files opened only to read, and
+the files of an HSDS server, do not trigger them. The copy is one of these actions, named ``copy``.
+
+
 DataSaver/DataLoader
 --------------------
 

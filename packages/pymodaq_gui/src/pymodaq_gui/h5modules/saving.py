@@ -22,6 +22,7 @@ from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_data.h5modules.backends import (
     backends_available, SaveType,
     GroupType, SWMR_CAPABLE_BACKENDS)
+from pymodaq_data.h5modules import file_copy
 from pymodaq_data.h5modules.saving import H5SaverLowLevel
 
 from pymodaq_gui.parameter import Parameter, ParameterTree
@@ -119,6 +120,24 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
          'tip': 'Browse the content of the current HDF5 file with a H5Browser'},
         {'title': 'New file', 'name': 'new_file', 'type': 'action'},
 
+        # Copy of the closed files: shared by all the savers of the process (see file_copy.FileCopier)
+        {'title': 'Copy of the closed files:', 'name': 'copy', 'type': 'group', 'children': [
+            {'title': 'Copy:', 'name': 'enabled', 'type': 'bool',
+             'value': config('data', 'data_saving', 'copy', 'enabled'),
+             'tooltip': 'Copy each h5 file to the destination a few seconds after its last close. '
+                        'The local file is kept. These settings are shared by all the savers.'},
+            {'title': 'Destination:', 'name': 'destination_path', 'type': 'browsepath',
+             'value': config('data', 'data_saving', 'copy', 'destination_path'), 'filetype': False,
+             'tooltip': 'Folder where the copies are written, as seen from this computer (a NAS already mounted for instance)'},
+            {'title': 'Url prefix:', 'name': 'url_prefix', 'type': 'str',
+             'value': config('data', 'data_saving', 'copy', 'url_prefix'),
+             'tooltip': 'Not used to copy. Put before the path of a copy, relative to the base path, to build its '
+                        'address for other people and programs (smb://nas/data)'},
+            {'title': 'Delay (s):', 'name': 'delay', 'type': 'float',
+             'value': config('data', 'data_saving', 'copy', 'delay'), 'min': 0,
+             'tooltip': 'Seconds to wait after the last close of a file before copying it'},
+        ]},
+
         # Backend/Data format: specific, rarely-touched settings, so they go last.
         {'title': 'Backend:', 'name': 'backend', 'type': 'group', 'children': [
             {'title': 'Backend type:', 'name': 'backend_type', 'type': 'list',
@@ -185,6 +204,13 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
 
         # Apply initial SWMR visibility based on the configured backend
         self.settings.child('backend', 'swmr_options').setOpts(visible=self.is_swmr_capable)
+
+        # The copier of the closed files is shared: show what it is currently set to
+        copier = file_copy.copier
+        for name, value in (('enabled', copier.enabled), ('destination_path', str(copier.destination)),
+                            ('url_prefix', copier.url_prefix), ('delay', copier.delay)):
+            self.settings.child('copy', name).setValue(value)
+        copier.add_source_root(self.settings['base_path'])
 
     def show_settings(self, show=True):
         self.settings_tree.setVisible(show)
@@ -545,7 +571,14 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
             if new_path and new_path != current_path:
                 self.open_file_dialog_result(new_path)
 
+        elif param.parent() is not None and param.parent().name() == 'copy':
+            file_copy.copier.configure(enabled=self.settings['copy', 'enabled'],
+                                       destination=self.settings['copy', 'destination_path'],
+                                       url_prefix=self.settings['copy', 'url_prefix'],
+                                       delay=self.settings['copy', 'delay'])
+
         elif param.name() == 'base_path':
+            file_copy.copier.add_source_root(param.value())
             try:
                 if not os.path.isdir(param.value()):
                     os.mkdir(param.value())
