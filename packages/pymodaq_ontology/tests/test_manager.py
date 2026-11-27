@@ -147,7 +147,7 @@ class FakeWorker:
 def test_attach_and_detach_worker(manager):
     worker = FakeWorker()
     manager.attach_worker(worker)
-    assert len(worker.preparers) == 1
+    assert len(worker.preparers) == 2  # annotation and excerpt of the ontology
     manager.detach_worker(worker)
     assert worker.preparers == []
 

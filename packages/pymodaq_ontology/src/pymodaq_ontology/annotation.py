@@ -12,6 +12,7 @@ from pymodaq_ontology.terms import ACTUATOR, DETECTOR
 logger = set_logger(get_module_name(__file__))
 
 ATTRIBUTE = 'semantic_iri'
+EMBEDDED_TEXT = 'excerpt'  # string array holding the text
 EMBEDDED_GROUP = 'Ontology'  # read by pymodaq_data.h5modules.representations.embedded_semantics
 
 
@@ -45,9 +46,10 @@ def make_preparer(get_assignment: Callable[[], Assignment]) -> Callable[[DataBun
 
 
 def embed_excerpt(h5saver, source, assignment: Assignment) -> bool:
-    """Save in the file the part of the ontology describing the assigned terms (group ``Ontology`` of the root, with the
-    attributes ``excerpt``, ``format``, and ``iri`` and ``version`` of the ontology when known), so that the file
-    can be read without the ontology. Returns False if there is nothing to save or the file cannot be written."""
+    """Save in the file the part of the ontology describing the assigned terms, so that the file can be read without
+    the ontology: group ``Ontology`` of the root, with the string array ``excerpt`` and the attributes ``format``,
+    ``iri`` and ``version`` (the last two when the source knows them).
+    Returns False if there is nothing to save or the file cannot be written."""
     iris = sorted({iri for iri in assignment.values.values() if iri})
     if source is None or not iris or h5saver is None:
         return False
@@ -56,7 +58,8 @@ def embed_excerpt(h5saver, source, assignment: Assignment) -> bool:
         if not text:
             return False
         group = h5saver.get_set_group('/', EMBEDDED_GROUP)
-        for name, value in {'excerpt': text, 'format': 'turtle', **info}.items():
+        h5saver.add_string_array(group, EMBEDDED_TEXT).append(text)
+        for name, value in {'format': 'turtle', **info}.items():
             h5saver.set_attr(group, name, value)
         return True
     except Exception as e:  # an excerpt that cannot be written must never stop the saving of the data
