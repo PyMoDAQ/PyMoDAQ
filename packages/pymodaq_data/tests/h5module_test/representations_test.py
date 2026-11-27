@@ -13,7 +13,7 @@ from pymodaq_data.h5modules import representations as rep
 NS = 'https://w3id.org/pymodaq/spectro#'
 
 
-def make_file(path: Path, items, group: str = 'Spectrometer'):
+def make_file(path: Path, items, group: str = 'Spectrometer', ontology: str = ''):
     """items: (name, units, concept or None, quantity kind or None, unit iri or None)"""
     dte = DataToExport('test')
     for name, units, concept, qk, unit_iri in items:
@@ -25,6 +25,8 @@ def make_file(path: Path, items, group: str = 'Spectrometer'):
     h5 = H5SaverLowLevel()
     h5.init_file(file_name=path, new_file=True)
     DataToExportSaver(h5).add_data(h5.get_set_group(h5.raw_group, group), dte)
+    if ontology:  # excerpt of the ontology embedded in the file
+        h5.set_attr(h5.get_set_group('/', rep.EMBEDDED_GROUP), 'excerpt', ontology)
     h5.close_file()
     return path
 
@@ -307,3 +309,47 @@ def test_main_groups_shown_only_when_data_come_from_several_groups(lab_a, tmp_pa
     text = rep.build_tree([lab_a, two], 'concept').to_text()
     assert 'noir · scan_001 [two]' in text and 'background · Spectrometer [lab_a]' in text
     assert 'scan_001' in rep.build_tree([lab_a, two], 'quantity').to_text()
+
+
+EQUIVALENT_TTL = """
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+<https://w3id.org/pymodaq/spectro#DarkSpectrum> rdfs:label "Dark"@en ;
+    owl:equivalentClass <http://other.org/vocab#DarkCurrent> .
+<http://other.org/vocab#DarkCurrent> rdfs:label "Dark current"@en .
+"""
+
+
+def test_canonical_groups_equivalent_terms(tmp_path):
+    pytest.importorskip('rdflib')
+    sem = rep.get_semantics('rdf', text=EQUIVALENT_TTL)
+    a, b = NS + 'DarkSpectrum', 'http://other.org/vocab#DarkCurrent'
+    assert sem.canonical(a) == sem.canonical(b)
+    assert sem.canonical(NS + 'Unknown') == NS + 'Unknown'
+    assert rep.SemanticsBase().canonical(a) == a
+    path = make_file(tmp_path / 'f.h5', [('d1', 'counts', 'DarkSpectrum', None, None)])
+    other = make_file(tmp_path / 'g.h5', [('d2', 'counts', 'X', None, None)])
+    infos, _ = infos_of(path)
+    infos2, _ = infos_of(other)
+    next(i for i in infos2 if i.kind == 'data').attrs['semantic_iri'] = b  # annotated with the other vocabulary
+    tree = rep.build_mode('concept', [i for i in infos + infos2 if i.kind == 'data'], sem)
+    concepts = [c for c in tree.children if c.label != rep.UNANNOTATED]
+    assert len(concepts) == 1 and len(concepts[0].children) == 2
+
+
+def test_embedded_ontology_is_read_from_the_file(tmp_path):
+    pytest.importorskip('rdflib')
+    items = [('d1', 'counts', 'DarkSpectrum', None, None)]
+    plain = make_file(tmp_path / 'plain.h5', items)
+    with_ontology = make_file(tmp_path / 'with.h5', items, ontology=EQUIVALENT_TTL)
+    for path, expected in ((plain, False), (with_ontology, True)):
+        h5 = H5BrowserUtil(backend='h5py')
+        h5.init_file(file_name=path, new_file=False, mode='r')
+        try:
+            sem = rep.embedded_semantics(h5.root())
+            assert (sem is not None) == expected
+            if sem:
+                assert sem.label(NS + 'DarkSpectrum') == 'Dark'
+                assert sem.canonical('http://other.org/vocab#DarkCurrent') == sem.canonical(NS + 'DarkSpectrum')
+        finally:
+            h5.close_file()

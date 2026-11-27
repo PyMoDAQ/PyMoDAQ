@@ -107,6 +107,11 @@ class SemanticsBase:
         """The more general concept of a term, None at the top (or if unknown)"""
         return None
 
+    def canonical(self, iri: str) -> str:
+        """The term standing for all the terms declared equivalent to this one (``owl:equivalentClass``), so that
+        data annotated with two vocabularies are shown together. The same IRI when there is no equivalent."""
+        return iri
+
 
 class CompositeSemantics(SemanticsBase):
     """Several providers used together (e.g. one ontology per technique): each term is answered by the first
@@ -128,6 +133,10 @@ class CompositeSemantics(SemanticsBase):
     def parent(self, iri: str) -> Optional[str]:
         provider = self._provider_of(iri)
         return provider.parent(iri) if provider else None
+
+    def canonical(self, iri: str) -> str:
+        provider = self._provider_of(iri)
+        return provider.canonical(iri) if provider else iri
 
 
 class SemanticsFactory:
@@ -196,6 +205,25 @@ def get_semantics(name: str = 'default', **kwargs) -> SemanticsBase:
             raise ImportError('The "rdf" semantics provider needs rdflib: '
                               'pip install pymodaq_data[semantics]') from e
     return SemanticsFactory.create(name, **kwargs)
+
+
+EMBEDDED_GROUP = 'Ontology'  # group of the root holding the excerpt of the ontology used when saving
+EMBEDDED_ATTRIBUTES = ('excerpt', 'format')  # RDF text and its format (default turtle); also 'iri', 'version'
+
+
+def embedded_semantics(root) -> Optional[SemanticsBase]:
+    """The provider built from the excerpt of ontology saved in the file (group ``Ontology`` of the root with the
+    attributes ``excerpt``, the RDF text, and optionally ``format``), None if the file has none or if it cannot
+    be read (rdflib missing...). The file then explains itself, whatever happens to the original ontology."""
+    try:
+        group = root.children().get(EMBEDDED_GROUP)
+        if group is None or 'excerpt' not in group.attrs.attrs_name:
+            return None
+        attrs = {name: str(group.attrs[name]) for name in group.attrs.attrs_name}
+        return get_semantics('rdf', text=attrs['excerpt'], format=attrs.get('format', 'turtle'))
+    except Exception as e:  # the embedded ontology is a help, never an obstacle
+        logger.warning(f'Could not read the ontology embedded in the file: {e}')
+        return None
 
 
 def data_infos(root, file: str = '') -> List[DataInfo]:
@@ -344,6 +372,7 @@ def concept_mode(infos: List[DataInfo], semantics: SemanticsBase) -> RepItem:
     unannotated = RepItem(UNANNOTATED)
     for info in infos:
         iri = str(info.attrs.get(SEMANTIC_IRI, ''))
+        iri = semantics.canonical(iri) if iri else iri
         (concept_item(iri) if iri else unannotated).children.append(_leaf(info, multi, with_group))
     _sort(root)
     if unannotated.children:
@@ -387,7 +416,8 @@ def _axis_leaf(info: DataInfo, multi_file: bool, with_group: bool = False) -> Re
 def _by_quantity_and_unit(infos: List[DataInfo], semantics: SemanticsBase, leaf: Callable) -> List[RepItem]:
     by_qk: Dict[str, List[DataInfo]] = {}
     for info in infos:
-        by_qk.setdefault(str(info.attrs.get(QUANTITY_KIND, '')), []).append(info)
+        qk = str(info.attrs.get(QUANTITY_KIND, ''))
+        by_qk.setdefault(semantics.canonical(qk) if qk else qk, []).append(info)
     items = []
     for qk in sorted(by_qk, key=lambda k: (k == '', semantics.label(k))):
         item = RepItem(semantics.label(qk) if qk else UNANNOTATED, tooltip=qk)

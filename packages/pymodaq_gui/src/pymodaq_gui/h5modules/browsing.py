@@ -673,7 +673,10 @@ class H5Browser(CustomApp):
                     self.view.add_widget_to_tree(pixmap_items)
                 else:
                     infos = representations.data_infos(base_node, Path(self.h5utils.h5_file_name or '').stem)
-                    self.view.add_base_item(rep_item_to_qtree(representations.build_mode(self.mode, infos, self._semantics)))
+                    embedded = representations.embedded_semantics(base_node)  # the ontology saved in the file itself
+                    semantics = (representations.CompositeSemantics([p for p in (self._semantics, embedded) if p])
+                                 if embedded else self._semantics)
+                    self.view.add_base_item(rep_item_to_qtree(representations.build_mode(self.mode, infos, semantics)))
 
         except Exception as e:
             logger.exception(str(e))

@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Iterable, Optional, Union
 
 from rdflib import Graph, URIRef
-from rdflib.namespace import RDFS, SKOS
+from rdflib.namespace import OWL, RDFS, SKOS
 
 from pymodaq_data.h5modules.representations import SemanticsBase, SemanticsFactory
 
@@ -29,15 +29,20 @@ class RdfSemantics(SemanticsBase):
     ----------
     sources: str, Path or an iterable of them
         local RDF files (the format is guessed from the extension) or URLs
+    text: str
+        RDF given as a string (the excerpt of an ontology embedded in an h5 file), in the given ``format``
     """
 
-    def __init__(self, sources: Union[str, Path, Iterable[Union[str, Path]]] = ()):
+    def __init__(self, sources: Union[str, Path, Iterable[Union[str, Path]]] = (), text: str = '',
+                 format: str = 'turtle'):
         super().__init__()
         self.graph = Graph()
         if isinstance(sources, (str, Path)):
             sources = [sources]
         for source in sources:
             self.graph.parse(str(source))
+        if text:
+            self.graph.parse(data=text, format=format)
 
     def knows(self, iri: str) -> bool:
         return (URIRef(iri), None, None) in self.graph
@@ -54,3 +59,20 @@ class RdfSemantics(SemanticsBase):
         parents = sorted(str(p) for p in self.graph.objects(URIRef(iri), RDFS.subClassOf)
                          if isinstance(p, URIRef) and self.knows(str(p)))
         return parents[0] if parents else None
+
+    def equivalents(self, iri: str) -> set:
+        """The IRI and all those declared equivalent to it with ``owl:equivalentClass`` (either direction,
+        transitive)"""
+        found, todo = set(), [URIRef(iri)]
+        while todo:
+            term = todo.pop()
+            if term in found:
+                continue
+            found.add(term)
+            todo.extend(o for o in self.graph.objects(term, OWL.equivalentClass) if isinstance(o, URIRef))
+            todo.extend(s for s in self.graph.subjects(OWL.equivalentClass, term) if isinstance(s, URIRef))
+        return {str(t) for t in found}
+
+    def canonical(self, iri: str) -> str:
+        """The first IRI (alphabetical order) of the equivalent terms: the same whatever the term asked"""
+        return min(self.equivalents(iri))
