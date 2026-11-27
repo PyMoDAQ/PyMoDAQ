@@ -47,6 +47,8 @@ from .core import (
     SyncMode,
     DataType,
     InitFrom,
+    make_property_getter,
+    make_property_setter,
 )
 from .factories import WidgetSyncFactories
 from typing import Any, Callable, Type
@@ -108,4 +110,6 @@ __all__ = [
     'DataType',          # Data type specification
     'WidgetSyncFactories',  # For custom factory extensions
     'InitFrom',          # Initialization source control
+    'make_property_getter',  # Build a weakref-safe getter from a Qt property name
+    'make_property_setter',  # Build a weakref-safe setter from a Qt property name
 ]
