@@ -247,9 +247,16 @@ class DataDisplayer(QObject):
                     self._fill_items.append(pg.FillBetweenItem(*self._boundary_items[-1],
                                                                list(self._plot_colors[ind]) + [100]))
                     self._plotitem.addItem(self._fill_items[-1])
+                    self._band_follows_curve(self._plot_items[-1],
+                                             [*self._boundary_items[-1], self._fill_items[-1]])
 
             self.updated_item.emit(self._plot_items)
             self.labels_changed.emit(data.labels)
+
+    @staticmethod
+    def _band_follows_curve(curve: pg.PlotDataItem, band: list):
+        """Show/hide the error band of a curve with it (e.g. when the curve is clicked in the legend)"""
+        curve.visibleChanged.connect(lambda: [item.setVisible(curve.isVisible()) for item in band])
 
     @property
     def labels(self):
