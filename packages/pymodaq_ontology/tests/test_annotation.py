@@ -3,7 +3,7 @@ import numpy as np
 from pymodaq_data.data import DataToExport, DataRaw
 from pymodaq_data.h5modules.data_saving import DataBundle
 
-from pymodaq_ontology.annotation import annotate_bundle, make_preparer
+from pymodaq_ontology.annotation import annotate_bundle, make_annotator
 from pymodaq_ontology.assignment import Assignment
 
 
@@ -29,8 +29,8 @@ def test_nothing_assigned_and_later_bundles_untouched():
     assert 'semantic_iri' not in b.dte.data[0].extra_attributes
 
 
-def test_preparer_reads_current_assignment():
+def test_annotator_reads_current_assignment():
     a = Assignment()
-    prep = make_preparer(lambda: a)
+    annotator = make_annotator(lambda: a)
     a.set('Det/Spec/a', 'x')
-    assert prep(bundle()).dte.data[0].semantic_iri == ['x', '']
+    assert annotator(bundle()).dte.data[0].semantic_iri == ['x', '']

@@ -335,8 +335,8 @@ The excerpt keeps, for the assigned terms, all the terms they are a kind of (the
 equivalent to them (``owl:equivalentClass``), and for each of these terms its type, label, definition, parents and
 equivalences. It is built by the source: ``OntologySource.excerpt(iris)`` returns ``(text, info)``, with the default
 implementation returning nothing, so a source type that cannot give one only means that no excerpt is saved. ``RdfSource``
-builds it from its rdflib graph. A second preparer, added and removed with the one that writes ``semantic_iri`` by
-``attach_worker`` and ``detach_worker``, saves it; a failure to write it is logged and never stops the saving of the data.
+builds it from its rdflib graph. A second data preparer, the excerpt saver (``make_excerpt_saver``), added and removed by ``attach_worker`` and
+``detach_worker`` with the annotator (``make_annotator``, which writes ``semantic_iri``), saves it; a failure to write it is logged and never stops the saving of the data.
 The reader is ``embedded_semantics`` in ``pymodaq_data.h5modules.representations``.
 
 Values of an actuator: states
