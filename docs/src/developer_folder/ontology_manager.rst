@@ -380,6 +380,10 @@ A state is a member of an enumeration (``owl:oneOf``): *Beam block* is defined a
 hierarchy, in grey italics with a legend, but does not let them be selected: a state is the meaning of a value of an
 actuator, not a channel.
 
+.. image:: /image/ontology_manager/ontology_term_picker_actuator.png
+    :alt: The popup of an actuator: the states are shown in grey italics and cannot be selected
+    :width: 55%
+
 A term can say in which states it has its meaning with ``pymodaq:requiresState``
 (``https://pymodaq.cnrs.fr/ontology#requiresState``): *Dark spectrum* requires *Beam blocked*, *Sample spectrum*
 requires *Beam open* and *Sample in beam*. **This predicate is our own, not a standard one**, and its namespace is a
