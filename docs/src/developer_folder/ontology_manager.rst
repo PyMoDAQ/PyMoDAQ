@@ -1,0 +1,278 @@
+.. _ontology_manager:
+
+Ontology manager
+================
+
+The package ``pymodaq_ontology`` adds an *Ontology* manager to the Dashboard (see :ref:`custom_app`, and
+"Adding a manager to the Dashboard" in :ref:`extension_plugins`). It answers one question: **what does each channel of my
+instruments mean?** The user picks, for each channel, a term of an ontology, and the choice is kept for the experiment and
+written in the saved data. This page is a map of the package: what the objects are, who talks to whom, and where to add
+things.
+
+.. contents::
+    :local:
+    :depth: 2
+
+Vocabulary
+----------
+
+.. list-table::
+    :header-rows: 1
+    :widths: 18 82
+
+    * - Word
+      - Meaning
+    * - ontology
+      - A file (or any place) describing concepts and how they relate: *a Spectrum is a Signal*. PyMoDAQ does not
+        interpret it, it only reads the terms.
+    * - source
+      - The code that reads an ontology from somewhere in some format and returns its terms
+        (``OntologySource``). ``rdf`` reads an RDF file with rdflib.
+    * - term
+      - What the manager knows of one concept (``OntologyTerm``): an IRI (its identifier), a label to show, a
+        description, the kinds of channel it is meant for (*roles*) and its parents (*broader*). It is a small copy,
+        independent from the ontology library.
+    * - channel
+      - What a term is assigned to (``Channel``): one array of the data of a detector, or one actuator.
+    * - assignment
+      - The table *channel key -> IRI of a term* (``Assignment``).
+    * - entry
+      - The file where the manager keeps the source and the assignment of an experiment (``.ontology``, TOML).
+
+The pieces
+----------
+
+.. graphviz::
+   :caption: The objects of the package and what they use (arrows read "uses")
+
+   digraph pieces {
+     rankdir=TB; nodesep=0.35; ranksep=0.55; node [shape=box, fontname="Helvetica", fontsize=10, style=filled];
+     edge [fontname="Helvetica", fontsize=9];
+     mgr [label="OntologyManager (manager.py)\nthe orchestrator", fillcolor="#b5d3ee"];
+     tree [label="ChannelTree\n(channel_tree.py)", fillcolor="#dbe9f6"];
+     picker [label="TermPicker\n(term_picker.py)", fillcolor="#dbe9f6"];
+     factory [label="SourceFactory\n(source_factory.py)", fillcolor="#fbe5cc"];
+     assign [label="Assignment + entry file\n(assignment.py)", fillcolor="#fbe5cc"];
+     annot [label="annotate_bundle, make_preparer\n(annotation.py)", fillcolor="#fbe5cc"];
+     chan [label="Channel\n(channels.py)", fillcolor="#fbe5cc"];
+     src [label="RdfSource\n(sources/rdf.py)", fillcolor="#fbe5cc"];
+     term [label="OntologyTerm, TermHierarchy\n(terms.py)", fillcolor="#fbe5cc"];
+     ontology [label="ontology file\n.ttl, .rdf, .jsonld", shape=note, fillcolor="#eeeeee"];
+     dash [label="Dashboard\nmodules manager", fillcolor="#eeeeee"];
+     worker [label="worker of an extension\n(add_data_preparer)", fillcolor="#eeeeee"];
+     h5 [label="saved file\n(extra attribute semantic_iri)", shape=note, fillcolor="#e2f0d9"];
+     mgr -> tree [label="rows to show"]; mgr -> picker [label="double click"];
+     mgr -> factory [label="create(type, location)"]; mgr -> assign [label="assign, save, load"];
+     mgr -> annot [label="attach_worker"]; mgr -> chan [label="keeps the list"];
+     factory -> src [label="builds"]; src -> ontology [label="reads"]; src -> term [label="returns the terms"];
+     picker -> term [label="shows"]; dash -> chan [label="actuators, probe of the detectors", constraint=false];
+     annot -> assign [label="reads"]; annot -> worker [label="added as data preparer"];
+     worker -> h5 [label="writes"];
+   }
+
+Everything in the blue and orange boxes can be tested without a Dashboard except the manager itself: ``terms``,
+``sources``, ``channels``, ``assignment`` and ``annotation`` have no Qt and no PyMoDAQ GUI dependency.
+
+Classes and their parents
+-------------------------
+
+.. graphviz::
+   :caption: Inheritance (an arrow goes from the class to its parent)
+
+   digraph inheritance {
+     rankdir=BT; node [shape=box, fontname="Helvetica", fontsize=10, style=filled, fillcolor="#dbe9f6"];
+     OntologyManager -> ManagerBase; OntologyManager -> DashboardMixin;
+     ManagerBase -> CustomApp;
+     ChannelTree -> QTreeWidget; TermPicker -> QDialog;
+     RdfSource -> OntologySource; OntologySource -> ABC;
+     YourSource [label="YourSource\n(in a plugin)", fillcolor="#fbe5cc", style="filled,dashed"];
+     YourSource -> OntologySource [style=dashed];
+     OntologyTerm [fillcolor="#fbe5cc"]; Channel [fillcolor="#fbe5cc"]; ChannelRow [fillcolor="#fbe5cc"];
+     OntologyTerm -> dataclass [style=dotted, arrowhead=none]; Channel -> dataclass [style=dotted, arrowhead=none];
+     ChannelRow -> dataclass [style=dotted, arrowhead=none]; dataclass [shape=plaintext, fillcolor=white, style=solid];
+   }
+
+.. list-table::
+    :header-rows: 1
+    :widths: 22 22 56
+
+    * - Class
+      - Parent
+      - Role
+    * - ``OntologyManager``
+      - ``DashboardMixin``, ``ManagerBase``
+      - The orchestrator. ``ManagerBase`` gives the entries (one file per experiment, the *Tools* menu, the toolbar) and
+        the settings of the window; ``DashboardMixin`` gives ``self.dashboard`` and the call to
+        ``do_things_after_experiment_set`` when an experiment is applied. It has ``own_modules_manager = False``: it
+        only looks the modules of the Dashboard up.
+    * - ``OntologySource``
+      - ``ABC``
+      - Contract of a source: ``source_type`` (the name used in entry files) and ``terms()``.
+    * - ``RdfSource``
+      - ``OntologySource``
+      - ``source_type = 'rdf'``: an RDF file read with rdflib.
+    * - ``SourceFactory``
+      -
+      - Registry of the source types: ``register`` (class decorator), ``create(type, location)``,
+        ``from_identifier('rdf:/path/file.ttl')``. It also loads the types declared in the ``pymodaq.ontology_sources``
+        entry point group.
+    * - ``OntologyTerm``
+      - frozen dataclass
+      - One term. ``fits(kind)`` tells whether it can describe a detector or an actuator channel.
+    * - ``TermHierarchy``
+      -
+      - The *is a kind of* relation between terms, built from ``broader``: ``parents``, ``children``, ``ancestors``,
+        ``descendants``, ``is_a``.
+    * - ``Channel``
+      - frozen dataclass
+      - A channel and its ``key``: ``module/data name/label`` for a detector array, ``module`` for an actuator.
+    * - ``Assignment``
+      -
+      - ``{channel key: IRI}`` with ``get`` and ``set`` (an empty IRI removes the assignment).
+    * - ``ChannelTree``
+      - ``QTreeWidget``
+      - Shows the channels grouped (*Actuators* / *Detectors*, then by module) with term, last value and a status led.
+        It knows nothing of terms: it receives ``ChannelRow`` objects.
+    * - ``TermPicker``
+      - ``QDialog``
+      - The popup opened by a double click: search field, tree of terms (the compatible ones first, a box to show all),
+        and the description of the selected term.
+
+From a term of the ontology to a saved array
+--------------------------------------------
+
+.. graphviz::
+   :caption: Life of an assignment
+
+   digraph flow {
+     rankdir=TB; node [shape=box, style=filled, fillcolor="#dbe9f6", fontname="Helvetica", fontsize=10];
+     a [label="1. The user chooses a source\n('rdf', path of a .ttl) and presses Load"];
+     b [label="2. RdfSource.terms() reads the file\nand returns the OntologyTerm list"];
+     c [label="3. Update channels / Probe detectors\nChannel list (actuators: one each,\ndetectors: snap, one per array)"];
+     d [label="4. Double click on the term of a channel\nTermPicker -> IRI"];
+     e [label="5. manager.assign(key, iri)\nAssignment.set + save the entry file\n(<config>/ontology/<experiment>/*.ontology)"];
+     f [label="6. An extension calls manager.attach_worker(worker)\nthe annotation preparer is added to the worker", fillcolor="#fbe5cc"];
+     g [label="7. At each bundle to save, the preparer reads the assignment\nand, for the first bundle only, adds the extra attribute\nsemantic_iri to the data (one IRI, or one per array)", fillcolor="#fbe5cc"];
+     h [label="8. The file written has the IRI next to the array\nit describes", fillcolor="#e2f0d9"];
+     a -> b -> c -> d -> e -> f -> g -> h;
+     e -> e [label="each change is saved at once", fontsize=9];
+   }
+
+1. **Source.** The location is typed or browsed in the manager, the type comes from ``SourceFactory.names()``.
+   ``set_source`` reads the terms; if that fails, the previous terms are kept and the reason is shown in the status line.
+2. **Terms.** From an RDF file, a term is (see ``sources/rdf.py``):
+
+   .. list-table::
+       :header-rows: 1
+       :widths: 35 65
+
+       * - In the RDF graph
+         - In the ``OntologyTerm``
+       * - ``owl:Class`` or ``owl:NamedIndividual`` with an ``rdfs:label``
+         - one term (no label: it is structure of the ontology, not a term); ``category`` is *Classes* or *Individuals*
+       * - ``rdfs:label`` (English first)
+         - ``label``
+       * - ``skos:definition``, else ``rdfs:comment``
+         - ``description``
+       * - ``rdfs:subClassOf`` (a class), ``rdf:type`` (an individual)
+         - ``broader`` (the parents)
+       * - the class is a kind of ``sosa:ObservableProperty`` / ``sosa:ActuatableProperty``
+         - ``roles`` = ``('detector',)`` / ``('actuator',)``; the roles are inherited through ``subClassOf``
+
+   A term without roles fits any channel. Assigning a term that does not fit is allowed: the led turns orange and the
+   recap says so.
+3. **Channels.** The actuators are known from the Dashboard at once. The channels of the detectors are only known once
+   they emitted data: *Probe detectors* does a snap with a modules manager of its own (the selection of the Dashboard is
+   not changed). Channels found by a previous probe are kept when the actuators are updated.
+4. **Assignment and entry.** The entry file is TOML:
+
+   .. code-block:: toml
+
+       [source]
+       type = "rdf"
+       location = "/path/to/spectro_ontology.ttl"
+
+       [assignments]
+       "Spectro/Spectrum/CH00" = "http://example.org/mockexamples#SampleSpectrum"
+       "BeamBlock" = "http://example.org/mockexamples#BeamBlock"
+
+   The key of a detector channel is ``module/data name/label``, the one of an actuator is the name of its module. An
+   assigned channel that the Dashboard no longer has stays in the file and is shown under *Not in the Dashboard* with a
+   red led. When the experiment is applied, the manager reads the entry of the experiment and reloads its source.
+5. **Annotation.** ``attach_worker`` is meant to be called by an extension, for the worker that saves its data (anything
+   with ``add_data_preparer`` / ``remove_data_preparer``); ``quit_fun`` detaches all the workers. The manager does not
+   know the extensions. The attribute ``semantic_iri`` is added only to the first bundle of an acquisition (``save_index
+   == 0``), the attributes being written when the arrays are created. Its value is one IRI if all the arrays of the data
+   have the same term, else a list with one IRI per array (empty text for an array without a term).
+
+Asking what a channel means
+---------------------------
+
+Channels are named by the instruments (``Det_1/Spectrum/CH00``), the terms say what they are. ``TermHierarchy`` and
+``OntologyManager.channels_of_concept`` ask the second question:
+
+.. code-block:: python
+
+    # every channel whose term is a Spectrum or a kind of Spectrum (SampleSpectrum, DarkSpectrum...)
+    channels = manager.channels_of_concept('http://example.org/mockexamples#Spectrum')
+
+    manager.hierarchy.is_a(sample_iri, spectrum_iri)   # True: a SampleSpectrum is a Spectrum
+    manager.hierarchy.descendants(spectrum_iri)        # all the kinds of Spectrum, the closest first
+
+The hierarchy is rebuilt from the terms each time it is asked for; parents that the ontology does not know and loops
+are ignored. There is no query language: the question is *is this term the concept or below it?*
+
+Status of a channel
+-------------------
+
+.. list-table::
+    :header-rows: 1
+    :widths: 15 15 70
+
+    * - Status
+      - Led
+      - Meaning
+    * - ``none``
+      - grey
+      - No term assigned.
+    * - ``assigned``
+      - green
+      - A term is assigned and fits the kind of channel (or its roles are not known).
+    * - ``incompatible``
+      - orange
+      - The term is meant for the other kind of channel (for instance a detector term on an actuator).
+    * - ``missing``
+      - red
+      - The assignment names a channel that is not in the Dashboard.
+
+Where to add things
+-------------------
+
+**A new source type** (a database, a web address, another format): subclass ``OntologySource``, define ``source_type``
+and ``terms()``, and register it. In the package, add a module to ``sources/`` using the decorator; from a plugin,
+declare the class in the entry point group:
+
+.. code-block:: python
+
+    from pymodaq_ontology.source_factory import OntologySource, SourceFactory
+    from pymodaq_ontology.terms import OntologyTerm
+
+    @SourceFactory.register
+    class CsvSource(OntologySource):
+        source_type = 'csv'
+
+        def terms(self) -> list[OntologyTerm]:
+            ...  # read self.location, raise if it cannot be read
+
+.. code-block:: toml
+
+    [project.entry-points."pymodaq.ontology_sources"]
+    csv = "my_plugin.ontology:CsvSource"
+
+The identifier of the source in the entry files is then ``csv:<location>``.
+
+**Annotating the data of an extension**: get the manager from the Dashboard and call ``attach_worker(worker)`` before the
+acquisition (and ``detach_worker`` after, if the extension stays open).
+
+**Another way to show or pick terms**: ``ChannelTree`` and ``TermPicker`` only exchange plain objects (``ChannelRow``,
+``OntologyTerm``, IRIs) with the manager, so they can be replaced without touching the data part.
