@@ -28,6 +28,7 @@ Contributing to PyMoDAQ core
    /developer_folder/contributing
    /developer_folder/shared_ui
    /developer_folder/managers
+   /developer_folder/ontology_manager
    /developer_folder/widget_sync
    /tutorials/write_documentation
    /tutorials/git_github
