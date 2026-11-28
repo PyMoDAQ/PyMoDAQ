@@ -6,7 +6,7 @@ from qtpy import QtWidgets
 
 from pymodaq_utils.config import get_set_config_dir
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_gui.managers.manager_base import ManagerBase
+from pymodaq_gui.managers.manager_base import ManagerBase, ManagerActions
 from pymodaq_gui.messenger import messagebox
 
 from pymodaq.utils.dashboard_mixin import DashboardMixin
@@ -117,7 +117,20 @@ class OntologyManager(DashboardMixin, ManagerBase):
         layout.addWidget(self.channel_tree)
         layout.addWidget(self.status_label)
 
+    def get_external_toolbar_menu(self, toolbar=None, menu=None):
+        """ Only the action opening the manager: there is no entry to choose and nothing to execute """
+        if toolbar is None:
+            toolbar = QtWidgets.QToolBar('Ontology')
+        if menu is None:
+            menu = QtWidgets.QMenu('Ontology')
+        self.affect_to(ManagerActions.OPEN, toolbar)
+        self.affect_to(ManagerActions.OPEN, menu)
+        return toolbar, menu
+
     def setup_actions(self) -> None:
+        # one entry file per experiment is enough: no list of entries to choose from, copy, create or delete
+        for action in (ManagerActions.LIST, ManagerActions.COPY, ManagerActions.NEW, ManagerActions.DELETE):
+            self.get_action(action).setVisible(False)
         self.add_action('update_channels', 'Update channels', 'refresh', toolbar='management', auto_menu=True,
                         tip='Update the channels from the control modules of the Dashboard')
         self.add_action('recap', 'Recap', 'grid_on', toolbar='management', auto_menu=True,
