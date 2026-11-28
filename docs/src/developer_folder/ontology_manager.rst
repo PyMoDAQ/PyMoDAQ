@@ -16,7 +16,7 @@ things.
 What is an ontology, and what is it for?
 ----------------------------------------
 
-Instruments name their data as their authors thought of it: ``Det_1/Spectrum/CH00``, ``M2``, ``Ch1``. Two setups doing the
+Instruments name their data as their authors thought of it: ``Ocean/Spectrum/CH00``, ``M2``, ``Ch1``. Two setups doing the
 same experiment give different names, and a file read years later says what was measured only to those who were there.
 
 An **ontology** is a shared vocabulary: a list of concepts (*Spectrum*, *Transmittance*, *BeamBlock*...), each with an
@@ -30,7 +30,7 @@ Assigning a term to a channel says **what the channel is, not what it is called*
 * **files that explain themselves**: the IRI is saved next to the array, so a program (or a person) finds the spectra of
   a file whatever the instruments were named;
 * **the same code on different setups**: an extension asks for "the channels that are a Spectrum" instead of
-  hard-coding ``Det_1``;
+  hard-coding ``Ocean``;
 * **questions that follow the relations**: asking for *Spectrum* also returns the channels assigned a *SampleSpectrum* or
   a *DarkSpectrum*, because they are kinds of it;
 * **exchange with other tools and databases** that use the same identifiers.
@@ -289,8 +289,8 @@ From a term of the ontology to a saved array
        location = "/path/to/spectro_ontology.ttl"
 
        [assignments]
-       "Det_1/Spectrum/CH00" = "http://example.org/mockexamples#SampleSpectrum"
-       "Act_1" = "http://example.org/mockexamples#BeamBlock"
+       "Ocean/Spectrum/CH00" = "http://example.org/mockexamples#SampleSpectrum"
+       "Shutter" = "http://example.org/mockexamples#BeamBlock"
 
    The key of a detector channel is ``module/data name/label``, the one of an actuator is the name of its module. An
    assigned channel that the Dashboard no longer has stays in the file and is shown under *Not in the Dashboard* with a
@@ -304,7 +304,7 @@ From a term of the ontology to a saved array
 Asking what a channel means
 ---------------------------
 
-Channels are named by the instruments (``Det_1/Spectrum/CH00``), the terms say what they are. ``TermHierarchy`` and
+Channels are named by the instruments (``Ocean/Spectrum/CH00``), the terms say what they are. ``TermHierarchy`` and
 ``OntologyManager.channels_of_concept`` ask the second question:
 
 .. code-block:: python
