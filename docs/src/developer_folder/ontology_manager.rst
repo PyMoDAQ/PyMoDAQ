@@ -103,18 +103,19 @@ Python (no Qt) and grey boxes belong to something else.
    digraph reading {
      rankdir=TB; nodesep=0.5; ranksep=0.45; node [shape=box, fontname="Helvetica", fontsize=10, style=filled];
      edge [fontname="Helvetica", fontsize=9];
-     mgr [label="OntologyManager\nset_source()", fillcolor="#b5d3ee"];
+     mgr [label="OntologyManager\nthe user gives a type and a location, Load", fillcolor="#b5d3ee"];
      factory [label="SourceFactory\ncreate('rdf', location)", fillcolor="#fbe5cc"];
      src [label="RdfSource\nterms()", fillcolor="#fbe5cc"];
      file [label="ontology file\n.ttl, .rdf, .jsonld", shape=note, fillcolor="#eeeeee"];
-     term [label="list of OntologyTerm\n(IRI, label, roles, broader)", fillcolor="#fbe5cc"];
+     terms [label="list of OntologyTerm\n(IRI, label, roles, broader)", fillcolor="#fbe5cc"];
+     kept [label="OntologyManager\nkeeps {IRI: term}", fillcolor="#b5d3ee"];
      hier [label="TermHierarchy\nis_a, descendants...", fillcolor="#fbe5cc"];
-     mgr -> factory [label="1. type and location"];
-     factory -> src [label="2. builds"];
-     src -> file [label="3. reads"];
-     src -> term [label="4. returns"];
-     term -> mgr [label="5. kept by the manager"];
-     term -> hier [label="built from"];
+     mgr -> factory [label="1. set_source() asks for a source"];
+     factory -> src [label="2. builds the source of that type"];
+     src -> file [label="3. terms() reads the file"];
+     file -> terms [label="4. each labelled class or individual\nbecomes a term"];
+     terms -> kept [label="5. returned to the manager"];
+     kept -> hier [label="6. when asked, builds the hierarchy"];
    }
 
 2. Assigning a term to a channel
