@@ -39,7 +39,7 @@ class OntologyManager(DashboardMixin, ManagerBase):
 
     entry_type = 'ontology'
     entry_extension = '.ontology'
-    icon_name = 'hub'
+    icon_name = 'account_tree'
 
     def __init__(self, dashboard: Optional['DashBoard'] = None, **kwargs):
         self.assignment = Assignment()
@@ -119,9 +119,9 @@ class OntologyManager(DashboardMixin, ManagerBase):
     def setup_actions(self) -> None:
         self.add_action('update_channels', 'Update channels', 'refresh', toolbar='management', auto_menu=True,
                         tip='Update the channels from the control modules of the Dashboard')
-        self.add_action('recap', 'Recap', 'table_view', toolbar='management', auto_menu=True,
+        self.add_action('recap', 'Recap', 'grid_on', toolbar='management', auto_menu=True,
                         tip='Show the table of the terms assigned to the channels')
-        self.add_action('probe', 'Probe detectors', 'search', toolbar='management', auto_menu=True,
+        self.add_action('probe', 'Probe detectors', 'snap', toolbar='management', auto_menu=True,
                         tip='Do a snap of the detectors to find the channels they emit')
 
     def connect_things(self) -> None:
