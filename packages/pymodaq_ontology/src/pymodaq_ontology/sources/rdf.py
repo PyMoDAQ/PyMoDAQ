@@ -1,5 +1,6 @@
 """Source reading the terms from an RDF file (Turtle, RDF/XML, JSON-LD...), with rdflib"""
 from pathlib import Path
+from typing import Iterable, Optional
 
 from rdflib import Graph, URIRef, Literal
 from rdflib.namespace import OWL, RDF, RDFS, SKOS
@@ -12,6 +13,8 @@ ROLES_OF_TYPE = {  # the classes whose individuals describe what a detector or a
     URIRef(SOSA + 'ObservableProperty'): DETECTOR,
     URIRef(SOSA + 'ActuatableProperty'): ACTUATOR,
 }
+EXCERPT_PREDICATES = (RDF.type, RDFS.label, SKOS.prefLabel, SKOS.definition, RDFS.comment, RDFS.subClassOf,
+                      OWL.equivalentClass)  # what the saved excerpt keeps of a term
 LANGUAGES = ('en', '')  # the label language preferred, then a label without language
 
 
@@ -50,9 +53,21 @@ class RdfSource(OntologySource):
     """
     source_type = 'rdf'
 
+    def __init__(self, location: str):
+        super().__init__(location)
+        self.graph: Optional[Graph] = None
+
+    def _read(self) -> Graph:
+        """The graph of the file, read once and kept: the questions on the terms are asked to it"""
+        if self.graph is None:
+            graph = Graph()
+            graph.parse(Path(self.location))
+            self.graph = graph
+        return self.graph
+
     def terms(self) -> list[OntologyTerm]:
-        graph = Graph()
-        graph.parse(Path(self.location))
+        self.graph = None  # read the file again, it may have changed
+        graph = self._read()
         subjects = [s for s in (*graph.subjects(RDF.type, OWL.Class), *graph.subjects(RDF.type, OWL.NamedIndividual))
                     if isinstance(s, URIRef)]
         terms = []
@@ -73,3 +88,34 @@ class RdfSource(OntologySource):
                 description=_text(graph, subject, (SKOS.definition, RDFS.comment)),
                 roles=roles, broader=parents))
         return sorted(terms, key=lambda term: term.label.lower())
+
+    def excerpt(self, iris: Iterable[str]) -> tuple[str, dict[str, str]]:
+        """What the file says about these terms, their more general terms and their equivalents (label, definition,
+        parents, equivalences), in Turtle, with the IRI and the version of the ontology if the file gives them"""
+        graph = self._read()
+        wanted = {URIRef(iri) for iri in iris}
+        closure = set()
+        for term in wanted:
+            for parent in (*graph.transitive_objects(term, RDFS.subClassOf), *graph.objects(term, RDF.type)):
+                closure.update(graph.transitive_objects(parent, RDFS.subClassOf))
+            closure.update(graph.transitive_objects(term, RDFS.subClassOf))
+        for term in list(closure):  # the terms declared equivalent, whichever way the statement is written
+            closure.update(graph.transitive_objects(term, OWL.equivalentClass))
+            closure.update(graph.transitive_subjects(OWL.equivalentClass, term))
+        closure = {t for t in closure if isinstance(t, URIRef)} | wanted
+        out = Graph()
+        for prefix, namespace in graph.namespaces():
+            out.bind(prefix, namespace)
+        for term in closure:
+            for predicate in EXCERPT_PREDICATES:
+                for obj in graph.objects(term, predicate):
+                    out.add((term, predicate, obj))
+        info = {}
+        ontology = next(iter(graph.subjects(RDF.type, OWL.Ontology)), None)
+        if isinstance(ontology, URIRef):
+            info['iri'] = str(ontology)
+            version = next(iter(graph.objects(ontology, OWL.versionIRI)), None) or \
+                next(iter(graph.objects(ontology, OWL.versionInfo)), None)
+            if version is not None:
+                info['version'] = str(version)
+        return out.serialize(format='turtle'), info

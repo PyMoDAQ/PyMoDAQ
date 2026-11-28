@@ -7,6 +7,7 @@ type is adding a file. A plugin can provide other source types and registers the
 class named in the ``pymodaq.ontology_sources`` entry point group.
 """
 from abc import ABC, abstractmethod
+from typing import Iterable
 from importlib import import_module
 
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -37,6 +38,12 @@ class OntologySource(ABC):
     @abstractmethod
     def terms(self) -> list[OntologyTerm]:
         """Read the terms. Raises an exception if the location cannot be read"""
+
+    def excerpt(self, iris: Iterable[str]) -> tuple[str, dict[str, str]]:
+        """The part of the ontology describing these terms, to be saved in the data files so that they can be read
+        without the ontology: ``(Turtle text, {'iri': ..., 'version': ...})``. A source that cannot give one returns
+        an empty text."""
+        return '', {}
 
 
 class SourceFactory:

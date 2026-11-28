@@ -316,6 +316,37 @@ Channels are named by the instruments (``Ocean/Spectrum/CH00``), the terms say w
 The hierarchy is rebuilt from the terms each time it is asked for; parents that the ontology does not know and loops
 are ignored. There is no query language: the question is *is this term the concept or below it?*
 
+The ontology saved with the data
+--------------------------------
+
+An IRI alone is only useful to someone who has the ontology. With the first bundle of an acquisition, the manager
+therefore also writes in the file what is needed to understand the terms without it, so that the file can be read, and
+shown by the h5 browser, on any machine:
+
+.. code-block:: text
+
+    /Ontology                  group at the root of the file
+        excerpt                string array: the part of the ontology that matters here, in Turtle
+        assignment             string array: the assignment, in TOML (the term of each channel)
+        attributes: format = "turtle"
+                    iri = "http://example.org/mockexamples"   (when the ontology gives its IRI)
+                    version = "1.0"                           (when it gives a version)
+
+The **excerpt** keeps, for the assigned terms, all the terms they are a kind of (their ancestors) and the terms declared
+equivalent to them (``owl:equivalentClass``), and for each of these terms its type, label, definition, parents and
+equivalences. It is built by the source: ``OntologySource.excerpt(iris)`` returns ``(text, info)``, with the default
+implementation returning nothing, so a source type that cannot give one only means that no excerpt is saved.
+``RdfSource`` builds it from its rdflib graph. The reader is ``embedded_semantics`` in
+``pymodaq_data.h5modules.representations``.
+
+The **assignment** is the ``[assignments]`` table of the entry file (channel key to IRI), without the ``[source]``
+table: the location of the ontology is a path of the user's machine and stays out of the data files. It tells which
+channels had a term, and which, which the ``semantic_iri`` attribute of the arrays alone does not say.
+
+Both are written by a second data preparer, the ontology saver (``make_ontology_saver``), added and removed by
+``attach_worker`` and ``detach_worker`` with the annotator (``make_annotator``, which writes ``semantic_iri``). A failure
+to write them is logged and never stops the saving of the data.
+
 Status of a channel
 -------------------
 
