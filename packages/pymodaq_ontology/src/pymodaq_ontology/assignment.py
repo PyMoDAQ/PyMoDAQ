@@ -53,7 +53,8 @@ def save_entry(path: Path, assignment: Assignment, source: Optional[OntologySour
 def load_entry(path: Path) -> tuple[Assignment, Optional[OntologySource]]:
     """Read an entry file. The source is None if the file does not name one or if its type is unknown"""
     content = toml.loads(Path(path).read_text(encoding='utf-8'))
-    states = [StateAssociation(str(s['actuator']), float(s['value']), str(s['term'])) for s in content.get('states', [])]
+    states = [StateAssociation(str(s['actuator']), float(s['value']), str(s['term']))
+              for s in content.get('states', [])]
     assignment = Assignment(content.get('assignments', {}), states)
     source = None
     if 'source' in content:
