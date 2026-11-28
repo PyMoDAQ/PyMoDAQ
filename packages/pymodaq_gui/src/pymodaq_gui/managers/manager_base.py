@@ -394,7 +394,12 @@ class ManagerBase(CustomApp):
     def quit_fun(self):
         self.entries_sync.unbind_all()
         self.entries_sync.deleteLater()  # unparented: the slots connected to it would keep this manager alive
-        return super().quit_fun()
+        done = super().quit_fun()
+        # the widget tree (with its parameter tree) is deleted now, not left to the garbage collector: collected later
+        # it would be, at a random moment, in a random thread, with the Python side of its pyqtgraph event filters
+        # already cleared
+        self.main_widget.deleteLater()
+        return done
 
     def create_entry(self, entry: str = None, bypass_dialog=False):
         if entry is not None:
