@@ -12,7 +12,7 @@ from pymodaq_gui.messenger import messagebox
 from pymodaq.utils.dashboard_mixin import DashboardMixin
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 
-from pymodaq_ontology.annotation import make_excerpt_saver, make_annotator
+from pymodaq_ontology.annotation import make_ontology_saver, make_annotator
 from pymodaq_ontology.assignment import Assignment, save_entry, load_entry
 from pymodaq_ontology.channel_tree import ChannelRow, ChannelTree
 from pymodaq_ontology.channels import Channel, actuator_channels, detector_channels
@@ -47,7 +47,7 @@ class OntologyManager(DashboardMixin, ManagerBase):
         self.terms: dict[str, OntologyTerm] = {}
         self.channels: list[Channel] = []
         self._annotator = make_annotator(lambda: self.assignment)
-        self._excerpt_savers: dict = {}  # worker -> function saving the excerpt of the ontology in its file
+        self._ontology_savers: dict = {}  # worker -> function saving the excerpt of the ontology in its file
         self._workers: list = []
         super().__init__(dashboard=dashboard, **kwargs)
 
@@ -177,17 +177,17 @@ class OntologyManager(DashboardMixin, ManagerBase):
     def attach_worker(self, worker) -> None:
         """Annotate the data saved by the worker of an extension (it must have ``add_data_preparer``)"""
         worker.add_data_preparer(self._annotator)
-        if worker not in self._excerpt_savers:
-            self._excerpt_savers[worker] = make_excerpt_saver(
+        if worker not in self._ontology_savers:
+            self._ontology_savers[worker] = make_ontology_saver(
                 lambda: self.source, lambda: self.assignment,
                 lambda: getattr(getattr(worker, '_app', None), 'h5saver', None))
-        worker.add_data_preparer(self._excerpt_savers[worker])
+        worker.add_data_preparer(self._ontology_savers[worker])
         if worker not in self._workers:
             self._workers.append(worker)
 
     def detach_worker(self, worker) -> None:
         worker.remove_data_preparer(self._annotator)
-        worker.remove_data_preparer(self._excerpt_savers.pop(worker, None))
+        worker.remove_data_preparer(self._ontology_savers.pop(worker, None))
         if worker in self._workers:
             self._workers.remove(worker)
 

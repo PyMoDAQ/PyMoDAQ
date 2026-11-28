@@ -25,10 +25,21 @@ class Assignment:
 
 def save_entry(path: Path, assignment: Assignment, source: Optional[OntologySource] = None) -> None:
     """Write the entry file: the source the terms come from and the assignment"""
-    content: dict = {'assignments': dict(sorted(assignment.values.items()))}
+    content = assignment_content(assignment)
     if source is not None:
         content['source'] = {'type': source.source_type, 'location': source.location}
     Path(path).write_text(toml.dumps(content), encoding='utf-8')
+
+
+def assignment_content(assignment: Assignment) -> dict:
+    """What the entry file (and the copy of the assignment saved in the data files) holds of an assignment"""
+    return {'assignments': dict(sorted(assignment.values.items()))}
+
+
+def assignment_text(assignment: Assignment) -> str:
+    """The assignment as TOML text, as in the entry file but without the source (its location is the business of
+    the user's machine)"""
+    return toml.dumps(assignment_content(assignment))
 
 
 def load_entry(path: Path) -> tuple[Assignment, Optional[OntologySource]]:

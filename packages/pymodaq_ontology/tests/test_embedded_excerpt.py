@@ -1,4 +1,5 @@
 import numpy as np
+import toml
 import pytest
 
 from pymodaq_data.data import DataRaw, DataToExport
@@ -11,7 +12,7 @@ try:  # the reader of the h5 browser comes with another change
 except ImportError:
     representations = None
 
-from pymodaq_ontology.annotation import save_excerpt_in_file, make_excerpt_saver
+from pymodaq_ontology.annotation import save_ontology_in_file, make_ontology_saver
 from pymodaq_ontology.assignment import Assignment
 
 HIERARCHY = '''
@@ -51,37 +52,54 @@ def make_saver(path):
     return h5
 
 
-def test_save_excerpt_in_file_writes_a_group_with_a_string_dataset(ontology_source, tmp_path):
+def test_save_ontology_in_file_writes_a_group_with_a_string_dataset(ontology_source, tmp_path):
     path = tmp_path / 'f.h5'
     h5 = make_saver(path)
-    assert save_excerpt_in_file(h5, ontology_source, Assignment({'Det/x': PHOTODIODE}))
+    assert save_ontology_in_file(h5, ontology_source, Assignment({'Det/x': PHOTODIODE}))
     h5.close_file()
     reader = H5BrowserUtil(backend='h5py')
     reader.init_file(file_name=path, new_file=False, mode='r')
     try:
         group = reader.root().children()['Ontology']
         assert group.attrs['format'] == 'turtle' and group.attrs['version'] == '1.2'
+        assert 'assignment' in group.children()
         text = group.children()['excerpt'].read()
         assert 'Photodiode' in ''.join(t if isinstance(t, str) else bytes(t).decode() for t in text)
     finally:
         reader.close_file()
 
 
-def test_nothing_embedded_without_terms_or_source(ontology_source, tmp_path):
+def test_nothing_saved_without_terms_or_file(ontology_source, tmp_path):
     h5 = make_saver(tmp_path / 'g.h5')
-    assert not save_excerpt_in_file(h5, ontology_source, Assignment())
-    assert not save_excerpt_in_file(h5, None, Assignment({'a': PHOTODIODE}))
-    assert not save_excerpt_in_file(None, ontology_source, Assignment({'a': PHOTODIODE}))
+    assert not save_ontology_in_file(h5, ontology_source, Assignment())
+    assert not save_ontology_in_file(None, ontology_source, Assignment({'a': PHOTODIODE}))
+    assert 'Ontology' not in h5.root().children()
     h5.close_file()
 
 
-def test_excerpt_saver_acts_on_the_first_bundle_only(ontology_source, tmp_path):
+def test_assignment_is_saved_even_without_a_source(tmp_path):
+    path = tmp_path / 'k.h5'
+    h5 = make_saver(path)
+    assert save_ontology_in_file(h5, None, Assignment({'Det/x': PHOTODIODE}))
+    h5.close_file()
+    reader = H5BrowserUtil(backend='h5py')
+    reader.init_file(file_name=path, new_file=False, mode='r')
+    try:
+        children = reader.root().children()['Ontology'].children()
+        assert 'excerpt' not in children
+        text = ''.join(t if isinstance(t, str) else bytes(t).decode() for t in children['assignment'].read())
+    finally:
+        reader.close_file()
+    assert toml.loads(text) == {'assignments': {'Det/x': PHOTODIODE}}  # no source: its location stays private
+
+
+def test_ontology_saver_acts_on_the_first_bundle_only(ontology_source, tmp_path):
     h5 = make_saver(tmp_path / 'h.h5')
-    excerpt_saver = make_excerpt_saver(lambda: ontology_source, lambda: Assignment({'a': PHOTODIODE}), lambda: h5)
+    ontology_saver = make_ontology_saver(lambda: ontology_source, lambda: Assignment({'a': PHOTODIODE}), lambda: h5)
     dte = DataToExport('d', data=[DataRaw('x', data=[np.array([1.0])])])
-    excerpt_saver(DataBundle(dte, save_index=1))
+    ontology_saver(DataBundle(dte, save_index=1))
     assert 'Ontology' not in h5.root().children()
-    excerpt_saver(DataBundle(dte, save_index=0))
+    ontology_saver(DataBundle(dte, save_index=0))
     assert 'Ontology' in h5.root().children()
     h5.close_file()
 
@@ -91,7 +109,7 @@ def test_excerpt_saver_acts_on_the_first_bundle_only(ontology_source, tmp_path):
 def test_the_browser_provider_reads_what_the_manager_wrote(ontology_source, tmp_path):
     path = tmp_path / 'i.h5'
     h5 = make_saver(path)
-    save_excerpt_in_file(h5, ontology_source, Assignment({'a': PHOTODIODE}))
+    save_ontology_in_file(h5, ontology_source, Assignment({'a': PHOTODIODE}))
     h5.close_file()
     reader = H5BrowserUtil(backend='h5py')
     reader.init_file(file_name=path, new_file=False, mode='r')
