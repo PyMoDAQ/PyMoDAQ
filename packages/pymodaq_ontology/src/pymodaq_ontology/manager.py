@@ -9,6 +9,7 @@ from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_gui.managers.manager_base import ManagerBase
 from pymodaq_gui.messenger import messagebox
 
+from pymodaq.control_modules.enums import ActionIconNames
 from pymodaq.utils.dashboard_mixin import DashboardMixin
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 
@@ -137,7 +138,7 @@ class OntologyManager(DashboardMixin, ManagerBase):
                         tip='Update the channels from the control modules of the Dashboard')
         self.add_action('recap', 'Recap', 'grid_on', toolbar='management', auto_menu=True,
                         tip='Show the table of the terms assigned to the channels')
-        self.add_action('probe', 'Probe detectors', 'snap', toolbar='management', auto_menu=True,
+        self.add_action('probe', 'Probe detectors', ActionIconNames.SNAP, toolbar='management', auto_menu=True,
                         tip='Do a snap of the detectors to find the channels they emit')
 
     def connect_things(self) -> None:

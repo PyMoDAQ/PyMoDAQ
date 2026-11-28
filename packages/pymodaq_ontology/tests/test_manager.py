@@ -170,12 +170,12 @@ def test_probe_and_update_buttons_are_in_the_window(manager):
 STATES = '''
 @prefix : <http://example.org/s#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
-@prefix pq: <https://pymodaq.cnrs.fr/ontology#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix sosa: <http://www.w3.org/ns/sosa/> .
 :Block a owl:Class ; rdfs:subClassOf sosa:ActuatableProperty ; rdfs:label "Beam block" .
-:Blocked a owl:Class ; rdfs:subClassOf :Block , pq:State ; rdfs:label "Beam blocked" .
-:Open a owl:Class ; rdfs:subClassOf :Block , pq:State ; rdfs:label "Beam open" .
+:Blocked a owl:NamedIndividual , :Block ; rdfs:label "Beam blocked" .
+:Open a owl:NamedIndividual , :Block ; rdfs:label "Beam open" .
+:Block owl:equivalentClass [ a owl:Class ; owl:oneOf ( :Blocked :Open ) ] .
 '''
 S = 'http://example.org/s#'
 

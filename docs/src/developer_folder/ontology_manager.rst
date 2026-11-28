@@ -375,9 +375,10 @@ channels, a table of **states**: a value of an actuator associated with a term t
       - yes, as ``semantic_iri``
       - yes, in the ``assignment`` of the ``Ontology`` group (see above); also used to move the actuators
 
-A term is a state when it is a kind of ``https://pymodaq.cnrs.fr/ontology#State`` (a placeholder namespace until the
-final one is chosen). The popup of a channel still shows the states in the hierarchy, in grey italics with a legend, but
-does not let them be selected: a state is the meaning of a value of an actuator, not a channel.
+A state is a member of an enumeration (``owl:oneOf``): *Beam block* is defined as the enumeration of *Beam blocked* and
+*Beam open*, the usual OWL way to list the values of a quality. The popup of a channel still shows the states in the
+hierarchy, in grey italics with a legend, but does not let them be selected: a state is the meaning of a value of an
+actuator, not a channel.
 
 In the window, *Add state...* opens one popup with the actuator (only those that have a term), its value (filled with
 its current value) and the state, chosen in a list of the kinds of the term of the actuator, so *Beam blocked* and
