@@ -137,8 +137,10 @@ class OntologyManager(DashboardMixin, ManagerBase):
         return toolbar, menu
 
     def setup_actions(self) -> None:
-        # one entry file per experiment is enough: no list of entries to choose from, copy, create or delete
-        for action in (ManagerActions.LIST, ManagerActions.COPY, ManagerActions.NEW, ManagerActions.DELETE):
+        # one entry file per experiment, kept at each change: nothing to choose from, copy, create, delete, save,
+        # reload or execute
+        for action in (ManagerActions.LIST, ManagerActions.COPY, ManagerActions.NEW, ManagerActions.DELETE,
+                       ManagerActions.SAVE, ManagerActions.RELOAD, ManagerActions.EXECUTE):
             self.get_action(action).setVisible(False)
         self.add_action('update_channels', 'Update channels', 'refresh', toolbar='management', auto_menu=True,
                         tip='Update the channels from the control modules of the Dashboard')
