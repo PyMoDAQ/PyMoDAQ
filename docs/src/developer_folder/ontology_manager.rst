@@ -13,6 +13,32 @@ things.
     :local:
     :depth: 2
 
+What is an ontology, and what is it for?
+----------------------------------------
+
+Instruments name their data as their authors thought of it: ``Det_1/Spectrum/CH00``, ``M2``, ``Ch1``. Two setups doing the
+same experiment give different names, and a file read years later says what was measured only to those who were there.
+
+An **ontology** is a shared vocabulary: a list of concepts (*Spectrum*, *Transmittance*, *BeamBlock*...), each with an
+identifier (an IRI, a web-style name that is unique and does not change), a definition, and relations to the other
+concepts. The relation used here is *is a kind of*: a *SampleSpectrum* is a *Spectrum*, which is a *Signal*. Ontologies
+already exist for many fields (units, quantities, observations, materials...), and a lab can write a small one for its
+own experiment.
+
+Assigning a term to a channel says **what the channel is, not what it is called**. This gives:
+
+* **files that explain themselves**: the IRI is saved next to the array, so a program (or a person) finds the spectra of
+  a file whatever the instruments were named;
+* **the same code on different setups**: an extension asks for "the channels that are a Spectrum" instead of
+  hard-coding ``Det_1``;
+* **questions that follow the relations**: asking for *Spectrum* also returns the channels assigned a *SampleSpectrum* or
+  a *DarkSpectrum*, because they are kinds of it;
+* **exchange with other tools and databases** that use the same identifiers.
+
+PyMoDAQ does not interpret the ontology: it reads the list of terms and their *is a kind of* relations, lets the user
+assign them, and records the choice. What the terms imply (formulas, units, protocols) is left to the extensions that
+use them.
+
 Vocabulary
 ----------
 
