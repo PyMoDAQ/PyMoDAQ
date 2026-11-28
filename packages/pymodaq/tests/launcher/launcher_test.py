@@ -1,6 +1,7 @@
 import sys
 
 import pytest
+import toml
 from qtpy import QtWidgets
 
 from pymodaq_utils.config import GlobalConfig, get_set_local_dir
@@ -9,6 +10,27 @@ config = GlobalConfig()
 
 
 class TestLauncher:
+
+    @pytest.mark.parametrize('encoding', ['utf-8', 'locale'])
+    def test_history_preserves_non_ascii_names(self, launcher, tmp_path, encoding):
+        history_path = tmp_path / 'history.toml'
+        timestamp = '2001-01-01:01:01:01'
+        previous = {'experiment': 'expérience', 'state': 'état'}
+        try:
+            history_path.write_text(toml.dumps({timestamp: previous}), encoding=encoding)
+        except UnicodeEncodeError:
+            pytest.skip('The local encoding cannot represent the legacy fixture')
+        launcher.history_file_path = history_path
+        launcher.state_manager.history_file_path = str(history_path)
+
+        history, keys = launcher.load_history_in_dict()
+        assert keys == [timestamp]
+        assert history[timestamp] == previous
+
+        launcher.state_manager.save_new_history_entry()
+        saved = toml.loads(history_path.read_text(encoding='utf-8'))
+        assert saved[timestamp] == previous
+        assert len(saved) == 2
 
     def test_next_arrow_disabled(self, launcher):
         assert launcher.get_action('next_config').isEnabled() == False
