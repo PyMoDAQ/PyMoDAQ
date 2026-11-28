@@ -105,9 +105,9 @@ class TestEntries:
 
     def test_unreadable_source_keeps_the_previous_terms(self, manager):
         from pymodaq_ontology.source_factory import SourceFactory
-        assert not manager.set_source(SourceFactory.create('terms', '/no/such/file.toml'))
+        assert not manager.set_source(SourceFactory.create('rdf', '/no/such/file.ttl'))
         assert len(manager.terms) == 3
-        assert manager.source.location != '/no/such/file.toml'
+        assert manager.source.location != '/no/such/file.ttl'
 
 
 def test_double_click_opens_the_popup_and_assigns(manager, monkeypatch):
@@ -156,3 +156,12 @@ def test_recap_rows(manager):
     manager.assign('Magnet', FIELD)
     rows_ = manager.recap_rows()
     assert rows_ == [('Magnet', 'Applied magnetic field', FIELD, 'assigned')]
+
+
+def test_probe_and_update_buttons_are_in_the_window(manager):
+    from qtpy import QtWidgets
+    buttons = {b.text(): b for b in manager.main_widget.findChildren(QtWidgets.QPushButton)}
+    assert {'Update channels', 'Probe detectors'} <= set(buttons)
+    manager.status_label.setText('')
+    buttons['Probe detectors'].click()  # no Dashboard here: the probe says there is nothing to probe
+    assert manager.status_label.text() == 'There is no detector to probe'

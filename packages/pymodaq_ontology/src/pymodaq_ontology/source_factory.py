@@ -3,9 +3,8 @@
 A source reads the terms of an ontology from somewhere (a file, a web address...) in some format. The manager only
 asks it for a list of :class:`~pymodaq_ontology.terms.OntologyTerm`. The sources provided are in the sibling folder
 ``sources``, one module per source type, each registering itself with :meth:`SourceFactory.register`: adding a source
-type is adding a file. A format that needs a library (RDF/Turtle for instance) is read by a source type provided by a
-plugin, which registers it the same way, from a module or a class named in the ``pymodaq.ontology_sources`` entry
-point group.
+type is adding a file. A plugin can provide other source types and registers them the same way, from a module or a
+class named in the ``pymodaq.ontology_sources`` entry point group.
 """
 from abc import ABC, abstractmethod
 from importlib import import_module
@@ -32,7 +31,7 @@ class OntologySource(ABC):
 
     @property
     def identifier(self) -> str:
-        """What identifies the source in the entry files, for instance ``terms:/path/to/file.toml``"""
+        """What identifies the source in the entry files, for instance ``rdf:/path/to/file.ttl``"""
         return f'{self.source_type}:{self.location}'
 
     @abstractmethod

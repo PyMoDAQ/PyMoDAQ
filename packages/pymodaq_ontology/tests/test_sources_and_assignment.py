@@ -17,17 +17,16 @@ class TestTerm:
 
 
 class TestSources:
-    def test_terms_file_source(self, source):
+    def test_rdf_source(self, source):
         terms = {term.label: term for term in source.terms()}
         assert set(terms) == {'Photodiode signal A', 'Applied magnetic field', 'Sample temperature'}
         assert terms['Photodiode signal A'].roles == (DETECTOR,)
         assert terms['Sample temperature'].roles == ()  # unknown: fits everything
-        assert terms['Sample temperature'].category == 'Environment'
 
     def test_identifier_round_trip(self, source):
         again = SourceFactory.from_identifier(source.identifier)
         assert again.location == source.location
-        assert again.source_type == 'terms'
+        assert again.source_type == 'rdf'
 
     def test_unknown_type(self):
         with pytest.raises(ValueError):

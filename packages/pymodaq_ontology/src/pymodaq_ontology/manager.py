@@ -18,7 +18,7 @@ from pymodaq_ontology.channel_tree import ChannelRow, ChannelTree
 from pymodaq_ontology.channels import Channel, actuator_channels, detector_channels
 from pymodaq_ontology.source_factory import OntologySource, SourceFactory
 from pymodaq_ontology.term_picker import TermPicker
-from pymodaq_ontology.terms import ACTUATOR, DETECTOR, OntologyTerm
+from pymodaq_ontology.terms import ACTUATOR, DETECTOR, OntologyTerm, TermHierarchy
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -39,7 +39,7 @@ class OntologyManager(DashboardMixin, ManagerBase):
 
     entry_type = 'ontology'
     entry_extension = '.ontology'
-    icon_name = 'hub'
+    icon_name = 'account_tree'
 
     def __init__(self, dashboard: Optional['DashBoard'] = None, **kwargs):
         self.assignment = Assignment()
@@ -98,17 +98,30 @@ class OntologyManager(DashboardMixin, ManagerBase):
         self.channel_tree.itemDoubleClicked.connect(self._on_double_clicked)
         self.status_label = QtWidgets.QLabel('Double click the term of a channel to choose it.')
 
+        # the same actions as the toolbar, within reach of the channels they refresh
+        update_button = QtWidgets.QPushButton('Update channels')
+        update_button.setToolTip('Update the channels from the control modules of the Dashboard')
+        update_button.clicked.connect(self.update_channels_from_dashboard)
+        probe_button = QtWidgets.QPushButton('Probe detectors')
+        probe_button.setToolTip('Do a snap of the detectors to find the channels they emit')
+        probe_button.clicked.connect(self.probe)
+        buttons_row = QtWidgets.QHBoxLayout()
+        buttons_row.addWidget(update_button)
+        buttons_row.addWidget(probe_button)
+        buttons_row.addStretch(1)
+
         layout = QtWidgets.QVBoxLayout(self.main_widget)
         layout.addLayout(source_row)
+        layout.addLayout(buttons_row)
         layout.addWidget(self.channel_tree)
         layout.addWidget(self.status_label)
 
     def setup_actions(self) -> None:
         self.add_action('update_channels', 'Update channels', 'refresh', toolbar='management', auto_menu=True,
                         tip='Update the channels from the control modules of the Dashboard')
-        self.add_action('recap', 'Recap', 'table_view', toolbar='management', auto_menu=True,
+        self.add_action('recap', 'Recap', 'grid_on', toolbar='management', auto_menu=True,
                         tip='Show the table of the terms assigned to the channels')
-        self.add_action('probe', 'Probe detectors', 'search', toolbar='management', auto_menu=True,
+        self.add_action('probe', 'Probe detectors', 'snap', toolbar='management', auto_menu=True,
                         tip='Do a snap of the detectors to find the channels they emit')
 
     def connect_things(self) -> None:
@@ -146,6 +159,18 @@ class OntologyManager(DashboardMixin, ManagerBase):
         source = SourceFactory.create(self.source_type.currentText(), self.source_location.text())
         if self.set_source(source):
             self.save_current_entry()
+
+    # ---- the relations between the terms
+    @property
+    def hierarchy(self) -> TermHierarchy:
+        return TermHierarchy(self.terms.values())
+
+    def channels_of_concept(self, concept_iri: str) -> list[Channel]:
+        """The channels whose assigned term is the concept or a kind of it (what the channels *mean*, not what
+        they are called)"""
+        hierarchy = self.hierarchy
+        return [channel for channel in self.channels
+                if (iri := self.assignment.get(channel.key)) and hierarchy.is_a(iri, concept_iri)]
 
     # ---- the annotation of the saved data
     def attach_worker(self, worker) -> None:

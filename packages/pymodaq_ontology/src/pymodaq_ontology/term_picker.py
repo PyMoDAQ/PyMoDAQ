@@ -3,13 +3,15 @@ from typing import Optional
 
 from qtpy import QtCore, QtWidgets
 
-from pymodaq_ontology.terms import OntologyTerm
+from pymodaq_ontology.terms import OntologyTerm, TermHierarchy
 
 IRI_ROLE = QtCore.Qt.ItemDataRole.UserRole
 
 
 class TermPicker(QtWidgets.QDialog):
-    """Search field and tree of terms, grouped by category, with the description of the selected term
+    """Search field and tree of terms with the description of the selected term
+
+    The terms are grouped by category or, when they have parents (``broader``), under what they are a kind of.
 
     Typing in the field filters the terms and selects the first one left, ``Enter`` (or a double click, or OK)
     validates. When a kind of channel is given, only the terms that fit it are listed, unless *Show all terms*
@@ -52,42 +54,81 @@ class TermPicker(QtWidgets.QDialog):
     def _rebuild(self) -> None:
         self.tree.clear()
         kind = None if self.show_all.isChecked() else self.kind
+        shown = {iri: term for iri, term in self.terms.items() if not (kind and not term.fits(kind))}
+        hierarchy = TermHierarchy(shown.values())
+        if hierarchy.has_relations:
+            self._build_hierarchy(hierarchy)
+        else:
+            self._build_categories(shown)
+        self._filter(self.search.text())
+
+    def _new_item(self, parent, term: OntologyTerm) -> QtWidgets.QTreeWidgetItem:
+        item = QtWidgets.QTreeWidgetItem(parent, [term.label])
+        item.setData(0, IRI_ROLE, term.iri)
+        item.setToolTip(0, term.description)
+        if term.iri == self.current_iri:
+            self.tree.setCurrentItem(item)
+        return item
+
+    def _build_categories(self, shown: dict[str, OntologyTerm]) -> None:
+        """No relation between the terms: they are grouped by category"""
         categories: dict[str, QtWidgets.QTreeWidgetItem] = {}
-        for term in self.terms.values():
-            if kind and not term.fits(kind):
-                continue
+        for term in shown.values():
             if term.category not in categories:
                 group = QtWidgets.QTreeWidgetItem(self.tree, [term.category or 'Terms'])
                 group.setFlags(QtCore.Qt.ItemFlag.ItemIsEnabled)
                 group.setExpanded(True)
                 categories[term.category] = group
-            item = QtWidgets.QTreeWidgetItem(categories[term.category], [term.label])
-            item.setData(0, IRI_ROLE, term.iri)
-            item.setToolTip(0, term.description)
-            if term.iri == self.current_iri:
-                self.tree.setCurrentItem(item)
-        self._filter(self.search.text())
+            self._new_item(categories[term.category], term)
+
+    def _build_hierarchy(self, hierarchy: TermHierarchy) -> None:
+        """The terms are shown under the term they are a kind of (under the first one if there are several)"""
+        placed: set[str] = set()
+
+        def add(parent, iri: str) -> None:
+            placed.add(iri)
+            item = self._new_item(parent, hierarchy.terms[iri])
+            item.setExpanded(True)
+            for child in hierarchy.children(iri):
+                if child not in placed and hierarchy.parents(child)[0] == iri:
+                    add(item, child)
+
+        for root in hierarchy.roots():
+            add(self.tree, root)
+        for iri in hierarchy.terms:  # a loop has no root: do not lose its terms
+            if iri not in placed:
+                add(self.tree, iri)
 
     def _leaves(self):
+        """(parent item or None, item) of each term of the tree"""
+        def walk(parent, item):
+            if item.data(0, IRI_ROLE) is not None:
+                yield parent, item
+            for i in range(item.childCount()):
+                yield from walk(item, item.child(i))
+
         for i in range(self.tree.topLevelItemCount()):
-            group = self.tree.topLevelItem(i)
-            for j in range(group.childCount()):
-                yield group, group.child(j)
+            yield from walk(None, self.tree.topLevelItem(i))
 
     def _filter(self, text: str) -> None:
         text = text.strip().lower()
-        first = None
-        shown = set()
-        for group, leaf in self._leaves():
-            term = self.terms[leaf.data(0, IRI_ROLE)]
-            visible = not text or text in f'{term.label} {term.iri} {term.description}'.lower()
-            leaf.setHidden(not visible)
-            if visible:
-                shown.add(id(group))
-                first = first or leaf
+
+        def matches(item) -> bool:
+            iri = item.data(0, IRI_ROLE)
+            term = self.terms.get(iri)
+            return term is not None and (not text or text in f'{term.label} {term.iri} {term.description}'.lower())
+
+        def apply(item) -> bool:
+            """Show the item if it or one of its children matches, return whether it is shown"""
+            visible = matches(item)
+            for i in range(item.childCount()):
+                visible = apply(item.child(i)) or visible
+            item.setHidden(not visible)
+            return visible
+
         for i in range(self.tree.topLevelItemCount()):
-            group = self.tree.topLevelItem(i)
-            group.setHidden(id(group) not in shown)
+            apply(self.tree.topLevelItem(i))
+        first = next((item for _, item in self._leaves() if not item.isHidden() and matches(item)), None)
         if text and first is not None:  # typing then Enter is enough
             self.tree.setCurrentItem(first)
 
