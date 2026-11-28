@@ -110,11 +110,26 @@ class OntologyManager(DashboardMixin, ManagerBase):
         buttons_row.addWidget(update_button)
         buttons_row.addWidget(probe_button)
         buttons_row.addStretch(1)
+        self.states_table = QtWidgets.QTableWidget(0, 3)
+        self.states_table.setHorizontalHeaderLabels(['Actuator', 'Value', 'State'])
+        self.states_table.horizontalHeader().setStretchLastSection(True)
+        self.states_table.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.states_table.setToolTip('The value of an actuator, as configured, that stands for a state of the ontology')
+        add_state = QtWidgets.QPushButton('Add state...')
+        add_state.clicked.connect(self.add_state_dialog)
+        remove_state = QtWidgets.QPushButton('Remove state')
+        remove_state.clicked.connect(self.remove_selected_state)
+        states_row = QtWidgets.QHBoxLayout()
+        for widget in (QtWidgets.QLabel('States of the actuators:'), add_state, remove_state):
+            states_row.addWidget(widget)
+        states_row.addStretch(1)
 
         layout = QtWidgets.QVBoxLayout(self.main_widget)
         layout.addLayout(source_row)
         layout.addLayout(buttons_row)
         layout.addWidget(self.channel_tree)
+        layout.addLayout(states_row)
+        layout.addWidget(self.states_table)
         layout.addWidget(self.status_label)
 
     def setup_actions(self) -> None:
@@ -291,6 +306,7 @@ class OntologyManager(DashboardMixin, ManagerBase):
                             status='missing')  # assigned, but no such channel now
                  for key in sorted(set(self.assignment.values) - known)]
         self.channel_tree.set_rows(rows)
+        self._refresh_states()
 
     def _on_double_clicked(self, item: QtWidgets.QTreeWidgetItem, _column: int = 0) -> None:
         key = self.channel_tree.key_of(item)
@@ -301,6 +317,71 @@ class OntologyManager(DashboardMixin, ManagerBase):
                             title=f'Term for {key}')
         if picker.exec():
             self.assign(key, picker.selected_iri)
+
+    # ---- the states of the actuators: a value of the actuator, as the user configured it, stands for a term
+    def assign_state(self, actuator: str, value: float, iri: str) -> None:
+        """Associate the state (term) with the value of the actuator and keep it in the current entry"""
+        self.assignment.set_state(actuator, value, iri)
+        self.save_current_entry()
+        self._refresh_states()
+
+    def remove_state(self, actuator: str, value: float) -> None:
+        self.assign_state(actuator, value, '')
+
+    def moves_for_states(self, wanted: list[str]) -> tuple[list[tuple[str, float]], list[str]]:
+        """The moves to reach these states: (actuator, value) for each, and the states with no association
+
+        The association of a state, or of a kind of it, is used: a value associated with ``Beam blocked`` serves
+        for the state ``Beam blocked`` and for a more general state it is a kind of. This is how the extensions
+        ask for what they need, in terms of the ontology, without knowing the values.
+        """
+        moves, missing = [], []
+        for state in wanted:
+            found = next((s for s in self.assignment.states if self.hierarchy.is_a(s.iri, state)), None)
+            if found is None:
+                missing.append(state)
+            else:
+                moves.append((found.actuator, found.value))
+        return moves, missing
+
+    def state_choices(self, actuator: str) -> list[OntologyTerm]:
+        """The terms that can be the state of an actuator: the kinds of its term (all the terms with a role of
+        actuator if it has none, or if nothing is a kind of it)"""
+        iri = self.assignment.get(actuator)
+        kinds = [self.terms[i] for i in self.hierarchy.descendants(iri) if i in self.terms] if iri else []
+        return kinds or [term for term in self.terms.values() if term.fits(ACTUATOR)]
+
+    def add_state_dialog(self) -> None:
+        """Ask the actuator, its value and the state the value stands for"""
+        actuators = [c.module for c in self.channels if c.kind == ACTUATOR]
+        if not actuators or not self.terms:
+            self.status_label.setText('Load an ontology and update the channels first')
+            return
+        actuator, ok = QtWidgets.QInputDialog.getItem(self.mainwindow, 'State', 'Actuator:', actuators, 0, False)
+        if not ok:
+            return
+        value, ok = QtWidgets.QInputDialog.getDouble(self.mainwindow, 'State', f'Value of {actuator}:',
+                                                     decimals=6, minValue=-1e12, maxValue=1e12)
+        if not ok:
+            return
+        picker = TermPicker(self.state_choices(actuator), self.mainwindow, '', ACTUATOR,
+                            title=f'State of {actuator} at {value:g}')
+        if picker.exec():
+            self.assign_state(actuator, value, picker.selected_iri)
+
+    def remove_selected_state(self) -> None:
+        row = self.states_table.currentRow()
+        if 0 <= row < len(self.assignment.states):
+            state = self.assignment.states[row]
+            self.remove_state(state.actuator, state.value)
+
+    def _refresh_states(self) -> None:
+        table = self.states_table
+        table.setRowCount(len(self.assignment.states))
+        for row, state in enumerate(self.assignment.states):
+            term = self.terms.get(state.iri)
+            for column, text in enumerate((state.actuator, f'{state.value:g}', term.label if term else state.iri)):
+                table.setItem(row, column, QtWidgets.QTableWidgetItem(text))
 
     def assign(self, channel_key: str, iri: str) -> None:
         """Assign the term to the channel and keep the assignment in the current entry"""

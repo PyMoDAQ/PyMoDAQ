@@ -165,3 +165,59 @@ def test_probe_and_update_buttons_are_in_the_window(manager):
     manager.status_label.setText('')
     buttons['Probe detectors'].click()  # no Dashboard here: the probe says there is nothing to probe
     assert manager.status_label.text() == 'There is no detector to probe'
+
+STATES = '''
+@prefix : <http://example.org/s#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sosa: <http://www.w3.org/ns/sosa/> .
+:Block a owl:Class ; rdfs:subClassOf sosa:ActuatableProperty ; rdfs:label "Beam block" .
+:Blocked a owl:Class ; rdfs:subClassOf :Block ; rdfs:label "Beam blocked" .
+:Open a owl:Class ; rdfs:subClassOf :Block ; rdfs:label "Beam open" .
+'''
+S = 'http://example.org/s#'
+
+
+@pytest.fixture
+def state_manager(manager, tmp_path):
+    from pymodaq_ontology.source_factory import SourceFactory
+    path = tmp_path / 'states.ttl'
+    path.write_text(STATES, encoding='utf-8')
+    manager.set_source(SourceFactory.create('rdf', str(path)))
+    return manager
+
+
+def test_a_value_of_an_actuator_stands_for_a_state(state_manager):
+    """The values are whatever the user configured: the ontology only knows the states"""
+    state_manager.assign_state('Magnet', 12.5, S + 'Blocked')
+    state_manager.assign_state('Magnet', 3., S + 'Open')
+    assert state_manager.moves_for_states([S + 'Blocked']) == ([('Magnet', 12.5)], [])
+    assert state_manager.moves_for_states([S + 'Open', S + 'Blocked']) == ([('Magnet', 3.), ('Magnet', 12.5)], [])
+
+
+def test_the_state_without_association_is_reported(state_manager):
+    state_manager.assign_state('Magnet', 1., S + 'Open')
+    assert state_manager.moves_for_states([S + 'Blocked']) == ([], [S + 'Blocked'])
+
+
+def test_a_kind_of_the_state_serves_for_the_state(state_manager):
+    state_manager.assign_state('Magnet', 1., S + 'Blocked')
+    assert state_manager.moves_for_states([S + 'Block']) == ([('Magnet', 1.)], [])  # a blocked beam is a block state
+
+
+def test_the_states_are_kept_in_the_entry_and_can_be_replaced(state_manager, tmp_path):
+    from pymodaq_ontology.assignment import load_entry, save_entry
+    state_manager.assign_state('Magnet', 1., S + 'Open')
+    state_manager.assign_state('Magnet', 1., S + 'Blocked')  # same value: replaced
+    assert [(s.value, s.iri) for s in state_manager.assignment.states] == [(1., S + 'Blocked')]
+    path = tmp_path / 'e.ontology'
+    save_entry(path, state_manager.assignment, state_manager.source)
+    assignment, _ = load_entry(path)
+    assert assignment.states == state_manager.assignment.states
+    state_manager.remove_state('Magnet', 1.)
+    assert state_manager.assignment.states == []
+
+
+def test_the_states_choices_are_the_kinds_of_the_term_of_the_actuator(state_manager):
+    state_manager.assign('Magnet', S + 'Block')
+    assert {t.label for t in state_manager.state_choices('Magnet')} == {'Beam blocked', 'Beam open'}

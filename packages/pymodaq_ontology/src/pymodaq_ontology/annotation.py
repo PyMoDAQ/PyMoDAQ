@@ -50,7 +50,7 @@ def embed_excerpt(h5saver, source, assignment: Assignment) -> bool:
     the ontology: group ``Ontology`` of the root, with the string array ``excerpt`` and the attributes ``format``,
     ``iri`` and ``version`` (the last two when the source knows them).
     Returns False if there is nothing to save or the file cannot be written."""
-    iris = sorted({iri for iri in assignment.values.values() if iri})
+    iris = sorted({iri for iri in assignment.values.values() if iri} | {s.iri for s in assignment.states})
     if source is None or not iris or h5saver is None:
         return False
     try:
