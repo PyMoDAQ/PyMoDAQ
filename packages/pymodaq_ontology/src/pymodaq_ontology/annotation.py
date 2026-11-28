@@ -5,14 +5,15 @@ from pymodaq_utils.logger import set_logger, get_module_name
 
 from pymodaq_data.h5modules.data_saving import DataBundle
 
-from pymodaq_ontology.assignment import Assignment
+from pymodaq_ontology.assignment import Assignment, assignment_text
 from pymodaq_ontology.channels import Channel
 from pymodaq_ontology.terms import ACTUATOR, DETECTOR
 
 logger = set_logger(get_module_name(__file__))
 
 ATTRIBUTE = 'semantic_iri'
-EMBEDDED_TEXT = 'excerpt'  # string array holding the text
+EMBEDDED_TEXT = 'excerpt'  # string array holding the excerpt of the ontology
+EMBEDDED_ASSIGNMENT = 'assignment'  # string array holding the assignment (TOML)
 EMBEDDED_GROUP = 'Ontology'  # read by pymodaq_data.h5modules.representations.embedded_semantics
 
 
@@ -46,35 +47,39 @@ def make_annotator(get_assignment: Callable[[], Assignment]) -> Callable[[DataBu
     return annotator
 
 
-def save_excerpt_in_file(h5saver, source, assignment: Assignment) -> bool:
-    """Save in the file the part of the ontology describing the assigned terms, so that the file can be read without
-    the ontology: group ``Ontology`` of the root, with the string array ``excerpt`` and the attributes ``format``,
-    ``iri`` and ``version`` (the last two when the source knows them).
+def save_ontology_in_file(h5saver, source, assignment: Assignment) -> bool:
+    """Save in the file what is needed to understand the terms of the data without the manager: group ``Ontology``
+    of the root, with
+
+    * the string array ``excerpt``: the part of the ontology describing the assigned terms (Turtle), with the group
+      attributes ``format``, and ``iri`` and ``version`` when the source knows them; only if there is a source,
+    * the string array ``assignment``: the assignment (TOML: the term of each channel and the states of the actuators).
+
     Returns False if there is nothing to save or the file cannot be written."""
     iris = sorted({iri for iri in assignment.values.values() if iri} | {s.iri for s in assignment.states})
-    if source is None or not iris or h5saver is None:
+    if not iris or h5saver is None:
         return False
     try:
-        text, info = source.excerpt(iris)
-        if not text:
-            return False
         group = h5saver.get_set_group('/', EMBEDDED_GROUP)
-        h5saver.add_string_array(group, EMBEDDED_TEXT).append(text)
-        for name, value in {'format': 'turtle', **info}.items():
-            h5saver.set_attr(group, name, value)
+        h5saver.add_string_array(group, EMBEDDED_ASSIGNMENT).append(assignment_text(assignment))
+        text, info = source.excerpt(iris) if source is not None else ('', {})
+        if text:
+            h5saver.add_string_array(group, EMBEDDED_TEXT).append(text)
+            for name, value in {'format': 'turtle', **info}.items():
+                h5saver.set_attr(group, name, value)
         return True
-    except Exception as e:  # an excerpt that cannot be written must never stop the saving of the data
-        logger.warning(f'Could not save the ontology excerpt in the file: {e}')
+    except Exception as e:  # what cannot be written must never stop the saving of the data
+        logger.warning(f'Could not save the ontology in the file: {e}')
         return False
 
 
-def make_excerpt_saver(get_source: Callable[[], object], get_assignment: Callable[[], Assignment],
-                       get_h5saver: Callable[[], object]) -> Callable[[DataBundle], Optional[DataBundle]]:
-    """The excerpt saver: a function to give to ``add_data_preparer``. With the first bundle of an acquisition, it
-    saves the excerpt of the ontology (see :func:`save_excerpt_in_file`). The file is then open and no other bundle is
-    being saved."""
-    def excerpt_saver(bundle: DataBundle) -> DataBundle:
+def make_ontology_saver(get_source: Callable[[], object], get_assignment: Callable[[], Assignment],
+                        get_h5saver: Callable[[], object]) -> Callable[[DataBundle], Optional[DataBundle]]:
+    """The ontology saver: a function to give to ``add_data_preparer``. With the first bundle of an acquisition, it
+    saves the excerpt of the ontology and the assignment (see :func:`save_ontology_in_file`). The file is then open
+    and no other bundle is being saved."""
+    def ontology_saver(bundle: DataBundle) -> DataBundle:
         if not bundle.save_index:
-            save_excerpt_in_file(get_h5saver(), get_source(), get_assignment())
+            save_ontology_in_file(get_h5saver(), get_source(), get_assignment())
         return bundle
-    return excerpt_saver
+    return ontology_saver
