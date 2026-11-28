@@ -5,6 +5,7 @@ from pathlib import Path
 
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_data.h5modules.representations import explicit_node_name
 
 config = Config()
 logger = set_logger(get_module_name(__file__))
@@ -244,8 +245,9 @@ def clickable(widget):
 
 def h5tree_to_QTree(base_node, base_tree_elt=None, pixmap_items=[]):
     """
-        | Convert a loaded h5 file to a QTreeWidgetItem element structure containing two columns.
-        | The first is the name of the h5 current node, the second is the path of the node in the h5 structure.
+        | Convert a loaded h5 file to a QTreeWidgetItem element structure containing three columns.
+        | The first is the name of the h5 current node completed with what it holds (data label and unit,
+        | see explicit_node_name), the third is the path of the node in the h5 structure.
         |
         | Recursive function discreasing on base_node.
 
@@ -273,7 +275,7 @@ def h5tree_to_QTree(base_node, base_tree_elt=None, pixmap_items=[]):
     if base_tree_elt is None:
         base_tree_elt = QtWidgets.QTreeWidgetItem([base_node.name, "", base_node.path])
     for node_name, node in base_node.children().items():
-        child = QtWidgets.QTreeWidgetItem([node_name, "", node.path])
+        child = QtWidgets.QTreeWidgetItem([explicit_node_name(node_name, node), "", node.path])
         klass = node.attrs['CLASS']
         tooltip = []
 

@@ -1,0 +1,253 @@
+from pathlib import Path
+from unittest import mock
+
+import numpy as np
+import pytest
+
+from pymodaq_data.data import Axis, DataRaw, DataToExport
+from pymodaq_data.h5modules.data_saving import DataToExportSaver
+from pymodaq_data.h5modules.saving import H5SaverLowLevel
+from pymodaq_gui.h5modules import browsing
+from qtpy import QtWidgets
+
+
+@pytest.fixture
+def h5_path(tmp_path):
+    dte = DataToExport('test')
+    for name, concept in (('background', 'DarkSpectrum'), ('signal', 'SampleSpectrum')):
+        data = DataRaw(name, data=[np.random.rand(10)], units='counts', labels=[name],
+                       axes=[Axis('x', data=np.arange(10.), index=0)])
+        data.add_extra_attribute(semantic_iri='https://x.org/spectro#' + concept,
+                                 quantity_kind='qk:Count', unit_iri='unit:NUM')
+        dte.append(data)
+    h5 = H5SaverLowLevel()
+    path = tmp_path / 'file.h5'
+    h5.init_file(file_name=path, new_file=True)
+    DataToExportSaver(h5).add_data(h5.get_set_group(h5.raw_group, 'Det'), dte)
+    h5.close_file()
+    return path
+
+
+def test_modes_show_same_data(qtbot, h5_path, monkeypatch):
+    monkeypatch.setattr(browsing, 'config', FakeConfig())
+    with mock.patch.object(browsing.H5Browser, 'check_version'):
+        window = QtWidgets.QMainWindow()
+        browser = browsing.H5Browser(window, h5file_path=h5_path)
+    qtbot.addWidget(window)
+    shown = []
+    browser.hyper_viewer.show_data = lambda data, **kwargs: shown.append(data)
+    tree = browser.view.h5file_tree.tree
+
+    def leaves():
+        stack, found = [tree.topLevelItem(0)], []
+        while stack:
+            item = stack.pop()
+            stack += [item.child(i) for i in range(item.childCount())]
+            if item.text(2).endswith('Data00'):
+                found.append(item)
+        return found
+
+    assert [browser.view.mode_combo.itemData(i) for i in range(browser.view.mode_combo.count())] == \
+        ['hdf5', 'concept', 'quantity']
+
+    for mode in ('hdf5', 'concept', 'quantity'):
+        browser.set_mode(mode)
+        assert len(leaves()) == 2
+        shown.clear()
+        for leaf in leaves():
+            tree.setCurrentItem(leaf)
+            browser.show_h5_data(leaf)
+        assert sorted(d.name for d in shown) == ['background', 'signal']
+
+    # an item that is only a grouping label (a concept) does nothing on double-click
+    browser.set_mode('concept')
+    shown.clear()
+    tree.setCurrentItem(tree.topLevelItem(0).child(0))
+    browser.show_h5_data(tree.currentItem())
+    assert shown == []
+
+
+def test_semantics_choice(qtbot, h5_path, tmp_path, monkeypatch):
+    pytest.importorskip('rdflib')
+    monkeypatch.setattr(browsing, 'config', FakeConfig())
+    ttl = tmp_path / 'onto.ttl'
+    ttl.write_text("""
+@prefix : <https://x.org/spectro#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+:Spectrum rdfs:label "Spectrum" .
+:DarkSpectrum rdfs:subClassOf :Spectrum ; rdfs:label "Dark" .
+""")
+    with mock.patch.object(browsing.H5Browser, 'check_version'):
+        window = QtWidgets.QMainWindow()
+        browser = browsing.H5Browser(window, h5file_path=h5_path)
+    qtbot.addWidget(window)
+    tree = browser.view.h5file_tree.tree
+    combo = browser.view.semantics_combo
+    assert [combo.itemData(i) for i in range(combo.count())] == ['', browsing.OTHER_FILE]
+    assert not combo.isEnabled()  # standard hierarchy: no ontology involved
+
+    browser.set_mode('concept')
+    assert combo.isEnabled()
+    labels = lambda: [tree.topLevelItem(0).child(i).text(0) for i in range(tree.topLevelItem(0).childCount())]
+    assert labels() == ['Dark spectrum', 'Sample spectrum']
+
+    with mock.patch.object(browsing, 'select_file', return_value=ttl):  # "Other file..."
+        browser.set_semantics_choice(browsing.OTHER_FILE)
+    # the ontology only knows the dark spectrum: 'Sample spectrum' stays at the top with its default label
+    assert labels() == ['Sample spectrum', 'Spectrum']
+    assert tree.topLevelItem(0).child(1).child(0).text(0) == 'Dark'
+    assert combo.currentText() == 'onto.ttl'  # the chosen file is now in the list
+
+    with mock.patch.object(browsing, 'select_file', return_value=None):  # cancelled: nothing changes
+        browser.set_semantics_choice(browsing.OTHER_FILE)
+    assert labels() == ['Sample spectrum', 'Spectrum']
+
+    browser.set_semantics_choice(browsing.NO_SEMANTICS)
+    assert labels() == ['Dark spectrum', 'Sample spectrum']
+
+
+class FakeConfig:
+    """Stand-in for the user config, so that tests do not write in the real one"""
+    def __init__(self, **values):
+        self.values = {'last_ontology': '', 'ontology_files': [], 'representation': ['hdf5', 'concept', 'quantity'],
+                       **values}
+
+    def __call__(self, *path):
+        return self.values[path[-1]]
+
+    def __setitem__(self, path, value):
+        self.values[path[-1]] = value
+
+
+def make_ttl(path):
+    path.write_text('@prefix : <https://x.org/spectro#> . @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .'
+                    ' :Spectrum rdfs:label "Spectrum" . :DarkSpectrum rdfs:subClassOf :Spectrum .')
+    return path
+
+
+def open_browser(qtbot, h5_path):
+    with mock.patch.object(browsing.H5Browser, 'check_version'):
+        window = QtWidgets.QMainWindow()
+        browser = browsing.H5Browser(window, h5file_path=h5_path)
+    qtbot.addWidget(window)
+    return browser
+
+
+def test_semantics_choice_is_remembered(qtbot, h5_path, tmp_path):
+    pytest.importorskip('rdflib')
+    first, second = make_ttl(tmp_path / 'first.ttl'), make_ttl(tmp_path / 'second.ttl')
+    fake = FakeConfig()
+    with mock.patch.object(browsing, 'config', fake):
+        browser = open_browser(qtbot, h5_path)
+        browser.set_mode('concept')
+        for ttl in (first, second):
+            with mock.patch.object(browsing, 'select_file', return_value=ttl):
+                browser.set_semantics_choice(browsing.OTHER_FILE)
+        assert fake.values['last_ontology'] == str(second)
+        assert fake.values['ontology_files'] == [str(second), str(first)]  # most recent first
+
+        # next start: the last ontology is selected again and both files are in the list
+        later = open_browser(qtbot, h5_path)
+        assert later.semantics_key == str(second)
+        later.set_mode('concept')
+        combo = later.view.semantics_combo
+        assert combo.currentText() == 'second.ttl'
+        assert [combo.itemText(i) for i in range(combo.count())] == \
+            ['No ontology', 'second.ttl', 'first.ttl', 'Other file...']
+
+    # a remembered file that disappeared is ignored, without error
+    second.unlink()
+    with mock.patch.object(browsing, 'config', FakeConfig(last_ontology=str(second),
+                                                           ontology_files=[str(second), str(first)])):
+        browser = open_browser(qtbot, h5_path)
+        assert browser.semantics_key == browsing.NO_SEMANTICS
+        browser.set_mode('concept')
+        assert [browser.view.semantics_combo.itemText(i) for i in range(browser.view.semantics_combo.count())] == \
+            ['No ontology', 'first.ttl', 'Other file...']
+
+
+def test_representation_mode_is_remembered(qtbot, h5_path):
+    fake = FakeConfig()
+    with mock.patch.object(browsing, 'config', fake):
+        browser = open_browser(qtbot, h5_path)
+        assert browser.mode == 'hdf5'  # default: first of the list
+        browser.set_mode('quantity')
+        assert fake.values['representation'] == ['quantity', 'hdf5', 'concept']
+        browser.set_mode('concept')
+        assert fake.values['representation'] == ['concept', 'quantity', 'hdf5']
+
+        later = open_browser(qtbot, h5_path)  # next start
+        assert later.mode == 'concept'
+        assert later.view.mode_combo.currentData() == 'concept'
+        assert later.view.h5file_tree.tree.topLevelItem(0).text(0) == 'By concept'
+
+    # an unknown or removed mode in the config falls back to the standard hierarchy
+    with mock.patch.object(browsing, 'config', FakeConfig(representation=['gone', 'hdf5'])):
+        assert open_browser(qtbot, h5_path).mode == browsing.HIERARCHY_MODE
+
+
+def test_copy_node_path_in_every_mode(qtbot, h5_path, monkeypatch):
+    monkeypatch.setattr(browsing, 'config', FakeConfig())
+    browser = open_browser(qtbot, h5_path)
+    tree = browser.view.h5file_tree.tree
+    clipboard = QtWidgets.QApplication.clipboard()
+    action = browser.get_action('copy_path')
+    assert action in tree.actions()  # in the right-click menu
+
+    def items():
+        stack, found = [tree.topLevelItem(0)], []
+        while stack:
+            item = stack.pop()
+            stack += [item.child(i) for i in range(item.childCount())]
+            found.append(item)
+        return found
+
+    for mode in ('hdf5', 'concept', 'quantity'):
+        browser.set_mode(mode)
+        for item in items():
+            clipboard.setText('')
+            tree.setCurrentItem(item)
+            if item.text(2):  # points to a node: the action copies its full path
+                assert action.isEnabled()
+                action.trigger()
+                assert clipboard.text() == item.text(2)
+                assert item.text(2).startswith('/')
+            else:  # only a grouping label (concept, unit): nothing to copy
+                assert not action.isEnabled()
+                action.trigger()
+                assert clipboard.text() == ''
+
+
+def test_standard_hierarchy_names_low_level_nodes(qtbot, h5_path, monkeypatch):
+    monkeypatch.setattr(browsing, 'config', FakeConfig())
+    browser = open_browser(qtbot, h5_path)
+    assert browser.mode == 'hdf5'
+    tree = browser.view.h5file_tree.tree
+    names = {}
+    stack = [tree.topLevelItem(0)]
+    while stack:
+        item = stack.pop()
+        stack += [item.child(i) for i in range(item.childCount())]
+        names[item.text(2)] = item.text(0)
+    base = '/RawData/Det/Data1D/CH00'
+    assert names[base] == 'CH00 · background'
+    assert names[base + '/Data00'] == 'Data00 · background [counts]'
+    assert names[base + '/Axis00'] == 'Axis00 · x'            # no unit on that axis
+    assert names['/RawData/Det/Data1D'] == 'Data1D' and names['/RawData'] == 'RawData'
+
+
+def test_quantity_mode_shows_axes(qtbot, h5_path, monkeypatch):
+    monkeypatch.setattr(browsing, 'config', FakeConfig())
+    browser = open_browser(qtbot, h5_path)
+    browser.set_mode('quantity')
+    tree = browser.view.h5file_tree.tree
+    top = tree.topLevelItem(0)
+    assert [top.child(i).text(0) for i in range(top.childCount())][-1] == 'Axes'
+    axes = top.child(top.childCount() - 1)
+    leaf = axes.child(0).child(0).child(0)
+    assert leaf.text(0).startswith('Axis00 · x') and leaf.text(2).endswith('/Axis00')
+    shown = []
+    browser.hyper_viewer.show_data = lambda data, **kwargs: shown.append(data)
+    tree.setCurrentItem(leaf)
+    browser.show_h5_data(leaf)
+    assert len(shown) == 1  # the axis data are shown as in the standard hierarchy

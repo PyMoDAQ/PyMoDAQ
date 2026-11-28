@@ -34,6 +34,7 @@ dependencies = [
     "pymodaq_utils>=0.0.8",
     "scipy",
     "h5py",
+    "rdflib>=7.0",
 ]
 
 [project.optional-dependencies]

@@ -35,7 +35,10 @@ class TreeLayout(QObject):
         self.tree.itemDoubleClicked.connect(lambda item, index: self.item_double_clicked_sig.emit(item))
 
     def _current_text(self, col_index: int = 2):
-        return self.tree.currentItem().text(col_index)
+        item = self.tree.currentItem()
+        if item is None:  # nothing selected, e.g. the tree has just been cleared
+            return ''
+        return item.text(col_index)
 
     def current_node_path(self):
         return self._current_text(2)
