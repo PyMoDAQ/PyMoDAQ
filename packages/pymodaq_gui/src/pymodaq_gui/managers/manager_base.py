@@ -113,6 +113,8 @@ class ManagerBase(CustomApp):
     execute_action_checkable = False
     icon_name = 'build_circle'  # the default icon to represent the manager in Toolbar and Menus
     default_entry_name = 'default'
+    single_entry = False  # if True, the manager works on one entry only: the entry list, copy, new and delete
+    #                       actions are hidden, as well as the entry list in the external toolbar
 
     def __init__(self, **kwargs):
         # what CustomApp does not know about goes to init_extra, once the Qt side is initialized
@@ -327,6 +329,9 @@ class ManagerBase(CustomApp):
                         checkable=True,
                         icon_checked_color=ThemeColor.CYAN,
                         auto_toolbar=False, auto_menu=False)
+        if self.single_entry:
+            for action in (ManagerActions.LIST, ManagerActions.COPY, ManagerActions.NEW, ManagerActions.DELETE):
+                self.get_action(action).setVisible(False)
 
     def get_external_toolbar_menu(
             self, toolbar: QtWidgets.QToolBar = None,
@@ -342,9 +347,10 @@ class ManagerBase(CustomApp):
         self.affect_to(ManagerActions.OPEN, toolbar)
         self.affect_to(ManagerActions.OPEN, menu)
 
-        self.add_widget(ManagerActions.LIST_EXTERNAL, ComboBox(), toolbar=toolbar,
-                        tip=f'List of possible {self.entry_type}s')
-        self.sync_entries_with(self.get_action(ManagerActions.LIST_EXTERNAL).widget)
+        if not self.single_entry:
+            self.add_widget(ManagerActions.LIST_EXTERNAL, ComboBox(), toolbar=toolbar,
+                            tip=f'List of possible {self.entry_type}s')
+            self.sync_entries_with(self.get_action(ManagerActions.LIST_EXTERNAL).widget)
         self.affect_to(ManagerActions.EXECUTE, toolbar)
         return toolbar, menu
 

@@ -36,6 +36,7 @@ class OntologyManager(DashboardMixin, ManagerBase):
     the term of a channel to choose it in a popup. The assignment is saved in the current entry each time it changes.
     """
     own_modules_manager = False  # only looks modules up: the ones of the dashboard
+    single_entry = True  # one entry file per experiment is enough
 
     entry_type = 'ontology'
     entry_extension = '.ontology'
