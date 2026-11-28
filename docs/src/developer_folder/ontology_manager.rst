@@ -316,6 +316,29 @@ Channels are named by the instruments (``Ocean/Spectrum/CH00``), the terms say w
 The hierarchy is rebuilt from the terms each time it is asked for; parents that the ontology does not know and loops
 are ignored. There is no query language: the question is *is this term the concept or below it?*
 
+The ontology excerpt saved with the data
+----------------------------------------
+
+An IRI alone is only useful to someone who has the ontology. With the first bundle of an acquisition, the manager
+therefore also writes in the file the part of the ontology that describes the terms it assigned, so that the file can be
+read, and shown by the h5 browser, without the ontology file:
+
+.. code-block:: text
+
+    /Ontology                  group at the root of the file
+        excerpt                string array: the excerpt, in Turtle
+        attributes: format = "turtle"
+                    iri = "http://example.org/mockexamples"   (when the ontology gives its IRI)
+                    version = "1.0"                           (when it gives a version)
+
+The excerpt keeps, for the assigned terms, all the terms they are a kind of (their ancestors) and the terms declared
+equivalent to them (``owl:equivalentClass``), and for each of these terms its type, label, definition, parents and
+equivalences. It is built by the source: ``OntologySource.excerpt(iris)`` returns ``(text, info)``, with the default
+implementation returning nothing, so a source type that cannot give one only means that no excerpt is saved. ``RdfSource``
+builds it from its rdflib graph. A second preparer, added and removed with the one that writes ``semantic_iri`` by
+``attach_worker`` and ``detach_worker``, saves it; a failure to write it is logged and never stops the saving of the data.
+The reader is ``embedded_semantics`` in ``pymodaq_data.h5modules.representations``.
+
 Status of a channel
 -------------------
 
