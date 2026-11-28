@@ -222,3 +222,25 @@ def test_the_states_are_kept_in_the_entry_and_can_be_replaced(state_manager, tmp
 def test_the_states_choices_are_the_kinds_of_the_term_of_the_actuator(state_manager):
     state_manager.assign('Magnet', S + 'Block')
     assert {t.label for t in state_manager.state_choices('Magnet')} == {'Beam blocked', 'Beam open'}
+
+
+def test_one_popup_sets_the_state_of_an_actuator(state_manager):
+    from qtpy import QtWidgets, QtCore
+    state_manager.assign('Magnet', S + 'Block')
+
+    def fill_and_accept():
+        dialog = QtWidgets.QApplication.activeModalWidget()
+        combos = dialog.findChildren(QtWidgets.QComboBox)
+        assert [combos[1].itemText(i) for i in range(combos[1].count())] == ['Beam blocked', 'Beam open']  # kinds only
+        dialog.findChild(QtWidgets.QDoubleSpinBox).setValue(12.5)
+        combos[1].setCurrentIndex(0)
+        dialog.accept()
+
+    QtCore.QTimer.singleShot(0, fill_and_accept)
+    state_manager.add_state_dialog()
+    assert [(s.actuator, s.value, s.iri) for s in state_manager.assignment.states] == [('Magnet', 12.5, S + 'Blocked')]
+
+
+def test_a_state_needs_the_actuator_to_have_a_term(state_manager):
+    state_manager.add_state_dialog()
+    assert state_manager.status_label.text() == 'Assign a term to an actuator first'

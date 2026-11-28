@@ -353,22 +353,44 @@ class OntologyManager(DashboardMixin, ManagerBase):
         return kinds or [term for term in self.terms.values() if term.fits(ACTUATOR)]
 
     def add_state_dialog(self) -> None:
-        """Ask the actuator, its value and the state the value stands for"""
-        actuators = [c.module for c in self.channels if c.kind == ACTUATOR]
-        if not actuators or not self.terms:
-            self.status_label.setText('Load an ontology and update the channels first')
+        """One popup: the actuator (those with a term), its value and the state the value stands for"""
+        actuators = [c for c in self.channels if c.kind == ACTUATOR and self.assignment.get(c.module)]
+        if not actuators:
+            self.status_label.setText('Assign a term to an actuator first')
             return
-        actuator, ok = QtWidgets.QInputDialog.getItem(self.mainwindow, 'State', 'Actuator:', actuators, 0, False)
-        if not ok:
-            return
-        value, ok = QtWidgets.QInputDialog.getDouble(self.mainwindow, 'State', f'Value of {actuator}:',
-                                                     decimals=6, minValue=-1e12, maxValue=1e12)
-        if not ok:
-            return
-        picker = TermPicker(self.state_choices(actuator), self.mainwindow, '', ACTUATOR,
-                            title=f'State of {actuator} at {value:g}')
-        if picker.exec():
-            self.assign_state(actuator, value, picker.selected_iri)
+        dialog = QtWidgets.QDialog(self.mainwindow)
+        dialog.setWindowTitle('State of an actuator')
+        actuator_combo = QtWidgets.QComboBox()
+        actuator_combo.addItems([c.module for c in actuators])
+        value_spin = QtWidgets.QDoubleSpinBox()
+        value_spin.setDecimals(6)
+        value_spin.setRange(-1e12, 1e12)
+        state_combo = QtWidgets.QComboBox()
+
+        def actuator_changed() -> None:
+            name = actuator_combo.currentText()
+            state_combo.clear()
+            for term in self.state_choices(name):
+                state_combo.addItem(term.label, term.iri)
+            last = next((c.last_value for c in actuators if c.module == name), '')
+            try:
+                value_spin.setValue(float(last))  # the current value of the actuator is the likely one
+            except ValueError:
+                pass
+
+        actuator_combo.currentTextChanged.connect(lambda _: actuator_changed())
+        actuator_changed()
+        form = QtWidgets.QFormLayout(dialog)
+        form.addRow('Actuator:', actuator_combo)
+        form.addRow('Value:', value_spin)
+        form.addRow('State:', state_combo)
+        buttons = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.StandardButton.Ok |
+                                             QtWidgets.QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        form.addRow(buttons)
+        if dialog.exec() and state_combo.currentData():
+            self.assign_state(actuator_combo.currentText(), value_spin.value(), state_combo.currentData())
 
     def remove_selected_state(self) -> None:
         row = self.states_table.currentRow()
