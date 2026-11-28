@@ -289,8 +289,8 @@ From a term of the ontology to a saved array
        location = "/path/to/spectro_ontology.ttl"
 
        [assignments]
-       "Spectro/Spectrum/CH00" = "http://example.org/mockexamples#SampleSpectrum"
-       "BeamBlock" = "http://example.org/mockexamples#BeamBlock"
+       "Det_1/Spectrum/CH00" = "http://example.org/mockexamples#SampleSpectrum"
+       "Act_1" = "http://example.org/mockexamples#BeamBlock"
 
    The key of a detector channel is ``module/data name/label``, the one of an actuator is the name of its module. An
    assigned channel that the Dashboard no longer has stays in the file and is shown under *Not in the Dashboard* with a
