@@ -65,6 +65,28 @@ Vocabulary
     * - entry
       - The file where the manager keeps the source and the assignment of an experiment (``.ontology``, TOML).
 
+The window
+----------
+
+.. image:: /image/ontology_manager/ontology_manager.png
+    :alt: The Ontology manager with a spectrometer experiment
+    :width: 90%
+
+The manager during an assignment (the spectrometer example of the mockexamples plugin). The row at the top is the
+source of the terms (type, location, *Load*). The tree lists the channels: the actuators, then the detectors grouped by
+module, each with its term, its last value (the last position of an actuator, or the unit of a detector channel, until
+a probe finds a value) and a status led (see `Status of a channel`_). The toolbar updates the channels from the
+Dashboard, shows the recap table and probes the detectors. A double click on the term of a channel opens the popup of
+terms:
+
+.. image:: /image/ontology_manager/ontology_term_picker.png
+    :alt: The popup to choose the term of a channel
+    :width: 55%
+
+The popup searches the labels, shows the terms as the tree of their *is a kind of* relations, and describes the selected
+term below with its IRI. The terms that fit the kind of channel (a detector here) are shown first; the box *Show all
+terms* adds the others.
+
 The pieces
 ----------
 
