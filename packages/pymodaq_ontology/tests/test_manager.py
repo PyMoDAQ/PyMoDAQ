@@ -156,3 +156,12 @@ def test_recap_rows(manager):
     manager.assign('Magnet', FIELD)
     rows_ = manager.recap_rows()
     assert rows_ == [('Magnet', 'Applied magnetic field', FIELD, 'assigned')]
+
+
+def test_probe_and_update_buttons_are_in_the_window(manager):
+    from qtpy import QtWidgets
+    buttons = {b.text(): b for b in manager.main_widget.findChildren(QtWidgets.QPushButton)}
+    assert {'Update channels', 'Probe detectors'} <= set(buttons)
+    manager.status_label.setText('')
+    buttons['Probe detectors'].click()  # no Dashboard here: the probe says there is nothing to probe
+    assert manager.status_label.text() == 'There is no detector to probe'

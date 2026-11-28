@@ -75,8 +75,9 @@ The window
 The manager during an assignment (the spectrometer example of the mockexamples plugin). The row at the top is the
 source of the terms (type, location, *Load*). The tree lists the channels: the actuators, then the detectors grouped by
 module, each with its term, its last value (the last position of an actuator, or the unit of a detector channel, until
-a probe finds a value) and a status led (see `Status of a channel`_). The toolbar updates the channels from the
-Dashboard, shows the recap table and probes the detectors. A double click on the term of a channel opens the popup of
+a probe finds a value) and a status led (see `Status of a channel`_). The two buttons under it, *Update channels* and *Probe detectors*, do the same as the
+first and the last actions of the toolbar (the recap table is the middle one): the first reads the actuators from the
+Dashboard, the second snaps the detectors to find the channels they emit. A double click on the term of a channel opens the popup of
 terms:
 
 .. image:: /image/ontology_manager/ontology_term_picker.png

@@ -98,8 +98,21 @@ class OntologyManager(DashboardMixin, ManagerBase):
         self.channel_tree.itemDoubleClicked.connect(self._on_double_clicked)
         self.status_label = QtWidgets.QLabel('Double click the term of a channel to choose it.')
 
+        # the same actions as the toolbar, within reach of the channels they refresh
+        update_button = QtWidgets.QPushButton('Update channels')
+        update_button.setToolTip('Update the channels from the control modules of the Dashboard')
+        update_button.clicked.connect(self.update_channels_from_dashboard)
+        probe_button = QtWidgets.QPushButton('Probe detectors')
+        probe_button.setToolTip('Do a snap of the detectors to find the channels they emit')
+        probe_button.clicked.connect(self.probe)
+        buttons_row = QtWidgets.QHBoxLayout()
+        buttons_row.addWidget(update_button)
+        buttons_row.addWidget(probe_button)
+        buttons_row.addStretch(1)
+
         layout = QtWidgets.QVBoxLayout(self.main_widget)
         layout.addLayout(source_row)
+        layout.addLayout(buttons_row)
         layout.addWidget(self.channel_tree)
         layout.addWidget(self.status_label)
 
