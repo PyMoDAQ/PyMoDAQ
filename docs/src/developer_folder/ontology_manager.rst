@@ -380,6 +380,13 @@ A state is a member of an enumeration (``owl:oneOf``): *Beam block* is defined a
 hierarchy, in grey italics with a legend, but does not let them be selected: a state is the meaning of a value of an
 actuator, not a channel.
 
+A term can say in which states it has its meaning with ``pymodaq:requiresState``
+(``https://pymodaq.cnrs.fr/ontology#requiresState``): *Dark spectrum* requires *Beam blocked*, *Sample spectrum*
+requires *Beam open* and *Sample in beam*. **This predicate is our own, not a standard one**, and its namespace is a
+placeholder until the final one is chosen. It could later be mapped to a standard modelling (an OWL restriction) without
+changing what the manager does with it: ``OntologyTerm.requires`` holds the IRIs of the required states. Extensions use
+it to know which states to set for a measurement, and to check that the actuators are where the measurement says.
+
 In the window, *Add state...* opens one popup with the actuator (only those that have a term), its value (filled with
 its current value) and the state, chosen in a list of the kinds of the term of the actuator, so *Beam blocked* and
 *Beam open* for a *Beam block* (every actuator term if nothing is a kind of it). *Remove state* removes the selected row.

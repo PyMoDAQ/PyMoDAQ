@@ -29,6 +29,8 @@ class OntologyTerm:
     is_state: bool
         The term is a state of a channel (like *Beam blocked*), not a channel: it can be associated with a value of
         an actuator but not assigned to a channel.
+    requires: tuple[str, ...]
+        The IRIs of the states in which the term has its meaning (a dark spectrum requires *Beam blocked*)
     """
     iri: str
     label: str
@@ -37,6 +39,7 @@ class OntologyTerm:
     roles: tuple[str, ...] = ()
     broader: tuple[str, ...] = ()
     is_state: bool = False
+    requires: tuple[str, ...] = ()
 
     def fits(self, kind: str) -> bool:
         """Whether the term can describe a channel of this kind (detector or actuator)"""

@@ -170,12 +170,14 @@ def test_probe_and_update_buttons_are_in_the_window(manager):
 STATES = '''
 @prefix : <http://example.org/s#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix pq: <https://pymodaq.cnrs.fr/ontology#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix sosa: <http://www.w3.org/ns/sosa/> .
 :Block a owl:Class ; rdfs:subClassOf sosa:ActuatableProperty ; rdfs:label "Beam block" .
 :Blocked a owl:NamedIndividual , :Block ; rdfs:label "Beam blocked" .
 :Open a owl:NamedIndividual , :Block ; rdfs:label "Beam open" .
 :Block owl:equivalentClass [ a owl:Class ; owl:oneOf ( :Blocked :Open ) ] .
+:Dark a owl:Class ; rdfs:label "Dark" ; pq:requiresState :Blocked .
 '''
 S = 'http://example.org/s#'
 
@@ -251,10 +253,10 @@ def test_a_state_is_shown_in_the_picker_but_cannot_be_chosen(state_manager):
     from pymodaq_ontology.term_picker import TermPicker, IRI_ROLE
     from pymodaq_ontology.terms import ACTUATOR
     assert {t.iri: t.is_state for t in state_manager.terms.values()} == {
-        S + 'Block': False, S + 'Blocked': True, S + 'Open': True}
+        S + 'Block': False, S + 'Blocked': True, S + 'Open': True, S + 'Dark': False}
     picker = TermPicker(list(state_manager.terms.values()), None, '', ACTUATOR)
     items = {item.data(0, IRI_ROLE): item for _, item in picker._leaves()}
-    assert set(items) == {S + 'Block', S + 'Blocked', S + 'Open'}  # the hierarchy is complete
+    assert set(items) == {S + 'Block', S + 'Blocked', S + 'Open', S + 'Dark'}  # the hierarchy is complete
     assert items[S + 'Blocked'].parent() is items[S + 'Block']
     picker.tree.setCurrentItem(items[S + 'Blocked'])
     picker._accept()
@@ -270,3 +272,8 @@ def test_the_picker_explains_the_states_only_when_it_shows_some(state_manager):
     with_states = TermPicker(list(state_manager.terms.values()), None, '', ACTUATOR)
     without = TermPicker([t for t in state_manager.terms.values() if not t.is_state], None, '', ACTUATOR)
     assert not with_states.legend.isHidden() and without.legend.isHidden()
+
+
+def test_a_term_says_in_which_states_it_has_its_meaning(state_manager):
+    assert state_manager.terms[S + 'Dark'].requires == (S + 'Blocked',)
+    assert state_manager.terms[S + 'Block'].requires == ()
