@@ -68,36 +68,84 @@ Vocabulary
 The pieces
 ----------
 
-.. graphviz::
-   :caption: The objects of the package and what they use (arrows read "uses")
+The package has one orchestrator, ``OntologyManager``, and small objects around it that do one thing each. Three
+diagrams follow it through its three jobs. In all of them, blue boxes are the user interface, orange boxes are plain
+Python (no Qt) and grey boxes belong to something else.
 
-   digraph pieces {
-     rankdir=TB; nodesep=0.35; ranksep=0.55; node [shape=box, fontname="Helvetica", fontsize=10, style=filled];
+1. Reading the ontology
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. graphviz::
+   :caption: The manager asks the factory for a source, the source returns the terms
+
+   digraph reading {
+     rankdir=LR; nodesep=0.4; ranksep=0.6; node [shape=box, fontname="Helvetica", fontsize=10, style=filled];
      edge [fontname="Helvetica", fontsize=9];
-     mgr [label="OntologyManager (manager.py)\nthe orchestrator", fillcolor="#b5d3ee"];
-     tree [label="ChannelTree\n(channel_tree.py)", fillcolor="#dbe9f6"];
-     picker [label="TermPicker\n(term_picker.py)", fillcolor="#dbe9f6"];
-     factory [label="SourceFactory\n(source_factory.py)", fillcolor="#fbe5cc"];
-     assign [label="Assignment + entry file\n(assignment.py)", fillcolor="#fbe5cc"];
-     annot [label="annotate_bundle, make_preparer\n(annotation.py)", fillcolor="#fbe5cc"];
-     chan [label="Channel\n(channels.py)", fillcolor="#fbe5cc"];
-     src [label="RdfSource\n(sources/rdf.py)", fillcolor="#fbe5cc"];
-     term [label="OntologyTerm, TermHierarchy\n(terms.py)", fillcolor="#fbe5cc"];
-     ontology [label="ontology file\n.ttl, .rdf, .jsonld", shape=note, fillcolor="#eeeeee"];
-     dash [label="Dashboard\nmodules manager", fillcolor="#eeeeee"];
-     worker [label="worker of an extension\n(add_data_preparer)", fillcolor="#eeeeee"];
-     h5 [label="saved file\n(extra attribute semantic_iri)", shape=note, fillcolor="#e2f0d9"];
-     mgr -> tree [label="rows to show"]; mgr -> picker [label="double click"];
-     mgr -> factory [label="create(type, location)"]; mgr -> assign [label="assign, save, load"];
-     mgr -> annot [label="attach_worker"]; mgr -> chan [label="keeps the list"];
-     factory -> src [label="builds"]; src -> ontology [label="reads"]; src -> term [label="returns the terms"];
-     picker -> term [label="shows"]; dash -> chan [label="actuators, probe of the detectors", constraint=false];
-     annot -> assign [label="reads"]; annot -> worker [label="added as data preparer"];
-     worker -> h5 [label="writes"];
+     mgr [label="OntologyManager\nset_source()", fillcolor="#b5d3ee"];
+     factory [label="SourceFactory\ncreate('rdf', location)", fillcolor="#fbe5cc"];
+     src [label="RdfSource\nterms()", fillcolor="#fbe5cc"];
+     file [label="ontology file\n.ttl, .rdf, .jsonld", shape=note, fillcolor="#eeeeee"];
+     term [label="list of OntologyTerm\n(IRI, label, roles, broader)", fillcolor="#fbe5cc"];
+     hier [label="TermHierarchy\nis_a, descendants...", fillcolor="#fbe5cc"];
+     mgr -> factory [label="1. type and location"];
+     factory -> src [label="2. builds"];
+     src -> file [label="3. reads"];
+     src -> term [label="4. returns"];
+     term -> mgr [label="5. kept by the manager"];
+     term -> hier [label="built from"];
    }
 
-Everything in the blue and orange boxes can be tested without a Dashboard except the manager itself: ``terms``,
-``sources``, ``channels``, ``assignment`` and ``annotation`` have no Qt and no PyMoDAQ GUI dependency.
+2. Assigning a term to a channel
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. graphviz::
+   :caption: From the instruments of the Dashboard to the entry file
+
+   digraph assigning {
+     rankdir=LR; nodesep=0.4; ranksep=0.6; node [shape=box, fontname="Helvetica", fontsize=10, style=filled];
+     edge [fontname="Helvetica", fontsize=9];
+     dash [label="Dashboard\nactuators, probe\nof the detectors", fillcolor="#eeeeee"];
+     chan [label="Channel list\n(channels.py)", fillcolor="#fbe5cc"];
+     mgr [label="OntologyManager", fillcolor="#b5d3ee"];
+     tree [label="ChannelTree\nchannels, terms, leds", fillcolor="#dbe9f6"];
+     picker [label="TermPicker\npopup", fillcolor="#dbe9f6"];
+     assign [label="Assignment\n{channel key: IRI}", fillcolor="#fbe5cc"];
+     entry [label="entry file\n(.ontology, TOML)", shape=note, fillcolor="#eeeeee"];
+     dash -> chan [label="1. channels"];
+     chan -> mgr;
+     mgr -> tree [label="2. rows to show"];
+     tree -> mgr [label="3. double click"];
+     mgr -> picker [label="4. opens"];
+     picker -> mgr [label="5. chosen IRI"];
+     mgr -> assign [label="6. assign()"];
+     assign -> entry [label="7. saved at once"];
+   }
+
+3. Writing the terms in the saved data
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. graphviz::
+   :caption: The data preparer added to the worker of an extension
+
+   digraph saving {
+     rankdir=LR; nodesep=0.4; ranksep=0.6; node [shape=box, fontname="Helvetica", fontsize=10, style=filled];
+     edge [fontname="Helvetica", fontsize=9];
+     ext [label="extension\n(for instance DAQ_Scan)", fillcolor="#eeeeee"];
+     mgr [label="OntologyManager\nattach_worker(worker)", fillcolor="#b5d3ee"];
+     worker [label="worker of the extension\nadd_data_preparer", fillcolor="#eeeeee"];
+     prep [label="preparer\nannotate_bundle()", fillcolor="#fbe5cc"];
+     assign [label="Assignment", fillcolor="#fbe5cc"];
+     h5 [label="saved file\narrays with semantic_iri", shape=note, fillcolor="#e2f0d9"];
+     ext -> mgr [label="1. asks"];
+     mgr -> worker [label="2. adds the preparer"];
+     worker -> prep [label="3. each bundle to save"];
+     prep -> assign [label="4. reads the IRIs"];
+     prep -> worker [label="5. adds semantic_iri"];
+     worker -> h5 [label="6. writes"];
+   }
+
+The orange boxes (``terms``, ``sources``, ``channels``, ``assignment``, ``annotation``) have no Qt and no PyMoDAQ GUI
+dependency: they can be tested without a Dashboard.
 
 Classes and their parents
 -------------------------
