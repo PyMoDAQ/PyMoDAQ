@@ -56,10 +56,17 @@ class OntologyManager(DashboardMixin, ManagerBase):
         return True
 
     def get_entry_folder(self, **kwargs_to_entry_folder) -> Path:
-        experiment = self.experiment_manager.entry if self.experiment_manager is not None else 'default'
-        folder = get_set_config_dir('ontology').joinpath(experiment or 'default')
+        """ All the entries together: one file per experiment, named after it """
+        folder = get_set_config_dir('ontology')
         folder.mkdir(parents=True, exist_ok=True)
         return folder
+
+    def list_managed_entries_path(self, **kwargs_to_entry_folder) -> list[Path]:
+        folder = self.get_entry_folder(**kwargs_to_entry_folder)
+        return sorted(path for path in folder.iterdir() if path.suffix == self.entry_extension)
+
+    def list_managed_entries(self, **kwargs_to_entry_folder) -> list[str]:
+        return [path.stem for path in self.list_managed_entries_path(**kwargs_to_entry_folder)]
 
     def save_entries(self, entry_path: Path = None) -> None:
         save_entry(entry_path, self.assignment, self.source)

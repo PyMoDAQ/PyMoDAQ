@@ -183,3 +183,9 @@ def test_a_single_entry_needs_no_entry_list(manager):
     toolbar, menu = manager.get_external_toolbar_menu()
     assert manager.get_action(ManagerActions.OPEN) in toolbar.actions()
     assert not any(a.text() == ManagerActions.LIST_EXTERNAL for a in toolbar.actions())
+
+
+def test_the_entry_file_is_named_after_the_experiment(manager, tmp_path):
+    assert manager.entry_path_from_name('spectro_lab_a') == tmp_path / 'ontology' / 'spectro_lab_a.ontology'
+    (tmp_path / 'ontology' / 'spectro_lab_a.ontology').write_text('')
+    assert manager.entries == ['spectro_lab_a']
