@@ -38,14 +38,15 @@ def annotate_bundle(bundle: DataBundle, assignment: Assignment) -> DataBundle:
     return bundle
 
 
-def make_preparer(get_assignment: Callable[[], Assignment]) -> Callable[[DataBundle], Optional[DataBundle]]:
-    """A function to give to ``add_data_preparer``, reading the assignment when called (it can change)"""
-    def preparer(bundle: DataBundle) -> DataBundle:
+def make_annotator(get_assignment: Callable[[], Assignment]) -> Callable[[DataBundle], Optional[DataBundle]]:
+    """The annotator: a function to give to ``add_data_preparer``, reading the assignment when called (it can
+    change)"""
+    def annotator(bundle: DataBundle) -> DataBundle:
         return annotate_bundle(bundle, get_assignment())
-    return preparer
+    return annotator
 
 
-def embed_excerpt(h5saver, source, assignment: Assignment) -> bool:
+def save_excerpt_in_file(h5saver, source, assignment: Assignment) -> bool:
     """Save in the file the part of the ontology describing the assigned terms, so that the file can be read without
     the ontology: group ``Ontology`` of the root, with the string array ``excerpt`` and the attributes ``format``,
     ``iri`` and ``version`` (the last two when the source knows them).
@@ -67,12 +68,13 @@ def embed_excerpt(h5saver, source, assignment: Assignment) -> bool:
         return False
 
 
-def make_embedder(get_source: Callable[[], object], get_assignment: Callable[[], Assignment],
-                  get_h5saver: Callable[[], object]) -> Callable[[DataBundle], Optional[DataBundle]]:
-    """A function to give to ``add_data_preparer``: with the first bundle of an acquisition, saves the excerpt of the
-    ontology (see :func:`embed_excerpt`). The file is then open and no other bundle is being saved."""
-    def embedder(bundle: DataBundle) -> DataBundle:
+def make_excerpt_saver(get_source: Callable[[], object], get_assignment: Callable[[], Assignment],
+                       get_h5saver: Callable[[], object]) -> Callable[[DataBundle], Optional[DataBundle]]:
+    """The excerpt saver: a function to give to ``add_data_preparer``. With the first bundle of an acquisition, it
+    saves the excerpt of the ontology (see :func:`save_excerpt_in_file`). The file is then open and no other bundle is
+    being saved."""
+    def excerpt_saver(bundle: DataBundle) -> DataBundle:
         if not bundle.save_index:
-            embed_excerpt(get_h5saver(), get_source(), get_assignment())
+            save_excerpt_in_file(get_h5saver(), get_source(), get_assignment())
         return bundle
-    return embedder
+    return excerpt_saver
