@@ -189,3 +189,11 @@ def test_the_entry_file_is_named_after_the_experiment(manager, tmp_path):
     assert manager.entry_path_from_name('spectro_lab_a') == tmp_path / 'ontology' / 'spectro_lab_a.ontology'
     (tmp_path / 'ontology' / 'spectro_lab_a.ontology').write_text('')
     assert manager.entries == ['spectro_lab_a']
+
+
+def test_a_long_status_does_not_widen_the_window(manager):
+    manager.mainwindow.show()
+    width = manager.mainwindow.width()
+    manager.status_label.setText('Could not read the ontology ' + 'very/long/path/' * 40)
+    assert manager.status_label.wordWrap()
+    assert manager.mainwindow.minimumSizeHint().width() < 2 * width

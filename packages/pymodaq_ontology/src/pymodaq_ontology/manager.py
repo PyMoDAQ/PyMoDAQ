@@ -105,6 +105,8 @@ class OntologyManager(DashboardMixin, ManagerBase):
         self.channel_tree = ChannelTree()
         self.channel_tree.itemDoubleClicked.connect(self._on_double_clicked)
         self.status_label = QtWidgets.QLabel('Double click the term of a channel to choose it.')
+        self.status_label.setWordWrap(True)  # a long path or error message must not widen the window
+        self.status_label.setSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Preferred)
 
         # the same actions as the toolbar, within reach of the channels they refresh
         update_button = QtWidgets.QPushButton('Update channels')
