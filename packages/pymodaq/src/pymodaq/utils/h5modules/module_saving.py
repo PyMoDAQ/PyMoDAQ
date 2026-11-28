@@ -5,7 +5,8 @@ Created the 23/11/2022
 @author: Sebastien Weber
 """
 from __future__ import annotations
-from typing import Union, List, Tuple, TYPE_CHECKING, Iterable
+from pathlib import Path
+from typing import Union, List, Tuple, TYPE_CHECKING, Iterable, Optional
 import time
 import xml.etree.ElementTree as ET
 
@@ -22,6 +23,8 @@ from pymodaq_data.h5modules.data_saving import (
     DataToExportSaver, DataToExportEnlargeableSaver,
     DataToExportTimedSaver, DataToExportExtendedSaver, DataBundle)
 from pymodaq_data.h5modules.backends import GROUP, Node, snapshot_path
+from pymodaq_data.h5modules.file_actions import FileActions
+from pymodaq_data.h5modules.ext_saving_events import ExtSavingEvents, ExtSavingInfo
 
 from pymodaq_gui.h5modules.saving import H5SaverBase
 from pymodaq_gui.parameter import ioxml
@@ -531,6 +534,7 @@ class ExtensionSaver(ModuleSaver):
 
         self.current_nodes: dict[str, Node] = {}
         self._time_saver: TimeModuleSaver = None
+        self._open_savings: dict[str, ExtSavingInfo] = {}  # the savings that started and did not end yet, by saving id
 
     def update_after_h5changed(self):
         """ To be updated depending on the actual Saver you want to use"""
@@ -614,7 +618,70 @@ class ExtensionSaver(ModuleSaver):
             self.create_module_group(self._module_group)
             if self._time_saver is not None:
                 self._time_saver.get_set_node(self._module_group)
+            self.saving_started()
         return self._module_group
+
+    @property
+    def saving(self) -> Optional[ExtSavingInfo]:
+        """The last saving that started and did not end yet (see :meth:`saving_started`), None if there is none"""
+        return list(self._open_savings.values())[-1] if self._open_savings else None
+
+    def saving_started(self):
+        """Tell the registered actions (see :class:`ExtSavingEvents`) that a saving starts, in the current h5 file
+
+        Called when a new group is created for the extension. The information on the saving is given by the
+        extension (``saving_payload``).
+        """
+        h5saver = self._h5saver
+        h5_path = None
+        if h5saver is not None and h5saver.h5_file_path is not None and h5saver.h5_file_name:
+            h5_path = Path(h5saver.h5_file_path).joinpath(h5saver.h5_file_name)
+        try:
+            payload = dict(self._module.saving_payload())
+        except Exception as e:  # a payload that fails must not prevent the saving
+            logger.warning(f'The payload of the saving of {self._module.title} could not be read: {e}')
+            payload = {}
+        info = ExtSavingInfo(extension=self._module.title, h5_path=h5_path, payload=payload)
+        self._open_savings[info.saving_id] = info
+        ExtSavingEvents.notify_started(info)
+
+    def snapshot_file_path(self, saving_id: Optional[str] = None) -> Optional[Path]:
+        """Where the picture of a saving is saved: next to its h5 file. None if there is no such saving or no file
+
+        Parameters
+        ----------
+        saving_id: str, optional
+            The saving, the last one that did not end if None
+        """
+        saving = self._open_savings.get(saving_id) if saving_id is not None else self.saving
+        if saving is None or saving.h5_path is None:
+            return None
+        return saving.h5_path.with_name(f'{saving.h5_path.stem}_{saving.saving_id[:8]}.png')
+
+    def end_saving(self, snapshot_path: Optional[Path] = None, saving_id: Optional[str] = None):
+        """Tell the registered actions that a saving is over, its file being closed
+
+        Nothing happens if the saving is unknown or already ended. A picture of the extension, if any, is a file
+        written by PyMoDAQ: it is announced to the :class:`FileActions` as a closed file, so it can be copied as the
+        h5 files are.
+
+        Parameters
+        ----------
+        snapshot_path: Path, optional
+            The picture of the extension at the end of the saving
+        saving_id: str, optional
+            The saving to end, the last one that did not end if None. A batch of scans gives the id of the scan that is
+            over, as the next one may have started already.
+        """
+        saving = self._open_savings.pop(saving_id, None) if saving_id is not None else None
+        if saving_id is None and self._open_savings:
+            saving = self._open_savings.pop(list(self._open_savings)[-1])
+        if saving is None:
+            return
+        info = saving.ended(snapshot_path)
+        if snapshot_path is not None:
+            FileActions.notify_closed(snapshot_path)
+        ExtSavingEvents.notify_ended(info)
 
     def initialize_time_array(self, extended_shape: Iterable[int]):
         self._time_saver.initialize(extended_shape)

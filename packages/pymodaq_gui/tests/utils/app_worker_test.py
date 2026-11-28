@@ -132,7 +132,7 @@ class TestDataPreparers:
 
         assert calls == []
 
-    def test_registered_functions_run_before_the_hook_without_super(self):
+    def test_registered_functions_saving_before_the_hook_without_super(self):
         calls = []
 
         class MyWorker(ExtensionWorker):
@@ -145,3 +145,54 @@ class TestDataPreparers:
         worker.emit_data_to_save(make_bundle())
 
         assert calls == ['preparer', 'hook']
+
+
+class TestSavingEnd:
+    """The worker takes the picture of its saving and tells the app that this saving is over"""
+
+    def make(self, tmp_path, saving_id='abc'):
+        calls = []
+        state = SimpleNamespace(saving_id=saving_id)
+        app = SimpleNamespace(
+            current_saving_id=lambda: state.saving_id,
+            take_saving_snapshot=lambda saving: tmp_path / f'{saving}.png',
+            notify_saving_end=lambda path, saving: calls.append((path, saving)))
+        worker = ExtensionWorker(app)
+        worker._saving_id = worker._current_saving_id()
+        return worker, calls, state
+
+    def test_saving_is_the_one_known_when_the_worker_started(self, tmp_path):
+        worker, _, _ = self.make(tmp_path)
+        assert worker._saving_id == 'abc'
+
+    def test_picture_and_saving_id_are_given_to_the_app(self, tmp_path):
+        worker, calls, _ = self.make(tmp_path)
+
+        snapshot = worker._take_snapshot()
+        worker._end_saving(snapshot)
+
+        assert calls == [(tmp_path / 'abc.png', 'abc')]
+
+    def test_a_saving_is_ended_once(self, tmp_path):
+        worker, calls, _ = self.make(tmp_path)
+
+        worker._end_saving(None)
+        worker._end_saving(None)
+
+        assert len(calls) == 1
+
+    def test_a_worker_ends_its_own_saving_even_if_another_one_started(self, tmp_path):
+        worker, calls, state = self.make(tmp_path)
+        state.saving_id = 'next'  # the next scan of a batch
+
+        worker._end_saving(None)
+
+        assert calls == [(None, 'abc')]
+
+    def test_app_without_saving_is_left_alone(self, tmp_path):
+        worker, calls, _ = self.make(tmp_path, saving_id=None)
+
+        assert worker._saving_id is None
+        assert worker._take_snapshot() is None
+        worker._end_saving(None)
+        assert calls == []

@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 import pytest
 import qt_themes
 from qtpy import QtWidgets
@@ -104,3 +106,85 @@ def test_quit_fun_closes_the_window(app):
     assert app.mainwindow.isVisible()
     assert app.quit_fun() is True
     assert not app.mainwindow.isVisible()
+
+
+class TestSnapshot:
+    def test_default_widget_is_the_main_window(self, app):
+        assert app.snapshot_widget() is app.mainwindow
+
+    def test_snapshot_is_saved_as_png(self, app, tmp_path):
+        path = app.save_snapshot(tmp_path / 'picture.png')
+
+        assert path == tmp_path / 'picture.png'
+        assert path.read_bytes()[:8] == b'\x89PNG\r\n\x1a\n'
+
+    def test_another_widget_can_be_chosen(self, app, tmp_path):
+        widget = QtWidgets.QLabel('result')
+        app.snapshot_widget = lambda: widget
+
+        assert app.save_snapshot(tmp_path / 'picture.png') is not None
+
+    def test_no_widget_gives_no_picture(self, app, tmp_path):
+        app.snapshot_widget = lambda: None
+
+        assert app.save_snapshot(tmp_path / 'picture.png') is None
+        assert not (tmp_path / 'picture.png').exists()
+
+    def test_unwritable_path_gives_no_picture(self, app, tmp_path):
+        assert app.save_snapshot(tmp_path / 'missing_folder' / 'picture.png') is None
+
+    def test_payload_is_empty_by_default(self, app):
+        assert app.saving_payload() == {}
+
+    def test_failing_snapshot_widget_gives_no_picture(self, app, tmp_path):
+        def failing():
+            raise RuntimeError('bug in the extension')
+        app.snapshot_widget = failing
+
+        assert app.save_snapshot(tmp_path / 'picture.png') is None
+
+    def test_app_without_saver_has_no_saving_to_end(self, app):
+        assert app.take_saving_snapshot() is None
+        app.end_saving()  # nothing to end, no error
+
+
+class FakeReporter:
+    """A saver that tells the saving events, as the ExtensionSaver does"""
+
+    def __init__(self, path):
+        self.saving = SimpleNamespace(saving_id='abc')
+        self.path = path
+        self.ended = []
+
+    def snapshot_file_path(self, saving_id=None):
+        return self.path
+
+    def end_saving(self, snapshot_path=None, saving_id=None):
+        self.ended.append((snapshot_path, saving_id))
+
+
+class TestSavingReporter:
+    @pytest.fixture
+    def reporter(self, app, tmp_path):
+        reporter = FakeReporter(tmp_path / 'picture.png')
+        app.__class__.module_and_data_saver = property(lambda self: reporter)
+        yield reporter
+        del app.__class__.module_and_data_saver
+
+    def test_a_saver_that_does_not_tell_the_savings_is_no_reporter(self, app):
+        assert app.saving_reporter is None
+        assert app.current_saving_id() is None
+
+    def test_reporter_is_the_saver_that_tells_the_savings(self, app, reporter):
+        assert app.saving_reporter is reporter
+        assert app.current_saving_id() == 'abc'
+
+    def test_end_takes_the_picture_then_tells_the_saver(self, app, reporter, tmp_path):
+        app.end_saving('abc')
+
+        assert reporter.ended == [(tmp_path / 'picture.png', 'abc')]
+
+    def test_end_without_saving_id_gives_none_to_the_saver(self, app, reporter):
+        app.notify_saving_end()
+
+        assert reporter.ended == [(None, None)]

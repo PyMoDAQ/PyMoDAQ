@@ -778,6 +778,18 @@ class DAQScan(CustomExt):
         self._metada_dataset_set = False
         self.update_file_settings()
 
+    def snapshot_widget(self):
+        """The picture of a scan shows its live plots"""
+        return self.live_plot_dockarea
+
+    def saving_payload(self) -> dict:
+        """What describes the scan for the actions listening to the saving events (a notebook entry for instance)"""
+        return dict(scan_type=self.scanner.scan_type,
+                    scan_sub_type=self.scanner.scan_sub_type,
+                    detectors=', '.join(self.modules_manager.selected_detectors_name),
+                    actuators=', '.join(self.modules_manager.selected_actuators_name),
+                    scan_average=self.settings['scan_options', 'scan_average'])
+
     def save_metadata(self, node, type_info='dataset_info'):
         """
             Switch the type_info value with :
@@ -1104,6 +1116,7 @@ class DAQScan(CustomExt):
                 if self.navigator is not None:
                     self.navigator.list_2D_scans()
             else:
+                self.end_saving()  # the next scan of the batch starts a new saving: the one of this scan is over
                 self.ind_batch += 1
                 self.loop_scan_batch()
 

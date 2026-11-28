@@ -77,6 +77,40 @@ it is really closed (not when the file is kept open by ``finalize_swmr(keep_open
 the files of an HSDS server, do not trigger them. The copy is one of these actions, named ``copy``.
 
 
+.. _ext_saving_events:
+
+Events of a saving
+------------------
+
+An extension that saves data (the scan, the logger, the ramping, the sequencer or the optimizers) makes one saving
+for each scan, logging, ramp... in its own group of the h5 file. Other code can be told when a saving starts and when it ends with the registry of saving events
+(:class:`~pymodaq_data.h5modules.ext_saving_events.ExtSavingEvents`), as the file actions tell when a file is closed::
+
+    from pymodaq_data.h5modules.ext_saving_events import ExtSavingEvents
+
+    def saving_started(info):
+        print(info.extension, info.started_at, info.payload)
+
+    def saving_ended(info):
+        print(info.ended_at, info.h5_path, info.snapshot_path)
+
+    ExtSavingEvents.register('my_action', on_started=saving_started, on_ended=saving_ended)
+
+Both functions receive a :class:`~pymodaq_data.h5modules.ext_saving_events.ExtSavingInfo`:
+
+* the title of the extension, the h5 file in which the data of the saving are written and a free ``payload`` given by the extension
+  (for the scan: the scan type, the detectors, the actuators and the average)
+* the time of the start and of the end, in ISO 8601 with the offset to UTC, taken when each event happens
+* at the end, the path of a PNG picture of the extension, or None
+
+A saving starts when the extension creates a new group in the file, and ends when the extension has finished saving and
+closed the file. The picture is a file written by PyMoDAQ: it is announced to the file actions as a closed file, so
+the copy of the closed files copies it with the h5 file. A failing action is logged and never stops the saving.
+
+An extension chooses what is photographed by reimplementing ``snapshot_widget`` (the main window by default, the live
+plots for the scan; None for no picture) and what it tells about its saving by reimplementing ``saving_payload``.
+
+
 DataSaver/DataLoader
 --------------------
 

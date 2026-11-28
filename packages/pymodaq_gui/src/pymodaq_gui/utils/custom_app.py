@@ -1,6 +1,6 @@
 import inspect
 from pathlib import Path
-from typing import Any, Union, TYPE_CHECKING, Dict, List, Optional, Iterable
+from typing import Any, Union, TYPE_CHECKING, Dict, List, Optional, Iterable, Protocol, runtime_checkable
 
 import qt_themes
 from qt_themes import Theme
@@ -8,6 +8,7 @@ from qtpy.QtCore import QObject, QLocale
 from qtpy import QtCore, QtWidgets
 
 from pymodaq_data.h5modules.data_saving import DataToExportSaver
+from pymodaq_data.h5modules.ext_saving_events import ExtSavingInfo
 from pymodaq_gui.h5modules.saving import H5Saver
 from pymodaq_gui.managers.runner_thread_manager import WorkerThreadManager
 from pymodaq_gui.managers.h5manager import FileStatus, H5Manager, FileAction
@@ -27,6 +28,28 @@ from pymodaq_gui.utils.styling import ThemeColor
 
 logger = set_logger(get_module_name(__file__))
 config = Config()
+
+
+@runtime_checkable
+class SavingReporter(Protocol):
+    """What a saver of an extension must offer to tell the saving events (see ``ExtSavingEvents``)
+
+    ``pymodaq.utils.h5modules.module_saving.ExtensionSaver`` does it. The other savers do not, and the app
+    then has no saving to report.
+    """
+
+    @property
+    def saving(self) -> Optional[ExtSavingInfo]:
+        """The last saving that started and did not end yet, None if there is none"""
+        ...
+
+    def snapshot_file_path(self, saving_id: Optional[str] = None) -> Optional[Path]:
+        """Where the picture of a saving is written, None if there is no such saving or no file"""
+        ...
+
+    def end_saving(self, snapshot_path: Optional[Path] = None, saving_id: Optional[str] = None) -> None:
+        """Tell the registered actions that a saving is over"""
+        ...
 
 
 class WorkFlowActions(StrEnum):
@@ -289,6 +312,78 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         self._title = title if title is not None else self.__class__.__name__
         if self.mainwindow is not None:
             self.mainwindow.setWindowTitle(self._title)
+
+    def snapshot_widget(self) -> Optional[QtWidgets.QWidget]:
+        """The widget that is photographed at the end of a saving (see :meth:`save_snapshot`)
+
+        By default the main window of the app, or its parent widget when there is no main window. Reimplement it
+        to choose another widget, for instance the viewer showing the result of the saving. Return None for no picture.
+        """
+        return self.mainwindow if self.mainwindow is not None else self.parent
+
+    def save_snapshot(self, path: Path) -> Optional[Path]:
+        """Save a PNG picture of :meth:`snapshot_widget` and return its path, or None if there is no picture
+
+        It must be called in the thread of the user interface. A failure, even in a reimplemented
+        :meth:`snapshot_widget`, is logged and gives None.
+        """
+        try:
+            widget = self.snapshot_widget()
+            if widget is None:
+                return None
+            path = Path(path)
+            if widget.grab().save(str(path), 'PNG'):
+                return path
+            logger.warning(f'The picture of {self.title} could not be saved in {path}')
+        except Exception as e:
+            logger.warning(f'The picture of {self.title} could not be taken: {e}')
+        return None
+
+    @property
+    def saving_reporter(self) -> Optional[SavingReporter]:
+        """The saver of the app if it tells the saving events (see :class:`SavingReporter`), else None"""
+        saver = self.module_and_data_saver
+        return saver if isinstance(saver, SavingReporter) else None
+
+    def current_saving_id(self) -> Optional[str]:
+        """The id of the last saving of the app that did not end, None if there is none"""
+        reporter = self.saving_reporter
+        saving = reporter.saving if reporter is not None else None
+        return saving.saving_id if saving is not None else None
+
+    def take_saving_snapshot(self, saving_id: Optional[str] = None) -> Optional[Path]:
+        """Take the picture of a saving saved by this app (the last one that did not end if ``saving_id`` is None)
+
+        Returns the path of the picture, or None if the app has no saving, no file or no picture.
+        """
+        reporter = self.saving_reporter
+        path = reporter.snapshot_file_path(saving_id) if reporter is not None else None
+        return self.save_snapshot(path) if path is not None else None
+
+    def notify_saving_end(self, snapshot_path: Optional[Path] = None, saving_id: Optional[str] = None):
+        """Tell the registered actions that a saving is over, whose file is closed and picture already taken
+
+        The saving is the last one that did not end if ``saving_id`` is None. Nothing happens if there is none.
+        """
+        reporter = self.saving_reporter
+        if reporter is not None:
+            reporter.end_saving(snapshot_path, saving_id)
+
+    def end_saving(self, saving_id: Optional[str] = None):
+        """Take the picture of a saving, then tell the registered actions that it is over (its file must be closed)
+
+        Nothing happens if the app has no such saving.
+        """
+        if self.saving_reporter is not None:
+            self.notify_saving_end(self.take_saving_snapshot(saving_id), saving_id)
+
+    def saving_payload(self) -> Dict[str, Any]:
+        """Free information on the saving that starts, given to the actions listening to the saving events
+
+        Empty by default. Reimplement it to give what is useful to describe the saving (the scan type for instance).
+        The values should be simple (text, numbers, booleans) as they may be written in a notebook.
+        """
+        return {}
 
     @staticmethod
     def get_theme(name: Optional[str] = None) -> Theme:
