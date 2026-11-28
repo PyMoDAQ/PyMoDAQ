@@ -36,7 +36,7 @@ from pymodaq.utils.dashboard_mixin import DashboardMixin
 from pymodaq.utils.config import get_set_state_path
 from pymodaq_gui.managers.manager_base import ManagerBase, ManagerActions
 from pymodaq.extensions import ExtensionEnum
-from pymodaq.launcher import HISTORY_FILE_NAME, HISTORY_FILE_PATH
+from pymodaq.launcher import HISTORY_FILE_NAME, HISTORY_FILE_PATH, load_history
 
 from datetime import datetime
 
@@ -493,7 +493,7 @@ class StateManager(DashboardMixin, SettingsManager):
         entry = {date: {'experiment': self.experiment_manager.entry, 'state': self.entry}}
 
         try:
-            existing = toml.load(self.history_file_path)
+            existing = load_history(self.history_file_path)
         except (FileNotFoundError, PermissionError, OSError):
             existing = {}
 
@@ -505,7 +505,7 @@ class StateManager(DashboardMixin, SettingsManager):
                     }
         new_dict.update(entry)
 
-        with open(self.history_file_path, "w") as f:
+        with open(self.history_file_path, "w", encoding="utf-8") as f:
             toml.dump(new_dict, f)
 
     def _update_entry(self, entry: Union[str, Path] = None, **kwargs):
