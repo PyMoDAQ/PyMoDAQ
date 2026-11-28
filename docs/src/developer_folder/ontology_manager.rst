@@ -101,21 +101,17 @@ Python (no Qt) and grey boxes belong to something else.
    :caption: The manager asks the factory for a source, the source returns the terms
 
    digraph reading {
-     rankdir=TB; nodesep=0.5; ranksep=0.45; node [shape=box, fontname="Helvetica", fontsize=10, style=filled];
+     rankdir=LR; nodesep=0.4; ranksep=0.55; node [shape=box, fontname="Helvetica", fontsize=10, style=filled];
      edge [fontname="Helvetica", fontsize=9];
-     mgr [label="OntologyManager\nthe user gives a type and a location, Load", fillcolor="#b5d3ee"];
+     mgr [label="OntologyManager\nset_source()", fillcolor="#b5d3ee"];
      factory [label="SourceFactory\ncreate('rdf', location)", fillcolor="#fbe5cc"];
-     src [label="RdfSource\nterms()", fillcolor="#fbe5cc"];
-     file [label="ontology file\n.ttl, .rdf, .jsonld", shape=note, fillcolor="#eeeeee"];
-     terms [label="list of OntologyTerm\n(IRI, label, roles, broader)", fillcolor="#fbe5cc"];
-     kept [label="OntologyManager\nkeeps {IRI: term}", fillcolor="#b5d3ee"];
-     hier [label="TermHierarchy\nis_a, descendants...", fillcolor="#fbe5cc"];
-     mgr -> factory [label="1. set_source() asks for a source"];
-     factory -> src [label="2. builds the source of that type"];
-     src -> file [label="3. terms() reads the file"];
-     file -> terms [label="4. each labelled class or individual\nbecomes a term"];
-     terms -> kept [label="5. returned to the manager"];
-     kept -> hier [label="6. when asked, builds the hierarchy"];
+     src [label="RdfSource\nterms() reads the\n.ttl, .rdf or .jsonld file", fillcolor="#fbe5cc"];
+     terms [label="list of OntologyTerm\none per labelled\nclass or individual", fillcolor="#fbe5cc"];
+     kept [label="OntologyManager\nkeeps {IRI: term}\nTermHierarchy on demand", fillcolor="#b5d3ee"];
+     mgr -> factory [label="1. asks for\na source"];
+     factory -> src [label="2. builds"];
+     src -> terms [label="3. returns"];
+     terms -> kept [label="4. kept by\nthe manager"];
    }
 
 2. Assigning a term to a channel
@@ -125,19 +121,23 @@ Python (no Qt) and grey boxes belong to something else.
    :caption: From the instruments of the Dashboard to the entry file
 
    digraph assigning {
-     rankdir=TB; nodesep=0.5; ranksep=0.45; node [shape=box, fontname="Helvetica", fontsize=10, style=filled];
+     rankdir=LR; nodesep=0.4; ranksep=0.6; node [shape=box, fontname="Helvetica", fontsize=10, style=filled];
      edge [fontname="Helvetica", fontsize=9];
-     dash [label="Dashboard\nactuators, probe of the detectors", fillcolor="#eeeeee"];
+     dash [label="Dashboard\nactuators, probe\nof the detectors", fillcolor="#eeeeee"];
      chan [label="Channel list\n(channels.py)", fillcolor="#fbe5cc"];
-     tree [label="ChannelTree\nchannels, terms, status leds", fillcolor="#dbe9f6"];
-     picker [label="TermPicker\npopup with the terms", fillcolor="#dbe9f6"];
+     mgr [label="OntologyManager", fillcolor="#b5d3ee"];
+     tree [label="ChannelTree\nchannels, terms, leds", fillcolor="#dbe9f6"];
+     picker [label="TermPicker\npopup", fillcolor="#dbe9f6"];
      assign [label="Assignment\n{channel key: IRI}", fillcolor="#fbe5cc"];
      entry [label="entry file\n(.ontology, TOML)", shape=note, fillcolor="#eeeeee"];
-     dash -> chan [label="1. the manager lists the channels"];
-     chan -> tree [label="2. and shows them"];
-     tree -> picker [label="3. double click on the term of a channel"];
-     picker -> assign [label="4. the chosen IRI: manager.assign()"];
-     assign -> entry [label="5. saved at once"];
+     dash -> chan [label="1. channels"];
+     chan -> mgr;
+     mgr -> tree [label="2. rows to show"];
+     tree -> mgr [label="3. double click"];
+     mgr -> picker [label="4. opens"];
+     picker -> mgr [label="5. chosen IRI"];
+     mgr -> assign [label="6. assign()"];
+     assign -> entry [label="7. saved at once"];
    }
 
 3. Writing the terms in the saved data
