@@ -244,7 +244,7 @@ From a term of the ontology to a saved array
      b [label="2. RdfSource.terms() reads the file\nand returns the OntologyTerm list"];
      c [label="3. Update channels / Probe detectors\nChannel list (actuators: one each,\ndetectors: snap, one per array)"];
      d [label="4. Double click on the term of a channel\nTermPicker -> IRI"];
-     e [label="5. manager.assign(key, iri)\nAssignment.set + save the entry file\n(<config>/ontology/<experiment>/*.ontology)"];
+     e [label="5. manager.assign(key, iri)\nAssignment.set + save the entry file\n(<config>/ontology/<experiment>.ontology)"];
      f [label="6. An extension calls manager.attach_worker(worker)\nthe annotation preparer is added to the worker", fillcolor="#fbe5cc"];
      g [label="7. At each bundle to save, the preparer reads the assignment\nand, for the first bundle only, adds the extra attribute\nsemantic_iri to the data (one IRI, or one per array)", fillcolor="#fbe5cc"];
      h [label="8. The file written has the IRI next to the array\nit describes", fillcolor="#e2f0d9"];

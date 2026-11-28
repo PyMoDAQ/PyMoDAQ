@@ -167,6 +167,39 @@ def test_probe_and_update_buttons_are_in_the_window(manager):
     assert manager.status_label.text() == 'There is no detector to probe'
 
 
+def test_applying_a_new_experiment_does_not_need_an_entry_file(manager, tmp_path):
+    manager.assign('Magnet', FIELD)
+    # the entry of an experiment is read when it is applied, before anything was saved
+    missing = tmp_path / 'never_saved' / 'default.ontology'
+    manager._update_entry(missing)  # used to raise FileNotFoundError
+    assert manager.assignment.get('Magnet') == ''
+    assert manager.source is not None  # the ontology already loaded is kept
+
+
+def test_a_single_entry_needs_no_entry_list(manager):
+    from pymodaq_gui.managers.manager_base import ManagerActions
+    for action in (ManagerActions.LIST, ManagerActions.COPY, ManagerActions.NEW, ManagerActions.DELETE,
+                   ManagerActions.SAVE, ManagerActions.RELOAD, ManagerActions.EXECUTE):
+        assert not manager.get_action(action).isVisible()
+    toolbar, menu = manager.get_external_toolbar_menu()
+    assert manager.get_action(ManagerActions.OPEN) in toolbar.actions()
+    assert not any(a.text() == ManagerActions.LIST_EXTERNAL for a in toolbar.actions())
+
+
+def test_the_entry_file_is_named_after_the_experiment(manager, tmp_path):
+    assert manager.entry_path_from_name('spectro_lab_a') == tmp_path / 'ontology' / 'spectro_lab_a.ontology'
+    (tmp_path / 'ontology' / 'spectro_lab_a.ontology').write_text('')
+    assert manager.entries == ['spectro_lab_a']
+
+
+def test_a_long_status_does_not_widen_the_window(manager):
+    manager.mainwindow.show()
+    width = manager.mainwindow.width()
+    manager.status_label.setText('Could not read the ontology ' + 'very/long/path/' * 40)
+    assert manager.status_label.wordWrap()
+    assert manager.mainwindow.minimumSizeHint().width() < 2 * width
+
+
 STATES = '''
 @prefix : <http://example.org/s#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .

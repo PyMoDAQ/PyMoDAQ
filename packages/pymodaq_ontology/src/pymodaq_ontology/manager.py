@@ -6,7 +6,7 @@ from qtpy import QtWidgets
 
 from pymodaq_utils.config import get_set_config_dir
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_gui.managers.manager_base import ManagerBase
+from pymodaq_gui.managers.manager_base import ManagerBase, ManagerActions
 from pymodaq_gui.messenger import messagebox
 
 from pymodaq.control_modules.enums import ActionIconNames
@@ -57,10 +57,17 @@ class OntologyManager(DashboardMixin, ManagerBase):
         return True
 
     def get_entry_folder(self, **kwargs_to_entry_folder) -> Path:
-        experiment = self.experiment_manager.entry if self.experiment_manager is not None else 'default'
-        folder = get_set_config_dir('ontology').joinpath(experiment or 'default')
+        """ All the entries together: one file per experiment, named after it """
+        folder = get_set_config_dir('ontology')
         folder.mkdir(parents=True, exist_ok=True)
         return folder
+
+    def list_managed_entries_path(self, **kwargs_to_entry_folder) -> list[Path]:
+        folder = self.get_entry_folder(**kwargs_to_entry_folder)
+        return sorted(path for path in folder.iterdir() if path.suffix == self.entry_extension)
+
+    def list_managed_entries(self, **kwargs_to_entry_folder) -> list[str]:
+        return [path.stem for path in self.list_managed_entries_path(**kwargs_to_entry_folder)]
 
     def save_entries(self, entry_path: Path = None) -> None:
         save_entry(entry_path, self.assignment, self.source)
@@ -99,6 +106,8 @@ class OntologyManager(DashboardMixin, ManagerBase):
         self.channel_tree = ChannelTree()
         self.channel_tree.itemDoubleClicked.connect(self._on_double_clicked)
         self.status_label = QtWidgets.QLabel('Double click the term of a channel to choose it.')
+        self.status_label.setWordWrap(True)  # a long path or error message must not widen the window
+        self.status_label.setSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Preferred)
 
         # the same actions as the toolbar, within reach of the channels they refresh
         update_button = QtWidgets.QPushButton('Update channels')
@@ -133,7 +142,22 @@ class OntologyManager(DashboardMixin, ManagerBase):
         layout.addWidget(self.states_table)
         layout.addWidget(self.status_label)
 
+    def get_external_toolbar_menu(self, toolbar=None, menu=None):
+        """ Only the action opening the manager: there is no entry to choose and nothing to execute """
+        if toolbar is None:
+            toolbar = QtWidgets.QToolBar('Ontology')
+        if menu is None:
+            menu = QtWidgets.QMenu('Ontology')
+        self.affect_to(ManagerActions.OPEN, toolbar)
+        self.affect_to(ManagerActions.OPEN, menu)
+        return toolbar, menu
+
     def setup_actions(self) -> None:
+        # one entry file per experiment, kept at each change: nothing to choose from, copy, create, delete, save,
+        # reload or execute
+        for action in (ManagerActions.LIST, ManagerActions.COPY, ManagerActions.NEW, ManagerActions.DELETE,
+                       ManagerActions.SAVE, ManagerActions.RELOAD, ManagerActions.EXECUTE):
+            self.get_action(action).setVisible(False)
         self.add_action('update_channels', 'Update channels', 'refresh', toolbar='management', auto_menu=True,
                         tip='Update the channels from the control modules of the Dashboard')
         self.add_action('recap', 'Recap', 'grid_on', toolbar='management', auto_menu=True,
@@ -272,7 +296,10 @@ class OntologyManager(DashboardMixin, ManagerBase):
 
     # ---- the assignment
     def load_entry(self, entry_path: Path) -> None:
-        self.assignment, source = load_entry(entry_path)
+        if not Path(entry_path).is_file():  # the entry of a new experiment is only written with its first assignment
+            self.assignment, source = Assignment(), None
+        else:
+            self.assignment, source = load_entry(entry_path)
         if source is not None and (self.source is None or source.identifier != self.source.identifier):
             self.set_source(source)
         self._refresh_tree()
