@@ -120,3 +120,20 @@ def test_the_browser_provider_reads_what_the_manager_wrote(ontology_source, tmp_
     assert semantics.label(PHOTODIODE) == 'Photodiode'
     assert semantics.parent(PHOTODIODE) == 'http://example.org/o#Optical'
     assert semantics.canonical(PHOTODIODE) == semantics.canonical('http://other.org/Diode')
+
+
+def test_states_of_the_actuators_are_part_of_the_saved_assignment(ontology_source, tmp_path):
+    path = tmp_path / 'l.h5'
+    h5 = make_saver(path)
+    assignment = Assignment({'Det/x': PHOTODIODE})
+    assignment.set_state('Shutter', 1.0, PHOTODIODE)
+    assert save_ontology_in_file(h5, ontology_source, assignment)
+    h5.close_file()
+    reader = H5BrowserUtil(backend='h5py')
+    reader.init_file(file_name=path, new_file=False, mode='r')
+    try:
+        node = reader.root().children()['Ontology'].children()['assignment']
+        text = ''.join(t if isinstance(t, str) else bytes(t).decode() for t in node.read())
+    finally:
+        reader.close_file()
+    assert toml.loads(text)['states'] == [{'actuator': 'Shutter', 'value': 1.0, 'term': PHOTODIODE}]
