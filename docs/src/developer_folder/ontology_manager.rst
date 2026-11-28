@@ -84,7 +84,7 @@ terms:
     :width: 55%
 
 The popup searches the labels, shows the terms as the tree of their *is a kind of* relations, and describes the selected
-term below with its IRI. The terms that fit the kind of channel (a detector here) are shown first; the box *Show all
+term below with its IRI. Only the terms that fit the kind of channel (a detector here) are listed; the box *Show all
 terms* adds the others.
 
 The pieces
@@ -231,7 +231,7 @@ Classes and their parents
         It knows nothing of terms: it receives ``ChannelRow`` objects.
     * - ``TermPicker``
       - ``QDialog``
-      - The popup opened by a double click: search field, tree of terms (the compatible ones first, a box to show all),
+      - The popup opened by a double click: search field, tree of terms (only the compatible ones, a box to show all),
         and the description of the selected term.
 
 From a term of the ontology to a saved array
