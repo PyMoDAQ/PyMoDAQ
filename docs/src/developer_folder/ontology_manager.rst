@@ -101,7 +101,7 @@ Python (no Qt) and grey boxes belong to something else.
    :caption: The manager asks the factory for a source, the source returns the terms
 
    digraph reading {
-     rankdir=LR; nodesep=0.4; ranksep=0.6; node [shape=box, fontname="Helvetica", fontsize=10, style=filled];
+     rankdir=TB; nodesep=0.5; ranksep=0.45; node [shape=box, fontname="Helvetica", fontsize=10, style=filled];
      edge [fontname="Helvetica", fontsize=9];
      mgr [label="OntologyManager\nset_source()", fillcolor="#b5d3ee"];
      factory [label="SourceFactory\ncreate('rdf', location)", fillcolor="#fbe5cc"];
@@ -124,23 +124,19 @@ Python (no Qt) and grey boxes belong to something else.
    :caption: From the instruments of the Dashboard to the entry file
 
    digraph assigning {
-     rankdir=LR; nodesep=0.4; ranksep=0.6; node [shape=box, fontname="Helvetica", fontsize=10, style=filled];
+     rankdir=TB; nodesep=0.5; ranksep=0.45; node [shape=box, fontname="Helvetica", fontsize=10, style=filled];
      edge [fontname="Helvetica", fontsize=9];
-     dash [label="Dashboard\nactuators, probe\nof the detectors", fillcolor="#eeeeee"];
+     dash [label="Dashboard\nactuators, probe of the detectors", fillcolor="#eeeeee"];
      chan [label="Channel list\n(channels.py)", fillcolor="#fbe5cc"];
-     mgr [label="OntologyManager", fillcolor="#b5d3ee"];
-     tree [label="ChannelTree\nchannels, terms, leds", fillcolor="#dbe9f6"];
-     picker [label="TermPicker\npopup", fillcolor="#dbe9f6"];
+     tree [label="ChannelTree\nchannels, terms, status leds", fillcolor="#dbe9f6"];
+     picker [label="TermPicker\npopup with the terms", fillcolor="#dbe9f6"];
      assign [label="Assignment\n{channel key: IRI}", fillcolor="#fbe5cc"];
      entry [label="entry file\n(.ontology, TOML)", shape=note, fillcolor="#eeeeee"];
-     dash -> chan [label="1. channels"];
-     chan -> mgr;
-     mgr -> tree [label="2. rows to show"];
-     tree -> mgr [label="3. double click"];
-     mgr -> picker [label="4. opens"];
-     picker -> mgr [label="5. chosen IRI"];
-     mgr -> assign [label="6. assign()"];
-     assign -> entry [label="7. saved at once"];
+     dash -> chan [label="1. the manager lists the channels"];
+     chan -> tree [label="2. and shows them"];
+     tree -> picker [label="3. double click on the term of a channel"];
+     picker -> assign [label="4. the chosen IRI: manager.assign()"];
+     assign -> entry [label="5. saved at once"];
    }
 
 3. Writing the terms in the saved data
@@ -150,7 +146,7 @@ Python (no Qt) and grey boxes belong to something else.
    :caption: The data preparer added to the worker of an extension
 
    digraph saving {
-     rankdir=LR; nodesep=0.4; ranksep=0.6; node [shape=box, fontname="Helvetica", fontsize=10, style=filled];
+     rankdir=TB; nodesep=0.5; ranksep=0.45; node [shape=box, fontname="Helvetica", fontsize=10, style=filled];
      edge [fontname="Helvetica", fontsize=9];
      ext [label="extension\n(for instance DAQ_Scan)", fillcolor="#eeeeee"];
      mgr [label="OntologyManager\nattach_worker(worker)", fillcolor="#b5d3ee"];
