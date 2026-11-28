@@ -165,3 +165,12 @@ def test_probe_and_update_buttons_are_in_the_window(manager):
     manager.status_label.setText('')
     buttons['Probe detectors'].click()  # no Dashboard here: the probe says there is nothing to probe
     assert manager.status_label.text() == 'There is no detector to probe'
+
+
+def test_applying_a_new_experiment_does_not_need_an_entry_file(manager, tmp_path):
+    manager.assign('Magnet', FIELD)
+    # the entry of an experiment is read when it is applied, before anything was saved
+    missing = tmp_path / 'never_saved' / 'default.ontology'
+    manager._update_entry(missing)  # used to raise FileNotFoundError
+    assert manager.assignment.get('Magnet') == ''
+    assert manager.source is not None  # the ontology already loaded is kept

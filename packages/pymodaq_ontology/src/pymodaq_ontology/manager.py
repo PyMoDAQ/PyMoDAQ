@@ -256,7 +256,10 @@ class OntologyManager(DashboardMixin, ManagerBase):
 
     # ---- the assignment
     def load_entry(self, entry_path: Path) -> None:
-        self.assignment, source = load_entry(entry_path)
+        if not Path(entry_path).is_file():  # the entry of a new experiment is only written with its first assignment
+            self.assignment, source = Assignment(), None
+        else:
+            self.assignment, source = load_entry(entry_path)
         if source is not None and (self.source is None or source.identifier != self.source.identifier):
             self.set_source(source)
         self._refresh_tree()
