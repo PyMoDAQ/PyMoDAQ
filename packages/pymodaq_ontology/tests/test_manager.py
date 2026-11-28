@@ -166,6 +166,7 @@ def test_probe_and_update_buttons_are_in_the_window(manager):
     buttons['Probe detectors'].click()  # no Dashboard here: the probe says there is nothing to probe
     assert manager.status_label.text() == 'There is no detector to probe'
 
+
 STATES = '''
 @prefix : <http://example.org/s#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .

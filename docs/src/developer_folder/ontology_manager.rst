@@ -77,7 +77,7 @@ source of the terms (type, location, *Load*). The tree lists the channels: the a
 module, each with its term, its last value (the last position of an actuator, or the unit of a detector channel, until
 a probe finds a value) and a status led (see `Status of a channel`_). The two buttons under it, *Update channels* and *Probe detectors*, do the same as the
 first and the last actions of the toolbar (the recap table is the middle one): the first reads the actuators from the
-Dashboard, the second snaps the detectors to find the channels they emit. A double click on the term of a channel opens the popup of
+Dashboard, the second snaps the detectors to find the channels they emit. The table under the tree lists the states of the actuators (see `Values of an actuator: states`_). A double click on the term of a channel opens the popup of
 terms:
 
 .. image:: /image/ontology_manager/ontology_term_picker.png
@@ -338,6 +338,55 @@ implementation returning nothing, so a source type that cannot give one only mea
 builds it from its rdflib graph. A second preparer, added and removed with the one that writes ``semantic_iri`` by
 ``attach_worker`` and ``detach_worker``, saves it; a failure to write it is logged and never stops the saving of the data.
 The reader is ``embedded_semantics`` in ``pymodaq_data.h5modules.representations``.
+
+Values of an actuator: states
+-----------------------------
+
+The term of an actuator says what it is (*Beam block*). It does not say what its values mean, and they are not fixed: on
+and off can be 1 and 0, or 0 and 1, or any number the user configured. The manager therefore keeps, next to the
+channels, a table of **states**: a value of an actuator associated with a term that says what the value stands for
+(``1`` is *Beam blocked*). An extension then asks in terms of the ontology, and the manager knows the values.
+
+.. list-table::
+    :header-rows: 1
+    :widths: 24 38 38
+
+    * -
+      - Term of the actuator
+      - State of a value
+    * - says
+      - what the actuator is
+      - what one of its values means
+    * - example
+      - *Beam block*
+      - *Beam blocked* (1), *Beam open* (0)
+    * - stored in
+      - ``Assignment.values``, ``[assignments]`` of the entry file, key = the actuator
+      - ``Assignment.states`` (``StateAssociation``), ``[[states]]`` of the entry file, key = the actuator **and** the value
+    * - written in the data
+      - yes, as ``semantic_iri``
+      - no, only used to move the actuators
+
+In the window, *Add state...* asks for the actuator, its value and the state (the popup offers the kinds of the term of
+the actuator, so *Beam blocked* and *Beam open* for a *Beam block*; if the actuator has no term, or nothing is a kind of
+it, every actuator term). *Remove state* removes the selected row. The offer is a suggestion, not a check: any term can be
+chosen.
+
+.. code-block:: toml
+
+    [[states]]
+    actuator = "Shutter"
+    value = 1.0
+    term = "http://example.org/mockexamples#BeamBlocked"
+
+.. code-block:: python
+
+    # what the extension asks, and what it gets: the actuators to move, and the states nobody gave a value to
+    moves, missing = manager.moves_for_states([BEAM_BLOCKED, SAMPLE_IN_BEAM])
+    # moves == [('Shutter', 1.0), ('Carousel', 1.0)], missing == []
+
+A state that is a kind of the wanted one is accepted: a value associated with *Beam blocked* also answers a request
+for a more general state, such as *Beam block* itself.
 
 Status of a channel
 -------------------
