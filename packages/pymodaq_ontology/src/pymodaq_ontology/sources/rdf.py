@@ -13,6 +13,7 @@ ROLES_OF_TYPE = {  # the classes whose individuals describe what a detector or a
     URIRef(SOSA + 'ObservableProperty'): DETECTOR,
     URIRef(SOSA + 'ActuatableProperty'): ACTUATOR,
 }
+STATE_CLASS = URIRef('https://pymodaq.cnrs.fr/ontology#State')  # a term that is a kind of it is a state, not a channel
 EXCERPT_PREDICATES = (RDF.type, RDFS.label, SKOS.prefLabel, SKOS.definition, RDFS.comment, RDFS.subClassOf,
                       OWL.equivalentClass)  # what the saved excerpt keeps of a term
 LANGUAGES = ('en', '')  # the label language preferred, then a label without language
@@ -46,7 +47,8 @@ class RdfSource(OntologySource):
     * the named individuals (``owl:NamedIndividual``): their classes are their parents.
 
     A term that is (or whose class is) a kind of ``sosa:ObservableProperty`` is meant for detectors, a kind of
-    ``sosa:ActuatableProperty`` for actuators.
+    ``sosa:ActuatableProperty`` for actuators. A term that is a kind of ``pymodaq:State``
+    (``https://pymodaq.cnrs.fr/ontology#State``) is a state of a channel (like *Beam blocked*), not a channel.
 
     The label is ``rdfs:label`` (English first), the description ``skos:definition`` or ``rdfs:comment``. Only the
     things with a label are terms: the others are structure of the ontology.
@@ -79,14 +81,15 @@ class RdfSource(OntologySource):
             seen.add(subject)
             is_class = (subject, RDF.type, OWL.Class) in graph
             parents = graph.objects(subject, RDFS.subClassOf if is_class else RDF.type)
+            is_state = STATE_CLASS in graph.transitive_objects(subject, RDFS.subClassOf if is_class else RDF.type)
             parents = tuple(str(p) for p in parents if isinstance(p, URIRef) and p != OWL.NamedIndividual
-                            and p != OWL.Class)
+                            and p != OWL.Class and p != STATE_CLASS)
             roles = _roles(graph, subject, is_class)
             terms.append(OntologyTerm(
                 iri=str(subject), label=label,
                 category='Classes' if is_class else 'Individuals',
                 description=_text(graph, subject, (SKOS.definition, RDFS.comment)),
-                roles=roles, broader=parents))
+                roles=roles, broader=parents, is_state=is_state))
         return sorted(terms, key=lambda term: term.label.lower())
 
     def excerpt(self, iris: Iterable[str]) -> tuple[str, dict[str, str]]:

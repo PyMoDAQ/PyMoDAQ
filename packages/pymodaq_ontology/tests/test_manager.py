@@ -170,11 +170,12 @@ def test_probe_and_update_buttons_are_in_the_window(manager):
 STATES = '''
 @prefix : <http://example.org/s#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix pq: <https://pymodaq.cnrs.fr/ontology#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix sosa: <http://www.w3.org/ns/sosa/> .
 :Block a owl:Class ; rdfs:subClassOf sosa:ActuatableProperty ; rdfs:label "Beam block" .
-:Blocked a owl:Class ; rdfs:subClassOf :Block ; rdfs:label "Beam blocked" .
-:Open a owl:Class ; rdfs:subClassOf :Block ; rdfs:label "Beam open" .
+:Blocked a owl:Class ; rdfs:subClassOf :Block , pq:State ; rdfs:label "Beam blocked" .
+:Open a owl:Class ; rdfs:subClassOf :Block , pq:State ; rdfs:label "Beam open" .
 '''
 S = 'http://example.org/s#'
 
@@ -244,3 +245,28 @@ def test_one_popup_sets_the_state_of_an_actuator(state_manager):
 def test_a_state_needs_the_actuator_to_have_a_term(state_manager):
     state_manager.add_state_dialog()
     assert state_manager.status_label.text() == 'Assign a term to an actuator first'
+
+
+def test_a_state_is_shown_in_the_picker_but_cannot_be_chosen(state_manager):
+    from pymodaq_ontology.term_picker import TermPicker, IRI_ROLE
+    from pymodaq_ontology.terms import ACTUATOR
+    assert {t.iri: t.is_state for t in state_manager.terms.values()} == {
+        S + 'Block': False, S + 'Blocked': True, S + 'Open': True}
+    picker = TermPicker(list(state_manager.terms.values()), None, '', ACTUATOR)
+    items = {item.data(0, IRI_ROLE): item for _, item in picker._leaves()}
+    assert set(items) == {S + 'Block', S + 'Blocked', S + 'Open'}  # the hierarchy is complete
+    assert items[S + 'Blocked'].parent() is items[S + 'Block']
+    picker.tree.setCurrentItem(items[S + 'Blocked'])
+    picker._accept()
+    assert picker.selected_iri == ''
+    picker.tree.setCurrentItem(items[S + 'Block'])
+    picker._accept()
+    assert picker.selected_iri == S + 'Block'
+
+
+def test_the_picker_explains_the_states_only_when_it_shows_some(state_manager):
+    from pymodaq_ontology.term_picker import TermPicker
+    from pymodaq_ontology.terms import ACTUATOR
+    with_states = TermPicker(list(state_manager.terms.values()), None, '', ACTUATOR)
+    without = TermPicker([t for t in state_manager.terms.values() if not t.is_state], None, '', ACTUATOR)
+    assert not with_states.legend.isHidden() and without.legend.isHidden()
