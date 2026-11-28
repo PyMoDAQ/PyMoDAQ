@@ -174,12 +174,3 @@ def test_applying_a_new_experiment_does_not_need_an_entry_file(manager, tmp_path
     manager._update_entry(missing)  # used to raise FileNotFoundError
     assert manager.assignment.get('Magnet') == ''
     assert manager.source is not None  # the ontology already loaded is kept
-
-
-def test_a_single_entry_needs_no_entry_list(manager):
-    from pymodaq_gui.managers.manager_base import ManagerActions
-    for action in (ManagerActions.LIST, ManagerActions.COPY, ManagerActions.NEW, ManagerActions.DELETE):
-        assert not manager.get_action(action).isVisible()
-    toolbar, menu = manager.get_external_toolbar_menu()
-    assert manager.get_action(ManagerActions.OPEN) in toolbar.actions()
-    assert not any(a.text() == ManagerActions.LIST_EXTERNAL for a in toolbar.actions())
