@@ -1,7 +1,7 @@
 """The popup where the user picks the term of a channel"""
 from typing import Optional
 
-from qtpy import QtCore, QtWidgets
+from qtpy import QtCore, QtGui, QtWidgets
 
 from pymodaq_ontology.terms import OntologyTerm, TermHierarchy
 
@@ -15,7 +15,7 @@ class TermPicker(QtWidgets.QDialog):
 
     Typing in the field filters the terms and selects the first one left, ``Enter`` (or a double click, or OK)
     validates. When a kind of channel is given, only the terms that fit it are listed, unless *Show all terms*
-    is checked.
+    is checked. The states (*Beam blocked*) are shown in italics in the hierarchy but cannot be selected.
     """
 
     def __init__(self, terms: list[OntologyTerm], parent=None, current_iri: str = '', kind: Optional[str] = None,
@@ -33,6 +33,9 @@ class TermPicker(QtWidgets.QDialog):
         self.show_all.setVisible(bool(kind))
         self.tree = QtWidgets.QTreeWidget()
         self.tree.setHeaderHidden(True)
+        self.legend = QtWidgets.QLabel(
+            '<i>Italic grey</i>: a state, set from a value of an actuator (not for a channel)')
+        self.legend.setWordWrap(True)
         self.description = QtWidgets.QLabel('Select a term to read its description.')
         self.description.setWordWrap(True)
         self.description.setMinimumHeight(70)
@@ -41,7 +44,7 @@ class TermPicker(QtWidgets.QDialog):
         buttons.accepted.connect(self._accept)
         buttons.rejected.connect(self.reject)
         layout = QtWidgets.QVBoxLayout(self)
-        for widget in (self.search, self.show_all, self.tree, self.description, buttons):
+        for widget in (self.search, self.show_all, self.tree, self.legend, self.description, buttons):
             layout.addWidget(widget)
 
         self.search.textChanged.connect(self._filter)
@@ -55,6 +58,7 @@ class TermPicker(QtWidgets.QDialog):
         self.tree.clear()
         kind = None if self.show_all.isChecked() else self.kind
         shown = {iri: term for iri, term in self.terms.items() if not (kind and not term.fits(kind))}
+        self.legend.setVisible(any(term.is_state for term in shown.values()))
         hierarchy = TermHierarchy(shown.values())
         if hierarchy.has_relations:
             self._build_hierarchy(hierarchy)
@@ -66,6 +70,15 @@ class TermPicker(QtWidgets.QDialog):
         item = QtWidgets.QTreeWidgetItem(parent, [term.label])
         item.setData(0, IRI_ROLE, term.iri)
         item.setToolTip(0, term.description)
+        if term.is_state:  # shown for the hierarchy, but a state is not the term of a channel
+            font = item.font(0)
+            font.setItalic(True)
+            item.setFont(0, font)
+            item.setForeground(0, self.palette().color(QtGui.QPalette.ColorGroup.Disabled,
+                                                       QtGui.QPalette.ColorRole.Text))
+            item.setFlags(item.flags() & ~QtCore.Qt.ItemFlag.ItemIsSelectable)
+            item.setToolTip(0, f'State, not a channel: set it from a value of an actuator.\n{term.description}')
+            return item
         if term.iri == self.current_iri:
             self.tree.setCurrentItem(item)
         return item
@@ -128,7 +141,8 @@ class TermPicker(QtWidgets.QDialog):
 
         for i in range(self.tree.topLevelItemCount()):
             apply(self.tree.topLevelItem(i))
-        first = next((item for _, item in self._leaves() if not item.isHidden() and matches(item)), None)
+        first = next((item for _, item in self._leaves()
+                      if not item.isHidden() and matches(item) and self._selectable(item)), None)
         if text and first is not None:  # typing then Enter is enough
             self.tree.setCurrentItem(first)
 
@@ -138,10 +152,14 @@ class TermPicker(QtWidgets.QDialog):
             term = self.terms[iri]
             self.description.setText(f'<b>{term.label}</b><br>{term.description}<br><small>{term.iri}</small>')
 
+    def _selectable(self, item) -> bool:
+        term = self.terms.get(item.data(0, IRI_ROLE))
+        return term is not None and not term.is_state
+
     def _accept(self) -> None:
         item = self.tree.currentItem()
         iri = item.data(0, IRI_ROLE) if item is not None else None
-        if iri in self.terms:
+        if iri in self.terms and self._selectable(item):
             self.selected_iri = iri
             self.accept()
 

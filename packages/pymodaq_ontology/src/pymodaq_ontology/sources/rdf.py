@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Iterable, Optional
 
 from rdflib import Graph, URIRef, Literal
+from rdflib.collection import Collection
 from rdflib.namespace import OWL, RDF, RDFS, SKOS
 
 from pymodaq_ontology.source_factory import OntologySource, SourceFactory
@@ -13,8 +14,9 @@ ROLES_OF_TYPE = {  # the classes whose individuals describe what a detector or a
     URIRef(SOSA + 'ObservableProperty'): DETECTOR,
     URIRef(SOSA + 'ActuatableProperty'): ACTUATOR,
 }
+REQUIRES_STATE = URIRef('https://pymodaq.cnrs.fr/ontology#requiresState')  # our own predicate, not a standard one
 EXCERPT_PREDICATES = (RDF.type, RDFS.label, SKOS.prefLabel, SKOS.definition, RDFS.comment, RDFS.subClassOf,
-                      OWL.equivalentClass)  # what the saved excerpt keeps of a term
+                      OWL.equivalentClass, REQUIRES_STATE)  # what the saved excerpt keeps of a term
 LANGUAGES = ('en', '')  # the label language preferred, then a label without language
 
 
@@ -46,7 +48,11 @@ class RdfSource(OntologySource):
     * the named individuals (``owl:NamedIndividual``): their classes are their parents.
 
     A term that is (or whose class is) a kind of ``sosa:ObservableProperty`` is meant for detectors, a kind of
-    ``sosa:ActuatableProperty`` for actuators.
+    ``sosa:ActuatableProperty`` for actuators. ``pymodaq:requiresState``
+    (``https://pymodaq.cnrs.fr/ontology#requiresState``, our own predicate, in a placeholder namespace) says in which
+    states a term has its meaning. A member of an enumeration (``owl:oneOf``) is a
+    value of a property, a *state* of an actuator (*Beam blocked* in the enumeration that defines *Beam block*), not a
+    term for a channel.
 
     The label is ``rdfs:label`` (English first), the description ``skos:definition`` or ``rdfs:comment``. Only the
     things with a label are terms: the others are structure of the ontology.
@@ -70,6 +76,7 @@ class RdfSource(OntologySource):
         graph = self._read()
         subjects = [s for s in (*graph.subjects(RDF.type, OWL.Class), *graph.subjects(RDF.type, OWL.NamedIndividual))
                     if isinstance(s, URIRef)]
+        states = {member for values in graph.objects(None, OWL.oneOf) for member in Collection(graph, values)}
         terms = []
         seen = set()
         for subject in subjects:
@@ -86,7 +93,8 @@ class RdfSource(OntologySource):
                 iri=str(subject), label=label,
                 category='Classes' if is_class else 'Individuals',
                 description=_text(graph, subject, (SKOS.definition, RDFS.comment)),
-                roles=roles, broader=parents))
+                roles=roles, broader=parents, is_state=subject in states,
+                requires=tuple(sorted(str(o) for o in graph.objects(subject, REQUIRES_STATE)))))
         return sorted(terms, key=lambda term: term.label.lower())
 
     def excerpt(self, iris: Iterable[str]) -> tuple[str, dict[str, str]]:

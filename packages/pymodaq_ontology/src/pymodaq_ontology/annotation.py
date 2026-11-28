@@ -53,10 +53,10 @@ def save_ontology_in_file(h5saver, source, assignment: Assignment) -> bool:
 
     * the string array ``excerpt``: the part of the ontology describing the assigned terms (Turtle), with the group
       attributes ``format``, and ``iri`` and ``version`` when the source knows them; only if there is a source,
-    * the string array ``assignment``: the assignment (TOML, the term of each channel).
+    * the string array ``assignment``: the assignment (TOML: the term of each channel and the states of the actuators).
 
     Returns False if there is nothing to save or the file cannot be written."""
-    iris = sorted({iri for iri in assignment.values.values() if iri})
+    iris = sorted({iri for iri in assignment.values.values() if iri} | {s.iri for s in assignment.states})
     if not iris or h5saver is None:
         return False
     try:

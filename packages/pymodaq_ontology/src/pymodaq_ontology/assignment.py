@@ -1,4 +1,5 @@
 """The assignment of ontology terms to channels, and its entry file"""
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
@@ -7,11 +8,27 @@ import toml
 from pymodaq_ontology.source_factory import OntologySource, SourceFactory
 
 
-class Assignment:
-    """Channel key -> IRI of the term assigned to it"""
+@dataclass(frozen=True)
+class StateAssociation:
+    """A value of an actuator, as the user configured it (a custom number: 1, 0, 12.5...), standing for a state: the
+    term of the ontology that says what the value means (``Beam blocked``)"""
+    actuator: str
+    value: float
+    iri: str
 
-    def __init__(self, values: Optional[dict[str, str]] = None):
+
+class Assignment:
+    """Channel key -> IRI of the term assigned to it, and the states associated with the values of the actuators"""
+
+    def __init__(self, values: Optional[dict[str, str]] = None, states: Optional[list[StateAssociation]] = None):
         self.values: dict[str, str] = dict(values or {})
+        self.states: list[StateAssociation] = list(states or [])
+
+    def set_state(self, actuator: str, value: float, iri: str) -> None:
+        """Associate the state with the value of the actuator (an empty IRI removes the association)"""
+        self.states = [s for s in self.states if not (s.actuator == actuator and s.value == value)]
+        if iri:
+            self.states.append(StateAssociation(actuator, float(value), iri))
 
     def get(self, key: str) -> str:
         return self.values.get(key, '')
@@ -33,7 +50,10 @@ def save_entry(path: Path, assignment: Assignment, source: Optional[OntologySour
 
 def assignment_content(assignment: Assignment) -> dict:
     """What the entry file (and the copy of the assignment saved in the data files) holds of an assignment"""
-    return {'assignments': dict(sorted(assignment.values.items()))}
+    content: dict = {'assignments': dict(sorted(assignment.values.items()))}
+    if assignment.states:
+        content['states'] = [{'actuator': s.actuator, 'value': s.value, 'term': s.iri} for s in assignment.states]
+    return content
 
 
 def assignment_text(assignment: Assignment) -> str:
@@ -45,7 +65,9 @@ def assignment_text(assignment: Assignment) -> str:
 def load_entry(path: Path) -> tuple[Assignment, Optional[OntologySource]]:
     """Read an entry file. The source is None if the file does not name one or if its type is unknown"""
     content = toml.loads(Path(path).read_text(encoding='utf-8'))
-    assignment = Assignment(content.get('assignments', {}))
+    states = [StateAssociation(str(s['actuator']), float(s['value']), str(s['term']))
+              for s in content.get('states', [])]
+    assignment = Assignment(content.get('assignments', {}), states)
     source = None
     if 'source' in content:
         try:

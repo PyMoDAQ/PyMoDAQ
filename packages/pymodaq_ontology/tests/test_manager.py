@@ -198,3 +198,115 @@ def test_a_long_status_does_not_widen_the_window(manager):
     manager.status_label.setText('Could not read the ontology ' + 'very/long/path/' * 40)
     assert manager.status_label.wordWrap()
     assert manager.mainwindow.minimumSizeHint().width() < 2 * width
+
+
+STATES = '''
+@prefix : <http://example.org/s#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix pq: <https://pymodaq.cnrs.fr/ontology#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sosa: <http://www.w3.org/ns/sosa/> .
+:Block a owl:Class ; rdfs:subClassOf sosa:ActuatableProperty ; rdfs:label "Beam block" .
+:Blocked a owl:NamedIndividual , :Block ; rdfs:label "Beam blocked" .
+:Open a owl:NamedIndividual , :Block ; rdfs:label "Beam open" .
+:Block owl:equivalentClass [ a owl:Class ; owl:oneOf ( :Blocked :Open ) ] .
+:Dark a owl:Class ; rdfs:label "Dark" ; pq:requiresState :Blocked .
+'''
+S = 'http://example.org/s#'
+
+
+@pytest.fixture
+def state_manager(manager, tmp_path):
+    from pymodaq_ontology.source_factory import SourceFactory
+    path = tmp_path / 'states.ttl'
+    path.write_text(STATES, encoding='utf-8')
+    manager.set_source(SourceFactory.create('rdf', str(path)))
+    return manager
+
+
+def test_a_value_of_an_actuator_stands_for_a_state(state_manager):
+    """The values are whatever the user configured: the ontology only knows the states"""
+    state_manager.assign_state('Magnet', 12.5, S + 'Blocked')
+    state_manager.assign_state('Magnet', 3., S + 'Open')
+    assert state_manager.moves_for_states([S + 'Blocked']) == ([('Magnet', 12.5)], [])
+    assert state_manager.moves_for_states([S + 'Open', S + 'Blocked']) == ([('Magnet', 3.), ('Magnet', 12.5)], [])
+
+
+def test_the_state_without_association_is_reported(state_manager):
+    state_manager.assign_state('Magnet', 1., S + 'Open')
+    assert state_manager.moves_for_states([S + 'Blocked']) == ([], [S + 'Blocked'])
+
+
+def test_a_kind_of_the_state_serves_for_the_state(state_manager):
+    state_manager.assign_state('Magnet', 1., S + 'Blocked')
+    assert state_manager.moves_for_states([S + 'Block']) == ([('Magnet', 1.)], [])  # a blocked beam is a block state
+
+
+def test_the_states_are_kept_in_the_entry_and_can_be_replaced(state_manager, tmp_path):
+    from pymodaq_ontology.assignment import load_entry, save_entry
+    state_manager.assign_state('Magnet', 1., S + 'Open')
+    state_manager.assign_state('Magnet', 1., S + 'Blocked')  # same value: replaced
+    assert [(s.value, s.iri) for s in state_manager.assignment.states] == [(1., S + 'Blocked')]
+    path = tmp_path / 'e.ontology'
+    save_entry(path, state_manager.assignment, state_manager.source)
+    assignment, _ = load_entry(path)
+    assert assignment.states == state_manager.assignment.states
+    state_manager.remove_state('Magnet', 1.)
+    assert state_manager.assignment.states == []
+
+
+def test_the_states_choices_are_the_kinds_of_the_term_of_the_actuator(state_manager):
+    state_manager.assign('Magnet', S + 'Block')
+    assert {t.label for t in state_manager.state_choices('Magnet')} == {'Beam blocked', 'Beam open'}
+
+
+def test_one_popup_sets_the_state_of_an_actuator(state_manager):
+    from qtpy import QtWidgets, QtCore
+    state_manager.assign('Magnet', S + 'Block')
+
+    def fill_and_accept():
+        dialog = QtWidgets.QApplication.activeModalWidget()
+        combos = dialog.findChildren(QtWidgets.QComboBox)
+        assert [combos[1].itemText(i) for i in range(combos[1].count())] == ['Beam blocked', 'Beam open']  # kinds only
+        dialog.findChild(QtWidgets.QDoubleSpinBox).setValue(12.5)
+        combos[1].setCurrentIndex(0)
+        dialog.accept()
+
+    QtCore.QTimer.singleShot(0, fill_and_accept)
+    state_manager.add_state_dialog()
+    assert [(s.actuator, s.value, s.iri) for s in state_manager.assignment.states] == [('Magnet', 12.5, S + 'Blocked')]
+
+
+def test_a_state_needs_the_actuator_to_have_a_term(state_manager):
+    state_manager.add_state_dialog()
+    assert state_manager.status_label.text() == 'Assign a term to an actuator first'
+
+
+def test_a_state_is_shown_in_the_picker_but_cannot_be_chosen(state_manager):
+    from pymodaq_ontology.term_picker import TermPicker, IRI_ROLE
+    from pymodaq_ontology.terms import ACTUATOR
+    assert {t.iri: t.is_state for t in state_manager.terms.values()} == {
+        S + 'Block': False, S + 'Blocked': True, S + 'Open': True, S + 'Dark': False}
+    picker = TermPicker(list(state_manager.terms.values()), None, '', ACTUATOR)
+    items = {item.data(0, IRI_ROLE): item for _, item in picker._leaves()}
+    assert set(items) == {S + 'Block', S + 'Blocked', S + 'Open', S + 'Dark'}  # the hierarchy is complete
+    assert items[S + 'Blocked'].parent() is items[S + 'Block']
+    picker.tree.setCurrentItem(items[S + 'Blocked'])
+    picker._accept()
+    assert picker.selected_iri == ''
+    picker.tree.setCurrentItem(items[S + 'Block'])
+    picker._accept()
+    assert picker.selected_iri == S + 'Block'
+
+
+def test_the_picker_explains_the_states_only_when_it_shows_some(state_manager):
+    from pymodaq_ontology.term_picker import TermPicker
+    from pymodaq_ontology.terms import ACTUATOR
+    with_states = TermPicker(list(state_manager.terms.values()), None, '', ACTUATOR)
+    without = TermPicker([t for t in state_manager.terms.values() if not t.is_state], None, '', ACTUATOR)
+    assert not with_states.legend.isHidden() and without.legend.isHidden()
+
+
+def test_a_term_says_in_which_states_it_has_its_meaning(state_manager):
+    assert state_manager.terms[S + 'Dark'].requires == (S + 'Blocked',)
+    assert state_manager.terms[S + 'Block'].requires == ()
