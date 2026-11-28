@@ -15,6 +15,11 @@ def pytest_runtest_teardown(item, nextitem):
     from qtpy import QtCore
     if QtCore.QCoreApplication.instance() is not None:
         QtCore.QCoreApplication.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete)
+    if QtCore.QCoreApplication.instance() is not None:
+        from qtpy import QtWidgets
+        for widget in QtWidgets.QApplication.topLevelWidgets():  # CI probe: those that the test leaves behind
+            widget.deleteLater()
+        QtCore.QCoreApplication.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete)
     gc.collect()  # CI probe: main thread, see ControlModule.quit_fun
 
 
